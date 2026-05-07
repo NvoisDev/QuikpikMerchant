@@ -533,9 +533,12 @@ export class OrderStorage extends ProductStorage {
           );
         }
 
-        // FEFO deduction in-memory
+        // FEFO deduction in-memory — one product-level movement recorded after loop
         let remaining = baseUnitsNeeded;
         let primaryBatchId: number | null = null;
+        // Capture product total BEFORE deductions (sum of in-memory batch qtys)
+        const productTotalBefore = activeBatches.reduce((acc, b) => acc + (batchQty.get(b.id) ?? 0), 0);
+        const batchLabels: string[] = [];
         for (const batch of activeBatches) {
           if (remaining <= 0) break;
           const currentQty = batchQty.get(batch.id) ?? 0;
@@ -545,19 +548,7 @@ export class OrderStorage extends ProductStorage {
           const newStatus = newQty === 0 ? 'depleted' : 'active';
           batchQty.set(batch.id, newQty);
           batchUpdates.push({ id: batch.id, newQty, newStatus });
-          movementsToInsert.push({
-            productId: item.productId,
-            wholesalerId: order.wholesalerId,
-            movementType: 'purchase',
-            quantity: -deduct,
-            unitType: 'units',
-            stockBefore: currentQty,
-            stockAfter: newQty,
-            reason: `Order sale (batch #${batch.batchNumber || batch.id}) - ${deduct} units`,
-            orderId: newOrder.id,
-            customerName,
-            businessProfileId: order.businessProfileId ?? null,
-          });
+          batchLabels.push(`batch #${batch.batchNumber || batch.id}: ${deduct} units`);
           if (primaryBatchId === null) primaryBatchId = batch.id;
           remaining -= deduct;
         }
@@ -571,6 +562,23 @@ export class OrderStorage extends ProductStorage {
           : 0;
         // Last item for this product wins (correctly reflects cumulative deductions)
         productStockFinal.set(item.productId, { stock: newStock, palletStock: newPalletStock });
+
+        // One movement per product item — stockBefore/After = product total, not batch qty
+        movementsToInsert.push({
+          productId: item.productId,
+          wholesalerId: order.wholesalerId,
+          movementType: 'purchase',
+          quantity: -baseUnitsNeeded,
+          unitType: 'units',
+          stockBefore: productTotalBefore,
+          stockAfter: newStock,
+          reason: batchLabels.length === 1
+            ? `Invoice order sale (${batchLabels[0]})`
+            : `Invoice order sale — ${batchLabels.join(', ')}`,
+          orderId: newOrder.id,
+          customerName,
+          businessProfileId: order.businessProfileId ?? null,
+        });
       }
 
       // ── BATCH EXECUTE: flush all mutations ───────────────────────────────
@@ -912,8 +920,11 @@ export class OrderStorage extends ProductStorage {
           }
 
           // ── Batch-based FEFO deduction ──────────────────────────────────────
+          // Capture product total BEFORE deductions to record accurate movement
+          const productTotalBefore2 = totalAvailable;
           let remaining = baseUnitsNeeded;
           let primaryBatchId: number | null = null;
+          const batchLabels2: string[] = [];
           for (const batch of activeBatches) {
             if (remaining <= 0) break;
             const deduct = Math.min(remaining, batch.quantity);
@@ -925,21 +936,9 @@ export class OrderStorage extends ProductStorage {
               .set({ quantity: newQty, status: newStatus, updatedAt: new Date() })
               .where(eq(productBatches.id, batch.id));
 
-            await trx.insert(stockMovements).values({
-              productId: item.productId,
-              wholesalerId: orderData.wholesalerId,
-              movementType: 'purchase',
-              quantity: -deduct,
-              unitType: 'units',
-              stockBefore: batch.quantity,
-              stockAfter: newQty,
-              reason: freeItemsQty > 0
-                ? `Order sale (batch #${batch.batchNumber || batch.id}) - ${deduct} units incl. ${freeItemsQty} free (promo)`
-                : `Order sale (batch #${batch.batchNumber || batch.id}) - ${deduct} units`,
-              orderId: newOrder.id,
-              customerName: orderData.customerName ?? null,
-              businessProfileId: orderData.businessProfileId ?? null,
-            });
+            batchLabels2.push(freeItemsQty > 0
+              ? `batch #${batch.batchNumber || batch.id}: ${deduct} units incl. ${freeItemsQty} free (promo)`
+              : `batch #${batch.batchNumber || batch.id}: ${deduct} units`);
 
             if (primaryBatchId === null) primaryBatchId = batch.id;
             remaining -= deduct;
@@ -969,6 +968,23 @@ export class OrderStorage extends ProductStorage {
             .update(products)
             .set({ stock: newUnitStock, palletStock: newPalletStock, updatedAt: new Date() })
             .where(sql`${products.id} = ${item.productId}`);
+
+          // One product-level movement — stockBefore/After = product total, not batch qty
+          await trx.insert(stockMovements).values({
+            productId: item.productId,
+            wholesalerId: orderData.wholesalerId,
+            movementType: 'purchase',
+            quantity: -baseUnitsNeeded,
+            unitType: 'units',
+            stockBefore: productTotalBefore2,
+            stockAfter: newUnitStock,
+            reason: batchLabels2.length === 1
+              ? `Invoice order sale (${batchLabels2[0]})`
+              : `Invoice order sale — ${batchLabels2.join(', ')}`,
+            orderId: newOrder.id,
+            customerName: orderData.customerName ?? null,
+            businessProfileId: orderData.businessProfileId ?? null,
+          });
 
           // ────────────────────────────────────────────────────────────────────
         }

@@ -646,16 +646,33 @@ export class ProductStorage extends UserStorageBase {
     if (safeUpdates.quantity !== undefined && wholesalerId) {
       const actualDelta = updated.quantity - before.quantity;
       if (actualDelta !== 0) {
+        // Read product-level totals before and after sync so movement history
+        // shows a coherent running balance across all batches.
+        const [prodBefore] = await db
+          .select({ stock: products.stock })
+          .from(products)
+          .where(eq(products.id, before.productId));
+        const productStockBefore = Number(prodBefore?.stock ?? 0);
+
+        await this._syncProductStockFromBatches(updated.productId);
+
+        const [prodAfter] = await db
+          .select({ stock: products.stock })
+          .from(products)
+          .where(eq(products.id, before.productId));
+        const productStockAfter = Number(prodAfter?.stock ?? 0);
+
         await db.insert(stockMovements).values({
           productId: before.productId,
           wholesalerId,
           movementType: actualDelta > 0 ? 'manual_increase' : 'manual_decrease',
           quantity: actualDelta,
           unitType: 'units',
-          stockBefore: before.quantity,
-          stockAfter: updated.quantity,
+          stockBefore: productStockBefore,
+          stockAfter: productStockAfter,
           reason: `Direct batch quantity update (batch #${before.batchNumber || batchId})`,
         });
+        return updated;
       }
     }
 
@@ -692,18 +709,35 @@ export class ProductStorage extends UserStorageBase {
 
     // Log stock movement only when the quantity actually changed (skip no-ops)
     if (actualDelta !== 0) {
+      // Use product-level totals (not batch-level) so movement history shows a
+      // coherent running balance across all batches.
+      const [prodBefore] = await db
+        .select({ stock: products.stock })
+        .from(products)
+        .where(eq(products.id, batch.productId));
+      const productStockBefore = Number(prodBefore?.stock ?? 0);
+
+      await this._syncProductStockFromBatches(batch.productId);
+
+      const [prodAfter] = await db
+        .select({ stock: products.stock })
+        .from(products)
+        .where(eq(products.id, batch.productId));
+      const productStockAfter = Number(prodAfter?.stock ?? 0);
+
       await db.insert(stockMovements).values({
         productId: batch.productId,
         wholesalerId,
         movementType: actualDelta > 0 ? 'manual_increase' : 'manual_decrease',
-        quantity: actualDelta,   // actual change, not requested delta
+        quantity: actualDelta,
         unitType: 'units',
-        stockBefore: before,
-        stockAfter: after,
+        stockBefore: productStockBefore,
+        stockAfter: productStockAfter,
         reason,
         orderId: orderId ?? null,
         businessProfileId: businessProfileId ?? null,
       });
+      return;
     }
 
     await this._syncProductStockFromBatches(batch.productId);
