@@ -49,6 +49,7 @@ export function registerBatchRoutes(app: Express): void {
           productName: products.name,
           batchNumber: productBatches.batchNumber,
           quantity: productBatches.quantity,
+          originalQuantity: productBatches.originalQuantity,
           expiryDate: productBatches.expiryDate,
           createdAt: productBatches.createdAt,
           costPrice: productBatches.costPrice,

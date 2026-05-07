@@ -102,8 +102,8 @@ export default function DownloadProductsModal({ open, onClose, products, isViewe
       if (!res.ok) throw new Error("Server error");
       const allBatches: Array<{
         id: number; productId: number; productName: string; batchNumber: string | null;
-        quantity: number; expiryDate: string | null; createdAt: string | null;
-        costPrice: string | null; status: string;
+        quantity: number; originalQuantity: number | null; expiryDate: string | null;
+        createdAt: string | null; costPrice: string | null; status: string;
       }> = await res.json();
       const filteredIds = new Set(filtered.map((p: Product) => p.id));
       const batchRows = allBatches
@@ -111,6 +111,7 @@ export default function DownloadProductsModal({ open, onClose, products, isViewe
         .map((b) => ({
           "Product Name": b.productName ?? "",
           "Batch ID": b.batchNumber || `#${b.id}`,
+          "Original Qty": b.originalQuantity ?? b.quantity ?? "",
           "Quantity": b.quantity ?? "",
           "Expiry Date": b.expiryDate ? fmtExportDate(b.expiryDate) : "No expiry",
           "Received Date": fmtExportDate(b.createdAt),
