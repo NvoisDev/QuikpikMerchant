@@ -318,7 +318,7 @@ function ProductCard({
                 </span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-gray-500">Stock</span>
+                <span className="text-gray-500">Remaining</span>
                 <span className={`font-medium ${stockStatus.color}`}>
                   {formatNumber(product.stock ?? 0)} {product.sellingFormat === 'pallets' ? 'pallets' : 'units'}
                 </span>
@@ -334,7 +334,7 @@ function ProductCard({
               {(product.batchCount ?? 0) > 0 && (
                 <div className="flex justify-between items-center">
                   <span className="text-gray-500">Batches</span>
-                  <span className="text-gray-600">{product.batchCount} {product.batchCount === 1 ? 'batch' : 'batches'} · {formatNumber(product.stock ?? 0)} {product.sellingFormat === 'pallets' ? 'pallets' : 'units'}</span>
+                  <span className="text-gray-600">{product.batchCount} {product.batchCount === 1 ? 'batch' : 'batches'}</span>
                 </div>
               )}
               {product.sellingFormat === 'both' && (

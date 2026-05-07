@@ -43,9 +43,22 @@ export default function DownloadProductsModal({ open, onClose, products, isViewe
   const handleDownload = async () => {
     if (!products || products.length === 0) return;
     const today = new Date().toISOString().substring(0, 10);
-    const filtered = (includeOutOfStock ? products : products.filter((p) => p.status === "active")) as Product[];
+
+    // Always fetch fresh product data at download time so remaining stock
+    // reflects the true current DB value, not a potentially stale page cache.
+    setIsLoading(true);
+    let liveProducts: Product[] = products;
+    try {
+      const freshRes = await fetch("/api/products", { credentials: "include" });
+      if (freshRes.ok) liveProducts = await freshRes.json();
+    } catch {
+      // Fall back to cached products if the fetch fails
+    }
+
+    const filtered = (includeOutOfStock ? liveProducts : liveProducts.filter((p) => p.status === "active")) as Product[];
 
     if (exportType === "summary") {
+      setIsLoading(false);
       const rows = filtered.map((p: Product) => {
         const row: Record<string, unknown> = {
           "Name": p.name ?? "",
@@ -54,7 +67,7 @@ export default function DownloadProductsModal({ open, onClose, products, isViewe
           "Price": p.price ?? "",
           "Currency": p.currency ?? "",
           "MOQ": p.moq ?? "",
-          "Stock": p.stock ?? "",
+          "Remaining Stock": p.stock ?? "",
           "Status": humanStatus(p.status ?? ""),
           "Selling Format": p.sellingFormat ?? "",
           "Pack Qty": p.quantityInPack ?? "",
