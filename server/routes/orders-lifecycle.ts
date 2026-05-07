@@ -1386,7 +1386,14 @@ export function registerOrderLifecycleRoutes(app: Express): void {
         for (const item of orderItemsList) {
           const product = await storage.getProduct(item.productId!);
           if (product) {
-            await storage.updateProductStock(item.productId!, (product.stock ?? 0) + (item.quantity ?? 0));
+            if (item.sellingType === 'pallets') {
+              const stockBefore = product.palletStock || 0;
+              const stockAfter = stockBefore + (item.quantity ?? 0);
+              await db.update(products).set({ palletStock: stockAfter }).where(eq(products.id, product.id));
+              await db.insert(stockMovements).values({ productId: product.id, wholesalerId: order.wholesalerId, movementType: 'return', quantity: item.quantity ?? 0, unitType: 'pallets', stockBefore, stockAfter, reason: `Full refund — ${item.quantity} pallets returned`, orderId: id, businessProfileId: order.businessProfileId ?? null });
+            } else {
+              await restockUnitsToOrigin(item.batchId ?? null, item.productId!, item.quantity ?? 0, order.wholesalerId, id, order.orderNumber, order.businessProfileId ?? null);
+            }
           }
         }
       } else {
