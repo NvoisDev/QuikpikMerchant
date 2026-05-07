@@ -849,6 +849,7 @@ export function registerOrderLifecycleRoutes(app: Express): void {
                     reason: `Order cancellation - ${returnQty} pallets returned`,
                     orderId: id,
                     businessProfileId: order.businessProfileId ?? null,
+                    batchId: orderItem.batchId ?? null,
                   });
                 } else {
                   await restockUnitsToOrigin(orderItem.batchId ?? null, product.id, returnQty, order.wholesalerId, id, order.orderNumber, order.businessProfileId ?? null);
@@ -911,6 +912,7 @@ export function registerOrderLifecycleRoutes(app: Express): void {
                   reason: `Order cancelled - ${item.quantity} pallets returned`,
                   orderId: id,
                   businessProfileId: order.businessProfileId ?? null,
+                  batchId: item.batchId ?? null,
                 });
               } else if (item.productId) {
                 await restockUnitsToOrigin(item.batchId ?? null, item.productId!, item.quantity, order.wholesalerId, id, order.orderNumber, order.businessProfileId ?? null);
@@ -1212,6 +1214,7 @@ export function registerOrderLifecycleRoutes(app: Express): void {
                     reason: `Order cancellation (customer request) — ${item.quantity} pallets returned`,
                     orderId: order.id,
                     businessProfileId: order.businessProfileId ?? null,
+                    batchId: item.batchId ?? null,
                   });
                 } else {
                   await restockUnitsToOrigin(item.batchId ?? null, item.productId!, item.quantity, order.wholesalerId, order.id, order.orderNumber, order.businessProfileId ?? null);

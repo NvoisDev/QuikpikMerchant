@@ -608,6 +608,7 @@ export const stockMovements = pgTable("stock_movements", {
   orderId: integer("order_id"), // reference to order if movement is from purchase
   customerName: varchar("customer_name"), // customer name if movement is from purchase
   businessProfileId: integer("business_profile_id").references(() => businessProfiles.id, { onDelete: "set null" }), // business profile if movement is from an order
+  batchId: integer("batch_id").references(() => productBatches.id, { onDelete: "set null" }), // batch this movement came from
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -1201,6 +1202,10 @@ export const stockMovementsRelations = relations(stockMovements, ({ one }) => ({
   businessProfile: one(businessProfiles, {
     fields: [stockMovements.businessProfileId],
     references: [businessProfiles.id],
+  }),
+  batch: one(productBatches, {
+    fields: [stockMovements.batchId],
+    references: [productBatches.id],
   }),
 }));
 

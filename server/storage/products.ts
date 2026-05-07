@@ -600,6 +600,7 @@ export class ProductStorage extends UserStorageBase {
         reason: opts?.reason ?? defaultReason,
         orderId: opts?.orderId ?? null,
         businessProfileId: opts?.businessProfileId ?? null,
+        batchId: newBatch.id,
       });
     }
 
@@ -671,6 +672,7 @@ export class ProductStorage extends UserStorageBase {
           stockBefore: productStockBefore,
           stockAfter: productStockAfter,
           reason: `Direct batch quantity update (batch #${before.batchNumber || batchId})`,
+          batchId,
         });
         return updated;
       }
@@ -736,6 +738,7 @@ export class ProductStorage extends UserStorageBase {
         reason,
         orderId: orderId ?? null,
         businessProfileId: businessProfileId ?? null,
+        batchId,
       });
       return;
     }

@@ -645,12 +645,12 @@ export function registerProductRoutes(app: Express): void {
   // GET /api/products/:id/stock-movements
   app.get('/api/products/:id/stock-movements', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.id;
+      const effectiveUserId = req.user.wholesalerId || req.user.id;
       const productId = parseInt(req.params.id);
       
-      // Verify the user owns this product
+      // Verify the user (or their employer) owns this product
       const product = await storage.getProduct(productId);
-      if (!product || product.wholesalerId !== userId) {
+      if (!product || product.wholesalerId !== effectiveUserId) {
         return res.status(404).json({ message: "Product not found" });
       }
       

@@ -725,6 +725,7 @@ export class OrderStorage extends ProductStorage {
             orderId: newOrder.id,
             customerName: orderData.customerName ?? null,
             businessProfileId: orderData.businessProfileId ?? null,
+            batchId: primaryBatchId,
           });
 
           // ────────────────────────────────────────────────────────────────────

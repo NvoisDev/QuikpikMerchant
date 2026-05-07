@@ -12,6 +12,7 @@ import {
   campaignOrders,
   stockUpdateNotifications,
   stockMovements,
+  productBatches,
   stockAlerts,
   customerRegistrationRequests,
   customerProfileUpdateNotifications,
@@ -478,7 +479,7 @@ export class BroadcastStorage extends CustomerStorage {
     }
   }
 
-  async getStockMovements(productId: number): Promise<(StockMovement & { orderNumber?: string | null; businessProfileName?: string | null })[]> {
+  async getStockMovements(productId: number): Promise<(StockMovement & { orderNumber?: string | null; businessProfileName?: string | null; batchNumber?: string | null })[]> {
     const result = await db
       .select({
         id: stockMovements.id,
@@ -493,17 +494,20 @@ export class BroadcastStorage extends CustomerStorage {
         orderId: stockMovements.orderId,
         customerName: stockMovements.customerName,
         businessProfileId: stockMovements.businessProfileId,
+        batchId: stockMovements.batchId,
         createdAt: stockMovements.createdAt,
         orderNumber: orders.orderNumber,
         businessProfileName: businessProfiles.name,
+        batchNumber: productBatches.batchNumber,
       })
       .from(stockMovements)
       .leftJoin(orders, eq(stockMovements.orderId, orders.id))
       .leftJoin(businessProfiles, eq(stockMovements.businessProfileId, businessProfiles.id))
+      .leftJoin(productBatches, eq(stockMovements.batchId, productBatches.id))
       .where(eq(stockMovements.productId, productId))
       .orderBy(desc(stockMovements.createdAt));
 
-    return result as (StockMovement & { orderNumber?: string | null; businessProfileName?: string | null })[];
+    return result as (StockMovement & { orderNumber?: string | null; businessProfileName?: string | null; batchNumber?: string | null })[];
   }
 
   async getStockMovementsByWholesaler(wholesalerId: string, limit = 50): Promise<(StockMovement & { product: Product })[]> {

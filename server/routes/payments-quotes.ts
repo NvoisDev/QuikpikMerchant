@@ -338,6 +338,7 @@ export function registerQuoteRoutes(app: Express): void {
                 orderId: quoteOrder.id,
                 customerName: quoteOrder.customerName ?? null,
                 businessProfileId: quoteOrder.businessProfileId ?? null,
+                batchId: d.id,
               });
             }
 

@@ -285,6 +285,9 @@ async function runStartupMigrations() {
     `CREATE INDEX IF NOT EXISTS orders_created_at_idx ON orders (created_at)`,
     `CREATE INDEX IF NOT EXISTS orders_customer_phone_idx ON orders (customer_phone)`,
     `CREATE INDEX IF NOT EXISTS products_status_idx ON products (status)`,
+    // Task #1032: Link stock movements to the batch they came from for better audit trails
+    `ALTER TABLE stock_movements ADD COLUMN IF NOT EXISTS batch_id INTEGER`,
+    `DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE table_name='stock_movements' AND constraint_name='stock_movements_batch_id_fkey') THEN ALTER TABLE stock_movements ADD CONSTRAINT stock_movements_batch_id_fkey FOREIGN KEY (batch_id) REFERENCES product_batches(id) ON DELETE SET NULL; END IF; END $$`,
   ];
   for (const stmt of migrations) {
     await db.execute(sql.raw(stmt));

@@ -80,6 +80,23 @@ interface StockSummary {
   currentStock: number;
 }
 
+interface StockMovementEntry {
+  id: number;
+  movementType: string;
+  quantity: number;
+  unitType: string;
+  stockBefore: number;
+  stockAfter: number;
+  reason: string | null;
+  orderId: number | null;
+  customerName: string | null;
+  batchId: number | null;
+  batchNumber: string | null;
+  orderNumber: string | null;
+  businessProfileName: string | null;
+  createdAt: string;
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 const fmt = (val: string | number | null | undefined, currency = "GBP") => {
@@ -189,6 +206,17 @@ export default function ProductDetail() {
     queryFn: async () => {
       const res = await fetch(`/api/products/${productId}/stock-summary`);
       if (!res.ok) return null;
+      return res.json();
+    },
+    enabled: !!productId,
+    staleTime: 0,
+  });
+
+  const { data: stockMovements = [], isLoading: movementsLoading } = useQuery<StockMovementEntry[]>({
+    queryKey: ["/api/products", productId, "stock-movements"],
+    queryFn: async () => {
+      const res = await fetch(`/api/products/${productId}/stock-movements`);
+      if (!res.ok) return [];
       return res.json();
     },
     enabled: !!productId,
@@ -795,6 +823,73 @@ export default function ProductDetail() {
                       </tbody>
                     </table>
                   </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* ── Stock Movement History ── */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Stock Movement History</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {movementsLoading ? (
+                <div className="space-y-2">
+                  {[0, 1, 2].map((i) => (
+                    <div key={i} className="h-10 bg-gray-100 rounded animate-pulse" />
+                  ))}
+                </div>
+              ) : stockMovements.length === 0 ? (
+                <p className="text-sm text-gray-400 text-center py-4">No stock movements yet</p>
+              ) : (
+                <div className="space-y-1.5">
+                  {stockMovements.slice(0, 20).map((m) => {
+                    const isIncrease = m.quantity > 0;
+                    const typeLabels: Record<string, string> = {
+                      purchase: "Sale",
+                      manual_increase: "Stock in",
+                      manual_decrease: "Adjustment",
+                      initial: "Initial stock",
+                      return: "Return",
+                    };
+                    const label = typeLabels[m.movementType] ?? m.movementType;
+                    const batchLabel = m.batchId
+                      ? m.batchNumber ? `Batch ${m.batchNumber}` : `Batch #${m.batchId}`
+                      : null;
+                    return (
+                      <div key={m.id} className="flex items-start justify-between gap-2 py-2 border-b border-gray-50 last:border-0">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className={`text-xs font-semibold px-1.5 py-0.5 rounded ${isIncrease ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
+                              {isIncrease ? "+" : ""}{m.quantity} {m.unitType}
+                            </span>
+                            <span className="text-xs text-gray-600 font-medium">{label}</span>
+                            {batchLabel && (
+                              <span className="text-xs bg-blue-50 text-blue-700 border border-blue-100 rounded px-1.5 py-0.5">
+                                {batchLabel}
+                              </span>
+                            )}
+                            {m.customerName && (
+                              <span className="text-xs text-gray-500 truncate">{m.customerName}</span>
+                            )}
+                            {m.orderNumber && (
+                              <span className="text-xs text-gray-400">#{m.orderNumber}</span>
+                            )}
+                          </div>
+                          {m.reason && (
+                            <p className="text-xs text-gray-400 mt-0.5 truncate">{m.reason}</p>
+                          )}
+                        </div>
+                        <div className="text-right shrink-0">
+                          <p className="text-xs text-gray-500">{m.stockAfter} left</p>
+                          <p className="text-xs text-gray-400">
+                            {new Date(m.createdAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short" })}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </CardContent>
