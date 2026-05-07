@@ -99,6 +99,7 @@ export default function ProductManagement() {
       if (!response.ok) throw new Error("Failed to fetch products");
       return response.json();
     },
+    staleTime: 0,
   });
 
   // Auto-open edit/stock modal when navigated from the product detail page

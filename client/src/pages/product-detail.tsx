@@ -169,6 +169,7 @@ export default function ProductDetail() {
       return res.json();
     },
     enabled: !!productId,
+    staleTime: 0,
   });
 
   const { data: batches = [], isLoading: batchesLoading } = useQuery<Batch[]>({
@@ -179,6 +180,7 @@ export default function ProductDetail() {
       return res.json();
     },
     enabled: !!productId,
+    staleTime: 0,
   });
 
   const { data: stockSummary } = useQuery<StockSummary>({
@@ -189,6 +191,7 @@ export default function ProductDetail() {
       return res.json();
     },
     enabled: !!productId,
+    staleTime: 0,
   });
 
   // ── Mutations ─────────────────────────────────────────────────────────────
@@ -349,7 +352,7 @@ export default function ProductDetail() {
   const otherBatches = batches.filter((b) => !activeBatches.includes(b));
   const displayBatches = showAllBatches ? batches : activeBatches;
 
-  const totalStock = stockSummary?.currentStock ?? product.totalBatchStock ?? product.stock;
+  const totalStock = stockSummary?.currentStock ?? product.stock;
   const batchCountDisplay = product.batchCount ?? activeBatches.length;
   const nearestExpiry = product.nearestExpiry || product.expiryDate;
 
@@ -534,7 +537,7 @@ export default function ProductDetail() {
               <div className="grid grid-cols-3 gap-3 text-center">
                 <div className="bg-gray-50 rounded-lg p-3">
                   <p className="text-2xl font-bold text-gray-900">{formatNumber(totalStock)}</p>
-                  <p className="text-xs text-gray-500 mt-0.5">Total stock</p>
+                  <p className="text-xs text-gray-500 mt-0.5">Stock</p>
                 </div>
                 <div className="bg-gray-50 rounded-lg p-3">
                   <p className="text-2xl font-bold text-gray-900">{batchCountDisplay}</p>

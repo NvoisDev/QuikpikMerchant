@@ -1,0 +1,276 @@
+Review the entire Quikpik codebase and perform a focused audit on memory management, garbage collection pressure, and long-lived memory retention risks in both the Node.js backend and React frontend.
+The goal is NOT to optimise prematurely, but to identify anything that could realistically cause:
+
+
+memory leaks
+
+
+heap growth over time
+
+
+excessive garbage collection pauses
+
+
+retained objects
+
+
+unbounded in-memory storage
+
+
+event listener leaks
+
+
+timer leaks
+
+
+large object retention
+
+
+stale React state retention
+
+
+unnecessary re-renders holding memory
+
+
+large query results being kept in memory
+
+
+websocket/session memory accumulation
+
+
+cache growth without eviction
+
+
+background jobs retaining references
+
+
+PDF/image buffer retention
+
+
+Stripe/Twilio/OpenAI client memory issues
+
+
+unclosed streams/files/connections
+
+
+Specifically audit for:
+BACKEND (Node.js / Express / Neon / Stripe)
+
+
+Any large arrays or objects loaded fully into memory instead of paginated/streamed
+
+
+Unbounded queries returning thousands of rows
+
+
+In-memory Maps/Sets/caches without TTL or cleanup
+
+
+node-cron jobs retaining references between runs
+
+
+Express middleware storing request data globally
+
+
+Long-lived closures
+
+
+EventEmitter listener accumulation
+
+
+Unawaited async operations causing retained promises
+
+
+Buffer usage in PDF generation, image processing (Sharp), invoice generation
+
+
+File handling and stream cleanup
+
+
+Memory impact of polling endpoints
+
+
+Stripe webhook processing memory safety
+
+
+WebSocket or realtime subscription cleanup
+
+
+Any global singleton objects growing over time
+
+
+Any repeated creation of expensive clients/services
+
+
+Transaction objects or DB connections not released properly
+
+
+Areas likely to trigger excessive V8 garbage collection under load
+
+
+FRONTEND (React / TanStack Query)
+
+
+Components retaining stale state unnecessarily
+
+
+Very large pages keeping all tabs/components mounted simultaneously
+
+
+Missing cleanup in useEffect
+
+
+Intervals/timeouts without cleanup
+
+
+Query cache growth issues
+
+
+Infinite re-render risks
+
+
+Large objects stored in React state
+
+
+Image/file preview memory leaks
+
+
+Modal/component mount stacking
+
+
+Unnecessary polling intervals
+
+
+Heavy derived calculations running every render
+
+
+Memory-heavy invoice/product forms
+
+
+React Query stale cache configuration review
+
+
+ANALYTICS & REPORTING
+
+
+Any endpoints loading full order datasets into Node memory
+
+
+AI analytics endpoints retaining large datasets
+
+
+Opportunities for DB-side aggregation instead of JS aggregation
+
+
+Any report generation paths that could spike heap memory
+
+
+OUTPUT FORMAT:
+
+
+Overall memory-management score out of 10
+
+
+Highest-risk memory leak candidates
+
+
+Garbage collection pressure analysis
+
+
+Heap growth risks
+
+
+Long-running production risks
+
+
+React memory risks
+
+
+Backend memory risks
+
+
+Query/memory hotspots
+
+
+Whether the app is safe for long-running uptime
+
+
+Estimated safe scale limits before memory pressure becomes concerning
+
+
+Priority fixes ranked by impact vs effort
+
+
+Explicitly identify:
+
+
+
+
+LOW risk
+
+
+MEDIUM risk
+
+
+HIGH risk
+
+
+
+
+Include exact files/functions/routes where risks exist
+
+
+Call out anything that is already implemented correctly
+
+
+IMPORTANT:
+
+
+This is an audit only — do NOT modify code automatically.
+
+
+Do NOT refactor anything yet.
+
+
+Do NOT introduce architectural changes.
+
+
+Do NOT break existing functionality.
+
+
+Do NOT change APIs, routes, business logic, payment flows, stock logic, or invoice logic.
+
+
+Focus on realistic production risks, not theoretical micro-optimisations.
+
+
+Distinguish clearly between:
+
+
+actual memory leak risks
+
+
+normal acceptable Node.js heap usage
+
+
+harmless GC churn
+
+
+speculative/non-issues
+
+
+
+
+Also identify whether the current architecture is suitable for:
+
+
+single-instance deployment
+
+
+clustered Node.js deployment
+
+
+horizontal scaling later with Redis/load balancing
+
+
+Finally, provide a concise “Top 5 memory/stability improvements” section that gives the highest-leverage production improvements with the least risk to the existing system.
