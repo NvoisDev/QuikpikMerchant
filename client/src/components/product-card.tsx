@@ -334,7 +334,7 @@ function ProductCard({
               {(product.batchCount ?? 0) > 0 && (
                 <div className="flex justify-between items-center">
                   <span className="text-gray-500">Batches</span>
-                  <span className="text-gray-600">{product.batchCount} active</span>
+                  <span className="text-gray-600">{product.batchCount} {product.batchCount === 1 ? 'batch' : 'batches'} · {formatNumber(product.stock ?? 0)} {product.sellingFormat === 'pallets' ? 'pallets' : 'units'}</span>
                 </div>
               )}
               {product.sellingFormat === 'both' && (

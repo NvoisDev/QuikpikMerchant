@@ -540,8 +540,8 @@ export default function ProductDetail() {
                   <p className="text-xs text-gray-500 mt-0.5">Stock</p>
                 </div>
                 <div className="bg-gray-50 rounded-lg p-3">
-                  <p className="text-2xl font-bold text-gray-900">{batchCountDisplay}</p>
-                  <p className="text-xs text-gray-500 mt-0.5">Active batches</p>
+                  <p className="text-2xl font-bold text-gray-900">{stockSummary?.totalPurchases ?? 0}</p>
+                  <p className="text-xs text-gray-500 mt-0.5">Units sold</p>
                 </div>
                 {nearestExpiry ? (
                   <div className={`rounded-lg p-3 border text-left ${getBatchExpiryInfo(nearestExpiry)?.className ?? "bg-gray-50"}`}>
