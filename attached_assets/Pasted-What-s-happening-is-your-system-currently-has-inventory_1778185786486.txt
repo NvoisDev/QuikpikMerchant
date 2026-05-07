@@ -1,0 +1,183 @@
+What’s happening is your system currently has inventory movement logging, but not a true inventory ledger reconciliation model.
+
+Right now the app is likely:
+
+mutating stock directly,
+then separately creating history rows,
+while invoice edits/cancellations/restores create duplicate movement events,
+and the displayed “X left” values are being derived inconsistently.
+
+That’s why the numbers stop making intuitive sense.
+
+You need to force the entire platform into a single-source-of-truth inventory ledger architecture where:
+
+stock is NEVER manually inferred,
+every stock movement is atomic,
+every inventory total is derived from the same calculation,
+and edits/cancellations reverse prior movements rather than creating confusing duplicate logic.
+
+Here’s the prompt you should give your agent:
+
+Perform a full inventory reconciliation and architecture correction audit across the entire Quikpik inventory system.
+
+Current issue:
+Stock counts, “units left” values, product card inventory totals, and movement history are inconsistent and no longer trustworthy. Invoice edits, cancellations, restorations, and stock-ins are creating confusing or duplicated inventory movements, causing displayed totals to stop matching real stock levels.
+
+This is now a data integrity issue and must be treated as a critical inventory architecture fix.
+
+Core requirement:
+Move the platform fully to a SINGLE SOURCE OF TRUTH inventory ledger model.
+
+The system must NEVER rely on manually updated stock totals or duplicated calculations in multiple places.
+
+Instead:
+
+Every inventory change must create ONE atomic inventory movement record
+Current stock must ALWAYS be derived from movement reconciliation or batch totals
+All UI displays, exports, invoices, product cards, analytics, and stock history must use the SAME calculation source
+
+Audit and fix all inventory mutation paths:
+
+Stock-in / batch creation
+Invoice creation
+Invoice editing
+Invoice cancellation
+Draft invoice approval
+Pay later flows
+Order deletion
+Returns/restorations
+Manual stock adjustments
+Batch edits
+Marketplace ordering
+Admin edits
+Duplicate retry/idempotency paths
+
+Required architecture rules:
+
+Inventory ledger model
+Every stock movement must be stored as an immutable movement event with:
+movementType
+quantityDelta
+productId
+batchId
+sourceType
+sourceId (invoice/order/etc)
+createdAt
+performedBy
+reversalOfMovementId (if reversing)
+
+Examples:
+
+STOCK_IN = +50
+SALE = -10
+CANCELLATION_RETURN = +10
+EDIT_REVERSAL = +5
+EDIT_REALLOCATION = -3
+No duplicate movement generation
+Invoice edits currently appear to generate duplicate allocation/restoration events.
+
+Fix this completely.
+
+An invoice edit must:
+
+reverse ONLY the previous allocation
+apply ONLY the new allocation
+never duplicate movement rows
+never double-restore stock
+never double-deduct stock
+Current stock calculation
+Current stock must ONLY come from:
+SUM(quantityDelta)
+grouped by product/batch
+
+OR from validated batch totals if batches are authoritative.
+
+No cached/manual “stock” fields should drift independently.
+
+“X left” correction
+The “X left” values shown in inventory history must:
+reflect the ACTUAL reconciled stock after that movement
+be recalculated consistently
+never show impossible jumps or duplicates
+Inventory history cleanup
+Audit historical movement generation logic and identify:
+duplicate movement creation
+repeated restore events
+double allocations
+missing reversals
+stale totals
+
+Generate a reconciliation report identifying affected invoices/orders.
+
+Atomic transactions
+All inventory mutations must happen inside database transactions:
+invoice creation
+invoice edits
+cancellations
+draft approvals
+stock adjustments
+
+Inventory and movement rows must never partially succeed.
+
+Idempotency protection
+Prevent duplicate stock movements caused by:
+double-clicks
+retries
+webhook replays
+request retries
+race conditions
+
+Movement creation must be idempotent.
+
+Product cards / exports / inventory pages
+Ensure ALL inventory displays use the SAME source:
+product cards
+inventory page
+exports
+CSV/Excel
+marketplace
+invoice product selectors
+analytics
+admin dashboards
+
+No duplicated inventory calculations anywhere.
+
+Historical reconciliation script
+Build a reconciliation utility that:
+recalculates inventory from movement history
+compares against current displayed totals
+identifies mismatches
+optionally repairs incorrect totals safely
+Testing requirements
+Add comprehensive tests covering:
+invoice creation
+invoice editing
+invoice cancellation
+repeated edits
+stock restoration
+concurrent requests
+duplicate retry prevention
+batch inventory
+multi-batch allocation
+pay later flows
+draft approval flows
+Critical constraint
+DO NOT break:
+existing invoices
+existing order flows
+batch architecture
+analytics
+exports
+Stripe flows
+customer ordering
+marketplace logic
+
+This must be a safe corrective refactor with full backwards compatibility.
+
+Final deliverable
+Produce:
+a list of all incorrect inventory mutation paths discovered
+which files caused duplication
+what logic was corrected
+before vs after reconciliation examples
+confirmation that stock totals now reconcile correctly from movement history
