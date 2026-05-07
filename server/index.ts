@@ -292,7 +292,7 @@ async function runStartupMigrations() {
     // batch has no corresponding movement record. INSERT ... WHERE NOT EXISTS is fully idempotent
     // — becomes a no-op on every startup once the rows exist.
     `INSERT INTO stock_movements (product_id, wholesaler_id, movement_type, quantity, unit_type, stock_before, stock_after, reason, batch_id, created_at)
-     SELECT pb.product_id, p.wholesaler_id, 'initial', pb.quantity, 'units', 0, pb.quantity, 'Initial stock', pb.id, pb.created_at
+     SELECT DISTINCT ON (pb.product_id) pb.product_id, p.wholesaler_id, 'initial', pb.quantity, 'units', 0, pb.quantity, 'Initial stock', pb.id, pb.created_at
      FROM product_batches pb
      JOIN products p ON p.id = pb.product_id
      WHERE pb.batch_number = 'Initial Stock'
@@ -301,7 +301,8 @@ async function runStartupMigrations() {
          SELECT 1 FROM stock_movements sm
          WHERE sm.product_id = pb.product_id
            AND sm.movement_type = 'initial'
-       )`,
+       )
+     ORDER BY pb.product_id, pb.id ASC`,
   ];
   for (const stmt of migrations) {
     await db.execute(sql.raw(stmt));
