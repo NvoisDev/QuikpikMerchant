@@ -65,7 +65,10 @@ export default function BatchBreakdownPanel({
                 return (
                   <tr key={batch.id} className={`border-b border-blue-50 last:border-0 ${isDepleted || isExpired ? 'opacity-50' : ''}`}>
                     <td className="py-1.5 pr-3 text-gray-700">{batch.batchNumber || 'Initial Stock'}</td>
-                    <td className="py-1.5 pr-3 text-right font-medium">{formatNumber(batch.quantity)}</td>
+                    <td className="py-1.5 pr-3 text-right font-medium">
+                      {formatNumber(batch.quantity)}
+                      <span className="text-gray-400 font-normal"> of {formatNumber(batch.originalQuantity ?? batch.quantity)}</span>
+                    </td>
                     <td className="py-1.5 pr-3">
                       {editingExpiryBatchId === batch.id ? (
                         <input

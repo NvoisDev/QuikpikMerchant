@@ -2,6 +2,7 @@ export interface ProductBatch {
   id: number;
   status: string;
   quantity: number;
+  originalQuantity?: number | null;
   expiryDate?: string | null;
   batchNumber?: string | null;
   costPrice?: number | string | null;

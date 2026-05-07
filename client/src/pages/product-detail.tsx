@@ -69,6 +69,7 @@ interface Batch {
   id: number;
   batchNumber: string;
   quantity: number;
+  originalQuantity?: number | null;
   expiryDate: string | null;
   status: "active" | "depleted" | "expired";
   notes: string | null;
@@ -582,7 +583,7 @@ export default function ProductDetail() {
                       <thead className="bg-gray-50">
                         <tr>
                           <th className="text-left px-3 py-2 text-gray-500 font-medium">Batch</th>
-                          <th className="text-right px-3 py-2 text-gray-500 font-medium">Units left</th>
+                          <th className="text-right px-3 py-2 text-gray-500 font-medium">Qty</th>
                           <th className="text-right px-3 py-2 text-gray-500 font-medium">Cost</th>
                           <th className="text-right px-3 py-2 text-gray-500 font-medium">Expiry</th>
                           <th className="hidden md:table-cell text-right px-3 py-2 text-gray-500 font-medium">Status</th>
@@ -603,7 +604,10 @@ export default function ProductDetail() {
                               <td className="px-3 py-2 font-medium text-gray-800 truncate max-w-[90px]">
                                 {batch.batchNumber || `#${batch.id}`}
                               </td>
-                              <td className="px-3 py-2 text-right text-gray-700">{formatNumber(batch.quantity)}</td>
+                              <td className="px-3 py-2 text-right text-gray-700">
+                                {formatNumber(batch.quantity)}
+                                <span className="text-gray-400 text-xs"> of {formatNumber(batch.originalQuantity ?? batch.quantity)}</span>
+                              </td>
                               <td className="px-3 py-2 text-right text-gray-700">
                                 {isViewer ? (
                                   batch.costPrice != null && batch.costPrice !== ""

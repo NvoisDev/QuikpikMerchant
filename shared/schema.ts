@@ -552,6 +552,7 @@ export const productBatches = pgTable("product_batches", {
   productId: integer("product_id").notNull().references(() => products.id, { onDelete: "cascade" }),
   batchNumber: varchar("batch_number"),          // optional user-facing label / delivery ref
   quantity: integer("quantity").notNull().default(0),
+  originalQuantity: integer("original_quantity"), // starting quantity at batch creation; never changes
   costPrice: decimal("cost_price", { precision: 10, scale: 2 }), // optional per-batch cost
   expiryDate: date("expiry_date"),               // null = no expiry
   status: varchar("status").notNull().default("active"), // 'active' | 'depleted' | 'expired'

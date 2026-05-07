@@ -570,7 +570,11 @@ export class ProductStorage extends UserStorageBase {
       .where(eq(products.id, batch.productId));
     const stockBefore = Number(productBefore?.stock ?? 0);
 
-    const [newBatch] = await db.insert(productBatches).values(batch).returning();
+    const batchWithOriginal = {
+      ...batch,
+      originalQuantity: batch.originalQuantity ?? batch.quantity,
+    };
+    const [newBatch] = await db.insert(productBatches).values(batchWithOriginal).returning();
 
     // Keep product.stock in sync (sum of all active non-expired batches)
     await this._syncProductStockFromBatches(batch.productId);
