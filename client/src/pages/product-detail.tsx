@@ -77,6 +77,10 @@ interface Batch {
 }
 
 interface StockSummary {
+  openingStock: number;
+  totalPurchases: number;
+  totalIncreases: number;
+  totalDecreases: number;
   currentStock: number;
 }
 
@@ -861,6 +865,26 @@ export default function ProductDetail() {
                   <p className="text-sm text-gray-400 text-center py-4">No stock movements yet</p>
                 ) : (
                   <div className="space-y-1.5">
+                    {stockSummary && (
+                      <div className="grid grid-cols-4 gap-2 mb-4 p-3 bg-gray-50 rounded-lg border border-gray-100">
+                        <div className="text-center">
+                          <p className="text-xs text-gray-400 mb-0.5">Opening</p>
+                          <p className="text-sm font-semibold text-gray-700">{stockSummary.openingStock}</p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-xs text-gray-400 mb-0.5">Total In</p>
+                          <p className="text-sm font-semibold text-green-600">+{stockSummary.totalIncreases}</p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-xs text-gray-400 mb-0.5">Total Sold</p>
+                          <p className="text-sm font-semibold text-red-500">-{stockSummary.totalPurchases}</p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-xs text-gray-400 mb-0.5">Current</p>
+                          <p className="text-sm font-semibold text-gray-700">{stockSummary.currentStock}</p>
+                        </div>
+                      </div>
+                    )}
                     {stockMovements.map((m) => {
                       const isIncrease = m.quantity > 0;
                       const typeLabels: Record<string, string> = {
