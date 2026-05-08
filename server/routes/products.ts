@@ -107,6 +107,8 @@ export function registerProductRoutes(app: Express): void {
         } as typeof products.$inferInsert).returning();
 
         // Auto-create an initial batch so the product is immediately FEFO-trackable
+        // (only needed when there is actual stock to track).
+        let initialBatchId: number | undefined;
         if (initialStock > 0) {
           const [initialBatch] = await tx.insert(productBatches).values({
             productId: newProduct.id,
@@ -115,21 +117,22 @@ export function registerProductRoutes(app: Express): void {
             status: 'active',
             notes: 'Initial stock batch (auto-created on product creation)',
           }).returning();
-
-          // Write the matching stock movement so history starts from 0 with a
-          // clear "Initial stock" entry — no unexplained stock ever.
-          await tx.insert(stockMovements).values({
-            productId: newProduct.id,
-            wholesalerId: targetUserId,
-            movementType: 'initial',
-            quantity: initialStock,
-            unitType: 'units',
-            stockBefore: 0,
-            stockAfter: initialStock,
-            reason: 'Initial stock',
-            batchId: initialBatch.id,
-          });
+          initialBatchId = initialBatch.id;
         }
+
+        // Always write the opening stock movement — even at 0 — so every product's
+        // history starts cleanly and the summary strip identity always balances.
+        await tx.insert(stockMovements).values({
+          productId: newProduct.id,
+          wholesalerId: targetUserId,
+          movementType: 'initial',
+          quantity: initialStock,
+          unitType: 'units',
+          stockBefore: 0,
+          stockAfter: initialStock,
+          reason: 'Initial stock',
+          batchId: initialBatchId ?? null,
+        });
         return newProduct;
       });
 

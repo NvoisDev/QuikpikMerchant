@@ -288,21 +288,39 @@ async function runStartupMigrations() {
     // Task #1032: Link stock movements to the batch they came from for better audit trails
     `ALTER TABLE stock_movements ADD COLUMN IF NOT EXISTS batch_id INTEGER`,
     `DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE table_name='stock_movements' AND constraint_name='stock_movements_batch_id_fkey') THEN ALTER TABLE stock_movements ADD CONSTRAINT stock_movements_batch_id_fkey FOREIGN KEY (batch_id) REFERENCES product_batches(id) ON DELETE SET NULL; END IF; END $$`,
-    // Task #1044: Backfill missing 'initial' stock movement for products whose "Initial Stock"
-    // batch has no corresponding movement record. INSERT ... WHERE NOT EXISTS is fully idempotent
-    // — becomes a no-op on every startup once the rows exist.
+    // Task #1046: Comprehensive backfill of missing 'initial' stock movements.
+    // Covers ALL products with no initial movement — whether they had an Initial Stock
+    // batch or not, and whether that batch had quantity 0 or >0.
+    // Opening stock is derived from stock_before of the product's earliest movement
+    // (i.e. what the stock was just before any activity started). For products with
+    // no movements at all, opening stock defaults to 0.
+    // The movement is timestamped 1 second before the earliest movement so it sorts first.
+    // Fully idempotent — WHERE NOT EXISTS makes it a no-op once rows exist.
     `INSERT INTO stock_movements (product_id, wholesaler_id, movement_type, quantity, unit_type, stock_before, stock_after, reason, batch_id, created_at)
-     SELECT DISTINCT ON (pb.product_id) pb.product_id, p.wholesaler_id, 'initial', pb.quantity, 'units', 0, pb.quantity, 'Initial stock', pb.id, pb.created_at
-     FROM product_batches pb
-     JOIN products p ON p.id = pb.product_id
-     WHERE pb.batch_number = 'Initial Stock'
-       AND pb.quantity > 0
-       AND NOT EXISTS (
-         SELECT 1 FROM stock_movements sm
-         WHERE sm.product_id = pb.product_id
-           AND sm.movement_type = 'initial'
-       )
-     ORDER BY pb.product_id, pb.id ASC`,
+     SELECT
+       p.id,
+       p.wholesaler_id,
+       'initial',
+       COALESCE(first_mv.stock_before, 0),
+       'units',
+       0,
+       COALESCE(first_mv.stock_before, 0),
+       'Initial stock',
+       (SELECT pb.id FROM product_batches pb WHERE pb.product_id = p.id AND pb.batch_number = 'Initial Stock' ORDER BY pb.id ASC LIMIT 1),
+       COALESCE(first_mv.created_at, p.created_at) - INTERVAL '1 second'
+     FROM products p
+     LEFT JOIN LATERAL (
+       SELECT sm.stock_before, sm.created_at
+       FROM stock_movements sm
+       WHERE sm.product_id = p.id
+       ORDER BY sm.created_at ASC, sm.id ASC
+       LIMIT 1
+     ) first_mv ON true
+     WHERE NOT EXISTS (
+       SELECT 1 FROM stock_movements sm
+       WHERE sm.product_id = p.id
+         AND sm.movement_type = 'initial'
+     )`,
   ];
   for (const stmt of migrations) {
     await db.execute(sql.raw(stmt));
