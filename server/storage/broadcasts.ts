@@ -562,6 +562,9 @@ export class BroadcastStorage extends CustomerStorage {
         case 'purchase':
           totalPurchases += Math.abs(movement.quantity); // purchases are negative
           break;
+        case 'return':
+          totalPurchases -= Math.abs(movement.quantity); // returns offset sales
+          break;
         case 'manual_increase':
           totalIncreases += movement.quantity;
           break;
@@ -570,6 +573,8 @@ export class BroadcastStorage extends CustomerStorage {
           break;
       }
     });
+    // Never show a negative net-sold figure (edge case: more returns logged than purchases)
+    totalPurchases = Math.max(0, totalPurchases);
 
     // Get current stock from product
     const product = await this.getProduct(productId);
