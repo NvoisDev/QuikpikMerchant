@@ -733,6 +733,9 @@ export const orders = pgTable("orders", {
   // to a partial index but compatible with Drizzle's onConflictDoNothing target syntax).
   idempotencyKey: varchar("idempotency_key", { length: 64 }),
 
+  // Task #1047: Invoice notification tracking — null=legacy/untracked, 'pending_send'=auto-send disabled, 'sent'=notifications dispatched
+  notificationStatus: varchar("notification_status", { length: 20 }),
+
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => [

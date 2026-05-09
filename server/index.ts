@@ -288,6 +288,16 @@ async function runStartupMigrations() {
     // Task #1032: Link stock movements to the batch they came from for better audit trails
     `ALTER TABLE stock_movements ADD COLUMN IF NOT EXISTS batch_id INTEGER`,
     `DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE table_name='stock_movements' AND constraint_name='stock_movements_batch_id_fkey') THEN ALTER TABLE stock_movements ADD CONSTRAINT stock_movements_batch_id_fkey FOREIGN KEY (batch_id) REFERENCES product_batches(id) ON DELETE SET NULL; END IF; END $$`,
+    // Task #1047: Invoice notification controls — add column + backfill user prefs
+    `ALTER TABLE orders ADD COLUMN IF NOT EXISTS notification_status VARCHAR(20)`,
+    // Backfill all wholesalers so they get the 5 new invoice-notification keys with safe defaults (all true).
+    // The || operator merges jsonb — existing keys (email, sms, etc.) are preserved.
+    // Only updates rows where the key is missing to keep the operation idempotent.
+    `UPDATE users
+     SET notification_preferences = COALESCE(notification_preferences, '{}'::jsonb)
+       || '{"autoSendInvoices":true,"invoiceEmail":true,"invoiceSms":true,"invoiceWhatsApp":true,"invoicePaymentLink":true}'::jsonb
+     WHERE role = 'wholesaler'
+       AND NOT (COALESCE(notification_preferences, '{}'::jsonb) ? 'autoSendInvoices')`,
     // Task #1046: Comprehensive backfill of missing 'initial' stock movements.
     // Covers ALL products with no initial movement — whether they had an Initial Stock
     // batch or not, and whether that batch had quantity 0 or >0.

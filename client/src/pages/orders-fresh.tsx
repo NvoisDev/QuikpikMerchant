@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Search, Package, DollarSign, Clock, Users, CheckCircle, X, Truck, MapPin, Camera, Image as ImageIcon, RefreshCw, Eye, FileText, UserPen, ShoppingCart, Loader2, MoreVertical, Share2 } from "lucide-react";
+import { Search, Package, DollarSign, Clock, Users, CheckCircle, X, Truck, MapPin, Camera, Image as ImageIcon, RefreshCw, Eye, FileText, UserPen, ShoppingCart, Loader2, MoreVertical, Share2, Send, Bell } from "lucide-react";
 import ElephantLoader from "@/components/ui/elephant-loader";
 import PageHeader from "@/components/PageHeader";
 import { Link, useLocation } from "wouter";
@@ -58,6 +58,7 @@ interface Order {
   wholesalerBusinessName?: string;
   businessProfileId?: number | null;
   businessProfileName?: string | null;
+  notificationStatus?: string | null;
   amountRefunded?: string;
   refundReason?: string;
   refundedAt?: string;
@@ -242,6 +243,32 @@ export default function OrdersFresh() {
   const [markAsPaidNote, setMarkAsPaidNote] = useState('');
   const [isMarkingPaid, setIsMarkingPaid] = useState(false);
   
+  // Send Invoice state
+  const [sendingInvoiceId, setSendingInvoiceId] = useState<number | null>(null);
+
+  const handleSendInvoice = async (order: Order, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSendingInvoiceId(order.id);
+    try {
+      const response = await fetch(`/api/orders/${order.id}/send-invoice`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      const data = await response.json();
+      if (response.ok && data.success) {
+        setOrders(prev => prev.map(o => o.id === order.id ? { ...o, notificationStatus: 'sent' } : o));
+        toast({ title: 'Invoice sent', description: 'Notifications dispatched to the customer.' });
+      } else {
+        toast({ title: 'Send failed', description: data.message || 'Please try again.', variant: 'destructive' });
+      }
+    } catch {
+      toast({ title: 'Send failed', description: 'Please try again.', variant: 'destructive' });
+    } finally {
+      setSendingInvoiceId(null);
+    }
+  };
+
   // Cancellation requests state
   const [cancellationRequests, setCancellationRequests] = useState<any[]>([]);
   const [showCancellationRequests, setShowCancellationRequests] = useState(false);
@@ -1280,7 +1307,12 @@ export default function OrdersFresh() {
                               <ShoppingCart className="w-3 h-3" />
                             </Badge>
                           )}
-                          {order.fulfillmentType && (
+                          {order.notificationStatus === 'pending_send' && (
+                            <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-300">
+                              <Bell className="w-2 h-2 mr-1" />Notify
+                            </Badge>
+                          )}
+                        {order.fulfillmentType && (
                             <Badge variant="outline" className="text-xs">
                               {order.fulfillmentType === 'delivery' ? (
                                 <><Truck className="w-2 h-2 mr-1" />Delivery</>
@@ -1311,16 +1343,25 @@ export default function OrdersFresh() {
                               <Button
                                 size="sm"
                                 variant="outline"
-                                disabled={updatingOrderId === order.id}
+                                disabled={updatingOrderId === order.id || sendingInvoiceId === order.id}
                                 onClick={(e) => e.stopPropagation()}
                                 className="h-7 w-7 p-0"
                               >
-                                {updatingOrderId === order.id
+                                {updatingOrderId === order.id || sendingInvoiceId === order.id
                                   ? <Loader2 className="h-3 w-3 animate-spin" />
                                   : <MoreVertical className="h-3 w-3" />}
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-44">
+                              {order.notificationStatus === 'pending_send' && (
+                                <DropdownMenuItem
+                                  onClick={(e) => handleSendInvoice(order, e)}
+                                  className="text-amber-600 focus:text-amber-700 cursor-pointer"
+                                >
+                                  <Send className="h-3.5 w-3.5 mr-2" />
+                                  Send Invoice
+                                </DropdownMenuItem>
+                              )}
                               {order.paymentStatus !== 'paid' && (
                                 <DropdownMenuItem
                                   onClick={(e) => { e.stopPropagation(); openMarkAsPaid(order); }}
@@ -1444,6 +1485,11 @@ export default function OrdersFresh() {
                             <ShoppingCart className="w-3 h-3 mr-1" />Order
                           </Badge>
                         )}
+                        {order.notificationStatus === 'pending_send' && (
+                          <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-300">
+                            <Bell className="w-3 h-3 mr-1" />Notify
+                          </Badge>
+                        )}
                         {order.fulfillmentType && (
                           <Badge variant="outline" className="text-xs">
                             {order.fulfillmentType === 'delivery' ? (
@@ -1461,16 +1507,25 @@ export default function OrdersFresh() {
                             <Button
                               size="sm"
                               variant="outline"
-                              disabled={updatingOrderId === order.id}
+                              disabled={updatingOrderId === order.id || sendingInvoiceId === order.id}
                               onClick={(e) => e.stopPropagation()}
                               className="text-xs w-full flex items-center justify-center gap-2 h-8"
                             >
-                              {updatingOrderId === order.id
+                              {updatingOrderId === order.id || sendingInvoiceId === order.id
                                 ? <><Loader2 className="h-3 w-3 animate-spin" /> Updating...</>
                                 : <><MoreVertical className="h-3 w-3" /> Actions</>}
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="w-44">
+                            {order.notificationStatus === 'pending_send' && (
+                              <DropdownMenuItem
+                                onClick={(e) => handleSendInvoice(order, e)}
+                                className="text-amber-600 focus:text-amber-700 cursor-pointer"
+                              >
+                                <Send className="h-4 w-4 mr-2" />
+                                Send Invoice
+                              </DropdownMenuItem>
+                            )}
                             {order.paymentStatus !== 'paid' && (
                               <DropdownMenuItem
                                 onClick={(e) => { e.stopPropagation(); openMarkAsPaid(order); }}

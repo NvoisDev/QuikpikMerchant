@@ -452,6 +452,11 @@ export function registerOrderCheckoutRoutes(
             const msg = emailError instanceof Error ? emailError.message : String(emailError);
             console.warn(`[sendgrid] stripe-checkout confirmation email failed [orderId=${order.id}]: ${msg}`);
           }
+
+          // Mark as sent — marketplace checkout always auto-sends (customer-initiated flow)
+          try {
+            await db.update(orders).set({ notificationStatus: 'sent' } as any).where(eq(orders.id, order.id));
+          } catch (_e) {}
         }
 
         // Send WhatsApp notification to wholesaler with wholesale reference

@@ -437,6 +437,29 @@ export function registerOrderCommsRoutes(app: Express): void {
     }
   });
 
+  // POST /api/orders/:id/send-invoice
+  // Manually trigger invoice notifications for an order (respects channel prefs, force re-sends)
+  app.post('/api/orders/:id/send-invoice', requireAuth, requireNotViewer, requireMemberPermission('orders'), async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) return res.status(400).json({ error: 'Invalid order ID' });
+      const user = req.user;
+      const effectiveWholesalerId = user.role === 'team_member' ? user.wholesalerId : user.id;
+
+      const order = await storage.getOrder(id);
+      if (!order) return res.status(404).json({ message: 'Order not found' });
+      if (order.wholesalerId !== effectiveWholesalerId) return res.status(403).json({ message: 'Not authorized' });
+
+      const { sendInvoiceNotifications } = await import('../services/invoiceNotificationService');
+      const result = await sendInvoiceNotifications(id, { force: true });
+
+      return res.json({ success: true, ...result });
+    } catch (error) {
+      console.error('Error sending invoice:', error);
+      return res.status(500).json({ message: 'Failed to send invoice' });
+    }
+  });
+
   // POST /api/orders/:id/share-invoice
   app.post('/api/orders/:id/share-invoice', requireAuth, requireNotViewer, requireMemberPermission('orders'), async (req: any, res) => {
     try {

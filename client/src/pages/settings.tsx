@@ -2043,12 +2043,87 @@ export default function Settings() {
                     </div>
                   </div>
 
+                  {/* Invoice Notifications */}
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2">
+                      <Receipt className="h-4 w-4 text-green-600" />
+                      <h4 className="font-semibold text-gray-800 text-sm sm:text-base">Invoice Notifications</h4>
+                    </div>
+                    <p className="text-sm text-gray-500">
+                      Control which channels fire when a new order is created, and whether notifications are sent automatically or held for manual review.
+                    </p>
+
+                    {/* Auto-send toggle */}
+                    <div className="border border-gray-200 rounded-lg p-4 space-y-3">
+                      <div className="flex items-center justify-between gap-4">
+                        <div>
+                          <p className="text-sm font-medium text-gray-800">Auto-send invoices</p>
+                          <p className="text-xs text-gray-500 mt-0.5">When enabled, notifications are sent immediately when a new order arrives. Disable to review orders before notifying customers.</p>
+                        </div>
+                        <button
+                          type="button"
+                          role="switch"
+                          aria-checked={(user?.notificationPreferences as any)?.autoSendInvoices !== false}
+                          onClick={async () => {
+                            const current = (user?.notificationPreferences as any) || {};
+                            const next = { ...current, autoSendInvoices: current.autoSendInvoices === false ? true : false };
+                            try {
+                              await apiRequest('PUT', '/api/user/profile', { notificationPreferences: next });
+                              queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
+                              toast({ title: next.autoSendInvoices ? 'Auto-send enabled' : 'Auto-send disabled' });
+                            } catch { toast({ title: 'Save failed', variant: 'destructive' }); }
+                          }}
+                          className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 ${(user?.notificationPreferences as any)?.autoSendInvoices !== false ? 'bg-green-600' : 'bg-gray-200'}`}
+                        >
+                          <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${(user?.notificationPreferences as any)?.autoSendInvoices !== false ? 'translate-x-5' : 'translate-x-0'}`} />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Channel toggles */}
+                    <div className="border border-gray-200 rounded-lg divide-y divide-gray-100">
+                      {([
+                        { key: 'invoiceEmail',       label: 'Email',        desc: 'Send invoice PDF to the customer\'s email address' },
+                        { key: 'invoiceSms',         label: 'SMS',          desc: 'Send a text message with a link to view the invoice' },
+                        { key: 'invoiceWhatsApp',    label: 'WhatsApp',     desc: 'Send a WhatsApp message with the invoice link (requires Twilio)' },
+                        { key: 'invoicePaymentLink', label: 'Payment link', desc: 'Include the Stripe payment link in the SMS/WhatsApp message (when available)' },
+                      ] as const).map(({ key, label, desc }) => {
+                        const prefs = (user?.notificationPreferences as any) || {};
+                        const isOn = prefs[key] !== false;
+                        return (
+                          <div key={key} className="flex items-center justify-between gap-4 p-4">
+                            <div>
+                              <p className="text-sm font-medium text-gray-800">{label}</p>
+                              <p className="text-xs text-gray-500 mt-0.5">{desc}</p>
+                            </div>
+                            <button
+                              type="button"
+                              role="switch"
+                              aria-checked={isOn}
+                              onClick={async () => {
+                                const next = { ...prefs, [key]: !isOn };
+                                try {
+                                  await apiRequest('PUT', '/api/user/profile', { notificationPreferences: next });
+                                  queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
+                                  toast({ title: `${label} notifications ${!isOn ? 'enabled' : 'disabled'}` });
+                                } catch { toast({ title: 'Save failed', variant: 'destructive' }); }
+                              }}
+                              className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 ${isOn ? 'bg-green-600' : 'bg-gray-200'}`}
+                            >
+                              <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${isOn ? 'translate-x-5' : 'translate-x-0'}`} />
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
                   {/* Other notifications */}
                   <div className="space-y-3">
                     <h4 className="font-semibold text-gray-800 text-sm sm:text-base">Other Notifications</h4>
                     <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 sm:p-4">
                       <p className="text-sm text-gray-600">
-                        Order confirmations, payment receipts, and WhatsApp broadcast messages are sent automatically — no configuration needed.
+                        Payment receipts and WhatsApp broadcast messages are sent automatically — no configuration needed.
                       </p>
                     </div>
                   </div>

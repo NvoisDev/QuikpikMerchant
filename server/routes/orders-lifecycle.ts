@@ -11,6 +11,7 @@ import { isImpersonating } from "../utils/isImpersonating";
 import { productBatches } from "@shared/schema";
 import { logQuoteActivity } from "../utils/quote-activity";
 import { sendCancellationNotification } from "../services/orderCancellationNotificationService";
+import { sendInvoiceNotifications } from "../services/invoiceNotificationService";
 import {
   storage, db,
   requireAuth, requireNotViewer, requireMemberPermission,
@@ -715,19 +716,17 @@ export function registerOrderLifecycleRoutes(app: Express): void {
       const customer = await storage.getUser(userId);
 
       if (!isDeduped && wholesaler && customer) {
-        try {
-          await sendCustomerInvoiceEmail(customer, order, await Promise.all(orderItemsList.map(async item => {
-            const prod = await storage.getProduct(item.productId);
-            return {
-              ...item,
-              productName: prod?.name || 'Product',
-              packDescriptor: formatPackDescriptor(prod?.packQuantity || prod?.quantityInPack, prod?.sizePerUnit || prod?.unitSize, prod?.unitOfMeasure),
-              product: prod ? { name: prod.name, packQuantity: prod.packQuantity, quantityInPack: prod.quantityInPack, sizePerUnit: prod.sizePerUnit, unitSize: prod.unitSize, unitOfMeasure: prod.unitOfMeasure } : null
-            };
-          })), wholesaler);
-        } catch (emailError) {
-          const msg = emailError instanceof Error ? emailError.message : String(emailError);
-          console.warn(`[sendgrid] order confirmation email failed: ${msg}`);
+        const prefs: Record<string, any> = (wholesaler.notificationPreferences as any) || {};
+        const autoSend = prefs.autoSendInvoices !== false;
+
+        if (!autoSend) {
+          // Wholesaler has disabled auto-send — mark as pending so they can send manually later
+          await db.update(orders).set({ notificationStatus: 'pending_send' } as any).where(eq(orders.id, order.id));
+        } else {
+          // Auto-send via the service (handles email, SMS, WhatsApp per prefs)
+          sendInvoiceNotifications(order.id).catch((err) => {
+            console.warn(`[invoiceNotificationService] Background send failed for order ${order.id}:`, err);
+          });
         }
       }
 
