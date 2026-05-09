@@ -245,6 +245,7 @@ export default function OrdersFresh() {
   
   // Send Invoice state
   const [sendingInvoiceId, setSendingInvoiceId] = useState<number | null>(null);
+  const [notificationFilter, setNotificationFilter] = useState<'pending_send' | ''>('');
 
   const handleSendInvoice = async (order: Order, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -256,7 +257,11 @@ export default function OrdersFresh() {
         headers: { 'Content-Type': 'application/json' },
       });
       const data = await response.json();
-      if (response.ok && data.success) {
+      if (response.status === 409) {
+        // Already sent — update the badge to reflect the real state
+        setOrders(prev => prev.map(o => o.id === order.id ? { ...o, notificationStatus: 'sent' } : o));
+        toast({ title: 'Already sent', description: 'Invoice notifications were already dispatched for this order.' });
+      } else if (response.ok && data.success) {
         setOrders(prev => prev.map(o => o.id === order.id ? { ...o, notificationStatus: 'sent' } : o));
         toast({ title: 'Invoice sent', description: 'Notifications dispatched to the customer.' });
       } else {
@@ -499,6 +504,19 @@ export default function OrdersFresh() {
   };
 
   const handleStatusFilter = (status: string) => {
+    // "pending_send_notify" is a special value that maps to the notification filter,
+    // not the order status filter — keep statusFilter empty so the server is not confused
+    if (status === 'pending_send_notify') {
+      setNotificationFilter('pending_send');
+      setStatusFilter('');
+      statusFilterRef.current = '';
+      setCurrentPage(1);
+      // Reload orders without a status restriction so all pending-send orders are visible
+      loadOrders(1, searchQuery);
+      return;
+    }
+    // Clear notification filter when switching to any normal status
+    setNotificationFilter('');
     setStatusFilter(status);
     statusFilterRef.current = status;
     setCurrentPage(1);
@@ -736,8 +754,13 @@ export default function OrdersFresh() {
       })
     : orders;
   
+  // Notification status filter (client-side — already-loaded orders)
+  const filteredByNotification = notificationFilter
+    ? filteredByStatus.filter(o => o.notificationStatus === notificationFilter)
+    : filteredByStatus;
+
   // Payment and delivery type filters are now applied server-side via loadOrders params
-  const filteredByPayment = filteredByStatus;
+  const filteredByPayment = filteredByNotification;
   const filteredByDelivery = filteredByPayment;
   
   // Apply date range filter (archive tab only)
@@ -984,7 +1007,7 @@ export default function OrdersFresh() {
         <div className="flex flex-wrap gap-2">
           <select 
             className="flex-1 min-w-[120px] sm:flex-none px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 bg-white"
-            value={statusFilter}
+            value={notificationFilter === 'pending_send' ? 'pending_send_notify' : statusFilter}
             onChange={(e) => handleStatusFilter(e.target.value)}
           >
             <option value="">All Status</option>
@@ -999,6 +1022,7 @@ export default function OrdersFresh() {
                 <option value="fulfilled">Fulfilled</option>
               </>
             )}
+            <option value="pending_send_notify">Pending Invoice Send</option>
           </select>
           
           <select 
@@ -1033,7 +1057,7 @@ export default function OrdersFresh() {
             <option value="90">Last 90 days</option>
           </select>
           
-          {(searchQuery || statusFilter || paymentStatusFilter || deliveryTypeFilter || dateRangeFilter) && (
+          {(searchQuery || statusFilter || paymentStatusFilter || deliveryTypeFilter || dateRangeFilter || notificationFilter) && (
             <Button
               variant="ghost"
               size="sm"
@@ -1046,6 +1070,7 @@ export default function OrdersFresh() {
                 setPaymentStatusFilter('');
                 setDeliveryTypeFilter('');
                 setDateRangeFilter('');
+                setNotificationFilter('');
                 loadOrders(1, '');
               }}
               className="text-sm whitespace-nowrap"
@@ -1312,6 +1337,11 @@ export default function OrdersFresh() {
                               <Bell className="w-2 h-2 mr-1" />Notify
                             </Badge>
                           )}
+                        {order.notificationStatus === 'sent' && (
+                            <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-300">
+                              <Send className="w-2 h-2 mr-1" />Sent
+                            </Badge>
+                          )}
                         {order.fulfillmentType && (
                             <Badge variant="outline" className="text-xs">
                               {order.fulfillmentType === 'delivery' ? (
@@ -1488,6 +1518,11 @@ export default function OrdersFresh() {
                         {order.notificationStatus === 'pending_send' && (
                           <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-300">
                             <Bell className="w-3 h-3 mr-1" />Notify
+                          </Badge>
+                        )}
+                        {order.notificationStatus === 'sent' && (
+                          <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-300">
+                            <Send className="w-3 h-3 mr-1" />Sent
                           </Badge>
                         )}
                         {order.fulfillmentType && (

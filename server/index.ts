@@ -291,13 +291,14 @@ async function runStartupMigrations() {
     // Task #1047: Invoice notification controls — add column + backfill user prefs
     `ALTER TABLE orders ADD COLUMN IF NOT EXISTS notification_status VARCHAR(20)`,
     // Backfill all wholesalers so they get the 5 new invoice-notification keys with safe defaults (all true).
-    // The || operator merges jsonb — existing keys (email, sms, etc.) are preserved.
-    // Only updates rows where the key is missing to keep the operation idempotent.
+    // Defaults are on the LEFT of ||, existing prefs are on the RIGHT — so any key a wholesaler
+    // has already set (e.g. invoiceEmail:false) is preserved, while missing keys are added.
+    // Running every restart is safe (idempotent) because existing values always win.
     `UPDATE users
-     SET notification_preferences = COALESCE(notification_preferences, '{}'::jsonb)
-       || '{"autoSendInvoices":true,"invoiceEmail":true,"invoiceSms":true,"invoiceWhatsApp":true,"invoicePaymentLink":true}'::jsonb
-     WHERE role = 'wholesaler'
-       AND NOT (COALESCE(notification_preferences, '{}'::jsonb) ? 'autoSendInvoices')`,
+     SET notification_preferences =
+       '{"autoSendInvoices":true,"invoiceEmail":true,"invoiceSms":true,"invoiceWhatsApp":true,"invoicePaymentLink":true}'::jsonb
+       || COALESCE(notification_preferences, '{}'::jsonb)
+     WHERE role = 'wholesaler'`,
     // Task #1046: Comprehensive backfill of missing 'initial' stock movements.
     // Covers ALL products with no initial movement — whether they had an Initial Stock
     // batch or not, and whether that batch had quantity 0 or >0.

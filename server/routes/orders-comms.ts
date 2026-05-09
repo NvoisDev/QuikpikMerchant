@@ -451,7 +451,11 @@ export function registerOrderCommsRoutes(app: Express): void {
       if (order.wholesalerId !== effectiveWholesalerId) return res.status(403).json({ message: 'Not authorized' });
 
       const { sendInvoiceNotifications } = await import('../services/invoiceNotificationService');
-      const result = await sendInvoiceNotifications(id, { force: true });
+      const result = await sendInvoiceNotifications(id);
+
+      if (result.alreadySent) {
+        return res.status(409).json({ message: 'Invoice notifications have already been sent for this order.' });
+      }
 
       return res.json({ success: true, ...result });
     } catch (error) {
