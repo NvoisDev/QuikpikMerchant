@@ -1,10 +1,10 @@
 import { type Request, type Response } from "express";
 import { db } from "./db";
+import { sql } from "drizzle-orm";
 
 export async function healthCheck(req: Request, res: Response) {
   try {
-    // Check database connection
-    await db.execute("SELECT 1");
+    await db.execute(sql`SELECT 1`);
     
     const healthStatus = {
       status: "healthy",
@@ -30,6 +30,17 @@ export async function healthCheck(req: Request, res: Response) {
   }
 }
 
+const DB_ATTEMPT_TIMEOUT_MS = 10_000;
+
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms)
+    ),
+  ]);
+}
+
 export async function validateDatabaseConnection(
   maxAttempts = 8,
   baseDelayMs = 3000,
@@ -37,7 +48,7 @@ export async function validateDatabaseConnection(
 ): Promise<boolean> {
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
-      await db.execute("SELECT 1");
+      await withTimeout(db.execute(sql`SELECT 1`), DB_ATTEMPT_TIMEOUT_MS, `DB attempt ${attempt}`);
       console.log("✅ Database connection validated successfully");
       return true;
     } catch (error) {

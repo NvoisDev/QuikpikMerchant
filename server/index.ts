@@ -557,7 +557,7 @@ httpServer.listen({ port, host: '0.0.0.0', reusePort: true }, () => {
       await new Promise<void>((resolve) => {
         const retryInterval = setInterval(async () => {
           try {
-            await db.execute("SELECT 1");
+            await db.execute(sql`SELECT 1`);
             console.log("✅ Database reconnected successfully after background retries");
             dbConnected = true;
             clearInterval(retryInterval);

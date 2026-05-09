@@ -1,9 +1,6 @@
-import { Pool, neonConfig } from '@neondatabase/serverless';
-import { drizzle } from 'drizzle-orm/neon-serverless';
-import ws from "ws";
+import { neon } from '@neondatabase/serverless';
+import { drizzle } from 'drizzle-orm/neon-http';
 import * as schema from "@shared/schema";
-
-neonConfig.webSocketConstructor = ws;
 
 if (!process.env.DATABASE_URL) {
   throw new Error(
@@ -11,18 +8,6 @@ if (!process.env.DATABASE_URL) {
   );
 }
 
-export const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  max: 5,
-  connectionTimeoutMillis: 10000, // Fail fast if Neon is unreachable — prevents silent hang at startup
-  idleTimeoutMillis: 30000,
-});
+const sql = neon(process.env.DATABASE_URL);
 
-// Prevent the process from crashing when Neon terminates an idle connection.
-// The pool automatically replaces the dropped client on the next query, so
-// swallowing the error here is safe and intentional.
-pool.on('error', (err) => {
-  console.error('PG Pool error (connection dropped by server):', err.message);
-});
-
-export const db = drizzle({ client: pool, schema });
+export const db = drizzle({ client: sql, schema });
