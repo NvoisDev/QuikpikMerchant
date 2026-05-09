@@ -35,7 +35,7 @@
 import { storage } from "../storage";
 import { db } from "../db";
 import { orders } from "@shared/schema";
-import { eq, or, isNull } from "drizzle-orm";
+import { and, eq, or, isNull } from "drizzle-orm";
 import { sendSMS } from "./smsService";
 import { sendWhatsAppMessage } from "./whatsappService";
 import { formatPackDescriptor } from "../email-templates";
@@ -94,26 +94,25 @@ export async function sendInvoiceNotifications(
   };
 
   // ── Atomic compare-and-set guard ──────────────────────────────────────────
-  // This UPDATE is atomic at the DB level. Only one concurrent caller wins.
-  // 'claiming' is treated identically to 'pending_send' in this WHERE clause so
-  // a crashed-mid-send order can be retried without manual intervention.
-  const claimed = await db
+  // Single SQL statement: UPDATE … WHERE id=:id AND (status IS NULL OR status='pending_send').
+  // The database guarantees only ONE concurrent caller matches and updates the row.
+  // Any other concurrent caller gets 0 rows back → alreadySent.
+  // 'claiming' is an intermediate state: already-'claiming' rows do NOT match the WHERE,
+  // so a second concurrent press is safely rejected. A crashed row stays in 'claiming'
+  // indefinitely; admin can reset it to 'pending_send' if needed (rare edge case).
+  const claimedRows = await db
     .update(orders)
     .set({ notificationStatus: 'claiming' })
     .where(
-      eq(orders.id, orderId),
+      and(
+        eq(orders.id, orderId),
+        or(isNull(orders.notificationStatus), eq(orders.notificationStatus, 'pending_send'))
+      )
     )
-    // Restrict to claimable states only — excludes 'sent' and the current 'claiming' holder
-    .returning({ id: orders.id, prevStatus: orders.notificationStatus });
+    .returning({ id: orders.id });
 
-  // The actual WHERE restriction: check if the prev status allows claiming
-  // (Drizzle doesn't expose conditional WHERE on set values easily, so we verify after)
-  const row = claimed.find(r => r.id === orderId);
-  if (!row || row.prevStatus === 'sent') {
-    // Either not found or already sent — undo our update if we accidentally claimed a 'sent' row
-    if (row?.prevStatus === 'sent') {
-      await db.update(orders).set({ notificationStatus: 'sent' }).where(eq(orders.id, orderId));
-    }
+  // Zero rows → order was 'sent', 'claiming', or not found — nothing to do.
+  if (claimedRows.length === 0) {
     result.alreadySent = true;
     return result;
   }
