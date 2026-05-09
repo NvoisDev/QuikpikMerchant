@@ -1,4 +1,5 @@
 import express, { type Request, Response, NextFunction } from "express";
+import { createServer } from "http";
 import { log } from "./vite";
 
 // Global safety nets — ensure unexpected errors are always visible in logs.
@@ -495,6 +496,39 @@ app.use((req, res, next) => {
   next();
 });
 
+// Readiness flag — set to true once DB and routes are fully initialised.
+// API routes return 503 until ready; /api/health always responds.
+let isReady = false;
+
+// Gate middleware — must be registered before routes so it runs first.
+// The /api/health path bypasses this so the platform can always probe it.
+app.use((req: Request, res: Response, next: NextFunction) => {
+  if (!isReady && req.path.startsWith('/api') && req.path !== '/api/health') {
+    return res.status(503).json({ error: 'Server is starting up, please try again in a moment.' });
+  }
+  next();
+});
+
+// Minimal health endpoint registered immediately so the deployment platform
+// receives a valid response as soon as the port is open.
+app.get('/api/health', (_req: Request, res: Response) => {
+  res.json({
+    status: isReady ? 'healthy' : 'starting',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+  });
+});
+
+const port = 5000;
+
+// Create the HTTP server and start listening IMMEDIATELY so the deployment
+// platform sees port 5000 open within seconds, before any DB work begins.
+const httpServer = createServer(app);
+httpServer.listen({ port, host: '0.0.0.0', reusePort: true }, () => {
+  console.log(`✅ Port ${port} open — server accepting connections (DB init in progress)`);
+  log(`serving on port ${port}`);
+});
+
 (async () => {
   try {
     console.log("🚀 Starting Quikpik server...");
@@ -510,11 +544,29 @@ app.use((req, res, next) => {
       console.warn("⚠️  OPENAI_API_KEY not set — AI features will be unavailable");
     }
 
-    // Validate database connection first
-    const dbConnected = await validateDatabaseConnection();
+    // Validate database connection — retries up to 8× with backoff (capped at 30s).
+    // Because the port is already open, this can take as long as needed
+    // without triggering a "port never opened" failure.
+    let dbConnected = await validateDatabaseConnection();
+
+    // If initial attempts all fail, keep retrying in a background loop every 30s.
+    // This means the server automatically becomes ready when Neon recovers,
+    // without requiring a process restart.
     if (!dbConnected) {
-      console.error("❌ Server startup failed: Database connection could not be established");
-      process.exit(1);
+      console.warn("⚠️  Initial DB connection attempts failed — will retry every 30s in the background");
+      await new Promise<void>((resolve) => {
+        const retryInterval = setInterval(async () => {
+          try {
+            await db.execute("SELECT 1");
+            console.log("✅ Database reconnected successfully after background retries");
+            dbConnected = true;
+            clearInterval(retryInterval);
+            resolve();
+          } catch {
+            console.warn("⚠️  Background DB retry failed — will try again in 30s");
+          }
+        }, 30_000);
+      });
     }
 
     // Apply idempotent schema migrations (ADD COLUMN IF NOT EXISTS)
@@ -528,53 +580,39 @@ app.use((req, res, next) => {
     // Ensure Stripe prices for Standard/Premium match the correct monthly_price amounts
     await fixStripePricesIfNeeded();
 
-    // Lazy load heavy modules
+    // Register all API routes onto the shared express app
     const { registerRoutes } = await import("./routes");
     const { setupVite, serveStatic } = await import("./vite");
-    
-    const server = await registerRoutes(app);
-    
-    // Webhook server removed with subscription system
 
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-    const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
+    await registerRoutes(app);
 
-    res.status(status).json({ message });
-    throw err;
-  });
+    app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+      const status = err.status || err.statusCode || 500;
+      const message = err.message || "Internal Server Error";
+      res.status(status).json({ message });
+      throw err;
+    });
 
-  // importantly only setup vite in development and after
-  // setting up all the other routes so the catch-all route
-  // doesn't interfere with the other routes
-  if (app.get("env") === "development") {
-    await setupVite(app, server);
-  } else {
-    serveStatic(app);
-  }
+    // Vite dev server or static assets — must come after API routes
+    if (app.get("env") === "development") {
+      await setupVite(app, httpServer);
+    } else {
+      serveStatic(app);
+    }
 
-  // ALWAYS serve the app on port 5000
-  // this serves both the API and the client.
-  // It is the only port that is not firewalled.
-  const port = 5000;
-  server.listen({
-    port,
-    host: "0.0.0.0",
-    reusePort: true,
-  }, async () => {
-    console.log(`✅ Server successfully started on port ${port}`);
+    // Mark server as ready — gate middleware now passes all requests through
+    isReady = true;
+    console.log(`✅ Server fully initialised and ready on port ${port}`);
     console.log(`🌐 Health check available at: http://localhost:${port}/api/health`);
-    
-    // Start automatic database maintenance
+
+    // Start background services
     startDatabaseMaintenance();
     console.log(`🧹 Database maintenance scheduler enabled`);
-    
-    // Start stock alert monitoring (runs once daily at 8 AM)
+
     const { stockAlertService } = await import("./services/stockAlertService");
     cron.schedule('0 8 * * *', async () => {
       console.log('📦 Running daily stock level check...');
       try {
-        // Expire any batches whose expiry_date has passed before sending alerts
         const { storage: storageInstance } = await import("./storage");
         const expiredCount = await storageInstance.expireOldBatches();
         if (expiredCount > 0) {
@@ -586,8 +624,7 @@ app.use((req, res, next) => {
       }
     });
     console.log(`🔔 Stock alert system enabled (daily at 8 AM)`);
-    
-    // Start payment reminder scheduler (runs daily at 9 AM)
+
     cron.schedule('0 9 * * *', async () => {
       console.log('📧 Running payment reminder check...');
       try {
@@ -598,7 +635,6 @@ app.use((req, res, next) => {
     });
     console.log(`📧 Payment reminder system enabled (daily at 9 AM)`);
 
-    // Start promotion start/end notifications (runs daily at 10 AM)
     const { promotionNotificationService } = await import("./services/promotionNotificationService");
     cron.schedule('0 10 * * *', async () => {
       console.log('🎯 Running promotion notification check...');
@@ -610,10 +646,6 @@ app.use((req, res, next) => {
     });
     console.log(`🎯 Promotion notification system enabled (daily at 10 AM)`);
 
-    // Daily pricing & plan maintenance at 11 AM:
-    //   1. Switch monthly Standard/Premium to full rates on 1 May 2027 (no-op before that)
-    //   2. Migrate intro annual subscribers to full-rate annual plans on 1 May 2027 (no-op before that)
-    //   3. Re-run Stripe price fix so any DB price change made above is reflected in Stripe same day
     cron.schedule('0 11 * * *', async () => {
       try {
         const { SubscriptionService: SS } = await import("./subscription-service");
@@ -626,11 +658,8 @@ app.use((req, res, next) => {
     });
     console.log(`📅 Daily pricing & plan migration scheduler enabled (daily at 11 AM)`);
 
-    log(`serving on port ${port}`);
-  });
-  
-} catch (error) {
-  console.error("❌ Server startup failed:", error);
-  process.exit(1);
-}
+  } catch (error) {
+    console.error("❌ Server initialisation error:", error);
+    // Keep process alive — port is already open, 503 gate protects routes
+  }
 })();
