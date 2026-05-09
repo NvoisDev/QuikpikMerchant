@@ -290,6 +290,8 @@ async function runStartupMigrations() {
     `DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE table_name='stock_movements' AND constraint_name='stock_movements_batch_id_fkey') THEN ALTER TABLE stock_movements ADD CONSTRAINT stock_movements_batch_id_fkey FOREIGN KEY (batch_id) REFERENCES product_batches(id) ON DELETE SET NULL; END IF; END $$`,
     // Task #1047: Invoice notification controls — add column + backfill user prefs
     `ALTER TABLE orders ADD COLUMN IF NOT EXISTS notification_status VARCHAR(20)`,
+    `ALTER TABLE orders ADD COLUMN IF NOT EXISTS notification_claimed_at TIMESTAMP`,
+    `ALTER TABLE orders ADD COLUMN IF NOT EXISTS notification_sent_at TIMESTAMP`,
     // Backfill all wholesalers so they get the 5 new invoice-notification keys with safe defaults (all true).
     // Defaults are on the LEFT of ||, existing prefs are on the RIGHT — so any key a wholesaler
     // has already set (e.g. invoiceEmail:false) is preserved, while missing keys are added.
