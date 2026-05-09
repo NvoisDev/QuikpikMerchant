@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Search, Package, DollarSign, Clock, Users, CheckCircle, X, Truck, MapPin, Camera, Image as ImageIcon, RefreshCw, Eye, FileText, UserPen, ShoppingCart, Loader2, MoreVertical, Share2, Send, Bell } from "lucide-react";
+import { Search, Package, DollarSign, Clock, Users, CheckCircle, X, Truck, MapPin, Camera, Image as ImageIcon, RefreshCw, Eye, FileText, UserPen, ShoppingCart, Loader2, MoreVertical, Share2 } from "lucide-react";
 import ElephantLoader from "@/components/ui/elephant-loader";
 import PageHeader from "@/components/PageHeader";
 import { Link, useLocation } from "wouter";
@@ -58,7 +58,6 @@ interface Order {
   wholesalerBusinessName?: string;
   businessProfileId?: number | null;
   businessProfileName?: string | null;
-  notificationStatus?: string | null;
   amountRefunded?: string;
   refundReason?: string;
   refundedAt?: string;
@@ -243,37 +242,6 @@ export default function OrdersFresh() {
   const [markAsPaidNote, setMarkAsPaidNote] = useState('');
   const [isMarkingPaid, setIsMarkingPaid] = useState(false);
   
-  // Send Invoice state
-  const [sendingInvoiceId, setSendingInvoiceId] = useState<number | null>(null);
-  const [notificationFilter, setNotificationFilter] = useState<'pending_send' | ''>('');
-
-  const handleSendInvoice = async (order: Order, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setSendingInvoiceId(order.id);
-    try {
-      const response = await fetch(`/api/orders/${order.id}/send-invoice`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-      });
-      const data = await response.json();
-      if (response.status === 409) {
-        // Already sent — update the badge to reflect the real state
-        setOrders(prev => prev.map(o => o.id === order.id ? { ...o, notificationStatus: 'sent' } : o));
-        toast({ title: 'Already sent', description: 'Invoice notifications were already dispatched for this order.' });
-      } else if (response.ok && data.success) {
-        setOrders(prev => prev.map(o => o.id === order.id ? { ...o, notificationStatus: 'sent' } : o));
-        toast({ title: 'Invoice sent', description: 'Notifications dispatched to the customer.' });
-      } else {
-        toast({ title: 'Send failed', description: data.message || 'Please try again.', variant: 'destructive' });
-      }
-    } catch {
-      toast({ title: 'Send failed', description: 'Please try again.', variant: 'destructive' });
-    } finally {
-      setSendingInvoiceId(null);
-    }
-  };
-
   // Cancellation requests state
   const [cancellationRequests, setCancellationRequests] = useState<any[]>([]);
   const [showCancellationRequests, setShowCancellationRequests] = useState(false);
@@ -331,7 +299,6 @@ export default function OrdersFresh() {
         ...(deliveryTypeRef.current && { fulfillmentType: deliveryTypeRef.current }),
         ...(paymentStatusRef.current && { paymentStatus: paymentStatusRef.current }),
         ...(statusFilterRef.current && { status: statusFilterRef.current }),
-        ...(notificationFilter && { notificationStatus: notificationFilter }),
       });
       const response = await fetch(`/api/orders-paginated?${params}`, {
         credentials: 'include',
@@ -505,8 +472,6 @@ export default function OrdersFresh() {
   };
 
   const handleStatusFilter = (status: string) => {
-    // Clear notification filter when switching to any normal status
-    setNotificationFilter('');
     setStatusFilter(status);
     statusFilterRef.current = status;
     setCurrentPage(1);
@@ -744,11 +709,8 @@ export default function OrdersFresh() {
       })
     : orders;
   
-  // Notification status filter is applied server-side via loadOrders params (notificationStatus query param)
-  const filteredByNotification = filteredByStatus;
-
   // Payment and delivery type filters are now applied server-side via loadOrders params
-  const filteredByPayment = filteredByNotification;
+  const filteredByPayment = filteredByStatus;
   const filteredByDelivery = filteredByPayment;
   
   // Apply date range filter (archive tab only)
@@ -926,12 +888,12 @@ export default function OrdersFresh() {
     <div className="p-4 md:p-6 space-y-4 md:space-y-6">
 
       {/* Archive Tabs */}
-      <div className="flex border-b border-slate-200 overflow-x-auto">
+      <div className="flex border-b border-slate-200">
         {customerIdFilter && (
           <button
-            onClick={() => { setArchiveTab('all'); setNotificationFilter(''); deliveryTypeRef.current = ''; paymentStatusRef.current = ''; statusFilterRef.current = ''; setStatusFilter(''); setPaymentStatusFilter(''); setDeliveryTypeFilter(''); setDateRangeFilter(''); loadOrders(1, searchQuery, 'all'); if (!customerIdFilter) loadOrderStats('all'); }}
-            className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
-              archiveTab === 'all' && !notificationFilter
+            onClick={() => { setArchiveTab('all'); deliveryTypeRef.current = ''; paymentStatusRef.current = ''; statusFilterRef.current = ''; setStatusFilter(''); setPaymentStatusFilter(''); setDeliveryTypeFilter(''); setDateRangeFilter(''); loadOrders(1, searchQuery, 'all'); if (!customerIdFilter) loadOrderStats('all'); }}
+            className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+              archiveTab === 'all'
                 ? 'border-emerald-600 text-emerald-600'
                 : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
             }`}
@@ -943,9 +905,9 @@ export default function OrdersFresh() {
           </button>
         )}
         <button
-          onClick={() => { setArchiveTab('active'); setNotificationFilter(''); deliveryTypeRef.current = ''; paymentStatusRef.current = ''; statusFilterRef.current = ''; setStatusFilter(''); setPaymentStatusFilter(''); setDeliveryTypeFilter(''); setDateRangeFilter(''); loadOrders(1, searchQuery, 'active'); if (!customerIdFilter) loadOrderStats('active'); }}
-          className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
-            archiveTab === 'active' && !notificationFilter
+          onClick={() => { setArchiveTab('active'); deliveryTypeRef.current = ''; paymentStatusRef.current = ''; statusFilterRef.current = ''; setStatusFilter(''); setPaymentStatusFilter(''); setDeliveryTypeFilter(''); setDateRangeFilter(''); loadOrders(1, searchQuery, 'active'); if (!customerIdFilter) loadOrderStats('active'); }}
+          className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+            archiveTab === 'active'
               ? 'border-emerald-600 text-emerald-600'
               : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
           }`}
@@ -956,9 +918,9 @@ export default function OrdersFresh() {
           </span>
         </button>
         <button
-          onClick={() => { setArchiveTab('archived'); setNotificationFilter(''); deliveryTypeRef.current = ''; paymentStatusRef.current = ''; statusFilterRef.current = ''; setStatusFilter(''); setPaymentStatusFilter(''); setDeliveryTypeFilter(''); setDateRangeFilter(''); loadOrders(1, searchQuery, 'archived'); if (!customerIdFilter) loadOrderStats('archived'); }}
-          className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
-            archiveTab === 'archived' && !notificationFilter
+          onClick={() => { setArchiveTab('archived'); deliveryTypeRef.current = ''; paymentStatusRef.current = ''; statusFilterRef.current = ''; setStatusFilter(''); setPaymentStatusFilter(''); setDeliveryTypeFilter(''); setDateRangeFilter(''); loadOrders(1, searchQuery, 'archived'); if (!customerIdFilter) loadOrderStats('archived'); }}
+          className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+            archiveTab === 'archived'
               ? 'border-emerald-600 text-emerald-600'
               : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
           }`}
@@ -968,30 +930,6 @@ export default function OrdersFresh() {
             {orderStats?.archivedCount ?? '...'}
           </span>
         </button>
-        {!customerIdFilter && (
-          <button
-            onClick={() => {
-              setNotificationFilter('pending_send');
-              setStatusFilter('');
-              statusFilterRef.current = '';
-              setPaymentStatusFilter('');
-              setDeliveryTypeFilter('');
-              setDateRangeFilter('');
-              setArchiveTab('active');
-              loadOrders(1, searchQuery, 'active');
-            }}
-            className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
-              notificationFilter === 'pending_send'
-                ? 'border-amber-500 text-amber-600'
-                : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
-            }`}
-          >
-            Pending Send
-            <span className="ml-2 px-2 py-0.5 text-xs rounded-full bg-amber-50 text-amber-700">
-              {orders.filter(o => o.notificationStatus === 'pending_send').length || 0}
-            </span>
-          </button>
-        )}
       </div>
 
       {/* Search and Filter - sticky */}
@@ -1068,7 +1006,7 @@ export default function OrdersFresh() {
             <option value="90">Last 90 days</option>
           </select>
           
-          {(searchQuery || statusFilter || paymentStatusFilter || deliveryTypeFilter || dateRangeFilter || notificationFilter) && (
+          {(searchQuery || statusFilter || paymentStatusFilter || deliveryTypeFilter || dateRangeFilter) && (
             <Button
               variant="ghost"
               size="sm"
@@ -1081,7 +1019,6 @@ export default function OrdersFresh() {
                 setPaymentStatusFilter('');
                 setDeliveryTypeFilter('');
                 setDateRangeFilter('');
-                setNotificationFilter('');
                 loadOrders(1, '');
               }}
               className="text-sm whitespace-nowrap"
@@ -1343,17 +1280,7 @@ export default function OrdersFresh() {
                               <ShoppingCart className="w-3 h-3" />
                             </Badge>
                           )}
-                          {order.notificationStatus === 'pending_send' && (
-                            <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-300">
-                              <Bell className="w-2 h-2 mr-1" />Pending Send
-                            </Badge>
-                          )}
-                        {order.notificationStatus === 'sent' && (
-                            <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-300">
-                              <Send className="w-2 h-2 mr-1" />Sent
-                            </Badge>
-                          )}
-                        {order.fulfillmentType && (
+                          {order.fulfillmentType && (
                             <Badge variant="outline" className="text-xs">
                               {order.fulfillmentType === 'delivery' ? (
                                 <><Truck className="w-2 h-2 mr-1" />Delivery</>
@@ -1384,25 +1311,16 @@ export default function OrdersFresh() {
                               <Button
                                 size="sm"
                                 variant="outline"
-                                disabled={updatingOrderId === order.id || sendingInvoiceId === order.id}
+                                disabled={updatingOrderId === order.id}
                                 onClick={(e) => e.stopPropagation()}
                                 className="h-7 w-7 p-0"
                               >
-                                {updatingOrderId === order.id || sendingInvoiceId === order.id
+                                {updatingOrderId === order.id
                                   ? <Loader2 className="h-3 w-3 animate-spin" />
                                   : <MoreVertical className="h-3 w-3" />}
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-44">
-                              {order.notificationStatus === 'pending_send' && (
-                                <DropdownMenuItem
-                                  onClick={(e) => handleSendInvoice(order, e)}
-                                  className="text-amber-600 focus:text-amber-700 cursor-pointer"
-                                >
-                                  <Send className="h-3.5 w-3.5 mr-2" />
-                                  Send Invoice
-                                </DropdownMenuItem>
-                              )}
                               {order.paymentStatus !== 'paid' && (
                                 <DropdownMenuItem
                                   onClick={(e) => { e.stopPropagation(); openMarkAsPaid(order); }}
@@ -1526,16 +1444,6 @@ export default function OrdersFresh() {
                             <ShoppingCart className="w-3 h-3 mr-1" />Order
                           </Badge>
                         )}
-                        {order.notificationStatus === 'pending_send' && (
-                          <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-300">
-                            <Bell className="w-3 h-3 mr-1" />Pending Send
-                          </Badge>
-                        )}
-                        {order.notificationStatus === 'sent' && (
-                          <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-300">
-                            <Send className="w-3 h-3 mr-1" />Sent
-                          </Badge>
-                        )}
                         {order.fulfillmentType && (
                           <Badge variant="outline" className="text-xs">
                             {order.fulfillmentType === 'delivery' ? (
@@ -1553,25 +1461,16 @@ export default function OrdersFresh() {
                             <Button
                               size="sm"
                               variant="outline"
-                              disabled={updatingOrderId === order.id || sendingInvoiceId === order.id}
+                              disabled={updatingOrderId === order.id}
                               onClick={(e) => e.stopPropagation()}
                               className="text-xs w-full flex items-center justify-center gap-2 h-8"
                             >
-                              {updatingOrderId === order.id || sendingInvoiceId === order.id
+                              {updatingOrderId === order.id
                                 ? <><Loader2 className="h-3 w-3 animate-spin" /> Updating...</>
                                 : <><MoreVertical className="h-3 w-3" /> Actions</>}
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="w-44">
-                            {order.notificationStatus === 'pending_send' && (
-                              <DropdownMenuItem
-                                onClick={(e) => handleSendInvoice(order, e)}
-                                className="text-amber-600 focus:text-amber-700 cursor-pointer"
-                              >
-                                <Send className="h-4 w-4 mr-2" />
-                                Send Invoice
-                              </DropdownMenuItem>
-                            )}
                             {order.paymentStatus !== 'paid' && (
                               <DropdownMenuItem
                                 onClick={(e) => { e.stopPropagation(); openMarkAsPaid(order); }}

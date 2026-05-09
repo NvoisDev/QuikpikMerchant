@@ -17,7 +17,7 @@ import {
 import {
   DollarSign, Clock, CheckCircle, X, Truck, MapPin, Camera, Image as ImageIcon,
   RefreshCw, FileText, Loader2, Share2, Package, ChevronLeft, Home, Building, Warehouse, Building2,
-  Pencil, Plus, Minus, Search, MessageCircle, MoreHorizontal, Copy, Link, Bell
+  Pencil, Plus, Minus, Search, MessageCircle, MoreHorizontal, Copy, Link
 } from "lucide-react";
 import { useAuth, type AuthUser } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -142,7 +142,6 @@ interface Order {
     responseMessage?: string;
     refundType?: string;
   };
-  notificationStatus?: string | null;
 }
 
 const WholesalerDeliveryAddressDisplay = ({ addressId }: { addressId: number }) => {
@@ -313,7 +312,6 @@ export default function OrderDetail() {
   const [editProductDialogOpen, setEditProductDialogOpen] = useState(false);
   const [editProductSearch, setEditProductSearch] = useState('');
   const [isGeneratingPaymentLink, setIsGeneratingPaymentLink] = useState(false);
-  const [isSendingInvoice, setIsSendingInvoice] = useState(false);
 
   const swipeTouchStartX = useRef<number | null>(null);
   const swipeTouchStartY = useRef<number | null>(null);
@@ -502,26 +500,6 @@ export default function OrderDetail() {
       toast({ title: 'Error', description: 'Could not generate the invoice. Please try again.', variant: 'destructive' });
     } finally {
       setIsDownloadingInvoice(false);
-    }
-  };
-
-  const handleSendInvoice = async () => {
-    if (!order) return;
-    setIsSendingInvoice(true);
-    try {
-      const response = await fetch(`/api/orders/${order.id}/send-invoice`, { method: 'POST', credentials: 'include' });
-      if (response.status === 409) {
-        setOrder(prev => prev ? { ...prev, notificationStatus: 'sent' } : prev);
-        toast({ title: 'Already sent', description: 'Invoice notifications were already dispatched for this order.' });
-        return;
-      }
-      if (!response.ok) throw new Error('Failed');
-      setOrder(prev => prev ? { ...prev, notificationStatus: 'sent' } : prev);
-      toast({ title: 'Invoice sent', description: 'Notifications dispatched to the customer.' });
-    } catch {
-      toast({ title: 'Error', description: 'Could not send the invoice. Please try again.', variant: 'destructive' });
-    } finally {
-      setIsSendingInvoice(false);
     }
   };
 
@@ -1111,17 +1089,6 @@ export default function OrderDetail() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48">
-                  {order.notificationStatus === 'pending_send' && (
-                    <DropdownMenuItem
-                      onClick={handleSendInvoice}
-                      disabled={isSendingInvoice}
-                    >
-                      {isSendingInvoice
-                        ? <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        : <Bell className="h-4 w-4 mr-2 text-amber-600" />}
-                      Send Invoice
-                    </DropdownMenuItem>
-                  )}
                   {order.status !== 'fulfilled' && (
                     <DropdownMenuItem
                       className="text-red-600 focus:text-red-600"
@@ -1191,16 +1158,6 @@ export default function OrderDetail() {
                     : <><MapPin className="w-3 h-3 mr-1" />Collection</>}
                 </Badge>
               )}
-              {order.notificationStatus === 'pending_send' && (
-                <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-300">
-                  <Bell className="w-3 h-3 mr-1" />Pending Send
-                </Badge>
-              )}
-              {order.notificationStatus === 'sent' && (
-                <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-300">
-                  Invoice Sent
-                </Badge>
-              )}
               </div>
               {!isViewer && order.status !== 'cancelled' && (
                 <div className="flex items-center gap-1.5 flex-shrink-0">
@@ -1224,17 +1181,6 @@ export default function OrderDetail() {
                     {isSharingInvoice ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Share2 className="h-3.5 w-3.5" />}
                     Share
                   </Button>
-                  {order.notificationStatus === 'pending_send' && (
-                    <Button
-                      size="sm"
-                      className="h-8 px-2.5 text-xs gap-1.5 bg-amber-600 hover:bg-amber-700 text-white"
-                      onClick={handleSendInvoice}
-                      disabled={isSendingInvoice}
-                    >
-                      {isSendingInvoice ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Bell className="h-3.5 w-3.5" />}
-                      Send Invoice
-                    </Button>
-                  )}
                 </div>
               )}
             </div>

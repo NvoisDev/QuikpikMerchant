@@ -413,46 +413,45 @@ export function registerOrderCheckoutRoutes(
         // Get wholesaler data for emails and notifications
         const wholesaler = await storage.getWholesalerProfile(wholesalerId);
 
-        // Send customer invoice notifications via shared service.
-        // Marketplace checkout always auto-sends (customer-initiated flow), so we
-        // route through sendInvoiceNotifications with a guestCustomer override that
-        // carries the Stripe-metadata-derived name/email/phone/address.
-        if (wholesaler) {
-          // Resolve the customer address string from the selected delivery address
-          const resolvedAddress = selectedDeliveryAddress
-            ? (() => {
-                const addressParts = [
-                  selectedDeliveryAddress.addressLine1,
-                  selectedDeliveryAddress.addressLine2,
-                  selectedDeliveryAddress.city,
-                  selectedDeliveryAddress.state,
-                  selectedDeliveryAddress.postalCode,
-                  selectedDeliveryAddress.country || 'United Kingdom',
-                ].filter(
-                  (part): part is string =>
-                    typeof part === 'string' &&
-                    part.trim() !== '' &&
-                    part.trim() !== 'undefined' &&
-                    part.trim() !== 'null'
-                );
-                return addressParts.length > 0 ? addressParts.join(', ') : null;
-              })()
-            : customerAddress ?? null;
+        // Send customer confirmation email and Stripe invoice
+        if (wholesaler && customerEmail) {
+          try {
+            const savedOrderItems = await storage.getOrderItems(order.id);
+            const enrichedItems = await Promise.all(savedOrderItems.map(async (item: any) => {
+              const product = await storage.getProduct(item.productId);
+              return {
+                ...item,
+                productName: product?.name || `Product #${item.productId}`,
+                packDescriptor: formatPackDescriptor(product?.packQuantity || product?.quantityInPack, product?.sizePerUnit || product?.unitSize, product?.unitOfMeasure),
+                product: product ? { name: product.name, packQuantity: product.packQuantity, quantityInPack: product.quantityInPack, sizePerUnit: product.sizePerUnit, unitSize: product.unitSize, unitOfMeasure: product.unitOfMeasure } : null
+              };
+            }));
 
-          const { sendInvoiceNotifications } = await import('../services/invoiceNotificationService');
-          sendInvoiceNotifications(order.id, {
-            // bypassChannelPrefs=true: marketplace checkout is customer-initiated, so all
-            // configured channels always fire regardless of the wholesaler's toggle settings.
-            bypassChannelPrefs: true,
-            guestCustomer: {
+            await sendCustomerInvoiceEmail({
               name: customerName,
-              email: customerEmail ?? null,
-              phone: customerPhone ?? null,
-              address: resolvedAddress,
-            },
-          }).catch((err) => {
-            console.warn(`[invoiceNotificationService] Marketplace send failed for order ${order.id}:`, err);
-          });
+              email: customerEmail,
+              phone: customerPhone,
+              address: selectedDeliveryAddress ?
+                (() => {
+                  // CRITICAL FIX: Filter out empty address components to prevent incomplete snapshots
+                  const addressParts = [
+                    selectedDeliveryAddress.addressLine1,
+                    selectedDeliveryAddress.addressLine2,
+                    selectedDeliveryAddress.city,
+                    selectedDeliveryAddress.state,
+                    selectedDeliveryAddress.postalCode,
+                    selectedDeliveryAddress.country || 'United Kingdom'
+                  ].filter(part => part && typeof part === 'string' && part.trim() && part.trim() !== 'undefined' && part.trim() !== 'null');
+
+                  return addressParts.length > 0 ? addressParts.join(', ') : null;
+                })() :
+                customerAddress
+            }, order, enrichedItems, wholesaler);
+
+          } catch (emailError) {
+            const msg = emailError instanceof Error ? emailError.message : String(emailError);
+            console.warn(`[sendgrid] stripe-checkout confirmation email failed [orderId=${order.id}]: ${msg}`);
+          }
         }
 
         // Send WhatsApp notification to wholesaler with wholesale reference

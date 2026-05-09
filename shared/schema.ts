@@ -733,14 +733,6 @@ export const orders = pgTable("orders", {
   // to a partial index but compatible with Drizzle's onConflictDoNothing target syntax).
   idempotencyKey: varchar("idempotency_key", { length: 64 }),
 
-  // Task #1047: Invoice notification tracking
-  // null = legacy/untracked, 'pending_send' = auto-send off, 'claiming' = send in-progress, 'sent' = dispatched
-  notificationStatus: varchar("notification_status", { length: 20 }),
-  // When the atomic claim was set ('claiming' state). Used for stale-claim expiry (>5 min → recoverable).
-  notificationClaimedAt: timestamp("notification_claimed_at"),
-  // When notifications were successfully dispatched. Set alongside status='sent'.
-  notificationSentAt: timestamp("notification_sent_at"),
-
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => [
