@@ -441,6 +441,9 @@ export function registerOrderCheckoutRoutes(
 
           const { sendInvoiceNotifications } = await import('../services/invoiceNotificationService');
           sendInvoiceNotifications(order.id, {
+            // bypassChannelPrefs=true: marketplace checkout is customer-initiated, so all
+            // configured channels always fire regardless of the wholesaler's toggle settings.
+            bypassChannelPrefs: true,
             guestCustomer: {
               name: customerName,
               email: customerEmail ?? null,

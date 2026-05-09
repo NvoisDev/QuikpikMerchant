@@ -504,17 +504,6 @@ export default function OrdersFresh() {
   };
 
   const handleStatusFilter = (status: string) => {
-    // "pending_send_notify" is a special value that maps to the notification filter,
-    // not the order status filter — keep statusFilter empty so the server is not confused
-    if (status === 'pending_send_notify') {
-      setNotificationFilter('pending_send');
-      setStatusFilter('');
-      statusFilterRef.current = '';
-      setCurrentPage(1);
-      // Reload orders without a status restriction so all pending-send orders are visible
-      loadOrders(1, searchQuery);
-      return;
-    }
     // Clear notification filter when switching to any normal status
     setNotificationFilter('');
     setStatusFilter(status);
@@ -938,12 +927,12 @@ export default function OrdersFresh() {
     <div className="p-4 md:p-6 space-y-4 md:space-y-6">
 
       {/* Archive Tabs */}
-      <div className="flex border-b border-slate-200">
+      <div className="flex border-b border-slate-200 overflow-x-auto">
         {customerIdFilter && (
           <button
-            onClick={() => { setArchiveTab('all'); deliveryTypeRef.current = ''; paymentStatusRef.current = ''; statusFilterRef.current = ''; setStatusFilter(''); setPaymentStatusFilter(''); setDeliveryTypeFilter(''); setDateRangeFilter(''); loadOrders(1, searchQuery, 'all'); if (!customerIdFilter) loadOrderStats('all'); }}
-            className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
-              archiveTab === 'all'
+            onClick={() => { setArchiveTab('all'); setNotificationFilter(''); deliveryTypeRef.current = ''; paymentStatusRef.current = ''; statusFilterRef.current = ''; setStatusFilter(''); setPaymentStatusFilter(''); setDeliveryTypeFilter(''); setDateRangeFilter(''); loadOrders(1, searchQuery, 'all'); if (!customerIdFilter) loadOrderStats('all'); }}
+            className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+              archiveTab === 'all' && !notificationFilter
                 ? 'border-emerald-600 text-emerald-600'
                 : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
             }`}
@@ -955,9 +944,9 @@ export default function OrdersFresh() {
           </button>
         )}
         <button
-          onClick={() => { setArchiveTab('active'); deliveryTypeRef.current = ''; paymentStatusRef.current = ''; statusFilterRef.current = ''; setStatusFilter(''); setPaymentStatusFilter(''); setDeliveryTypeFilter(''); setDateRangeFilter(''); loadOrders(1, searchQuery, 'active'); if (!customerIdFilter) loadOrderStats('active'); }}
-          className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
-            archiveTab === 'active'
+          onClick={() => { setArchiveTab('active'); setNotificationFilter(''); deliveryTypeRef.current = ''; paymentStatusRef.current = ''; statusFilterRef.current = ''; setStatusFilter(''); setPaymentStatusFilter(''); setDeliveryTypeFilter(''); setDateRangeFilter(''); loadOrders(1, searchQuery, 'active'); if (!customerIdFilter) loadOrderStats('active'); }}
+          className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+            archiveTab === 'active' && !notificationFilter
               ? 'border-emerald-600 text-emerald-600'
               : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
           }`}
@@ -968,9 +957,9 @@ export default function OrdersFresh() {
           </span>
         </button>
         <button
-          onClick={() => { setArchiveTab('archived'); deliveryTypeRef.current = ''; paymentStatusRef.current = ''; statusFilterRef.current = ''; setStatusFilter(''); setPaymentStatusFilter(''); setDeliveryTypeFilter(''); setDateRangeFilter(''); loadOrders(1, searchQuery, 'archived'); if (!customerIdFilter) loadOrderStats('archived'); }}
-          className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
-            archiveTab === 'archived'
+          onClick={() => { setArchiveTab('archived'); setNotificationFilter(''); deliveryTypeRef.current = ''; paymentStatusRef.current = ''; statusFilterRef.current = ''; setStatusFilter(''); setPaymentStatusFilter(''); setDeliveryTypeFilter(''); setDateRangeFilter(''); loadOrders(1, searchQuery, 'archived'); if (!customerIdFilter) loadOrderStats('archived'); }}
+          className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+            archiveTab === 'archived' && !notificationFilter
               ? 'border-emerald-600 text-emerald-600'
               : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
           }`}
@@ -980,6 +969,30 @@ export default function OrdersFresh() {
             {orderStats?.archivedCount ?? '...'}
           </span>
         </button>
+        {!customerIdFilter && (
+          <button
+            onClick={() => {
+              setNotificationFilter('pending_send');
+              setStatusFilter('');
+              statusFilterRef.current = '';
+              setPaymentStatusFilter('');
+              setDeliveryTypeFilter('');
+              setDateRangeFilter('');
+              setArchiveTab('active');
+              loadOrders(1, searchQuery, 'active');
+            }}
+            className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+              notificationFilter === 'pending_send'
+                ? 'border-amber-500 text-amber-600'
+                : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+            }`}
+          >
+            Pending Send
+            <span className="ml-2 px-2 py-0.5 text-xs rounded-full bg-amber-50 text-amber-700">
+              {orders.filter(o => o.notificationStatus === 'pending_send').length || 0}
+            </span>
+          </button>
+        )}
       </div>
 
       {/* Search and Filter - sticky */}
@@ -1007,7 +1020,7 @@ export default function OrdersFresh() {
         <div className="flex flex-wrap gap-2">
           <select 
             className="flex-1 min-w-[120px] sm:flex-none px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 bg-white"
-            value={notificationFilter === 'pending_send' ? 'pending_send_notify' : statusFilter}
+            value={statusFilter}
             onChange={(e) => handleStatusFilter(e.target.value)}
           >
             <option value="">All Status</option>
@@ -1022,7 +1035,6 @@ export default function OrdersFresh() {
                 <option value="fulfilled">Fulfilled</option>
               </>
             )}
-            <option value="pending_send_notify">Pending Invoice Send</option>
           </select>
           
           <select 
@@ -1334,7 +1346,7 @@ export default function OrdersFresh() {
                           )}
                           {order.notificationStatus === 'pending_send' && (
                             <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-300">
-                              <Bell className="w-2 h-2 mr-1" />Notify
+                              <Bell className="w-2 h-2 mr-1" />Pending Send
                             </Badge>
                           )}
                         {order.notificationStatus === 'sent' && (
@@ -1517,7 +1529,7 @@ export default function OrdersFresh() {
                         )}
                         {order.notificationStatus === 'pending_send' && (
                           <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-300">
-                            <Bell className="w-3 h-3 mr-1" />Notify
+                            <Bell className="w-3 h-3 mr-1" />Pending Send
                           </Badge>
                         )}
                         {order.notificationStatus === 'sent' && (
