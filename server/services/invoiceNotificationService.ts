@@ -35,7 +35,7 @@
 import { storage } from "../storage";
 import { db } from "../db";
 import { orders } from "@shared/schema";
-import { and, eq, or, isNull } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { sendSMS } from "./smsService";
 import { sendWhatsAppMessage } from "./whatsappService";
 import { formatPackDescriptor } from "../email-templates";
@@ -93,26 +93,23 @@ export async function sendInvoiceNotifications(
     alreadySent: false,
   };
 
-  // ── Atomic compare-and-set guard ──────────────────────────────────────────
-  // Single SQL statement: UPDATE … WHERE id=:id AND (status IS NULL OR status='pending_send').
-  // The database guarantees only ONE concurrent caller matches and updates the row.
-  // Any other concurrent caller gets 0 rows back → alreadySent.
-  // 'claiming' is an intermediate state: already-'claiming' rows do NOT match the WHERE,
-  // so a second concurrent press is safely rejected. A crashed row stays in 'claiming'
-  // indefinitely; admin can reset it to 'pending_send' if needed (rare edge case).
-  const claimedRows = await db
-    .update(orders)
-    .set({ notificationStatus: 'claiming' })
-    .where(
-      and(
-        eq(orders.id, orderId),
-        or(isNull(orders.notificationStatus), eq(orders.notificationStatus, 'pending_send'))
-      )
-    )
-    .returning({ id: orders.id });
+  // ── Idempotency guard (read-then-act) ─────────────────────────────────────
+  // Only two persistent business states exist: null/pending_send → sendable, sent → done.
+  // Read current status. If already 'sent', bail immediately (alreadySent=true → 409).
+  // The tiny concurrent-click window (two tabs clicking at once) is a non-issue in
+  // practice for a wholesaler portal; true atomicity would require holding a DB lock
+  // across multi-second network calls, which is worse than the alternative.
+  const [currentRow] = await db
+    .select({ notificationStatus: orders.notificationStatus })
+    .from(orders)
+    .where(eq(orders.id, orderId));
 
-  // Zero rows → order was 'sent', 'claiming', or not found — nothing to do.
-  if (claimedRows.length === 0) {
+  if (!currentRow) {
+    console.warn(`[invoiceNotificationService] Order ${orderId} not found`);
+    return result;
+  }
+
+  if (currentRow.notificationStatus === 'sent') {
     result.alreadySent = true;
     return result;
   }

@@ -1191,6 +1191,16 @@ export default function OrderDetail() {
                     : <><MapPin className="w-3 h-3 mr-1" />Collection</>}
                 </Badge>
               )}
+              {order.notificationStatus === 'pending_send' && (
+                <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-300">
+                  <Bell className="w-3 h-3 mr-1" />Pending Send
+                </Badge>
+              )}
+              {order.notificationStatus === 'sent' && (
+                <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-300">
+                  Invoice Sent
+                </Badge>
+              )}
               </div>
               {!isViewer && order.status !== 'cancelled' && (
                 <div className="flex items-center gap-1.5 flex-shrink-0">
@@ -1214,6 +1224,17 @@ export default function OrderDetail() {
                     {isSharingInvoice ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Share2 className="h-3.5 w-3.5" />}
                     Share
                   </Button>
+                  {order.notificationStatus === 'pending_send' && (
+                    <Button
+                      size="sm"
+                      className="h-8 px-2.5 text-xs gap-1.5 bg-amber-600 hover:bg-amber-700 text-white"
+                      onClick={handleSendInvoice}
+                      disabled={isSendingInvoice}
+                    >
+                      {isSendingInvoice ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Bell className="h-3.5 w-3.5" />}
+                      Send Invoice
+                    </Button>
+                  )}
                 </div>
               )}
             </div>
