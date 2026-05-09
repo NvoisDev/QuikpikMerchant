@@ -31,12 +31,24 @@ export async function healthCheck(req: Request, res: Response) {
 }
 
 export async function validateDatabaseConnection(): Promise<boolean> {
-  try {
-    await db.execute("SELECT 1");
-    console.log("✅ Database connection validated successfully");
-    return true;
-  } catch (error) {
-    console.error("❌ Database connection validation failed:", error);
-    return false;
+  const maxAttempts = 5;
+  const baseDelayMs = 2000;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      await db.execute("SELECT 1");
+      console.log("✅ Database connection validated successfully");
+      return true;
+    } catch (error) {
+      const isLastAttempt = attempt === maxAttempts;
+      if (isLastAttempt) {
+        console.error("❌ Database connection validation failed:", error);
+        return false;
+      }
+      const delayMs = baseDelayMs * attempt;
+      console.warn(`⚠️  Database connection attempt ${attempt}/${maxAttempts} failed — retrying in ${delayMs / 1000}s...`);
+      await new Promise(resolve => setTimeout(resolve, delayMs));
+    }
   }
+  return false;
 }

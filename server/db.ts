@@ -11,7 +11,12 @@ if (!process.env.DATABASE_URL) {
   );
 }
 
-export const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+export const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  max: 5,
+  connectionTimeoutMillis: 10000, // Fail fast if Neon is unreachable — prevents silent hang at startup
+  idleTimeoutMillis: 30000,
+});
 
 // Prevent the process from crashing when Neon terminates an idle connection.
 // The pool automatically replaces the dropped client on the next query, so
