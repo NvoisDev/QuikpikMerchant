@@ -185,6 +185,7 @@ export function registerOrderReadRoutes(app: Express): void {
       const paymentStatusParam = req.query.paymentStatus as string | undefined;
       const fulfillmentTypeParam = req.query.fulfillmentType as string | undefined;
       const statusParam = req.query.status as string | undefined;
+      const notificationStatusParam = req.query.notificationStatus as string | undefined;
       // Use authenticated user's ID for proper data isolation - SECURITY FIX
       const wholesalerId = resolveWholesalerId(req);
       
@@ -226,6 +227,11 @@ export function registerOrderReadRoutes(app: Express): void {
         } else {
           searchConditions.push(eq(orders.status, statusParam));
         }
+      }
+
+      // Notification status filter (e.g. 'pending_send' for the Pending Send tab)
+      if (notificationStatusParam) {
+        searchConditions.push(eq(orders.notificationStatus, notificationStatusParam));
       }
 
       // Archived = cancelled OR (fulfilled AND paid)

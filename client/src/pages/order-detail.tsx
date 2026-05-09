@@ -17,7 +17,7 @@ import {
 import {
   DollarSign, Clock, CheckCircle, X, Truck, MapPin, Camera, Image as ImageIcon,
   RefreshCw, FileText, Loader2, Share2, Package, ChevronLeft, Home, Building, Warehouse, Building2,
-  Pencil, Plus, Minus, Search, MessageCircle, MoreHorizontal, Copy, Link
+  Pencil, Plus, Minus, Search, MessageCircle, MoreHorizontal, Copy, Link, Bell
 } from "lucide-react";
 import { useAuth, type AuthUser } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -142,6 +142,7 @@ interface Order {
     responseMessage?: string;
     refundType?: string;
   };
+  notificationStatus?: string | null;
 }
 
 const WholesalerDeliveryAddressDisplay = ({ addressId }: { addressId: number }) => {
@@ -312,6 +313,7 @@ export default function OrderDetail() {
   const [editProductDialogOpen, setEditProductDialogOpen] = useState(false);
   const [editProductSearch, setEditProductSearch] = useState('');
   const [isGeneratingPaymentLink, setIsGeneratingPaymentLink] = useState(false);
+  const [isSendingInvoice, setIsSendingInvoice] = useState(false);
 
   const swipeTouchStartX = useRef<number | null>(null);
   const swipeTouchStartY = useRef<number | null>(null);
@@ -500,6 +502,26 @@ export default function OrderDetail() {
       toast({ title: 'Error', description: 'Could not generate the invoice. Please try again.', variant: 'destructive' });
     } finally {
       setIsDownloadingInvoice(false);
+    }
+  };
+
+  const handleSendInvoice = async () => {
+    if (!order) return;
+    setIsSendingInvoice(true);
+    try {
+      const response = await fetch(`/api/orders/${order.id}/send-invoice`, { method: 'POST', credentials: 'include' });
+      if (response.status === 409) {
+        setOrder(prev => prev ? { ...prev, notificationStatus: 'sent' } : prev);
+        toast({ title: 'Already sent', description: 'Invoice notifications were already dispatched for this order.' });
+        return;
+      }
+      if (!response.ok) throw new Error('Failed');
+      setOrder(prev => prev ? { ...prev, notificationStatus: 'sent' } : prev);
+      toast({ title: 'Invoice sent', description: 'Notifications dispatched to the customer.' });
+    } catch {
+      toast({ title: 'Error', description: 'Could not send the invoice. Please try again.', variant: 'destructive' });
+    } finally {
+      setIsSendingInvoice(false);
     }
   };
 
@@ -1089,6 +1111,17 @@ export default function OrderDetail() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48">
+                  {order.notificationStatus === 'pending_send' && (
+                    <DropdownMenuItem
+                      onClick={handleSendInvoice}
+                      disabled={isSendingInvoice}
+                    >
+                      {isSendingInvoice
+                        ? <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        : <Bell className="h-4 w-4 mr-2 text-amber-600" />}
+                      Send Invoice
+                    </DropdownMenuItem>
+                  )}
                   {order.status !== 'fulfilled' && (
                     <DropdownMenuItem
                       className="text-red-600 focus:text-red-600"

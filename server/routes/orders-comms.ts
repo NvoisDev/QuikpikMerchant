@@ -438,7 +438,9 @@ export function registerOrderCommsRoutes(app: Express): void {
   });
 
   // POST /api/orders/:id/send-invoice
-  // Manually trigger invoice notifications for an order (respects channel prefs, force re-sends)
+  // Manually trigger invoice notifications for an order (respects channel prefs, force re-sends).
+  // If invoicePaymentLink pref is enabled and the order has no Stripe payment link yet,
+  // one is created first (same flow as the dedicated generate-balance-link endpoint).
   app.post('/api/orders/:id/send-invoice', requireAuth, requireNotViewer, requireMemberPermission('orders'), async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
@@ -449,6 +451,73 @@ export function registerOrderCommsRoutes(app: Express): void {
       const order = await storage.getOrder(id);
       if (!order) return res.status(404).json({ message: 'Order not found' });
       if (order.wholesalerId !== effectiveWholesalerId) return res.status(403).json({ message: 'Not authorized' });
+
+      // ── Ensure a Stripe payment link exists if the pref requires one ──────
+      // When auto-send was OFF, the order was created without a payment link.
+      // The wholesaler now manually sends the invoice, so we create the link now
+      // if (a) invoicePaymentLink pref is enabled, (b) no link exists yet, and
+      // (c) the order has an outstanding balance.
+      const wholesaler = await storage.getUser(effectiveWholesalerId);
+      if (wholesaler) {
+        const prefs = (wholesaler.notificationPreferences ?? {}) as import('../services/invoiceNotificationService').NotificationPreferences;
+        const doPayLink = prefs.invoicePaymentLink !== false;
+        const hasLink = !!(order as Record<string, unknown>).stripePaymentLinkUrl;
+        const amountOutstanding = parseFloat((order as Record<string, unknown>).amountOutstanding as string || '0');
+
+        if (doPayLink && !hasLink && amountOutstanding > 0 && wholesaler.stripeAccountId) {
+          try {
+            const stripe = getStripeClient(Boolean(wholesaler.isTestAccount));
+            const orderTotal = parseFloat((order as Record<string, unknown>).total as string || '0');
+            const depositPercentage = (order as Record<string, unknown>).depositPercentage as number || 100;
+            let paymentAmount: number;
+            let paymentLabel: string;
+            let paymentDescription: string;
+
+            if ((order as Record<string, unknown>).paymentStatus === 'unpaid' && depositPercentage < 100) {
+              paymentAmount = orderTotal * (depositPercentage / 100);
+              paymentLabel = `Deposit (${depositPercentage}%) - Order ${(order as Record<string, unknown>).orderNumber}`;
+              paymentDescription = `Deposit payment of ${depositPercentage}%. Order total: £${orderTotal.toFixed(2)}`;
+            } else {
+              paymentAmount = amountOutstanding;
+              paymentLabel = `Remaining Balance - Order ${(order as Record<string, unknown>).orderNumber}`;
+              paymentDescription = `Payment for remaining balance. Original order total: £${orderTotal.toFixed(2)}`;
+            }
+
+            if (paymentAmount > 0) {
+              let useConnect = false;
+              try {
+                const acct = await stripe.accounts.retrieve(wholesaler.stripeAccountId);
+                if (acct.charges_enabled && acct.details_submitted) useConnect = true;
+              } catch { /* Stripe Connect not ready — skip transfer_data */ }
+
+              const subtotal = parseFloat((order as Record<string, unknown>).subtotal as string || '0');
+              const platformFee = parseFloat((order as Record<string, unknown>).platformFee as string || '0');
+              const wholesalerCut = subtotal - platformFee;
+              const transferAmount = orderTotal > 0
+                ? Math.round(paymentAmount * (wholesalerCut / orderTotal) * 100) : 0;
+              const baseUrl = process.env.APP_URL
+                || (process.env.REPLIT_DOMAINS?.split(',')[0] ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}` : 'https://quikpik.app');
+              const orderNum = (order as Record<string, unknown>).orderNumber as string;
+              const session = await stripe.checkout.sessions.create({
+                payment_method_types: ['card'],
+                line_items: [{ price_data: { currency: 'gbp', product_data: { name: paymentLabel, description: paymentDescription }, unit_amount: Math.round(paymentAmount * 100) }, quantity: 1 }],
+                mode: 'payment',
+                success_url: `${baseUrl}/customer/payment-success?order=${orderNum}&wholesaler=${effectiveWholesalerId}&returning=true&session_id={CHECKOUT_SESSION_ID}`,
+                cancel_url: `${baseUrl}/store/${effectiveWholesalerId}`,
+                metadata: { orderId: id.toString(), orderNumber: orderNum || '', wholesalerId: effectiveWholesalerId, customerId: (order as Record<string, unknown>).retailerId as string || '', isQuote: 'true', isBalancePayment: (order as Record<string, unknown>).paymentStatus === 'part_paid' ? 'true' : 'false', depositPercentage: depositPercentage.toString(), depositAmount: paymentAmount.toFixed(2), totalAmount: orderTotal.toFixed(2) },
+                customer_email: (order as Record<string, unknown>).customerEmail as string || undefined,
+                expires_at: Math.floor(Date.now() / 1000) + (24 * 60 * 60),
+                ...(useConnect && transferAmount > 0 ? { payment_intent_data: { transfer_data: { destination: wholesaler.stripeAccountId!, amount: transferAmount } } } : {}),
+              });
+              await db.update(orders).set({ stripePaymentLinkId: session.id, stripePaymentLinkUrl: session.url || '', quoteExpiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000) }).where(eq(orders.id, id));
+            }
+          } catch (stripeErr: unknown) {
+            const msg = stripeErr instanceof Error ? stripeErr.message : String(stripeErr);
+            console.warn(`[send-invoice] Could not create Stripe payment link for order ${id}: ${msg}`);
+            // Non-fatal: continue with send even if Stripe link creation fails
+          }
+        }
+      }
 
       const { sendInvoiceNotifications } = await import('../services/invoiceNotificationService');
       const result = await sendInvoiceNotifications(id);

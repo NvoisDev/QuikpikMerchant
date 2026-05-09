@@ -331,6 +331,7 @@ export default function OrdersFresh() {
         ...(deliveryTypeRef.current && { fulfillmentType: deliveryTypeRef.current }),
         ...(paymentStatusRef.current && { paymentStatus: paymentStatusRef.current }),
         ...(statusFilterRef.current && { status: statusFilterRef.current }),
+        ...(notificationFilter && { notificationStatus: notificationFilter }),
       });
       const response = await fetch(`/api/orders-paginated?${params}`, {
         credentials: 'include',
@@ -743,10 +744,8 @@ export default function OrdersFresh() {
       })
     : orders;
   
-  // Notification status filter (client-side — already-loaded orders)
-  const filteredByNotification = notificationFilter
-    ? filteredByStatus.filter(o => o.notificationStatus === notificationFilter)
-    : filteredByStatus;
+  // Notification status filter is applied server-side via loadOrders params (notificationStatus query param)
+  const filteredByNotification = filteredByStatus;
 
   // Payment and delivery type filters are now applied server-side via loadOrders params
   const filteredByPayment = filteredByNotification;
