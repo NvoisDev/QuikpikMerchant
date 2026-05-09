@@ -1,0 +1,155 @@
+Extend the invoice notification refactor so wholesalers can fully control how invoice communications are sent from Notification Settings.
+
+Current behaviour:
+Invoice creation automatically triggers:
+- email notifications
+- SMS notifications
+- WhatsApp notifications
+- payment link notifications
+
+This behaviour must be changed into a configurable notification system while preserving all existing invoice, stock, payment, analytics, and customer flows.
+
+Core objective:
+Invoices should save internally first.
+Notifications should only be sent:
+- when the wholesaler presses “Send Invoice”
+AND
+- only through the channels enabled in Notification Settings.
+
+Required changes:
+
+1. Add invoice notification preferences
+Create a dedicated “Invoice Notifications” section inside Settings → Notifications.
+
+Add toggles/settings for:
+- Send invoice emails
+- Send invoice SMS
+- Send WhatsApp invoice notifications
+- Send payment links automatically
+- Auto-send invoices after creation (default OFF for new users, preserve existing behaviour for current users if needed)
+
+Optional future-ready fields:
+- Default send channels
+- Send copy to wholesaler
+- Reminder notifications
+
+2. Preserve backwards compatibility
+DO NOT break existing wholesalers already using automatic sending.
+
+Migration requirement:
+- Existing wholesalers should retain current behaviour initially if necessary
+OR
+- safely migrate to the new flow with explicit defaults
+
+No existing invoices, customers, or notification flows should break.
+
+3. Invoice creation flow
+When an invoice is created:
+- invoice saves successfully
+- stock updates exactly as it currently does
+- invoice numbers generate exactly as they currently do
+- analytics/reporting remain unchanged
+
+Notification behaviour:
+IF auto-send is OFF:
+- invoice remains Pending Send
+- no customer communication goes out
+
+IF auto-send is ON:
+- existing send flow runs automatically
+- BUT only enabled channels are used
+
+Example:
+- Email ON
+- SMS OFF
+- WhatsApp OFF
+
+→ only email sends.
+
+4. Manual “Send Invoice” action
+Add a “Send Invoice” button for pending invoices.
+
+When pressed:
+- send through enabled channels only
+- use existing templates
+- use existing Stripe/payment link flows
+- preserve existing audit logs/history
+
+5. Notification architecture refactor
+Extract all invoice communication into a single reusable service:
+
+sendInvoiceNotifications(invoiceId, options)
+
+This service becomes the ONLY place responsible for:
+- email sending
+- SMS sending
+- WhatsApp sending
+- payment links
+- customer invoice notifications
+
+No route/controller should send notifications directly anymore.
+
+6. Add invoice statuses
+Support safe additive statuses:
+- pending_send
+- sent
+
+Existing sent flows must remain intact.
+
+7. UI updates
+Add:
+- Pending Send badge
+- Sent badge
+- Filters/tabs for pending invoices
+- Send Invoice action
+- Notification channel indicators if possible
+
+8. Critical protection requirements
+DO NOT break:
+- invoice generation
+- stock allocation
+- stock restoration
+- order editing
+- Stripe/payment flows
+- customer portal visibility
+- marketplace ordering
+- reporting/analytics
+- fee calculations
+- exports/PDF generation
+- SMS infrastructure
+- WhatsApp infrastructure
+
+This must be a safe additive refactor only.
+
+9. Idempotency protection
+Protect against:
+- double-click send
+- retries
+- duplicate SMS/email sends
+- webhook replay issues
+
+Repeated sends must not duplicate notifications unintentionally.
+
+10. Tests required
+Add regression tests covering:
+- invoice creation with auto-send OFF
+- invoice creation with auto-send ON
+- manual send flow
+- channel-specific sending
+- email-only sending
+- SMS-only sending
+- WhatsApp-only sending
+- duplicate send protection
+- existing invoice compatibility
+- stock integrity
+- analytics integrity
+- Stripe/payment integrity
+
+11. Final deliverable
+Provide:
+- list of modified files
+- migration notes
+- new settings structure
+- confirmation of backwards compatibility
+- confirmation no existing flows were broken
+- test coverage summary
