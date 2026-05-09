@@ -97,7 +97,7 @@ export async function sendInvoiceNotifications(
   // The 'claiming' state acts as a mutex for the duration of the network sends.
   const claimedRows = await db
     .update(orders)
-    .set({ notificationStatus: 'claiming' })
+    .set({ notificationStatus: 'claiming', notificationClaimedAt: new Date() })
     .where(
       and(
         eq(orders.id, orderId),
@@ -231,13 +231,13 @@ export async function sendInvoiceNotifications(
       // ── Success or no-channels-available: mark permanently sent ───────────
       await db
         .update(orders)
-        .set({ notificationStatus: 'sent' })
+        .set({ notificationStatus: 'sent', notificationSentAt: new Date(), notificationClaimedAt: null })
         .where(eq(orders.id, orderId));
     } else {
       // ── All enabled channels failed: revert so wholesaler can retry ───────
       await db
         .update(orders)
-        .set({ notificationStatus: 'pending_send' })
+        .set({ notificationStatus: 'pending_send', notificationClaimedAt: null })
         .where(eq(orders.id, orderId));
     }
   }

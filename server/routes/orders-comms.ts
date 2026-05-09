@@ -454,14 +454,24 @@ export function registerOrderCommsRoutes(app: Express): void {
 
       // ── Short-circuit on already-sent BEFORE any side effects ─────────────
       // This is the FIRST check — no Stripe link creation, no service call.
-      // Also resets 'claiming' → 'pending_send' so crashed sends are recoverable.
       const currentStatus = (order as Record<string, unknown>).notificationStatus as string | null | undefined;
       if (currentStatus === 'sent') {
         return res.status(409).json({ message: 'Invoice notifications have already been sent for this order.' });
       }
       if (currentStatus === 'claiming') {
-        // A previous send attempt crashed mid-flight. Reset so this manual retry can proceed.
-        await db.update(orders).set({ notificationStatus: 'pending_send' }).where(eq(orders.id, id));
+        // Another request currently holds the claim OR a previous send crashed.
+        // Differentiate using the claim timestamp: claims older than 5 minutes are stale
+        // (the sender crashed) and safe to reclaim. Fresh claims are in-flight → 409.
+        const claimedAt = (order as Record<string, unknown>).notificationClaimedAt as Date | string | null | undefined;
+        const claimedAtMs = claimedAt ? new Date(claimedAt).getTime() : 0;
+        const isStale = !claimedAt || (Date.now() - claimedAtMs > 5 * 60 * 1000);
+        if (isStale) {
+          // Stale claim from a crashed send — reset so this manual retry can proceed.
+          await db.update(orders).set({ notificationStatus: 'pending_send', notificationClaimedAt: null }).where(eq(orders.id, id));
+        } else {
+          // In-flight send from a concurrent request — do nothing (second press is a no-op).
+          return res.status(409).json({ message: 'Invoice notifications are currently being sent for this order.' });
+        }
       }
 
       // ── Ensure a Stripe payment link exists if the pref requires one ──────
