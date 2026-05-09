@@ -4,38 +4,37 @@
  * Single source of truth for all invoice notification channels.
  * Reads wholesaler notificationPreferences and fires each enabled channel.
  *
- * Idempotency + concurrency model:
- *   1. Atomic compare-and-set: UPDATE orders SET notification_status = 'claiming'
- *      WHERE id = :id AND notification_status IN (NULL, 'pending_send').
- *      Only ONE concurrent request claims the row (DB-level atomicity).
- *      If 0 rows updated → already sent (or currently being claimed) → alreadySent=true.
- *   2. Sends execute with the row in 'claiming' state, preventing duplicate dispatch.
- *   3. On SUCCESS  → notification_status = 'sent'.
- *      On FAILURE  → notification_status = 'pending_send' (revert, fully retriable).
- *      On CRASH    → row stays 'claiming'; treated same as 'pending_send' in the WHERE
- *                    clause on next manual send attempt (see orders-comms.ts which calls
- *                    resetStuckClaims before each manual send if desired, or the DB admin
- *                    can simply UPDATE notification_status = 'pending_send' WHERE = 'claiming').
+ * Concurrency / idempotency model:
+ *   1. Atomic compare-and-set claim:
+ *        UPDATE orders SET notification_status = 'claiming'
+ *        WHERE id = :id AND (notification_status IS NULL OR notification_status = 'pending_send')
+ *        RETURNING id
+ *      If 0 rows updated → row is 'sent' or already 'claiming' (concurrent) → alreadySent.
+ *      If 1 row updated  → this caller owns the send; others are blocked by the WHERE guard.
+ *   2. Sends execute with the row in 'claiming', preventing duplicate dispatch.
+ *   3. On SUCCESS (at least one enabled channel delivered) → notification_status = 'sent'.
+ *      On NO-DELIVERY (all enabled channels failed)       → revert to 'pending_send' (retriable).
+ *      On NO-CHANNELS (all prefs off or no contact info)  → notification_status = 'sent'
+ *                                                           (no retry possible; intent fulfilled).
+ *   4. On process crash the row stays in 'claiming'. Recovery: the manual send endpoint
+ *      (orders-comms.ts) resets 'claiming' → 'pending_send' before calling this service,
+ *      so wholesalers can always retry via the "Send Invoice" button.
  *
  * Channels controlled by wholesaler notificationPreferences:
  *   invoiceEmail        — send the full invoice email with PDF attachment
- *   invoiceSms          — send a plain SMS to the customer's phone (smsService)
- *   invoiceWhatsApp     — send a WhatsApp message (whatsappService)
+ *   invoiceSms          — send a plain SMS to the customer's phone
+ *   invoiceWhatsApp     — send a WhatsApp message (requires Twilio)
  *   invoicePaymentLink  — include the Stripe payment link in SMS/WhatsApp body
  *
- * Guest customer support:
- *   Pass `guestCustomer` in options to send to a non-registered customer whose
- *   details come from Stripe metadata (marketplace / anonymous checkout).
- *
- * Pref bypass:
- *   Pass `bypassChannelPrefs: true` (marketplace customer-initiated flow) to always
- *   fire all configured channels regardless of the wholesaler's toggle settings.
+ * bypassChannelPrefs:
+ *   Pass true for marketplace (customer-initiated) checkouts to always fire all channels
+ *   regardless of the wholesaler's toggle settings.
  */
 
 import { storage } from "../storage";
 import { db } from "../db";
 import { orders } from "@shared/schema";
-import { eq } from "drizzle-orm";
+import { and, eq, or, isNull } from "drizzle-orm";
 import { sendSMS } from "./smsService";
 import { sendWhatsAppMessage } from "./whatsappService";
 import { formatPackDescriptor } from "../email-templates";
@@ -48,7 +47,6 @@ export interface NotificationPreferences {
   invoiceSms?: boolean;
   invoiceWhatsApp?: boolean;
   invoicePaymentLink?: boolean;
-  // pre-existing keys (preserved, not modified by this service)
   email?: boolean;
   sms?: boolean;
   orderUpdates?: boolean;
@@ -75,8 +73,8 @@ export interface InvoiceNotificationResult {
 /**
  * Fire invoice notifications for the given order according to the wholesaler's preferences.
  *
- * Idempotent + concurrency-safe via atomic DB compare-and-set guard.
- * State transitions: NULL / pending_send → claiming → sent (success) | pending_send (failure).
+ * Atomically claims the order row before any sends, preventing duplicate dispatch.
+ * State flow: NULL / pending_send → claiming → sent | pending_send (on failure).
  *
  * @param orderId                  ID of the order to notify about
  * @param options.guestCustomer    Override customer details for guest/anonymous checkouts
@@ -93,33 +91,38 @@ export async function sendInvoiceNotifications(
     alreadySent: false,
   };
 
-  // ── Idempotency guard (read-then-act) ─────────────────────────────────────
-  // Only two persistent business states exist: null/pending_send → sendable, sent → done.
-  // Read current status. If already 'sent', bail immediately (alreadySent=true → 409).
-  // The tiny concurrent-click window (two tabs clicking at once) is a non-issue in
-  // practice for a wholesaler portal; true atomicity would require holding a DB lock
-  // across multi-second network calls, which is worse than the alternative.
-  const [currentRow] = await db
-    .select({ notificationStatus: orders.notificationStatus })
-    .from(orders)
-    .where(eq(orders.id, orderId));
+  // ── Atomic compare-and-set claim ──────────────────────────────────────────
+  // The DB enforces that only ONE concurrent caller matches this WHERE clause.
+  // Any other concurrent caller gets 0 rows → alreadySent (or already 'sent').
+  // The 'claiming' state acts as a mutex for the duration of the network sends.
+  const claimedRows = await db
+    .update(orders)
+    .set({ notificationStatus: 'claiming' })
+    .where(
+      and(
+        eq(orders.id, orderId),
+        or(isNull(orders.notificationStatus), eq(orders.notificationStatus, 'pending_send'))
+      )
+    )
+    .returning({ id: orders.id });
 
-  if (!currentRow) {
-    console.warn(`[invoiceNotificationService] Order ${orderId} not found`);
-    return result;
-  }
-
-  if (currentRow.notificationStatus === 'sent') {
+  // Zero rows → order is 'sent', 'claiming' (concurrent), or not found.
+  if (claimedRows.length === 0) {
     result.alreadySent = true;
     return result;
   }
 
-  // ── Load data ─────────────────────────────────────────────────────────────
-  let sendSuccess = false;
+  // ── Sends ─────────────────────────────────────────────────────────────────
+  // Track whether at least one enabled channel delivered successfully.
+  // noChannels = all prefs are off OR no contact info → mark 'sent' anyway (no retry).
+  let atLeastOneDelivered = false;
+  let noChannels = true; // flipped to false as soon as an enabled channel is attempted
+
   try {
     const order = await storage.getOrder(orderId);
     if (!order) {
       console.warn(`[invoiceNotificationService] Order ${orderId} not found in storage`);
+      // revert in finally
       return result;
     }
 
@@ -147,6 +150,7 @@ export async function sendInvoiceNotifications(
 
     // ── Email ──────────────────────────────────────────────────────────────
     if (doEmail && customerEmail) {
+      noChannels = false;
       try {
         const orderItemsList = await storage.getOrderItems(orderId);
         const enrichedItems = await Promise.all(
@@ -184,6 +188,7 @@ export async function sendInvoiceNotifications(
         const { sendCustomerInvoiceEmail } = await import("../routes/shared");
         await sendCustomerInvoiceEmail(emailCustomer, order, enrichedItems, wholesaler);
         result.emailSent = true;
+        atLeastOneDelivered = true;
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         console.warn(`[invoiceNotificationService] Email failed for order ${orderId}: ${msg}`);
@@ -192,12 +197,14 @@ export async function sendInvoiceNotifications(
 
     // ── SMS ────────────────────────────────────────────────────────────────
     if (doSms && customerPhone) {
+      noChannels = false;
       try {
         const businessName = wholesaler.businessName ?? 'Your Supplier';
         const stripeLink   = (order as Record<string, unknown>).stripePaymentLinkUrl as string | undefined;
         const paymentLinkPart = doPayLink && stripeLink ? `\n\nPay online: ${stripeLink}` : '';
         const message = `Hi! Your invoice from ${businessName} is ready.${paymentLinkPart}\n\nSent via Quikpik.`;
         result.smsSent = await sendSMS({ to: customerPhone, message });
+        if (result.smsSent) atLeastOneDelivered = true;
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         console.warn(`[invoiceNotificationService] SMS failed for order ${orderId}: ${msg}`);
@@ -206,29 +213,28 @@ export async function sendInvoiceNotifications(
 
     // ── WhatsApp ───────────────────────────────────────────────────────────
     if (doWhatsApp && customerPhone) {
+      noChannels = false;
       try {
         const businessName = wholesaler.businessName ?? 'Your Supplier';
         const stripeLink   = (order as Record<string, unknown>).stripePaymentLinkUrl as string | undefined;
         const paymentLinkPart = doPayLink && stripeLink ? `\n\nPay online: ${stripeLink}` : '';
         const message = `Hi! Your invoice from ${businessName} is ready.${paymentLinkPart}\n\nSent via Quikpik.`;
         result.whatsAppSent = await sendWhatsAppMessage({ to: customerPhone, message });
+        if (result.whatsAppSent) atLeastOneDelivered = true;
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         console.warn(`[invoiceNotificationService] WhatsApp failed for order ${orderId}: ${msg}`);
       }
     }
-
-    sendSuccess = true;
   } finally {
-    if (sendSuccess) {
-      // ── Success: mark permanently sent ────────────────────────────────────
+    if (atLeastOneDelivered || noChannels) {
+      // ── Success or no-channels-available: mark permanently sent ───────────
       await db
         .update(orders)
         .set({ notificationStatus: 'sent' })
         .where(eq(orders.id, orderId));
     } else {
-      // ── Failure or early return: revert to pending_send so the wholesaler
-      //    can retry via the manual "Send Invoice" button. ─────────────────
+      // ── All enabled channels failed: revert so wholesaler can retry ───────
       await db
         .update(orders)
         .set({ notificationStatus: 'pending_send' })

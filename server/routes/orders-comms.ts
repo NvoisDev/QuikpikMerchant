@@ -452,6 +452,18 @@ export function registerOrderCommsRoutes(app: Express): void {
       if (!order) return res.status(404).json({ message: 'Order not found' });
       if (order.wholesalerId !== effectiveWholesalerId) return res.status(403).json({ message: 'Not authorized' });
 
+      // ── Short-circuit on already-sent BEFORE any side effects ─────────────
+      // This is the FIRST check — no Stripe link creation, no service call.
+      // Also resets 'claiming' → 'pending_send' so crashed sends are recoverable.
+      const currentStatus = (order as Record<string, unknown>).notificationStatus as string | null | undefined;
+      if (currentStatus === 'sent') {
+        return res.status(409).json({ message: 'Invoice notifications have already been sent for this order.' });
+      }
+      if (currentStatus === 'claiming') {
+        // A previous send attempt crashed mid-flight. Reset so this manual retry can proceed.
+        await db.update(orders).set({ notificationStatus: 'pending_send' }).where(eq(orders.id, id));
+      }
+
       // ── Ensure a Stripe payment link exists if the pref requires one ──────
       // When auto-send was OFF, the order was created without a payment link.
       // The wholesaler now manually sends the invoice, so we create the link now
