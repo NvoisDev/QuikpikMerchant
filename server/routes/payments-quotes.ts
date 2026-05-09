@@ -1164,6 +1164,17 @@ export function registerQuoteRoutes(app: Express): void {
       // ── Step 7: Atomic DB transaction — stock restore → item swap → allocate ─
       const oldStripeSessionId = existingOrder.stripePaymentLinkId;
       await db.transaction(async (trx) => {
+        // Capture stock for all affected products before any changes (for net movement records)
+        const allAffectedProductIds = Array.from(new Set([
+          ...existingItems.filter(i => i.productId !== null).map(i => i.productId as number),
+          ...items.map(i => i.productId),
+        ]));
+        const stockBeforeEdit7a = new Map<number, { units: number; pallets: number }>();
+        for (const pid of allAffectedProductIds) {
+          const [pre] = await trx.select({ stock: products.stock, palletStock: products.palletStock }).from(products).where(eq(products.id, pid)).limit(1);
+          if (pre) stockBeforeEdit7a.set(pid, { units: pre.stock ?? 0, pallets: pre.palletStock ?? 0 });
+        }
+
         // 7a. Restore stock from old items — aggregate by product for exactly one movement per product
         const editRestoreToday = new Date().toISOString().split('T')[0];
         type RestoreGroup = { productId: number; qty: number; sellingType: string; batches: { batchId: number | null; qty: number }[] };
@@ -1190,7 +1201,6 @@ export function registerQuoteRoutes(app: Express): void {
             const upp = product.unitsPerPallet ?? 1;
             const newUnitStock = (product.stock ?? 0) + group.qty * qip * upp;
             await trx.update(products).set({ palletStock: newPalletStock, stock: newUnitStock, updatedAt: new Date() }).where(eq(products.id, productId));
-            await trx.insert(stockMovements).values({ productId, wholesalerId, movementType: 'return', quantity: group.qty, unitType: 'pallets', stockBefore: palletStockBefore, stockAfter: newPalletStock, reason: `Invoice edit — restoring ${group.qty} pallets`, orderId: quoteId, customerName: existingOrder.customerName ?? null, businessProfileId: existingOrder.businessProfileId ?? null });
           } else {
             const unitStockBefore = product.stock || 0;
             // Restore each batch individually; fall back to a return batch if original is missing
@@ -1216,8 +1226,6 @@ export function registerQuoteRoutes(app: Express): void {
             const upp = product.unitsPerPallet ?? 1;
             const newPalletStock = (qip > 0 && upp > 0) ? Math.floor(Math.floor(newUnitStock / qip) / upp) : 0;
             await trx.update(products).set({ stock: newUnitStock, palletStock: newPalletStock, updatedAt: new Date() }).where(eq(products.id, productId));
-            // ONE consolidated movement per product
-            await trx.insert(stockMovements).values({ productId, wholesalerId, movementType: 'return', quantity: group.qty, unitType: 'units', stockBefore: unitStockBefore, stockAfter: newUnitStock, reason: `Invoice edit — restoring ${group.qty} units`, orderId: quoteId, customerName: existingOrder.customerName ?? null, businessProfileId: existingOrder.businessProfileId ?? null });
           }
         }
 
@@ -1225,15 +1233,7 @@ export function registerQuoteRoutes(app: Express): void {
         await trx.delete(orderItems).where(eq(orderItems.orderId, quoteId));
 
         // 7c. Allocate stock for new items and insert them with their allocated batchId
-        // Capture stock levels before step-7c allocation (for accurate movement records)
-        const stockBeforeEdit7c = new Map<number, { units: number; pallets: number }>();
-        for (const preItem7c of items) {
-          if (!stockBeforeEdit7c.has(preItem7c.productId)) {
-            const [preP7c] = await trx.select({ stock: products.stock, palletStock: products.palletStock }).from(products).where(eq(products.id, preItem7c.productId)).limit(1);
-            if (preP7c) stockBeforeEdit7c.set(preItem7c.productId, { units: preP7c.stock ?? 0, pallets: preP7c.palletStock ?? 0 });
-          }
-        }
-        // Accumulate purchase totals per (product, sellingType); one movement written after the loop
+        // Accumulate purchase totals per (product, sellingType) to track primary batchId for the net movement
         const editPurchaseSummary = new Map<string, { productId: number; sellingType: string; qty: number; primaryBatchId: number | null }>();
         for (const item of items) {
           const sellingType = item.sellingType || 'units';
@@ -1313,13 +1313,37 @@ export function registerQuoteRoutes(app: Express): void {
             }
           }
         }
-        // Write exactly one consolidated purchase movement per (product, sellingType) after step-7c allocation
-        for (const epsum of Array.from(editPurchaseSummary.values())) {
-          const { productId: epPid, sellingType: epSt, qty: epQty, primaryBatchId: epBid } = epsum;
-          const stockBefore7c = epSt === 'pallets' ? (stockBeforeEdit7c.get(epPid)?.pallets ?? 0) : (stockBeforeEdit7c.get(epPid)?.units ?? 0);
-          const [productNow7c] = await trx.select({ stock: products.stock, palletStock: products.palletStock }).from(products).where(eq(products.id, epPid)).limit(1);
-          const stockAfter7c = epSt === 'pallets' ? (productNow7c?.palletStock ?? 0) : (productNow7c?.stock ?? 0);
-          await trx.insert(stockMovements).values({ productId: epPid, wholesalerId, movementType: 'purchase', quantity: -epQty, unitType: epSt === 'pallets' ? 'pallets' : 'units', stockBefore: stockBefore7c, stockAfter: stockAfter7c, reason: `Invoice edit — allocating ${epQty} ${epSt}`, orderId: quoteId, customerName: existingOrder.customerName ?? null, businessProfileId: existingOrder.businessProfileId ?? null, batchId: epBid });
+        // Write NET movements only — one per (product, sellingType) if quantity actually changed.
+        // No movement if the quantity is identical (e.g. price-only edit), avoiding restore+reallocate noise.
+        const netMoveMap = new Map<string, { productId: number; sellingType: string; oldQty: number; newQty: number; primaryBatchId: number | null }>();
+        for (const oldItem of existingItems) {
+          if (oldItem.productId === null) continue;
+          const st = oldItem.sellingType || 'units';
+          const key = `${oldItem.productId}_${st}`;
+          const entry = netMoveMap.get(key) ?? { productId: oldItem.productId, sellingType: st, oldQty: 0, newQty: 0, primaryBatchId: null };
+          entry.oldQty += oldItem.quantity;
+          netMoveMap.set(key, entry);
+        }
+        for (const [key, epsum] of Array.from(editPurchaseSummary.entries())) {
+          const entry = netMoveMap.get(key) ?? { productId: epsum.productId, sellingType: epsum.sellingType, oldQty: 0, newQty: 0, primaryBatchId: null };
+          entry.newQty += epsum.qty;
+          if (entry.primaryBatchId === null) entry.primaryBatchId = epsum.primaryBatchId;
+          netMoveMap.set(key, entry);
+        }
+        for (const { productId: nmPid, sellingType: nmSt, oldQty, newQty, primaryBatchId: nmBid } of Array.from(netMoveMap.values())) {
+          const net = newQty - oldQty; // positive = more allocated; negative = units returned
+          if (net === 0) continue;
+          const stockBefore7a = nmSt === 'pallets' ? (stockBeforeEdit7a.get(nmPid)?.pallets ?? 0) : (stockBeforeEdit7a.get(nmPid)?.units ?? 0);
+          const [productNowNet] = await trx.select({ stock: products.stock, palletStock: products.palletStock }).from(products).where(eq(products.id, nmPid)).limit(1);
+          const stockAfterNet = nmSt === 'pallets' ? (productNowNet?.palletStock ?? 0) : (productNowNet?.stock ?? 0);
+          if (net > 0) {
+            // More units allocated on this edit
+            await trx.insert(stockMovements).values({ productId: nmPid, wholesalerId, movementType: 'purchase', quantity: -net, unitType: nmSt === 'pallets' ? 'pallets' : 'units', stockBefore: stockBefore7a, stockAfter: stockAfterNet, reason: `Invoice edit — ${net} extra ${nmSt} allocated`, orderId: quoteId, customerName: existingOrder.customerName ?? null, businessProfileId: existingOrder.businessProfileId ?? null, batchId: nmBid });
+          } else {
+            // Fewer units allocated — units returned to stock
+            const absNet = Math.abs(net);
+            await trx.insert(stockMovements).values({ productId: nmPid, wholesalerId, movementType: 'return', quantity: absNet, unitType: nmSt === 'pallets' ? 'pallets' : 'units', stockBefore: stockBefore7a, stockAfter: stockAfterNet, reason: `Invoice edit — ${absNet} ${nmSt} returned`, orderId: quoteId, customerName: existingOrder.customerName ?? null, businessProfileId: existingOrder.businessProfileId ?? null });
+          }
         }
 
         // 7d. Update order totals and payment link

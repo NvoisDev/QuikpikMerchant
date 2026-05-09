@@ -1,0 +1,64 @@
+ou are confusing me a bit on the stock logic.
+
+Where exactly is the 243 coming from? If the user manually inputs an initial stock quantity, that should be the source of truth and the number the system consistently works from.
+
+Right now the stock history feels all over the place because I’m seeing:
+
+original stock entries,
+invoice allocations,
+invoice edits,
+restores,
+cancellations,
+and re-allocations,
+
+all affecting the running balance in a way that no longer feels reliable or intuitive.
+
+I need the inventory system simplified and made deterministic.
+
+Please audit and explain:
+
+How stock is currently created
+How stock edits work
+How invoice edits affect stock
+How cancellations restore stock
+How the “remaining stock” number is actually calculated
+
+What I think should happen instead:
+
+The latest valid stock state should always be the source of truth
+Invoice edits should not create confusing duplicate allocation/restoration history
+If an invoice is edited, the system should reverse the previous allocation cleanly and apply only the final allocation once
+The inventory timeline should reflect the final net movement, not every intermediate edit action
+
+The visible stock balance should always reconcile clearly from:
+
+Initial Stock
+
+Stock-ins
+Final Invoice Sales
+Cancelled/Returned Stock
+= Remaining Stock
+
+Right now it feels like the system is counting both the original invoice allocation and the edit allocation separately, which is inflating/confusing the movement history.
+
+I want you to:
+
+Trace the full stock mutation flow end-to-end
+Identify where duplicate stock mutations are happening
+Check for non-idempotent invoice edit behaviour
+Ensure there is only ONE authoritative stock calculation path
+Make the inventory history human-readable and mathematically reconcilable
+
+Most importantly:
+DO NOT break existing invoice flows, stock allocation logic, batch tracking, cancellations, analytics, or reporting.
+
+This needs to be a safe refactor with regression testing around:
+
+invoice creation
+invoice editing
+invoice cancellation
+stock restoration
+batch allocation
+remaining stock calculations
+
+The final remaining stock should always be obvious, explainable, and fully traceable from the movement history.
