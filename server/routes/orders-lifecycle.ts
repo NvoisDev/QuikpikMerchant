@@ -716,12 +716,12 @@ export function registerOrderLifecycleRoutes(app: Express): void {
       const customer = await storage.getUser(userId);
 
       if (!isDeduped && wholesaler && customer) {
-        const prefs: Record<string, any> = (wholesaler.notificationPreferences as any) || {};
+        const prefs = (wholesaler.notificationPreferences ?? {}) as import('../services/invoiceNotificationService').NotificationPreferences;
         const autoSend = prefs.autoSendInvoices !== false;
 
         if (!autoSend) {
           // Wholesaler has disabled auto-send — mark as pending so they can send manually later
-          await db.update(orders).set({ notificationStatus: 'pending_send' } as any).where(eq(orders.id, order.id));
+          await db.update(orders).set({ notificationStatus: 'pending_send' }).where(eq(orders.id, order.id));
         } else {
           // Auto-send via the service (handles email, SMS, WhatsApp per prefs)
           sendInvoiceNotifications(order.id).catch((err) => {

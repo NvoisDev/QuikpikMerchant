@@ -2060,23 +2060,29 @@ export default function Settings() {
                           <p className="text-sm font-medium text-gray-800">Auto-send invoices</p>
                           <p className="text-xs text-gray-500 mt-0.5">When enabled, notifications are sent immediately when a new order arrives. Disable to review orders before notifying customers.</p>
                         </div>
-                        <button
-                          type="button"
-                          role="switch"
-                          aria-checked={(user?.notificationPreferences as any)?.autoSendInvoices !== false}
-                          onClick={async () => {
-                            const current = (user?.notificationPreferences as any) || {};
-                            const next = { ...current, autoSendInvoices: current.autoSendInvoices === false ? true : false };
-                            try {
-                              await apiRequest('PUT', '/api/user/profile', { notificationPreferences: next });
-                              queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
-                              toast({ title: next.autoSendInvoices ? 'Auto-send enabled' : 'Auto-send disabled' });
-                            } catch { toast({ title: 'Save failed', variant: 'destructive' }); }
-                          }}
-                          className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 ${(user?.notificationPreferences as any)?.autoSendInvoices !== false ? 'bg-green-600' : 'bg-gray-200'}`}
-                        >
-                          <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${(user?.notificationPreferences as any)?.autoSendInvoices !== false ? 'translate-x-5' : 'translate-x-0'}`} />
-                        </button>
+                        {(() => {
+                          interface NotifPrefs { autoSendInvoices?: boolean; invoiceEmail?: boolean; invoiceSms?: boolean; invoiceWhatsApp?: boolean; invoicePaymentLink?: boolean; [k: string]: boolean | undefined; }
+                          const prefs: NotifPrefs = (user?.notificationPreferences && typeof user.notificationPreferences === 'object') ? user.notificationPreferences as NotifPrefs : {};
+                          const isOn = prefs.autoSendInvoices !== false;
+                          return (
+                            <button
+                              type="button"
+                              role="switch"
+                              aria-checked={isOn}
+                              onClick={async () => {
+                                const next: NotifPrefs = { ...prefs, autoSendInvoices: !isOn };
+                                try {
+                                  await apiRequest('PUT', '/api/user/profile', { notificationPreferences: next });
+                                  queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
+                                  toast({ title: next.autoSendInvoices ? 'Auto-send enabled' : 'Auto-send disabled' });
+                                } catch { toast({ title: 'Save failed', variant: 'destructive' }); }
+                              }}
+                              className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 ${isOn ? 'bg-green-600' : 'bg-gray-200'}`}
+                            >
+                              <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${isOn ? 'translate-x-5' : 'translate-x-0'}`} />
+                            </button>
+                          );
+                        })()}
                       </div>
                     </div>
 
@@ -2088,7 +2094,8 @@ export default function Settings() {
                         { key: 'invoiceWhatsApp',    label: 'WhatsApp',     desc: 'Send a WhatsApp message with the invoice link (requires Twilio)' },
                         { key: 'invoicePaymentLink', label: 'Payment link', desc: 'Include the Stripe payment link in the SMS/WhatsApp message (when available)' },
                       ] as const).map(({ key, label, desc }) => {
-                        const prefs = (user?.notificationPreferences as any) || {};
+                        interface NotifPrefs { autoSendInvoices?: boolean; invoiceEmail?: boolean; invoiceSms?: boolean; invoiceWhatsApp?: boolean; invoicePaymentLink?: boolean; [k: string]: boolean | undefined; }
+                        const prefs: NotifPrefs = (user?.notificationPreferences && typeof user.notificationPreferences === 'object') ? user.notificationPreferences as NotifPrefs : {};
                         const isOn = prefs[key] !== false;
                         return (
                           <div key={key} className="flex items-center justify-between gap-4 p-4">
