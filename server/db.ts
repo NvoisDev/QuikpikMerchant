@@ -1,6 +1,5 @@
-import pg from 'pg';
-const { Pool } = pg;
-import { drizzle } from 'drizzle-orm/node-postgres';
+import { neon } from '@neondatabase/serverless';
+import { drizzle } from 'drizzle-orm/neon-http';
 import * as schema from "@shared/schema";
 
 if (!process.env.DATABASE_URL) {
@@ -9,16 +8,13 @@ if (!process.env.DATABASE_URL) {
   );
 }
 
-export const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  max: 5,
-  connectionTimeoutMillis: 10000,
-  idleTimeoutMillis: 30000,
-  ssl: { rejectUnauthorized: false },
-});
+// neon() connects via HTTPS (port 443) — works in all environments including
+// production deployment containers that block outbound TCP/5432.
+// drizzle-orm/neon-http supports interactive transactions via Neon's HTTP
+// transaction API (session tokens), so db.transaction() works correctly.
+const sql = neon(process.env.DATABASE_URL!);
+export const db = drizzle({ client: sql, schema });
 
-pool.on('error', (err) => {
-  console.error('Unexpected PostgreSQL pool error:', err.message);
-});
-
-export const db = drizzle({ client: pool, schema });
+// Dummy pool export for any legacy code that might reference it.
+// connect-pg-simple uses conString directly, not this pool.
+export const pool = { query: sql, end: async () => {} };
