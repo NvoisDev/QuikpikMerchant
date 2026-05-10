@@ -541,6 +541,7 @@ export class BroadcastStorage extends CustomerStorage {
     totalPurchases: number;
     totalIncreases: number;
     totalDecreases: number;
+    totalAdjustments: number;
     currentStock: number;
   }> {
     const movements = await this.getStockMovements(productId);
@@ -549,6 +550,7 @@ export class BroadcastStorage extends CustomerStorage {
     let totalPurchases = 0;
     let totalIncreases = 0;
     let totalDecreases = 0;
+    let totalAdjustments = 0;
 
     // Find the initial stock movement (if any)
     const initialMovement = movements.find(m => m.movementType === 'initial');
@@ -570,6 +572,7 @@ export class BroadcastStorage extends CustomerStorage {
           break;
         case 'manual_decrease':
           totalDecreases += Math.abs(movement.quantity); // track as positive for display
+          totalAdjustments += movement.quantity; // negative — reduces stock
           break;
       }
     });
@@ -585,6 +588,7 @@ export class BroadcastStorage extends CustomerStorage {
       totalPurchases,
       totalIncreases,
       totalDecreases,
+      totalAdjustments,
       currentStock,
     };
   }

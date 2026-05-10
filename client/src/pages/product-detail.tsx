@@ -81,6 +81,7 @@ interface StockSummary {
   totalPurchases: number;
   totalIncreases: number;
   totalDecreases: number;
+  totalAdjustments: number;
   currentStock: number;
 }
 
@@ -875,19 +876,27 @@ export default function ProductDetail() {
                         ))}
                       </div>
                     ) : stockSummary && (
-                      <div className="grid grid-cols-4 gap-2 mb-4 p-3 bg-gray-50 rounded-lg border border-gray-100">
+                      <div className={`grid gap-2 mb-4 p-3 bg-gray-50 rounded-lg border border-gray-100 ${stockSummary.totalAdjustments !== 0 ? 'grid-cols-5' : 'grid-cols-4'}`}>
                         <div className="text-center">
                           <p className="text-xs text-gray-400 mb-0.5">Opening Stock</p>
                           <p className="text-sm font-semibold text-gray-700">{stockSummary.openingStock}</p>
                         </div>
                         <div className="text-center">
-                          <p className="text-xs text-gray-400 mb-0.5">Total In</p>
+                          <p className="text-xs text-gray-400 mb-0.5">Stock In</p>
                           <p className="text-sm font-semibold text-green-600">+{stockSummary.totalIncreases}</p>
                         </div>
                         <div className="text-center">
                           <p className="text-xs text-gray-400 mb-0.5">Total Sold</p>
                           <p className="text-sm font-semibold text-red-500">-{stockSummary.totalPurchases}</p>
                         </div>
+                        {stockSummary.totalAdjustments !== 0 && (
+                          <div className="text-center">
+                            <p className="text-xs text-gray-400 mb-0.5">Adjustments</p>
+                            <p className={`text-sm font-semibold ${stockSummary.totalAdjustments > 0 ? 'text-green-600' : 'text-red-500'}`}>
+                              {stockSummary.totalAdjustments > 0 ? '+' : ''}{stockSummary.totalAdjustments}
+                            </p>
+                          </div>
+                        )}
                         <div className="text-center">
                           <p className="text-xs text-gray-400 mb-0.5">Current Stock</p>
                           <p className="text-sm font-semibold text-gray-700">{stockSummary.currentStock}</p>
