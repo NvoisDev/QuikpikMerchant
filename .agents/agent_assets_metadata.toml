@@ -6,3 +6,9 @@ id = "VvWy6dknROnp4cX25MtnV"
 uri = "file://sweet_beans_20kg_stock_movements.xlsx"
 type = "table"
 title = "Sweet Beans 20kg — Stock Movement History"
+
+[[outputs]]
+id = "8csSA29qF6z2FuQJ1wTjD"
+uri = "file://haq-global-stock-summary.xlsx"
+type = "table"
+title = "Haq Global — Stock Summary (All Products)"
