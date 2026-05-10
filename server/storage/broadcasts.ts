@@ -563,7 +563,6 @@ export class BroadcastStorage extends CustomerStorage {
     // Calculate totals from movements
     movements.forEach(movement => {
       const isCorrection = typeof movement.reason === 'string' && movement.reason.toLowerCase().includes('correction');
-      const isAdjustment = movement.movementType === 'manual_increase' || movement.movementType === 'manual_decrease' || isCorrection;
 
       switch (movement.movementType) {
         case 'purchase':
@@ -573,7 +572,7 @@ export class BroadcastStorage extends CustomerStorage {
           totalPurchases -= Math.abs(movement.quantity); // returns offset sales
           break;
         case 'manual_increase':
-          totalIncreases += movement.quantity;
+          // Manual increases are adjustments, not regular stock-in flows
           totalAdjustments += movement.quantity;
           hasAdjustmentMovements = true;
           break;

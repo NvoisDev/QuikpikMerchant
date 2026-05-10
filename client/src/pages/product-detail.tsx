@@ -877,18 +877,10 @@ export default function ProductDetail() {
                         ))}
                       </div>
                     ) : stockSummary && (
-                      <div className={`grid gap-2 mb-4 p-3 bg-gray-50 rounded-lg border border-gray-100 ${stockSummary.hasAdjustmentMovements ? 'grid-cols-5' : 'grid-cols-4'}`}>
+                      <div className={`grid gap-2 mb-4 p-3 bg-gray-50 rounded-lg border border-gray-100 ${stockSummary.hasAdjustmentMovements ? 'grid-cols-4' : 'grid-cols-3'}`}>
                         <div className="text-center">
                           <p className="text-xs text-gray-400 mb-0.5">Opening Stock</p>
                           <p className="text-sm font-semibold text-gray-700">{stockSummary.openingStock}</p>
-                        </div>
-                        <div className="text-center">
-                          <p className="text-xs text-gray-400 mb-0.5">Stock In</p>
-                          <p className="text-sm font-semibold text-green-600">+{stockSummary.totalIncreases}</p>
-                        </div>
-                        <div className="text-center">
-                          <p className="text-xs text-gray-400 mb-0.5">Total Sold</p>
-                          <p className="text-sm font-semibold text-red-500">-{stockSummary.totalPurchases}</p>
                         </div>
                         {stockSummary.hasAdjustmentMovements && (
                           <div className="text-center">
@@ -902,6 +894,10 @@ export default function ProductDetail() {
                             </p>
                           </div>
                         )}
+                        <div className="text-center">
+                          <p className="text-xs text-gray-400 mb-0.5">Total Sold</p>
+                          <p className="text-sm font-semibold text-red-500">-{stockSummary.totalPurchases}</p>
+                        </div>
                         <div className="text-center">
                           <p className="text-xs text-gray-400 mb-0.5">Current Stock</p>
                           <p className="text-sm font-semibold text-gray-700">{stockSummary.currentStock}</p>
