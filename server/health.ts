@@ -58,7 +58,7 @@ export async function validateDatabaseConnection(
         return false;
       }
       const delayMs = Math.min(baseDelayMs * attempt, maxDelayMs);
-      console.warn(`⚠️  Database connection attempt ${attempt}/${maxAttempts} failed — retrying in ${delayMs / 1000}s...`);
+      console.warn(`⚠️  Database connection attempt ${attempt}/${maxAttempts} failed — retrying in ${delayMs / 1000}s... Error: ${error instanceof Error ? error.message : String(error)}`);
       await new Promise(resolve => setTimeout(resolve, delayMs));
     }
   }
