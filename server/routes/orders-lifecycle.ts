@@ -1252,7 +1252,11 @@ export function registerOrderLifecycleRoutes(app: Express): void {
             });
           }
 
-          custCancelAmountPaid = parseFloat(order.total || order.amountPaid || '0');
+          // Use order.total as the authoritative amount owed regardless of payment method.
+          // For Pay Later (bank_transfer) orders, amountPaid is £0 but the full order
+          // value is still owed — order.total is the correct basis for refund tracking.
+          const orderTotal = parseFloat(order.total || '0');
+          custCancelAmountPaid = orderTotal > 0 ? orderTotal : parseFloat(order.amountPaid || '0');
 
           const custAlreadyRefunded = parseFloat(order.amountRefunded || '0') > 0;
 
@@ -1268,6 +1272,8 @@ export function registerOrderLifecycleRoutes(app: Express): void {
             custCancelStripeRefunded = result.totalRefunded;
           }
 
+          // For refundType='later': always record the full amount owed so the badge
+          // shows "Refund Pending" correctly — even for Pay Later orders where amountPaid=0.
           const custCancelAmountRefunded = custCancelStripeRefunded > 0
             ? custCancelStripeRefunded.toFixed(2)
             : custAlreadyRefunded
