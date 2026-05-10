@@ -1339,13 +1339,15 @@ export default function OrdersFresh() {
                                   Mark Ready
                                 </DropdownMenuItem>
                               )}
-                              <DropdownMenuItem
-                                onClick={(e) => { e.stopPropagation(); markAsFulfilled(order.id); }}
-                                className="text-blue-600 focus:text-blue-700 cursor-pointer"
-                              >
-                                <CheckCircle className="h-3.5 w-3.5 mr-2" />
-                                Mark Fulfilled
-                              </DropdownMenuItem>
+                              {order.status !== 'fulfilled' && (
+                                <DropdownMenuItem
+                                  onClick={(e) => { e.stopPropagation(); markAsFulfilled(order.id); }}
+                                  className="text-blue-600 focus:text-blue-700 cursor-pointer"
+                                >
+                                  <CheckCircle className="h-3.5 w-3.5 mr-2" />
+                                  Mark Fulfilled
+                                </DropdownMenuItem>
+                              )}
                               <DropdownMenuSeparator />
                               <DropdownMenuItem
                                 onClick={(e) => { e.stopPropagation(); openCancelForm(order); }}
@@ -1489,13 +1491,15 @@ export default function OrdersFresh() {
                                 Mark Ready
                               </DropdownMenuItem>
                             )}
-                            <DropdownMenuItem
-                              onClick={(e) => { e.stopPropagation(); markAsFulfilled(order.id); }}
-                              className="text-blue-600 focus:text-blue-700 cursor-pointer"
-                            >
-                              <CheckCircle className="h-4 w-4 mr-2" />
-                              Mark Fulfilled
-                            </DropdownMenuItem>
+                            {order.status !== 'fulfilled' && (
+                              <DropdownMenuItem
+                                onClick={(e) => { e.stopPropagation(); markAsFulfilled(order.id); }}
+                                className="text-blue-600 focus:text-blue-700 cursor-pointer"
+                              >
+                                <CheckCircle className="h-4 w-4 mr-2" />
+                                Mark Fulfilled
+                              </DropdownMenuItem>
+                            )}
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
                               onClick={(e) => { e.stopPropagation(); openCancelForm(order); }}
