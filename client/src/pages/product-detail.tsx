@@ -868,7 +868,7 @@ export default function ProductDetail() {
                 ) : (
                   <div className="space-y-1.5">
                     {summaryLoading ? (
-                      <div className="grid grid-cols-4 gap-2 mb-4 p-3 bg-gray-50 rounded-lg border border-gray-100">
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4 p-3 bg-gray-50 rounded-lg border border-gray-100">
                         {[0, 1, 2, 3].map((i) => (
                           <div key={i} className="text-center space-y-1.5">
                             <div className="h-3 bg-gray-200 rounded animate-pulse mx-auto w-14" />
@@ -877,7 +877,7 @@ export default function ProductDetail() {
                         ))}
                       </div>
                     ) : stockSummary && (
-                      <div className={`grid gap-2 mb-4 p-3 bg-gray-50 rounded-lg border border-gray-100 ${stockSummary.hasAdjustmentMovements ? 'grid-cols-5' : 'grid-cols-4'}`}>
+                      <div className={`grid gap-2 mb-4 p-3 bg-gray-50 rounded-lg border border-gray-100 ${stockSummary.hasAdjustmentMovements ? 'grid-cols-3 sm:grid-cols-5' : 'grid-cols-2 sm:grid-cols-4'}`}>
                         <div className="text-center">
                           <p className="text-xs text-gray-400 mb-0.5">Opening Stock</p>
                           <p className="text-sm font-semibold text-gray-700">{stockSummary.openingStock}</p>
