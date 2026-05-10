@@ -549,38 +549,39 @@ httpServer.listen({ port, host: '0.0.0.0', reusePort: true }, () => {
     // without triggering a "port never opened" failure.
     let dbConnected = await validateDatabaseConnection();
 
-    // If initial attempts all fail, keep retrying in a background loop every 30s.
-    // This means the server automatically becomes ready when Neon recovers,
-    // without requiring a process restart.
-    if (!dbConnected) {
-      console.warn("⚠️  Initial DB connection attempts failed — will retry every 30s in the background");
-      await new Promise<void>((resolve) => {
-        const retryInterval = setInterval(async () => {
+    // Helper: run all DB-dependent startup tasks (migrations, plans, Stripe prices).
+    // Called immediately if DB is up, or deferred to background retry if not.
+    async function runDbStartupTasks() {
+      await runStartupMigrations();
+      const { SubscriptionService } = await import("./subscription-service");
+      await SubscriptionService.initializePlans();
+      await SubscriptionService.initializeAnnualPlans();
+      await fixStripePricesIfNeeded();
+    }
+
+    if (dbConnected) {
+      await runDbStartupTasks();
+    } else {
+      console.warn("⚠️  Initial DB connection attempts failed — frontend will be served while DB retries in background");
+      // Non-blocking background retry: attempt every 30s until DB is reachable
+      (async () => {
+        // eslint-disable-next-line no-constant-condition
+        while (true) {
+          await new Promise(r => setTimeout(r, 30_000));
           try {
             await db.execute(sql`SELECT 1`);
-            console.log("✅ Database reconnected successfully after background retries");
-            dbConnected = true;
-            clearInterval(retryInterval);
-            resolve();
+            console.log("✅ Database reconnected — running deferred startup tasks");
+            await runDbStartupTasks();
+            console.log("✅ Deferred startup tasks complete");
+            break;
           } catch {
             console.warn("⚠️  Background DB retry failed — will try again in 30s");
           }
-        }, 30_000);
-      });
+        }
+      })();
     }
 
-    // Apply idempotent schema migrations (ADD COLUMN IF NOT EXISTS)
-    await runStartupMigrations();
-
-    // Sync subscription plan features/limits from code into DB
-    const { SubscriptionService } = await import("./subscription-service");
-    await SubscriptionService.initializePlans();
-    await SubscriptionService.initializeAnnualPlans();
-
-    // Ensure Stripe prices for Standard/Premium match the correct monthly_price amounts
-    await fixStripePricesIfNeeded();
-
-    // Register all API routes onto the shared express app
+    // Register all API routes onto the shared express app — always runs regardless of DB state
     const { registerRoutes } = await import("./routes");
     const { setupVite, serveStatic } = await import("./vite");
 
@@ -593,7 +594,7 @@ httpServer.listen({ port, host: '0.0.0.0', reusePort: true }, () => {
       throw err;
     });
 
-    // Vite dev server or static assets — must come after API routes
+    // Vite dev server or static assets — must come after API routes, always registered
     if (app.get("env") === "development") {
       await setupVite(app, httpServer);
     } else {
