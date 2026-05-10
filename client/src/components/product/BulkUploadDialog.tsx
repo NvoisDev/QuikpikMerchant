@@ -91,7 +91,7 @@ export default function BulkUploadDialog({
               <div className="mt-6">
                 <input
                   type="file"
-                  accept=".csv,.xlsx,.xls"
+                  accept=".csv,.xlsx"
                   onChange={onFileUpload}
                   className="hidden"
                   id="bulk-upload-file"
@@ -112,7 +112,7 @@ export default function BulkUploadDialog({
               <div className="text-sm text-gray-600 space-y-2">
                 <p><strong>Required columns:</strong> name, price, moq, stock</p>
                 <p><strong>Optional columns:</strong> description, promoPrice, promoActive, currency, category, imageUrl, priceVisible, status, unit, unitFormat, sellingFormat, unitsPerPallet, palletPrice, palletMoq, palletStock, palletWeight, temperatureRequirement, contentCategory, supportsPickup, supportsDelivery</p>
-                <p><strong>Supported formats:</strong> CSV, Excel (.xlsx, .xls)</p>
+                <p><strong>Supported formats:</strong> CSV, Excel (.xlsx)</p>
               </div>
               <Button variant="link" onClick={downloadProductCsvTemplate} className="p-0">
                 Download template file to get started

@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { PackagePlus, ArrowUpCircle, ArrowDownCircle, Clock, Download } from "lucide-react";
-import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
 import { formatCurrency } from "@/lib/currencies";
 import { formatNumber } from "@shared/utils/currency";
 import type { Product } from "@shared/schema";
@@ -95,7 +95,7 @@ export default function StockManagementDialog({
   onUpdateBatchCostPrice,
   isUpdatingCostPrice,
 }: StockManagementDialogProps) {
-  const handleExportExcel = () => {
+  const handleExportExcel = async () => {
     if (!stockMovements || (stockMovements as StockMovement[]).length === 0) return;
     const rows = (stockMovements as StockMovement[]).map((m) => {
       const d = new Date(m.createdAt);
@@ -118,16 +118,27 @@ export default function StockManagementDialog({
         'Stock After': m.stockAfter,
       };
     });
-    const ws = XLSX.utils.json_to_sheet(rows);
-    ws['!cols'] = [
-      { wch: 18 }, { wch: 14 }, { wch: 8 },
-      { wch: 36 }, { wch: 20 }, { wch: 10 },
-      { wch: 13 }, { wch: 12 },
+    const wb = new ExcelJS.Workbook();
+    const ws = wb.addWorksheet('Stock Movements');
+    ws.columns = [
+      { header: 'Date', key: 'Date', width: 18 },
+      { header: 'Type', key: 'Type', width: 14 },
+      { header: 'Qty', key: 'Qty', width: 8 },
+      { header: 'Reason', key: 'Reason', width: 36 },
+      { header: 'Customer', key: 'Customer', width: 20 },
+      { header: 'Order #', key: 'Order #', width: 10 },
+      { header: 'Stock Before', key: 'Stock Before', width: 13 },
+      { header: 'Stock After', key: 'Stock After', width: 12 },
     ];
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Stock Movements');
+    rows.forEach((row) => ws.addRow(row));
+    const buffer = await wb.xlsx.writeBuffer();
     const slug = (stockProduct?.name || 'product').toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
-    XLSX.writeFile(wb, `${slug}-stock-movements.xlsx`);
+    const url = URL.createObjectURL(new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${slug}-stock-movements.xlsx`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   return (

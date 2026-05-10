@@ -104,29 +104,21 @@ async function buildPriceListWorkbook(wholesalerId: string, listId: number) {
   const standardRows = allProducts.filter((p) => !priceListMap.has(p.id)).map(buildRow);
   const rows = [...priceListRows, ...standardRows];
 
-  const XLSX = await import("xlsx");
-  const ws = XLSX.utils.json_to_sheet(rows, {
-    header: [
-      "Product Name",
-      "Pack Size / Unit",
-      "Unit Price",
-      "Standard Pallet Price",
-      "Units per Pallet",
-    ],
-  });
-  ws["!cols"] = [
-    { wch: 35 },
-    { wch: 18 },
-    { wch: 20 },
-    { wch: 22 },
-    { wch: 16 },
+  const ExcelJS = (await import("exceljs")).default;
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet("Price List");
+  ws.columns = [
+    { header: "Product Name", key: "Product Name", width: 35 },
+    { header: "Pack Size / Unit", key: "Pack Size / Unit", width: 18 },
+    { header: "Unit Price", key: "Unit Price", width: 20 },
+    { header: "Standard Pallet Price", key: "Standard Pallet Price", width: 22 },
+    { header: "Units per Pallet", key: "Units per Pallet", width: 16 },
   ];
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Price List");
+  rows.forEach((row) => ws.addRow(row));
 
   const safeName = list.name.replace(/[/\\?%*:|"<>]/g, "-");
   const filename = `${safeName} - Price List.xlsx`;
-  return { wb, filename, XLSX };
+  return { wb, filename };
 }
 
 // ── Route registration ──────────────────────────────────────────────────────
@@ -228,8 +220,8 @@ export function registerPriceListRoutes(app: Express): void {
       const id = parseInt(req.params.id);
       if (isNaN(id)) return res.status(400).json({ message: "Invalid price list ID" });
 
-      const { wb, filename, XLSX } = await buildPriceListWorkbook(wholesalerId, id);
-      const buf: Buffer = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+      const { wb, filename } = await buildPriceListWorkbook(wholesalerId, id);
+      const buf = Buffer.from(await wb.xlsx.writeBuffer());
 
       res.setHeader(
         "Content-Type",
@@ -614,8 +606,8 @@ export function registerPriceListRoutes(app: Express): void {
       const logoUrl = getEmailLogoUrl(wholesaler.id, wholesaler.logoType, wholesaler.logoUrl);
 
       // Build Excel attachment once — same file for all assigned customers
-      const { wb, filename: xlsxFilename, XLSX } = await buildPriceListWorkbook(wholesalerId, id);
-      const xlsxBase64: string = XLSX.write(wb, { type: "base64", bookType: "xlsx" });
+      const { wb, filename: xlsxFilename } = await buildPriceListWorkbook(wholesalerId, id);
+      const xlsxBase64: string = Buffer.from(await wb.xlsx.writeBuffer()).toString("base64");
       const xlsxAttachment = {
         content: xlsxBase64,
         type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",

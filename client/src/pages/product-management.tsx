@@ -19,7 +19,7 @@ import { formatCurrency } from "@/lib/currencies";
 import { useCurrency } from "@/hooks/useCurrency";
 import { UNITS } from "@shared/units";
 import Papa from "papaparse";
-import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
 import ElephantLoader from "@/components/ui/elephant-loader";
 import PageHeader from "@/components/PageHeader";
 import { SubscriptionUpgradeModal } from "@/components/subscription/SubscriptionUpgradeModal";
@@ -513,15 +513,28 @@ export default function ProductManagement() {
         complete: (results) => { processUploadedData(results.data as Record<string, string>[]); },
         error: (error) => { toast({ title: "Error", description: "Failed to parse CSV file: " + error.message, variant: "destructive" }); }
       });
-    } else if (fileType === 'xlsx' || fileType === 'xls') {
+    } else if (fileType === 'xlsx') {
       const reader = new FileReader();
-      reader.onload = (e) => {
+      reader.onload = async (e) => {
         try {
-          const data = new Uint8Array(e.target?.result as ArrayBuffer);
-          const workbook = XLSX.read(data, { type: 'array' });
-          const sheetName = workbook.SheetNames[0];
-          const worksheet = workbook.Sheets[sheetName];
-          processUploadedData(XLSX.utils.sheet_to_json(worksheet) as Record<string, string>[]);
+          const buffer = e.target?.result as ArrayBuffer;
+          const wb = new ExcelJS.Workbook();
+          await wb.xlsx.load(buffer);
+          const ws = wb.worksheets[0];
+          const headers: string[] = [];
+          const rows: Record<string, string>[] = [];
+          ws.eachRow((row, rowNum) => {
+            if (rowNum === 1) {
+              row.eachCell((cell, colNum) => { headers[colNum] = cell.text; });
+            } else {
+              const obj: Record<string, string> = {};
+              row.eachCell((cell, colNum) => {
+                if (headers[colNum]) obj[headers[colNum]] = cell.text || '';
+              });
+              if (Object.keys(obj).length > 0) rows.push(obj);
+            }
+          });
+          processUploadedData(rows);
         } catch {
           toast({ title: "Error", description: "Failed to parse Excel file", variant: "destructive" });
         }

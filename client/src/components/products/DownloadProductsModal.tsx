@@ -6,7 +6,7 @@ import { Download } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { Product } from "@shared/schema";
 import Papa from "papaparse";
-import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
 
 function fmtExportDate(val: string | null | undefined): string {
   if (!val) return "";
@@ -84,10 +84,14 @@ export default function DownloadProductsModal({ open, onClose, products, isViewe
         return row;
       });
       if (format === "xlsx") {
-        const ws = XLSX.utils.json_to_sheet(rows);
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "Stock Summary");
-        XLSX.writeFile(wb, `stock_summary_${today}.xlsx`);
+        const wb = new ExcelJS.Workbook();
+        const ws = wb.addWorksheet("Stock Summary");
+        if (rows.length > 0) {
+          ws.columns = Object.keys(rows[0]).map((k) => ({ header: k, key: k, width: 20 }));
+          rows.forEach((row) => ws.addRow(row));
+        }
+        const buffer = await wb.xlsx.writeBuffer();
+        triggerFileDownload(new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }), `stock_summary_${today}.xlsx`);
       } else {
         const csv = Papa.unparse(rows);
         triggerFileDownload(new Blob([csv], { type: "text/csv" }), `stock_summary_${today}.csv`);
@@ -119,10 +123,14 @@ export default function DownloadProductsModal({ open, onClose, products, isViewe
           ...(isViewer ? {} : { "Cost Price": b.costPrice ?? "" }),
         }));
       if (format === "xlsx") {
-        const ws = XLSX.utils.json_to_sheet(batchRows);
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "Batch Details");
-        XLSX.writeFile(wb, `batch_details_${today}.xlsx`);
+        const wb = new ExcelJS.Workbook();
+        const ws = wb.addWorksheet("Batch Details");
+        if (batchRows.length > 0) {
+          ws.columns = Object.keys(batchRows[0]).map((k) => ({ header: k, key: k, width: 20 }));
+          batchRows.forEach((row) => ws.addRow(row));
+        }
+        const buffer = await wb.xlsx.writeBuffer();
+        triggerFileDownload(new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }), `batch_details_${today}.xlsx`);
       } else {
         const csv = Papa.unparse(batchRows);
         triggerFileDownload(new Blob([csv], { type: "text/csv" }), `batch_details_${today}.csv`);
