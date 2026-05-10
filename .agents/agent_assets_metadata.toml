@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "VvWy6dknROnp4cX25MtnV"
+uri = "file://sweet_beans_20kg_stock_movements.xlsx"
+type = "table"
+title = "Sweet Beans 20kg — Stock Movement History"
