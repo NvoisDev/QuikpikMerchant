@@ -468,7 +468,7 @@ export default function ProductFormDialog({
   const updateProductMutation = useMutation({
     mutationFn: async (data: ProductFormData & { id: number }) => {
       const { id, ...productData } = data;
-      const updatedData = {
+      const updatedData: Record<string, any> = {
         ...productData,
         price: parseFloat(productData.price),
         moq: parseInt(productData.moq),
@@ -485,6 +485,11 @@ export default function ProductFormDialog({
         costPrice: productData.costPrice && productData.costPrice !== "" ? parseFloat(productData.costPrice) : null,
         promotionalOffers: productData.promotionalOffers || [],
       };
+      // Stock is managed exclusively via Manage Stock for batch-tracked products.
+      // Strip it from the payload so editing product details never overwrites batch inventory.
+      if ((editingProduct?.batchCount ?? 0) > 0) {
+        delete updatedData.stock;
+      }
       return await apiRequest("PATCH", `/api/products/${id}`, updatedData);
     },
     onSuccess: () => {

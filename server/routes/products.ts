@@ -177,8 +177,18 @@ export function registerProductRoutes(app: Express): void {
       // Let the schema handle all transformations
       const productData = insertProductSchema.partial().parse(req.body);
 
-      // ── Stock validation ────────────────────────────────────────────────────
-      if (req.body.stock !== undefined) {
+      // ── Stock field: batch-managed products are off-limits ──────────────────
+      // If this product already has batches, the stock column is owned exclusively
+      // by the batch system (Manage Stock). Strip it from the patch payload so a
+      // product-edit form save can never silently overwrite batch-managed inventory.
+      const productHasBatches = (existingProduct.batchCount ?? 0) > 0;
+      if (productHasBatches) {
+        delete (productData as any).stock;
+        delete (productData as any).baseUnitStock;
+      }
+
+      // ── Stock validation (only relevant when no batches exist) ───────────────
+      if (!productHasBatches && req.body.stock !== undefined) {
         const requestedStock = Number(req.body.stock);
         if (!Number.isFinite(requestedStock) || requestedStock < 0) {
           return res.status(400).json({ message: "Stock must be a non-negative number" });
@@ -186,8 +196,9 @@ export function registerProductRoutes(app: Express): void {
       }
 
       // ── Atomic product update + batch reconciliation ────────────────────────
-      // When `stock` is being patched we reconcile the batch pool in the SAME
-      // transaction so product.stock and batch totals are never out of sync.
+      // When `stock` is being patched (and no batches exist) we reconcile the
+      // batch pool in the SAME transaction so product.stock and batch totals are
+      // never out of sync.
       const product = await db.transaction(async (tx) => {
         // Update the product row
         const [updatedProduct] = await tx
@@ -211,7 +222,7 @@ export function registerProductRoutes(app: Express): void {
             );
         }
 
-        if (req.body.stock !== undefined) {
+        if (!productHasBatches && req.body.stock !== undefined) {
           const newStock = Number(req.body.stock) || 0;
           const today = new Date().toISOString().split('T')[0];
 
