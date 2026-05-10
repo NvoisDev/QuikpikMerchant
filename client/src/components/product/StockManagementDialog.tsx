@@ -110,7 +110,7 @@ export default function StockManagementDialog({
       return {
         Date: date,
         Type: type,
-        Qty: m.quantity,
+        Qty: m.quantity > 0 ? `+${m.quantity}` : `${m.quantity}`,
         Reason: m.reason || '',
         Customer: m.customerName || '',
         'Order #': m.orderNumber || '',
