@@ -3,7 +3,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { PackagePlus, ArrowUpCircle, ArrowDownCircle, Clock } from "lucide-react";
+import { PackagePlus, ArrowUpCircle, ArrowDownCircle, Clock, Download } from "lucide-react";
+import * as XLSX from "xlsx";
 import { formatCurrency } from "@/lib/currencies";
 import { formatNumber } from "@shared/utils/currency";
 import type { Product } from "@shared/schema";
@@ -94,6 +95,41 @@ export default function StockManagementDialog({
   onUpdateBatchCostPrice,
   isUpdatingCostPrice,
 }: StockManagementDialogProps) {
+  const handleExportExcel = () => {
+    if (!stockMovements || (stockMovements as StockMovement[]).length === 0) return;
+    const rows = (stockMovements as StockMovement[]).map((m) => {
+      const d = new Date(m.createdAt);
+      const pad = (n: number) => String(n).padStart(2, '0');
+      const date = `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+      const type = m.movementType === 'purchase' ? 'Order'
+        : m.movementType === 'return' ? 'Return'
+        : m.movementType === 'manual_increase' ? 'Restocked'
+        : m.movementType === 'manual_decrease' ? 'Removed'
+        : m.movementType === 'initial' ? 'Initial Stock'
+        : 'Updated';
+      return {
+        Date: date,
+        Type: type,
+        Qty: m.quantity,
+        Reason: m.reason || '',
+        Customer: m.customerName || '',
+        'Order #': m.orderNumber || '',
+        'Stock Before': m.stockBefore,
+        'Stock After': m.stockAfter,
+      };
+    });
+    const ws = XLSX.utils.json_to_sheet(rows);
+    ws['!cols'] = [
+      { wch: 18 }, { wch: 14 }, { wch: 8 },
+      { wch: 36 }, { wch: 20 }, { wch: 10 },
+      { wch: 13 }, { wch: 12 },
+    ];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Stock Movements');
+    const slug = (stockProduct?.name || 'product').toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+    XLSX.writeFile(wb, `${slug}-stock-movements.xlsx`);
+  };
+
   return (
     <Dialog open={open} onOpenChange={(open) => { if (!open) onClose(); }}>
       <DialogContent className="max-w-md sm:max-w-lg max-h-[90vh] overflow-y-auto">
@@ -487,10 +523,23 @@ export default function StockManagementDialog({
             )}
 
             <div className="border-t pt-4">
-              <h4 className="text-sm font-semibold text-gray-900 flex items-center gap-2 mb-3">
-                <Clock className="h-4 w-4 text-gray-500" />
-                Stock Movement History
-              </h4>
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-gray-500" />
+                  Stock Movement History
+                </h4>
+                {stockMovements && (stockMovements as StockMovement[]).length > 0 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleExportExcel}
+                    className="h-7 text-xs gap-1.5"
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                    Export
+                  </Button>
+                )}
+              </div>
               {isLoadingMovements ? (
                 <p className="text-sm text-gray-500 text-center py-4">Loading history...</p>
               ) : stockMovements && (stockMovements as StockMovement[]).length > 0 ? (
