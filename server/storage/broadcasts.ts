@@ -592,6 +592,11 @@ export class BroadcastStorage extends CustomerStorage {
           totalAdjustments += movement.quantity; // negative — reduces stock
           hasAdjustmentMovements = true;
           break;
+        case 'adjustment':
+          // System adjustments e.g. FEFO reconciliation
+          totalAdjustments += movement.quantity;
+          hasAdjustmentMovements = true;
+          break;
         default:
           if (isCorrection) {
             totalAdjustments += movement.quantity;
