@@ -563,25 +563,40 @@ export class BroadcastStorage extends CustomerStorage {
     // Calculate totals from movements
     movements.forEach(movement => {
       const isCorrection = typeof movement.reason === 'string' && movement.reason.toLowerCase().includes('correction');
-      const isManualAdjustment = movement.movementType === 'manual_increase' || movement.movementType === 'manual_decrease';
 
-      if (isManualAdjustment || isCorrection) {
-        // Manual movements and correction-tagged movements of any type go to Adjustments
-        totalAdjustments += movement.quantity;
-        hasAdjustmentMovements = true;
-        if (movement.movementType === 'manual_decrease') {
-          totalDecreases += Math.abs(movement.quantity);
-        }
-      } else {
-        // Regular sales / returns (no correction tag)
-        switch (movement.movementType) {
-          case 'purchase':
+      switch (movement.movementType) {
+        case 'purchase':
+          if (isCorrection) {
+            // correction-tagged purchase goes to adjustments, not sales
+            totalAdjustments += movement.quantity;
+            hasAdjustmentMovements = true;
+          } else {
             totalPurchases += Math.abs(movement.quantity);
-            break;
-          case 'return':
+          }
+          break;
+        case 'return':
+          if (isCorrection) {
+            totalAdjustments += movement.quantity;
+            hasAdjustmentMovements = true;
+          } else {
             totalPurchases -= Math.abs(movement.quantity);
-            break;
-        }
+          }
+          break;
+        case 'manual_increase':
+          // Batch additions and manual top-ups are stock coming in
+          totalIncreases += movement.quantity;
+          break;
+        case 'manual_decrease':
+          // Manual decreases are corrections / adjustments
+          totalDecreases += Math.abs(movement.quantity);
+          totalAdjustments += movement.quantity; // negative — reduces stock
+          hasAdjustmentMovements = true;
+          break;
+        default:
+          if (isCorrection) {
+            totalAdjustments += movement.quantity;
+            hasAdjustmentMovements = true;
+          }
       }
     });
     // Never show a negative net-sold figure (edge case: more returns logged than purchases)
