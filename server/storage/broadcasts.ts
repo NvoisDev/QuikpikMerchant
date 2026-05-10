@@ -542,6 +542,7 @@ export class BroadcastStorage extends CustomerStorage {
     totalIncreases: number;
     totalDecreases: number;
     totalAdjustments: number;
+    hasAdjustmentMovements: boolean;
     currentStock: number;
   }> {
     const movements = await this.getStockMovements(productId);
@@ -551,6 +552,7 @@ export class BroadcastStorage extends CustomerStorage {
     let totalIncreases = 0;
     let totalDecreases = 0;
     let totalAdjustments = 0;
+    let hasAdjustmentMovements = false;
 
     // Find the initial stock movement (if any)
     const initialMovement = movements.find(m => m.movementType === 'initial');
@@ -560,6 +562,9 @@ export class BroadcastStorage extends CustomerStorage {
 
     // Calculate totals from movements
     movements.forEach(movement => {
+      const isCorrection = typeof movement.reason === 'string' && movement.reason.toLowerCase().includes('correction');
+      const isAdjustment = movement.movementType === 'manual_increase' || movement.movementType === 'manual_decrease' || isCorrection;
+
       switch (movement.movementType) {
         case 'purchase':
           totalPurchases += Math.abs(movement.quantity); // purchases are negative
@@ -569,11 +574,20 @@ export class BroadcastStorage extends CustomerStorage {
           break;
         case 'manual_increase':
           totalIncreases += movement.quantity;
+          totalAdjustments += movement.quantity;
+          hasAdjustmentMovements = true;
           break;
         case 'manual_decrease':
-          totalDecreases += Math.abs(movement.quantity); // track as positive for display
+          totalDecreases += Math.abs(movement.quantity);
           totalAdjustments += movement.quantity; // negative — reduces stock
+          hasAdjustmentMovements = true;
           break;
+        default:
+          // Catch correction-tagged movements of other types
+          if (isCorrection) {
+            totalAdjustments += movement.quantity;
+            hasAdjustmentMovements = true;
+          }
       }
     });
     // Never show a negative net-sold figure (edge case: more returns logged than purchases)
@@ -589,6 +603,7 @@ export class BroadcastStorage extends CustomerStorage {
       totalIncreases,
       totalDecreases,
       totalAdjustments,
+      hasAdjustmentMovements,
       currentStock,
     };
   }
