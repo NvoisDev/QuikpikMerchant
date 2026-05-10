@@ -1,6 +1,9 @@
-import { neon } from '@neondatabase/serverless';
-import { drizzle } from 'drizzle-orm/neon-http';
+import { Pool, neonConfig } from '@neondatabase/serverless';
+import { drizzle } from 'drizzle-orm/neon-serverless';
+import ws from "ws";
 import * as schema from "@shared/schema";
+
+neonConfig.webSocketConstructor = ws;
 
 if (!process.env.DATABASE_URL) {
   throw new Error(
@@ -8,13 +11,13 @@ if (!process.env.DATABASE_URL) {
   );
 }
 
-// neon() connects via HTTPS (port 443) — works in all environments including
-// production deployment containers that block outbound TCP/5432.
-// drizzle-orm/neon-http supports interactive transactions via Neon's HTTP
-// transaction API (session tokens), so db.transaction() works correctly.
-const sql = neon(process.env.DATABASE_URL!);
-export const db = drizzle({ client: sql, schema });
+export const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
-// Dummy pool export for any legacy code that might reference it.
-// connect-pg-simple uses conString directly, not this pool.
-export const pool = { query: sql, end: async () => {} };
+// Prevent the process from crashing when Neon terminates an idle connection.
+// The pool automatically replaces the dropped client on the next query, so
+// swallowing the error here is safe and intentional.
+pool.on('error', (err) => {
+  console.error('PG Pool error (connection dropped by server):', err.message);
+});
+
+export const db = drizzle({ client: pool, schema });
