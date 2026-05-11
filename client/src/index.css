@@ -161,11 +161,11 @@
 /* Customer Theme System */
 /* Default Green Theme (Emerald) */
 :root, [data-customer-theme="emerald"] {
-  --theme-primary: hsl(151, 77%, 36%);
+  --theme-primary: hsl(151, 95%, 24%);
   --theme-primary-foreground: hsl(0, 0%, 100%);
   --theme-secondary: hsl(151, 30%, 95%);
-  --theme-secondary-foreground: hsl(151, 77%, 20%);
-  --theme-accent: hsl(151, 77%, 36%);
+  --theme-secondary-foreground: hsl(151, 95%, 14%);
+  --theme-accent: hsl(151, 95%, 24%);
   --theme-accent-foreground: hsl(0, 0%, 100%);
   --theme-background: #ffffff;
   --theme-card: #ffffff;
@@ -248,15 +248,15 @@
   --card-foreground: hsl(222, 47%, 11%);
   --border: hsl(214, 13%, 88%);
   --input: hsl(214, 13%, 88%);
-  --primary: hsl(151, 77%, 36%);
+  --primary: hsl(151, 95%, 24%);
   --primary-foreground: hsl(0, 0%, 100%);
   --secondary: hsl(151, 30%, 95%);
-  --secondary-foreground: hsl(151, 77%, 20%);
-  --accent: hsl(151, 77%, 36%);
+  --secondary-foreground: hsl(151, 95%, 14%);
+  --accent: hsl(151, 95%, 24%);
   --accent-foreground: hsl(0, 0%, 100%);
   --destructive: hsl(0, 84.2%, 60.2%);
   --destructive-foreground: hsl(60, 9.1%, 97.8%);
-  --ring: hsl(151, 77%, 36%);
+  --ring: hsl(151, 95%, 24%);
   --radius: 0.625rem;
   --warning: hsl(38, 92%, 50%);
   --warning-foreground: hsl(48, 96%, 89%);
