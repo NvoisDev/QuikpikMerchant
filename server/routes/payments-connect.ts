@@ -536,15 +536,13 @@ export function registerPaymentConnectRoutes(app: Express): void {
       }
 
       if (event.type === 'payment_intent.succeeded') {
-        const paymentIntent = event.data?.object;
+        const paymentIntent = event.data?.object as Stripe.PaymentIntent;
         
         const userId = paymentIntent?.metadata?.userId;
         // Handle all possible tier metadata field names for maximum compatibility
         const tier = paymentIntent?.metadata?.targetTier || 
                      paymentIntent?.metadata?.tier || 
                      paymentIntent?.metadata?.planId;
-        
-        const orderType = paymentIntent?.metadata?.orderType;
         
         if (userId && tier) {
           
@@ -569,6 +567,79 @@ export function registerPaymentConnectRoutes(app: Express): void {
             productLimit: productLimit
           });
         }
+
+        // ── Fallback: order/quote payment via payment_intent.succeeded ──────────
+        // When checkout.session.completed is delayed or missed, the payment intent
+        // metadata (populated at session creation) lets us mark the order as paid.
+        const piOrderId = paymentIntent?.metadata?.orderId;
+        const piOrderNumber = paymentIntent?.metadata?.orderNumber;
+
+        if (piOrderId && piOrderNumber) {
+          console.log(`🔄 payment_intent.succeeded fallback — checking order ${piOrderNumber} (id ${piOrderId})`);
+          try {
+            const [existingOrder] = await db.select()
+              .from(orders)
+              .where(eq(orders.id, parseInt(piOrderId)))
+              .limit(1);
+
+            if (!existingOrder) {
+              console.warn(`⚠️ payment_intent.succeeded fallback: order ${piOrderId} not found`);
+              return res.json({ received: true, type: event.type });
+            }
+
+            // Only act if this PI hasn't already been recorded (avoid double-counting)
+            const piId = paymentIntent.id;
+            const alreadyRecorded = (existingOrder.stripePaymentIntentId || '')
+              .split(',').map((s: string) => s.trim()).includes(piId);
+
+            if (alreadyRecorded) {
+              console.log(`⚡ payment_intent.succeeded fallback: PI ${piId} already recorded for order ${piOrderNumber} — skipping`);
+              return res.json({ received: true, type: event.type });
+            }
+
+            // If the order is already fully paid, nothing to do
+            if (existingOrder.paymentStatus === 'paid') {
+              console.log(`⚡ payment_intent.succeeded fallback: order ${piOrderNumber} already marked paid — skipping`);
+              return res.json({ received: true, type: event.type });
+            }
+
+            const thisPayment = (paymentIntent.amount_received || 0) / 100;
+            const previouslyPaid = parseFloat(existingOrder.amountPaid || '0');
+            const orderTotal = parseFloat(existingOrder.total || '0');
+            const cumulativePaid = previouslyPaid + thisPayment;
+            const newOutstanding = Math.max(0, orderTotal - cumulativePaid);
+
+            let paymentStatus = 'unpaid';
+            if (newOutstanding <= 0.01) {
+              paymentStatus = 'paid';
+            } else if (cumulativePaid > 0) {
+              paymentStatus = 'part_paid';
+            }
+
+            const newPiList = existingOrder.stripePaymentIntentId
+              ? `${existingOrder.stripePaymentIntentId},${piId}`
+              : piId;
+
+            await db.update(orders)
+              .set({
+                amountPaid: cumulativePaid.toFixed(2),
+                amountOutstanding: newOutstanding.toFixed(2),
+                paymentStatus,
+                status: paymentStatus === 'paid' ? 'confirmed' : existingOrder.status,
+                stripePaymentIntentId: newPiList,
+                stripePaymentLinkUrl: null,
+                stripePaymentLinkId: null,
+                ...(!existingOrder.paymentMethod ? { paymentMethod: 'payment_link' } : {}),
+              })
+              .where(eq(orders.id, parseInt(piOrderId)));
+
+            console.log(`✅ payment_intent.succeeded fallback: order ${piOrderNumber} updated → ${paymentStatus} (paid £${cumulativePaid.toFixed(2)} / £${orderTotal.toFixed(2)})`);
+          } catch (fallbackErr) {
+            console.error(`❌ payment_intent.succeeded fallback failed for order ${piOrderNumber}:`, fallbackErr);
+          }
+        }
+
+        return res.json({ received: true, type: event.type });
       }
 
       if (event.type === 'charge.refund.updated') {

@@ -648,6 +648,24 @@ export function registerPaymentRoutes(app: Express, customerActionLimiter: Reque
         : 0;
 
       // Create Stripe checkout session for remaining balance
+      const baseUrl = process.env.NODE_ENV === 'production'
+        ? 'https://quikpik.app'
+        : (process.env.REPLIT_DEV_DOMAIN
+          ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+          : 'http://localhost:5000');
+
+      const balanceOrderMetadata = {
+        orderId: orderId.toString(),
+        orderNumber: order.orderNumber || '',
+        wholesalerId: order.wholesalerId,
+        customerId: order.retailerId || '',
+        isQuote: 'true',
+        isBalancePayment: 'true',
+        depositPercentage: '100',
+        depositAmount: amountOutstanding.toFixed(2),
+        totalAmount: order.total || '0',
+      };
+
       const session = await stripe.checkout.sessions.create({
         payment_method_types: ['card'],
         line_items: [{
@@ -662,29 +680,24 @@ export function registerPaymentRoutes(app: Express, customerActionLimiter: Reque
           quantity: 1,
         }],
         mode: 'payment',
-        success_url: `${process.env.APP_URL || (process.env.REPLIT_DOMAINS?.split(',')[0] ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}` : 'https://quikpik.app')}/customer/payment-success?order=${order.orderNumber}&wholesaler=${order.wholesalerId}&returning=true&session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `${process.env.APP_URL || (process.env.REPLIT_DOMAINS?.split(',')[0] ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}` : 'https://quikpik.app')}/store/${order.wholesalerId}`,
-        metadata: {
-          orderId: orderId.toString(),
-          orderNumber: order.orderNumber || '',
-          wholesalerId: order.wholesalerId,
-          customerId: order.retailerId,
-          isQuote: 'true',
-          isBalancePayment: 'true',
-          depositPercentage: '100',
-          depositAmount: amountOutstanding.toFixed(2),
-          totalAmount: order.total || '0',
-        },
+        success_url: `${baseUrl}/customer/payment-success?order=${order.orderNumber}&wholesaler=${order.wholesalerId}&returning=true`,
+        cancel_url: `${baseUrl}/store/${order.wholesalerId}`,
+        metadata: balanceOrderMetadata,
         customer_email: customer?.email || undefined,
         expires_at: Math.floor(Date.now() / 1000) + (24 * 60 * 60),
         ...(customerBalanceUseConnect && customerBalanceTransferAmount > 0 ? {
           payment_intent_data: {
+            metadata: balanceOrderMetadata,
             transfer_data: {
               destination: wholesaler!.stripeAccountId!,
               amount: customerBalanceTransferAmount,
             },
           },
-        } : {}),
+        } : {
+          payment_intent_data: {
+            metadata: balanceOrderMetadata,
+          },
+        }),
       });
 
       // Update order with new payment link

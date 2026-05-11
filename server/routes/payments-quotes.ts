@@ -509,23 +509,34 @@ export function registerQuoteRoutes(app: Express): void {
           const wholesalerTotal = subtotal - platformFee;
           const wholesalerDepositAmount = Math.round(depositAmount * (wholesalerTotal / total) * 100);
 
+          const quoteBaseUrl = process.env.NODE_ENV === 'production'
+            ? 'https://quikpik.app'
+            : (process.env.REPLIT_DEV_DOMAIN
+              ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+              : 'http://localhost:5000');
+
+          const quoteOrderMetadata = {
+            orderId: quoteOrder.id.toString(),
+            orderNumber: quoteOrder.orderNumber,
+            wholesalerId,
+            customerId,
+            isQuote: 'true',
+            depositPercentage: validDepositPercentage.toString(),
+            depositAmount: depositAmount.toFixed(2),
+            totalAmount: total.toFixed(2),
+          };
+
           // Base session params (no Connect routing) — used as fallback if transfer_data fails
           const baseSessionParams: any = {
             payment_method_types: ['card'],
             line_items: lineItems,
             mode: 'payment',
-            success_url: `${process.env.APP_URL || (process.env.REPLIT_DOMAINS?.split(',')[0] ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}` : 'https://quikpik.app')}/customer/payment-success?order=${quoteOrder.orderNumber}&wholesaler=${wholesalerId}${isReturning ? '&returning=true' : ''}&session_id={CHECKOUT_SESSION_ID}`,
-            cancel_url: `${process.env.APP_URL || (process.env.REPLIT_DOMAINS?.split(',')[0] ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}` : 'https://quikpik.app')}/store/${wholesalerId}`,
-            metadata: {
-              orderId: quoteOrder.id.toString(),
-              orderNumber: quoteOrder.orderNumber,
-              wholesalerId,
-              customerId,
-              isQuote: 'true',
-              depositPercentage: validDepositPercentage.toString(),
-              depositAmount: depositAmount.toFixed(2),
-              totalAmount: total.toFixed(2),
-            },
+            success_url: `${quoteBaseUrl}/customer/payment-success?order=${quoteOrder.orderNumber}&wholesaler=${wholesalerId}${isReturning ? '&returning=true' : ''}`,
+            cancel_url: `${quoteBaseUrl}/store/${wholesalerId}`,
+            metadata: quoteOrderMetadata,
+            payment_intent_data: {
+              metadata: quoteOrderMetadata,
+            } as Stripe.Checkout.SessionCreateParams['payment_intent_data'],
             customer_email: customer.email || undefined,
             expires_at: Math.floor(Date.now() / 1000) + (24 * 60 * 60), // Stripe max is 24 hours
           };
@@ -537,6 +548,7 @@ export function registerQuoteRoutes(app: Express): void {
               session = await stripe.checkout.sessions.create({
                 ...baseSessionParams,
                 payment_intent_data: {
+                  metadata: quoteOrderMetadata,
                   transfer_data: {
                     destination: wholesaler.stripeAccountId!,
                     amount: wholesalerDepositAmount,
@@ -1097,19 +1109,25 @@ export function registerQuoteRoutes(app: Express): void {
           // Session charge amount (in pence): for part_paid it's the remaining outstanding, otherwise the deposit
           const sessionChargeForConnect = isPartPaid ? newAmountOutstanding : depositAmount;
           const wholesalerSessionAmount = Math.round(sessionChargeForConnect * (wholesalerTotal / (total || 1)) * 100);
-          const baseUrl = process.env.APP_URL || (process.env.REPLIT_DOMAINS?.split(',')[0] ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}` : 'https://quikpik.app');
+          const baseUrl = process.env.NODE_ENV === 'production'
+            ? 'https://quikpik.app'
+            : (process.env.REPLIT_DEV_DOMAIN
+              ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+              : 'http://localhost:5000');
+          const editQuoteMetadata = { orderId: quoteId.toString(), orderNumber: existingOrder.orderNumber, wholesalerId, customerId: existingOrder.retailerId || '', isQuote: 'true', depositPercentage: depositPercentage.toString(), depositAmount: depositAmount.toFixed(2), totalAmount: total.toFixed(2), alreadyPaid: alreadyPaid.toFixed(2) };
           const baseSessionParams: any = {
             payment_method_types: ['card'], line_items: lineItems, mode: 'payment',
-            success_url: `${baseUrl}/customer/payment-success?order=${existingOrder.orderNumber}&wholesaler=${wholesalerId}&session_id={CHECKOUT_SESSION_ID}`,
+            success_url: `${baseUrl}/customer/payment-success?order=${existingOrder.orderNumber}&wholesaler=${wholesalerId}`,
             cancel_url: `${baseUrl}/store/${wholesalerId}`,
-            metadata: { orderId: quoteId.toString(), orderNumber: existingOrder.orderNumber, wholesalerId, customerId: existingOrder.retailerId, isQuote: 'true', depositPercentage: depositPercentage.toString(), depositAmount: depositAmount.toFixed(2), totalAmount: total.toFixed(2), alreadyPaid: alreadyPaid.toFixed(2) },
+            metadata: editQuoteMetadata,
+            payment_intent_data: { metadata: editQuoteMetadata } as Stripe.Checkout.SessionCreateParams['payment_intent_data'],
             customer_email: customer?.email || undefined,
             expires_at: Math.floor(Date.now() / 1000) + (24 * 60 * 60),
           };
           let session: Awaited<ReturnType<typeof stripe.checkout.sessions.create>> | null = null;
           if (quoteUseConnect && wholesalerSessionAmount > 0) {
             try {
-              session = await stripe.checkout.sessions.create({ ...baseSessionParams, payment_intent_data: { transfer_data: { destination: wholesaler.stripeAccountId!, amount: wholesalerSessionAmount } } });
+              session = await stripe.checkout.sessions.create({ ...baseSessionParams, payment_intent_data: { metadata: editQuoteMetadata, transfer_data: { destination: wholesaler.stripeAccountId!, amount: wholesalerSessionAmount } } });
             } catch (e) { console.warn('[payments] Stripe Connect session failed (falling back to direct):', e instanceof Error ? e.message : e); }
           }
           if (!session) session = await stripe.checkout.sessions.create(baseSessionParams);
