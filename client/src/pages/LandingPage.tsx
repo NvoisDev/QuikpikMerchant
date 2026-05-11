@@ -191,7 +191,7 @@ export default function LandingPage() {
         </div>
 
         {/* Content row */}
-        <div className="relative z-10 w-full max-w-6xl mx-auto pl-0 pr-4 sm:pr-6 lg:pr-8 py-16 sm:py-20">
+        <div className="relative z-10 w-full max-w-6xl mx-auto px-4 sm:pl-0 sm:pr-6 lg:pr-8 py-16 sm:py-20">
           <div className="flex flex-col lg:flex-row items-center gap-10 lg:gap-16">
 
             {/* Copy — now the only child of the hero flex row */}
@@ -201,7 +201,7 @@ export default function LandingPage() {
                 Built for wholesale businesses
               </div>
 
-              <h1 className="text-4xl sm:text-5xl lg:text-[3.25rem] font-extrabold text-white leading-tight tracking-tight mb-6">
+              <h1 className="text-3xl sm:text-5xl lg:text-[3.25rem] font-extrabold text-white leading-tight tracking-tight mb-6">
                 Run your<br />
                 wholesale business<br />
                 <span className="text-primary">without the chaos</span>
@@ -216,7 +216,7 @@ export default function LandingPage() {
                 <Button
                   onClick={handleGetStarted}
                   size="lg"
-                  className="text-base px-8 py-6 bg-primary hover:bg-primary/90 rounded-xl shadow-lg shadow-primary/30"
+                  className="text-base px-8 py-4 sm:py-6 bg-primary hover:bg-primary/90 rounded-xl shadow-lg shadow-primary/30"
                 >
                   Start Free <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
@@ -224,7 +224,7 @@ export default function LandingPage() {
                   onClick={handleBookDemo}
                   size="lg"
                   variant="outline"
-                  className="text-base px-8 py-6 rounded-xl border-2 border-white/30 text-white bg-transparent hover:bg-white/10 hover:border-white/50"
+                  className="text-base px-8 py-4 sm:py-6 rounded-xl border-2 border-white/30 text-white bg-transparent hover:bg-white/10 hover:border-white/50"
                 >
                   Book Demo
                 </Button>
@@ -257,8 +257,8 @@ export default function LandingPage() {
               <DashboardMockup />
             </div>
 
-            {/* Right — 2×2 feature grid */}
-            <div className="flex-1 w-full grid grid-cols-2 gap-4">
+            {/* Right — 2×2 feature grid (single col on mobile) */}
+            <div className="flex-1 w-full grid grid-cols-1 sm:grid-cols-2 gap-4">
               {[
                 { icon: Box,         title: "Inventory Management",  desc: "Track stock in real time and never run out again." },
                 { icon: ReceiptText, title: "Invoicing",             desc: "Create and send professional invoices in seconds." },
@@ -462,24 +462,24 @@ export default function LandingPage() {
           </div>
 
           <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-            <div className="grid grid-cols-3 text-sm font-semibold border-b border-gray-100">
-              <div className="col-span-1 p-4 text-gray-500"></div>
-              <div className="p-4 text-center text-gray-500 border-l border-gray-100">Traditional</div>
-              <div className="p-4 text-center text-primary border-l border-gray-100">Quikpik</div>
+            <div className="grid grid-cols-3 text-xs sm:text-sm font-semibold border-b border-gray-100">
+              <div className="col-span-1 p-2 sm:p-4 text-gray-500"></div>
+              <div className="p-2 sm:p-4 text-center text-gray-500 border-l border-gray-100">Traditional</div>
+              <div className="p-2 sm:p-4 text-center text-primary border-l border-gray-100">Quikpik</div>
             </div>
             {[
               { label: "Monthly cost",     old: "£200–£500+",       new: "Free to start" },
               { label: "Taking orders",    old: "Manual",           new: "Automated online" },
               { label: "Payments",         old: "Chasing invoices", new: "Instant card payments" },
-              { label: "Stock tracking",   old: "Spreadsheets",     new: "Real-time, automatic" },
-              { label: "Customer pricing", old: "Sent manually",    new: "Custom price lists" },
+              { label: "Stock tracking",   old: "Spreadsheets",     new: "Real-time, auto" },
+              { label: "Pricing",          old: "Sent manually",    new: "Custom price lists" },
               { label: "Contracts",        old: "Annual lock-in",   new: "Cancel anytime" },
             ].map(({ label, old, new: newVal }, i) => (
-              <div key={i} className={`grid grid-cols-3 text-sm border-b border-gray-50 ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}`}>
-                <div className="p-4 font-medium text-gray-700">{label}</div>
-                <div className="p-4 text-center text-gray-400 border-l border-gray-100">{old}</div>
-                <div className="p-4 text-center text-primary font-semibold border-l border-gray-100 flex items-center justify-center gap-1">
-                  <CheckCircle className="h-4 w-4" /> {newVal}
+              <div key={i} className={`grid grid-cols-3 text-xs sm:text-sm border-b border-gray-50 ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}`}>
+                <div className="p-2 sm:p-4 font-medium text-gray-700">{label}</div>
+                <div className="p-2 sm:p-4 text-center text-gray-400 border-l border-gray-100">{old}</div>
+                <div className="p-2 sm:p-4 text-center text-primary font-semibold border-l border-gray-100 flex items-center justify-center gap-1">
+                  <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" /> {newVal}
                 </div>
               </div>
             ))}
