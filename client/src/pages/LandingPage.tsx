@@ -52,7 +52,7 @@ function DashboardMockup() {
               <span className="text-white/80 text-xs">Total Sales</span>
               <TrendingUp className="h-3.5 w-3.5 text-white/70" />
             </div>
-            <p className="text-white font-bold text-base">£12,450</p>
+            <p className="text-white font-bold text-base">12,450</p>
             <p className="text-white/70 text-xs">+18% from last month</p>
           </div>
 
@@ -62,7 +62,7 @@ function DashboardMockup() {
               <span className="text-amber-900/80 text-xs">Amount Owed</span>
               <TrendingUp className="h-3.5 w-3.5 text-amber-900/60" />
             </div>
-            <p className="text-amber-900 font-bold text-base">£4,820</p>
+            <p className="text-amber-900 font-bold text-base">4,820</p>
             <p className="text-amber-900/70 text-xs">12 unpaid invoices</p>
           </div>
 
@@ -194,7 +194,12 @@ export default function LandingPage() {
         <div className="relative z-10 w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-20">
           <div className="flex flex-col lg:flex-row items-center gap-10 lg:gap-16">
 
-            {/* Left — copy */}
+            {/* Left — dashboard mockup */}
+            <div className="flex-shrink-0 w-full max-w-[340px] lg:max-w-[320px] hidden sm:block">
+              <DashboardMockup />
+            </div>
+
+            {/* Right — copy */}
             <div className="flex-1 max-w-lg">
               <div className="inline-flex items-center gap-2 bg-green-900/50 text-green-400 text-xs font-semibold px-4 py-2 rounded-full mb-8 border border-green-800/50">
                 <span className="w-1.5 h-1.5 bg-green-400 rounded-full" />
@@ -241,11 +246,6 @@ export default function LandingPage() {
                   <CheckCircle className="h-4 w-4 text-green-500" /> Cancel anytime
                 </span>
               </div>
-            </div>
-
-            {/* Right — dashboard mockup */}
-            <div className="flex-shrink-0 w-full max-w-[340px] lg:max-w-[320px] hidden sm:block">
-              <DashboardMockup />
             </div>
 
           </div>
