@@ -127,7 +127,7 @@ export default function LandingPage() {
   const handleGetStarted = () => { window.location.href = "/signup"; };
   const handleLogin = () => { window.location.href = "/login"; };
   const handleCustomerLogin = () => { window.location.href = "/customer-login"; };
-  const handleBookDemo = () => { window.location.href = "mailto:hello@quikpik.co?subject=Demo Request"; };
+  const handleBookDemo = () => { window.open("https://calendly.com/hello-quikpik/30min", "_blank"); };
 
   return (
     <div className="min-h-screen bg-white text-gray-900">
