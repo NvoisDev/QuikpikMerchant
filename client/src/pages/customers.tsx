@@ -750,35 +750,35 @@ export default function Customers() {
           <TabsContent value="address-book" className="space-y-4 sm:space-y-6">
 
             {stats && (
-              <div className="flex flex-wrap gap-2 mb-2">
+              <div className={`grid gap-2 mb-2 ${user?.role !== 'team_member' ? 'grid-cols-4' : 'grid-cols-2'}`}>
                 {user?.role !== 'team_member' && (
-                  <div className="rounded-lg bg-green-50 border border-green-100 px-3 py-2 flex items-center gap-2">
+                  <div className="rounded-lg bg-green-50 border border-green-100 px-3 py-2 flex items-center gap-2 min-w-0">
                     <DollarSign className="h-4 w-4 text-green-500 shrink-0" />
-                    <div>
+                    <div className="min-w-0">
                       <p className="text-[11px] text-green-700">Paid</p>
-                      <p className="text-sm font-bold text-green-600">{formatMoney(stats.totalRevenue)}</p>
+                      <p className="text-sm font-bold text-green-600 truncate">{formatMoney(stats.totalRevenue)}</p>
                     </div>
                   </div>
                 )}
                 {user?.role !== 'team_member' && (
-                  <div className="rounded-lg bg-red-50 border border-red-100 px-3 py-2 flex items-center gap-2">
+                  <div className="rounded-lg bg-red-50 border border-red-100 px-3 py-2 flex items-center gap-2 min-w-0">
                     <Clock className="h-4 w-4 text-red-500 shrink-0" />
-                    <div>
+                    <div className="min-w-0">
                       <p className="text-[11px] text-red-700">Unpaid</p>
-                      <p className="text-sm font-bold text-red-600">{formatMoney(stats.totalUnpaid)}</p>
+                      <p className="text-sm font-bold text-red-600 truncate">{formatMoney(stats.totalUnpaid)}</p>
                     </div>
                   </div>
                 )}
-                <div className="rounded-lg bg-blue-50 border border-blue-100 px-3 py-2 flex items-center gap-2">
+                <div className="rounded-lg bg-blue-50 border border-blue-100 px-3 py-2 flex items-center gap-2 min-w-0">
                   <Users className="h-4 w-4 text-blue-500 shrink-0" />
-                  <div>
+                  <div className="min-w-0">
                     <p className="text-[11px] text-blue-700">Customers</p>
                     <p className="text-sm font-bold text-blue-600">{stats.totalCustomers}</p>
                   </div>
                 </div>
-                <div className="rounded-lg bg-orange-50 border border-orange-100 px-3 py-2 flex items-center gap-2">
+                <div className="rounded-lg bg-orange-50 border border-orange-100 px-3 py-2 flex items-center gap-2 min-w-0">
                   <Activity className="h-4 w-4 text-orange-500 shrink-0" />
-                  <div>
+                  <div className="min-w-0">
                     <p className="text-[11px] text-orange-700">Active</p>
                     <p className="text-sm font-bold text-orange-600">{stats.activeCustomers}</p>
                   </div>
