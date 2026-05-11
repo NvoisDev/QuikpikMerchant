@@ -162,7 +162,19 @@ export function EditQuoteView({
                           >
                             <Minus className="h-3 w-3" />
                           </Button>
-                          <span className="w-8 text-center text-sm font-medium">{item.quantity}</span>
+                          <input
+                            type="number"
+                            min="1"
+                            value={item.quantity}
+                            onChange={(e) => {
+                              const val = parseInt(e.target.value, 10);
+                              const updated = [...editItems];
+                              updated[index] = { ...updated[index], quantity: isNaN(val) ? 1 : Math.max(1, val) };
+                              setEditItems(updated);
+                            }}
+                            onFocus={(e) => e.target.select()}
+                            className="w-14 text-center text-sm font-medium border border-gray-300 rounded px-1 py-0.5 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                          />
                           <Button
                             variant="outline" size="sm" className="h-7 w-7 p-0"
                             onClick={() => {
