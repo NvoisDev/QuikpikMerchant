@@ -194,12 +194,7 @@ export default function LandingPage() {
         <div className="relative z-10 w-full max-w-6xl mx-auto pl-0 pr-4 sm:pr-6 lg:pr-8 py-16 sm:py-20">
           <div className="flex flex-col lg:flex-row items-center gap-10 lg:gap-16">
 
-            {/* Left — dashboard mockup, flush to the left edge */}
-            <div className="flex-shrink-0 w-full max-w-[340px] lg:max-w-[360px] hidden sm:block">
-              <DashboardMockup />
-            </div>
-
-            {/* Right — copy */}
+            {/* Copy — now the only child of the hero flex row */}
             <div className="flex-1 max-w-lg">
               <div className="inline-flex items-center gap-2 bg-green-900/50 text-green-400 text-xs font-semibold px-4 py-2 rounded-full mb-8 border border-green-800/50">
                 <span className="w-1.5 h-1.5 bg-green-400 rounded-full" />
@@ -253,28 +248,38 @@ export default function LandingPage() {
       </section>
 
       {/* ── FEATURE CARDS STRIP ── */}
-      <section className="bg-white border-b border-gray-100">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6">
-          <div className="grid grid-cols-2 lg:grid-cols-4 divide-x divide-y lg:divide-y-0 divide-gray-100">
-            {[
-              { icon: Box,         title: "Inventory Management",  desc: "Track stock in real time and never run out again." },
-              { icon: ReceiptText, title: "Invoicing",             desc: "Create and send professional invoices in seconds." },
-              { icon: UserCheck,   title: "Customer Management",   desc: "Manage customers, balances and order history easily." },
-              { icon: Wallet,      title: "Payment Tracking",      desc: "Track payments and get paid faster, every time." },
-            ].map(({ icon: Icon, title, desc }, i) => (
-              <div
-                key={i}
-                className="flex items-start gap-4 p-6 sm:p-8 group hover:bg-green-50/50 transition-colors duration-200"
-              >
-                <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0 group-hover:bg-green-200 transition-colors">
-                  <Icon className="h-5 w-5 text-primary" />
+      <section className="bg-white border-b border-gray-100 py-12 sm:py-16">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col lg:flex-row items-center gap-10 lg:gap-16">
+
+            {/* Left — dashboard mockup */}
+            <div className="w-full max-w-xs sm:max-w-sm lg:max-w-md flex-shrink-0 mx-auto lg:mx-0">
+              <DashboardMockup />
+            </div>
+
+            {/* Right — 2×2 feature grid */}
+            <div className="flex-1 w-full grid grid-cols-2 gap-4">
+              {[
+                { icon: Box,         title: "Inventory Management",  desc: "Track stock in real time and never run out again." },
+                { icon: ReceiptText, title: "Invoicing",             desc: "Create and send professional invoices in seconds." },
+                { icon: UserCheck,   title: "Customer Management",   desc: "Manage customers, balances and order history easily." },
+                { icon: Wallet,      title: "Payment Tracking",      desc: "Track payments and get paid faster, every time." },
+              ].map(({ icon: Icon, title, desc }, i) => (
+                <div
+                  key={i}
+                  className="flex items-start gap-4 p-5 sm:p-6 rounded-xl border border-gray-100 group hover:bg-green-50/50 hover:border-green-100 transition-colors duration-200"
+                >
+                  <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0 group-hover:bg-green-200 transition-colors">
+                    <Icon className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-gray-900 text-sm sm:text-base mb-1">{title}</h3>
+                    <p className="text-gray-500 text-xs sm:text-sm leading-relaxed">{desc}</p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="font-bold text-gray-900 text-sm sm:text-base mb-1">{title}</h3>
-                  <p className="text-gray-500 text-xs sm:text-sm leading-relaxed">{desc}</p>
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
+
           </div>
         </div>
       </section>
