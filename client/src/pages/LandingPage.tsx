@@ -471,8 +471,8 @@ export default function LandingPage() {
               { label: "Monthly cost",     old: "£200–£500+",       new: "Free to start" },
               { label: "Taking orders",    old: "Manual",           new: "Automated online" },
               { label: "Payments",         old: "Chasing invoices", new: "Instant card payments" },
-              { label: "Stock tracking",   old: "Spreadsheets",     new: "Real-time, auto" },
-              { label: "Pricing",          old: "Sent manually",    new: "Custom price lists" },
+              { label: "Stock tracking",   old: "Spreadsheets",     new: "Real-time, automatic" },
+              { label: "Customer pricing", old: "Sent manually",    new: "Custom price lists" },
               { label: "Contracts",        old: "Annual lock-in",   new: "Cancel anytime" },
             ].map(({ label, old, new: newVal }, i) => (
               <div key={i} className={`grid grid-cols-3 text-xs sm:text-sm border-b border-gray-50 ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}`}>
