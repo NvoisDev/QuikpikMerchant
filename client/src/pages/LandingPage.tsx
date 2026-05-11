@@ -12,12 +12,113 @@ import {
   FileText,
   CheckCircle,
   Shield,
-  Zap,
+  TrendingUp,
+  ShoppingCart,
+  AlertTriangle,
+  ChevronRight,
+  Menu,
   Box,
   ReceiptText,
   UserCheck,
   Wallet,
 } from "lucide-react";
+
+function DashboardMockup() {
+  return (
+    <div className="bg-white rounded-2xl shadow-2xl overflow-hidden w-full max-w-sm text-gray-900 select-none">
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+        <div className="flex items-center gap-2">
+          <img src="/quikpik-logo.png" alt="" className="h-5 w-5 object-contain" />
+          <span className="font-bold text-sm text-gray-900">Quikpik</span>
+        </div>
+        <Menu className="h-4 w-4 text-gray-400" />
+      </div>
+
+      <div className="p-4">
+        {/* Greeting */}
+        <div className="mb-4">
+          <p className="font-semibold text-sm text-gray-900">Good morning, John 👋</p>
+          <p className="text-xs text-gray-400">Here's what's happening in your business.</p>
+        </div>
+
+        {/* KPI grid */}
+        <div className="grid grid-cols-2 gap-2 mb-4">
+          {/* Total Sales */}
+          <div className="bg-primary rounded-xl p-3">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-white/80 text-xs">Total Sales</span>
+              <TrendingUp className="h-3.5 w-3.5 text-white/70" />
+            </div>
+            <p className="text-white font-bold text-base">£12,450</p>
+            <p className="text-white/70 text-xs">+18% from last month</p>
+          </div>
+
+          {/* Amount Owed */}
+          <div className="bg-amber-400 rounded-xl p-3">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-amber-900/80 text-xs">Amount Owed</span>
+              <TrendingUp className="h-3.5 w-3.5 text-amber-900/60" />
+            </div>
+            <p className="text-amber-900 font-bold text-base">£4,820</p>
+            <p className="text-amber-900/70 text-xs">12 unpaid invoices</p>
+          </div>
+
+          {/* Total Orders */}
+          <div className="bg-gray-50 rounded-xl p-3">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-gray-500 text-xs">Total Orders</span>
+              <ShoppingCart className="h-3.5 w-3.5 text-gray-400" />
+            </div>
+            <p className="text-gray-900 font-bold text-base">126</p>
+            <p className="text-green-600 text-xs">+10% this week</p>
+          </div>
+
+          {/* Low Stock */}
+          <div className="bg-gray-50 rounded-xl p-3">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-gray-500 text-xs">Low Stock Items</span>
+              <AlertTriangle className="h-3.5 w-3.5 text-amber-400" />
+            </div>
+            <p className="text-gray-900 font-bold text-base">6</p>
+            <p className="text-primary text-xs cursor-pointer">View items</p>
+          </div>
+        </div>
+
+        {/* Recent Activity */}
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-semibold text-gray-700">Recent Activity</span>
+            <span className="text-xs text-primary">View all</span>
+          </div>
+          <div className="space-y-1.5">
+            {[
+              { id: "INV-051", status: "Paid",   color: "text-green-600", date: "10 May, 2024" },
+              { id: "INV-050", status: "Paid",   color: "text-green-600", date: "10 May, 2024" },
+              { id: "INV-049", status: "Unpaid", color: "text-red-500",   date: "9 May, 2024"  },
+            ].map(({ id, status, color, date }) => (
+              <div key={id} className="flex items-center justify-between py-1.5 border-b border-gray-50 last:border-0">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 bg-gray-100 rounded flex items-center justify-center">
+                    <FileText className="h-3 w-3 text-gray-400" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium text-gray-800">Invoice #{id}</p>
+                    <p className={`text-xs ${color}`}>{status}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1">
+                  <span className="text-xs text-gray-400">{date}</span>
+                  <ChevronRight className="h-3 w-3 text-gray-300" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function LandingPage() {
   const handleGetStarted = () => { window.location.href = "/signup"; };
@@ -50,67 +151,80 @@ export default function LandingPage() {
       </nav>
 
       {/* ── HERO ── */}
-      <section className="relative bg-gray-950 overflow-hidden min-h-[580px] sm:min-h-[640px] flex items-center">
-        {/* Right-side hero image */}
-        <div className="absolute inset-y-0 right-0 w-full sm:w-3/5 lg:w-1/2">
+      <section className="relative bg-gray-950 overflow-hidden min-h-[620px] flex items-center">
+        {/* Warehouse background photo — right half */}
+        <div className="absolute inset-y-0 right-0 w-full sm:w-[65%] lg:w-[58%]">
           <img
-            src="/hero-warehouse.png"
-            alt="Quikpik wholesale management"
-            className="w-full h-full object-cover object-left"
+            src="/hero-warehouse.jpg"
+            alt=""
+            aria-hidden="true"
+            className="w-full h-full object-cover object-center"
             loading="eager"
           />
-          {/* gradient fade from dark left into image */}
-          <div className="absolute inset-0 bg-gradient-to-r from-gray-950 via-gray-950/80 sm:via-gray-950/60 to-transparent" />
-          {/* bottom fade */}
-          <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-gray-950 to-transparent" />
+          {/* left-to-right gradient so text stays readable */}
+          <div className="absolute inset-0 bg-gradient-to-r from-gray-950 via-gray-950/70 sm:via-gray-950/50 to-transparent" />
+          {/* subtle bottom fade */}
+          <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-gray-950/60 to-transparent" />
         </div>
 
-        {/* Left-side content */}
-        <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-24 w-full">
-          <div className="max-w-xl">
-            <div className="inline-flex items-center gap-2 bg-green-900/50 text-green-400 text-xs font-semibold px-4 py-2 rounded-full mb-8 border border-green-800/50">
-              <span className="w-1.5 h-1.5 bg-green-400 rounded-full" />
-              Built for wholesale businesses
+        {/* Content row */}
+        <div className="relative z-10 w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-20">
+          <div className="flex flex-col lg:flex-row items-center gap-10 lg:gap-16">
+
+            {/* Left — copy */}
+            <div className="flex-1 max-w-lg">
+              <div className="inline-flex items-center gap-2 bg-green-900/50 text-green-400 text-xs font-semibold px-4 py-2 rounded-full mb-8 border border-green-800/50">
+                <span className="w-1.5 h-1.5 bg-green-400 rounded-full" />
+                Built for wholesale businesses
+              </div>
+
+              <h1 className="text-4xl sm:text-5xl lg:text-[3.25rem] font-extrabold text-white leading-tight tracking-tight mb-6">
+                Run your<br />
+                wholesale business<br />
+                <span className="text-primary">without the chaos</span>
+              </h1>
+
+              <p className="text-gray-300 text-lg mb-10 leading-relaxed">
+                Manage stock, send invoices, track payments,<br className="hidden sm:block" />
+                and grow faster with Quikpik.
+              </p>
+
+              <div className="flex flex-col sm:flex-row gap-3 mb-8">
+                <Button
+                  onClick={handleGetStarted}
+                  size="lg"
+                  className="text-base px-8 py-6 bg-primary hover:bg-primary/90 rounded-xl shadow-lg shadow-primary/30"
+                >
+                  Start Free <ArrowRight className="ml-2 h-5 w-5" />
+                </Button>
+                <Button
+                  onClick={handleBookDemo}
+                  size="lg"
+                  variant="outline"
+                  className="text-base px-8 py-6 rounded-xl border-2 border-white/30 text-white bg-transparent hover:bg-white/10 hover:border-white/50"
+                >
+                  Book Demo
+                </Button>
+              </div>
+
+              <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-gray-400">
+                <span className="flex items-center gap-1.5">
+                  <CheckCircle className="h-4 w-4 text-green-500" /> Setup in minutes
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <CheckCircle className="h-4 w-4 text-green-500" /> No credit card required
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <CheckCircle className="h-4 w-4 text-green-500" /> Cancel anytime
+                </span>
+              </div>
             </div>
 
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-white leading-tight tracking-tight mb-6">
-              Run your<br />wholesale business<br />
-              <span className="text-primary">without the chaos</span>
-            </h1>
-
-            <p className="text-gray-300 text-lg sm:text-xl mb-10 leading-relaxed max-w-md">
-              Manage stock, send invoices, track payments, and grow faster with Quikpik.
-            </p>
-
-            <div className="flex flex-col sm:flex-row gap-3 mb-8">
-              <Button
-                onClick={handleGetStarted}
-                size="lg"
-                className="text-base px-8 py-6 bg-primary hover:bg-primary/90 rounded-xl shadow-lg shadow-primary/30"
-              >
-                Start Free <ArrowRight className="ml-2 h-5 w-5" />
-              </Button>
-              <Button
-                onClick={handleBookDemo}
-                size="lg"
-                variant="outline"
-                className="text-base px-8 py-6 rounded-xl border-2 border-white/30 text-white bg-transparent hover:bg-white/10 hover:border-white/50"
-              >
-                Book Demo
-              </Button>
+            {/* Right — dashboard mockup */}
+            <div className="flex-shrink-0 w-full max-w-[340px] lg:max-w-[320px] hidden sm:block">
+              <DashboardMockup />
             </div>
 
-            <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-gray-400">
-              <span className="flex items-center gap-1.5">
-                <CheckCircle className="h-4 w-4 text-green-500" /> Setup in minutes
-              </span>
-              <span className="flex items-center gap-1.5">
-                <CheckCircle className="h-4 w-4 text-green-500" /> No credit card required
-              </span>
-              <span className="flex items-center gap-1.5">
-                <CheckCircle className="h-4 w-4 text-green-500" /> Cancel anytime
-              </span>
-            </div>
           </div>
         </div>
       </section>
@@ -284,7 +398,7 @@ export default function LandingPage() {
                 color: "text-blue-500",
                 bg: "bg-blue-50",
                 title: "Small fee on card payments",
-                desc: "Only charged when a customer pays by card online.",
+                desc: "Only pay on card orders — cash and Pay Later orders are always free.",
               },
               {
                 icon: Shield,
