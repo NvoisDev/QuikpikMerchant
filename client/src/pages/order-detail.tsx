@@ -252,21 +252,20 @@ const getPaymentMethodLabel = (method: string): string => {
 const OFFLINE_PAYMENT_METHODS = ['cash', 'bank_transfer', 'cheque', 'pay_later', 'other'];
 
 const isStripePayment = (order: Order): boolean => {
+  // A Stripe payment intent means Stripe was actually used, even if the payment method
+  // field says "bank_transfer" (e.g. quote created offline but customer paid via link)
+  if (order.stripePaymentIntentId || order.stripePaymentLinkUrl) return true;
   if (OFFLINE_PAYMENT_METHODS.includes(order.paymentMethod || '')) return false;
-  return (
-    order.paymentMethod === 'payment_link' ||
-    !!order.stripePaymentIntentId ||
-    !!order.stripePaymentLinkUrl
-  );
+  return order.paymentMethod === 'payment_link';
 };
 
 const calculateNetAmount = (order: Order) => {
   const subtotal = parseFloat(order.subtotal || '0');
   const deliveryCost = parseFloat(order.deliveryCost || '0');
-  if (!isStripePayment(order)) return subtotal + deliveryCost;
+  // Only deduct what is actually stored — never fall back to a default rate
   const actualPlatformFee = parseFloat(order.platformFee || '0');
-  const feeToDeduct = actualPlatformFee > 0 ? actualPlatformFee : calculatePlatformFee(subtotal + deliveryCost);
-  return (subtotal + deliveryCost) - feeToDeduct;
+  if (actualPlatformFee <= 0) return subtotal + deliveryCost;
+  return (subtotal + deliveryCost) - actualPlatformFee;
 };
 
 export default function OrderDetail() {
@@ -1409,10 +1408,10 @@ export default function OrderDetail() {
                   </div>
                 );
               })()}
-              {isStripePayment(order) && (
+              {parseFloat(order.platformFee || '0') > 0 && (
                 <div className="flex justify-between text-red-600">
-                  <span>Platform Fee</span>
-                  <span>-{formatMoney(parseFloat(order.platformFee || '0') || calculatePlatformFee(parseFloat(order.subtotal || '0') + parseFloat(order.deliveryCost || '0')))}</span>
+                  <span>Less platform fee</span>
+                  <span>-{formatMoney(parseFloat(order.platformFee || '0'))}</span>
                 </div>
               )}
               {order.paymentMethod && (
@@ -1471,7 +1470,7 @@ export default function OrderDetail() {
                   })())}</span>
                 </div>
                 <div className="text-xs text-gray-400 mt-0.5">
-                  {isStripePayment(order) ? 'After platform fee' : 'No platform fee for offline payments'}
+                  {parseFloat(order.platformFee || '0') > 0 ? 'After platform fee' : isStripePayment(order) ? 'No platform fee charged' : 'No platform fee for offline payments'}
                 </div>
               </div>
             </div>

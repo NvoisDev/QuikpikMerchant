@@ -671,14 +671,13 @@ export default function OrdersFresh() {
     return due;
   };
 
-  // Calculate net amount: offline orders keep full subtotal+delivery; Stripe orders deduct platform fee
+  // Calculate net amount: only deduct the actual stored platform fee — never fall back to a default rate
   const calculateNetAmount = (order: Order) => {
     const subtotal = parseFloat(order.subtotal || '0');
     const deliveryCost = parseFloat(order.deliveryCost || '0');
-    if (!isStripePayment(order)) return subtotal + deliveryCost;
     const actualPlatformFee = parseFloat(order.platformFee || '0');
-    const feeToDeduct = actualPlatformFee > 0 ? actualPlatformFee : calculatePlatformFee(subtotal + deliveryCost);
-    return (subtotal + deliveryCost) - feeToDeduct;
+    if (actualPlatformFee <= 0) return subtotal + deliveryCost;
+    return (subtotal + deliveryCost) - actualPlatformFee;
   };
 
   // Helper function to determine if an order should be archived
@@ -1240,7 +1239,7 @@ export default function OrdersFresh() {
                       <TableCell className="font-medium text-xs">
                         <div>
                           <div>{formatMoney(calculateNetAmount(order))}</div>
-                          <div className="text-xs text-gray-500">{isStripePayment(order) ? 'After platform fee' : 'No platform fee'}</div>
+                          <div className="text-xs text-gray-500">{parseFloat(order.platformFee || '0') > 0 ? 'After platform fee' : 'No platform fee'}</div>
                         </div>
                       </TableCell>
                       <TableCell className="text-xs">
