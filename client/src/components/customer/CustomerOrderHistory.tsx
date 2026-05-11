@@ -250,13 +250,7 @@ export const isQuoteEdited = (order: Order): boolean =>
 
 export const PayBalanceButton = ({ order, customerPhone }: { order: Order, customerPhone: string }) => {
   const [isLoading, setIsLoading] = useState(false);
-  const storedLink = order.isQuote ? order.stripePaymentLinkUrl : undefined;
-
   const handlePayNow = async () => {
-    if (storedLink) {
-      window.location.href = storedLink;
-      return;
-    }
     setIsLoading(true);
     try {
       const response = await fetch(`/api/customer/orders/${order.id}/payment-link/${encodeURIComponent(customerPhone)}`, {
