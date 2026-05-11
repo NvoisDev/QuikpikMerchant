@@ -245,12 +245,18 @@ export interface IStorage {
     ordersCount: number;
     activeProducts: number;
     lowStockCount: number;
+    revenueChange: number;
+    ordersChange: number;
+    unpaidAmount: number;
+    unpaidCount: number;
   }>;
   getWholesalerStatsForDateRange(wholesalerId: string, fromDate: Date, toDate: Date): Promise<{
     totalRevenue: number;
     ordersCount: number;
     activeProducts: number;
     lowStockCount: number;
+    unpaidAmount: number;
+    unpaidCount: number;
   }>;
   
   getTopProducts(wholesalerId: string, limit?: number): Promise<(Product & { orderCount: number; revenue: number })[]>;

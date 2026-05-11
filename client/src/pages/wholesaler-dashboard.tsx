@@ -49,7 +49,7 @@ import { DynamicTooltip, HelpTooltip, InfoTooltip } from "@/components/ui/dynami
 
 // Chart data is now fetched from real backend API instead of fake data generation
 
-interface DashboardStats { totalRevenue?: number; revenueChange?: number; ordersCount?: number; ordersChange?: number; activeProducts?: number; }
+interface DashboardStats { totalRevenue?: number; revenueChange?: number; ordersCount?: number; ordersChange?: number; activeProducts?: number; lowStockCount?: number; unpaidAmount?: number; unpaidCount?: number; }
 interface BroadcastStats { recipientsReached?: number; }
 interface TopProduct { id: number; name: string; description?: string; images?: string[]; totalRevenue?: number; unitsOrdered?: number; revenue?: number; totalQuantitySold?: number; orderCount?: number; price?: number; }
 interface StripeConnectStatus { paymentsEnabled?: boolean; accountStatus?: string; }
@@ -585,8 +585,8 @@ export default function WholesalerDashboard() {
             </div>
           )}
 
-          {/* Stats Cards Row */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-6 sm:mb-8">
+          {/* Stats Cards Row — 3 per row on large screens */}
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6 mb-6 sm:mb-8">
             <DynamicTooltip 
               content="Your total revenue from all active orders (paid + outstanding). Excludes cancelled orders."
               type="info"
@@ -611,6 +611,35 @@ export default function WholesalerDashboard() {
                     </div>
                     <div className="bg-white/20 p-2 sm:p-3 rounded-full">
                       <DollarSign className="h-4 w-4 sm:h-6 sm:w-6" />
+                    </div>
+                  </div>
+                </AnimatedCardContent>
+              </AnimatedCard>
+            </DynamicTooltip>
+
+            {/* Amount Owed — amber */}
+            <DynamicTooltip
+              content="Total outstanding balance across all unpaid invoices and orders."
+              type="info"
+              placement="top"
+            >
+              <AnimatedCard
+                className="text-white border-0 shadow-lg bg-gradient-to-br from-amber-400 to-amber-500"
+                hoverScale={true}
+                fadeIn={true}
+                delay={50}
+              >
+                <AnimatedCardContent className="p-3 sm:p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-white/80 text-xs sm:text-sm font-medium">Amount Owed</p>
+                      <p className="text-xl sm:text-3xl font-bold">{statsLoading ? '...' : formatCurrency(stats?.unpaidAmount || 0)}</p>
+                      <p className="text-white/80 text-xs mt-1">
+                        {statsLoading ? '' : `${stats?.unpaidCount ?? 0} unpaid invoice${(stats?.unpaidCount ?? 0) !== 1 ? 's' : ''}`}
+                      </p>
+                    </div>
+                    <div className="bg-white/20 p-2 sm:p-3 rounded-full">
+                      <CreditCard className="h-4 w-4 sm:h-6 sm:w-6" />
                     </div>
                   </div>
                 </AnimatedCardContent>
@@ -669,6 +698,24 @@ export default function WholesalerDashboard() {
                 </CardContent>
               </Card>
             </DynamicTooltip>
+
+            {/* Low Stock Items */}
+            <Card className="border shadow-sm bg-white">
+              <CardContent className="p-3 sm:p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-gray-500 text-xs sm:text-sm font-medium">Low Stock Items</p>
+                    <p className="text-xl sm:text-3xl font-bold text-gray-900">{statsLoading ? '...' : formatNumber(stats?.lowStockCount || 0)}</p>
+                    <Link href="/products">
+                      <span className="text-xs mt-1 font-medium text-primary cursor-pointer hover:underline">View items</span>
+                    </Link>
+                  </div>
+                  <div className="bg-amber-100 p-2 sm:p-3 rounded-full">
+                    <AlertTriangle className="h-4 w-4 sm:h-6 sm:w-6 text-amber-500" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
             <Card className="text-white border-0 shadow-lg" style={{ background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)' }}>
               <CardContent className="p-3 sm:p-6">

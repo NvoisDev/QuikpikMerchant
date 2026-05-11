@@ -842,6 +842,8 @@ export class CustomerStorage extends OrderStorage {
     lowStockCount: number;
     revenueChange: number;
     ordersChange: number;
+    unpaidAmount: number;
+    unpaidCount: number;
   }> {
     // Get current month's data
     const currentMonthStart = new Date();
@@ -922,6 +924,19 @@ export class CustomerStorage extends OrderStorage {
         sql`${products.stock} <= COALESCE(${products.lowStockThreshold}, 50)`
       ));
 
+    // Get unpaid amount and count
+    const [unpaidStats] = await db
+      .select({
+        unpaidAmount: sql<number>`COALESCE(SUM(CAST(${orders.total} AS NUMERIC)), 0)`,
+        unpaidCount: count(orders.id),
+      })
+      .from(orders)
+      .where(and(
+        eq(orders.wholesalerId, wholesalerId),
+        sql`${orders.status} NOT IN ('cancelled', 'refunded')`,
+        sql`(${orders.paymentStatus} IS NULL OR ${orders.paymentStatus} = 'unpaid')`
+      ));
+
     return {
       totalRevenue: Number(revenueStats.totalRevenue) || 0,
       ordersCount: revenueStats.ordersCount || 0,
@@ -929,6 +944,8 @@ export class CustomerStorage extends OrderStorage {
       lowStockCount: lowStockStats.lowStockCount || 0,
       revenueChange: Math.round(revenueChange * 100) / 100,
       ordersChange: Math.round(ordersChange * 100) / 100,
+      unpaidAmount: Number(unpaidStats.unpaidAmount) || 0,
+      unpaidCount: unpaidStats.unpaidCount || 0,
     };
   }
 
@@ -937,6 +954,8 @@ export class CustomerStorage extends OrderStorage {
     ordersCount: number;
     activeProducts: number;
     lowStockCount: number;
+    unpaidAmount: number;
+    unpaidCount: number;
   }> {
     // Get revenue and order count for the specified date range
     const [revenueStats] = await db
@@ -974,11 +993,26 @@ export class CustomerStorage extends OrderStorage {
         sql`${products.stock} <= COALESCE(${products.lowStockThreshold}, 50)`
       ));
 
+    // Get unpaid amount and count (all-time, not date-range-filtered — always current)
+    const [unpaidStats] = await db
+      .select({
+        unpaidAmount: sql<number>`COALESCE(SUM(CAST(${orders.total} AS NUMERIC)), 0)`,
+        unpaidCount: count(orders.id),
+      })
+      .from(orders)
+      .where(and(
+        eq(orders.wholesalerId, wholesalerId),
+        sql`${orders.status} NOT IN ('cancelled', 'refunded')`,
+        sql`(${orders.paymentStatus} IS NULL OR ${orders.paymentStatus} = 'unpaid')`
+      ));
+
     return {
       totalRevenue: Number(revenueStats.totalRevenue) || 0,
       ordersCount: revenueStats.ordersCount || 0,
       activeProducts: productStats.activeProducts || 0,
       lowStockCount: lowStockStats.lowStockCount || 0,
+      unpaidAmount: Number(unpaidStats.unpaidAmount) || 0,
+      unpaidCount: unpaidStats.unpaidCount || 0,
     };
   }
 
