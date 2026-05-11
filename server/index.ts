@@ -501,12 +501,43 @@ app.use((req, res, next) => {
 let isReady = false;
 
 // Gate middleware — must be registered before routes so it runs first.
-// The /api/health path bypasses this so the platform can always probe it.
+// /api/health bypasses this so the platform can always probe it.
+// Non-API routes (frontend) get a branded loading page during the startup window
+// instead of Express's bare "Cannot GET /" error.
 app.use((req: Request, res: Response, next: NextFunction) => {
-  if (!isReady && req.path.startsWith('/api') && req.path !== '/api/health') {
+  if (isReady) return next();
+  if (req.path === '/api/health') return next();
+  if (req.path.startsWith('/api')) {
     return res.status(503).json({ error: 'Server is starting up, please try again in a moment.' });
   }
-  next();
+  // Frontend routes — serve a minimal auto-refreshing loading page
+  res.status(503).send(`<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="refresh" content="3" />
+  <title>Quikpik — Starting up</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{display:flex;align-items:center;justify-content:center;min-height:100vh;background:#f9fafb;font-family:system-ui,sans-serif}
+    .card{text-align:center;padding:2.5rem 3rem;background:#fff;border-radius:1rem;box-shadow:0 4px 24px rgba(0,0,0,.08)}
+    .dot{display:inline-block;width:10px;height:10px;border-radius:50%;background:#16a34a;margin:0 4px;animation:bounce 1.2s infinite ease-in-out}
+    .dot:nth-child(2){animation-delay:.2s}
+    .dot:nth-child(3){animation-delay:.4s}
+    @keyframes bounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-10px)}}
+    h1{font-size:1.5rem;color:#15803d;margin-bottom:.5rem;font-weight:700}
+    p{color:#6b7280;font-size:.95rem;margin-bottom:1.5rem}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Quikpik</h1>
+    <p>Starting up, please wait…</p>
+    <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+  </div>
+</body>
+</html>`);
 });
 
 // Minimal health endpoint registered immediately so the deployment platform
