@@ -1,0 +1,73 @@
+Update the Quikpik landing page hero section using the supplied warehouse/wholesaler image.
+
+IMPORTANT:
+- Do NOT break any existing layouts, routing, responsiveness, authentication flows, buttons, analytics, SEO tags, or animations.
+- Do NOT remove existing sections unless explicitly replaced.
+- Keep all current branding, fonts, spacing system, and theme consistency intact.
+- Preserve mobile responsiveness across all screen sizes.
+- Do NOT hardcode dimensions that could break scaling.
+
+GOAL:
+Create a premium SaaS-style hero section that makes Quikpik feel like a professional wholesale operating system.
+
+HERO SECTION REQUIREMENTS:
+- Use the supplied wholesaler warehouse image as the main hero visual
+- Add a dark gradient overlay for readability
+- Position content on the left and image on the right (desktop)
+- Stack cleanly on mobile
+- Keep the Quikpik brand colours consistent
+
+HEADLINE:
+Run Your Wholesale Business in One Place
+
+SUBTEXT:
+Manage stock, send invoices, track payments, and grow faster with Quikpik.
+
+CTA BUTTONS:
+Primary:
+- Start Free
+
+Secondary:
+- Book Demo
+
+VISUAL IMPROVEMENTS:
+- Remove all fake/random currency symbols and unrealistic numbers from the dashboard mockup
+- Use neutral realistic UI placeholders instead
+- Remove or tone down the large “WHOLESALER” sign in the background so it feels more premium
+- Keep the Quikpik logo visible and professional
+- Make the interface look clean, modern, and enterprise-grade
+
+STYLE:
+- Modern B2B SaaS
+- Premium
+- Trustworthy
+- Warehouse/logistics/wholesale focused
+- Similar quality level to Stripe, Shopify, Square, or Toast landing pages
+
+ADD TRUST SIGNALS BELOW HERO:
+Include 3–4 quick feature cards:
+- Inventory Management
+- Invoicing
+- Customer Management
+- Payment Tracking
+
+Each card should:
+- Have a clean icon
+- Short description
+- Subtle hover animation
+- Match existing design system
+
+PERFORMANCE:
+- Optimise image rendering and lazy loading where appropriate
+- Do NOT introduce memory leaks
+- Do NOT create unnecessary rerenders
+- Compress image properly
+- Maintain fast Lighthouse performance
+
+FINAL CHECK:
+Before finishing:
+- Ensure mobile view is polished
+- Ensure text contrast passes accessibility checks
+- Ensure no existing functionality is broken
+- Ensure spacing and padding are visually balanced
+- Ensure buttons work correctly

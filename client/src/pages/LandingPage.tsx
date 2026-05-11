@@ -4,21 +4,26 @@ import {
   ArrowRight,
   MessageSquare,
   Users,
-  Shield,
-  CheckCircle,
-  Zap,
   CreditCard,
   Package,
   Phone,
   Lock,
   ShoppingBag,
   FileText,
+  CheckCircle,
+  Shield,
+  Zap,
+  Box,
+  ReceiptText,
+  UserCheck,
+  Wallet,
 } from "lucide-react";
 
 export default function LandingPage() {
   const handleGetStarted = () => { window.location.href = "/signup"; };
   const handleLogin = () => { window.location.href = "/login"; };
   const handleCustomerLogin = () => { window.location.href = "/customer-login"; };
+  const handleBookDemo = () => { window.location.href = "mailto:hello@quikpik.co?subject=Demo Request"; };
 
   return (
     <div className="min-h-screen bg-white text-gray-900">
@@ -45,54 +50,94 @@ export default function LandingPage() {
       </nav>
 
       {/* ── HERO ── */}
-      <section className="pt-16 sm:pt-24 pb-16 sm:pb-20 bg-gradient-to-b from-green-50/60 to-white">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center">
-          <div className="inline-flex items-center gap-2 bg-green-100 text-green-800 text-xs font-semibold px-4 py-2 rounded-full mb-8">
-            <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
-            Built for wholesale businesses
+      <section className="relative bg-gray-950 overflow-hidden min-h-[580px] sm:min-h-[640px] flex items-center">
+        {/* Right-side hero image */}
+        <div className="absolute inset-y-0 right-0 w-full sm:w-3/5 lg:w-1/2">
+          <img
+            src="/hero-warehouse.png"
+            alt="Quikpik wholesale management"
+            className="w-full h-full object-cover object-left"
+            loading="eager"
+          />
+          {/* gradient fade from dark left into image */}
+          <div className="absolute inset-0 bg-gradient-to-r from-gray-950 via-gray-950/80 sm:via-gray-950/60 to-transparent" />
+          {/* bottom fade */}
+          <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-gray-950 to-transparent" />
+        </div>
+
+        {/* Left-side content */}
+        <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-24 w-full">
+          <div className="max-w-xl">
+            <div className="inline-flex items-center gap-2 bg-green-900/50 text-green-400 text-xs font-semibold px-4 py-2 rounded-full mb-8 border border-green-800/50">
+              <span className="w-1.5 h-1.5 bg-green-400 rounded-full" />
+              Built for wholesale businesses
+            </div>
+
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-white leading-tight tracking-tight mb-6">
+              Run your<br />wholesale business<br />
+              <span className="text-primary">without the chaos</span>
+            </h1>
+
+            <p className="text-gray-300 text-lg sm:text-xl mb-10 leading-relaxed max-w-md">
+              Manage stock, send invoices, track payments, and grow faster with Quikpik.
+            </p>
+
+            <div className="flex flex-col sm:flex-row gap-3 mb-8">
+              <Button
+                onClick={handleGetStarted}
+                size="lg"
+                className="text-base px-8 py-6 bg-primary hover:bg-primary/90 rounded-xl shadow-lg shadow-primary/30"
+              >
+                Start Free <ArrowRight className="ml-2 h-5 w-5" />
+              </Button>
+              <Button
+                onClick={handleBookDemo}
+                size="lg"
+                variant="outline"
+                className="text-base px-8 py-6 rounded-xl border-2 border-white/30 text-white bg-transparent hover:bg-white/10 hover:border-white/50"
+              >
+                Book Demo
+              </Button>
+            </div>
+
+            <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-gray-400">
+              <span className="flex items-center gap-1.5">
+                <CheckCircle className="h-4 w-4 text-green-500" /> Setup in minutes
+              </span>
+              <span className="flex items-center gap-1.5">
+                <CheckCircle className="h-4 w-4 text-green-500" /> No credit card required
+              </span>
+              <span className="flex items-center gap-1.5">
+                <CheckCircle className="h-4 w-4 text-green-500" /> Cancel anytime
+              </span>
+            </div>
           </div>
+        </div>
+      </section>
 
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-gray-900 leading-tight tracking-tight mb-6">
-            Run your wholesale business<br className="hidden sm:block" />
-            <span className="text-primary"> without the chaos</span>
-          </h1>
-
-          <p className="text-lg sm:text-xl text-gray-500 max-w-2xl mx-auto mb-10 leading-relaxed">
-            Orders, payments, stock, and customers — all in one simple platform built for modern wholesalers.
-            No calls. No spreadsheets. No chasing payments.
-          </p>
-
-          <div className="flex flex-col sm:flex-row gap-3 justify-center mb-6">
-            <Button
-              onClick={handleGetStarted}
-              size="lg"
-              className="text-base px-8 py-6 bg-primary hover:bg-primary/90 rounded-xl shadow-lg shadow-primary/20"
-            >
-              Start Free <ArrowRight className="ml-2 h-5 w-5" />
-            </Button>
-            <Button
-              variant="outline"
-              size="lg"
-              onClick={handleLogin}
-              className="text-base px-8 py-6 rounded-xl border-2"
-            >
-              Log in to your account
-            </Button>
-          </div>
-          <p className="text-sm text-gray-500 mb-10">
-            Are you a customer?{" "}
-            <button
-              onClick={handleCustomerLogin}
-              className="text-primary font-medium hover:underline inline-flex items-center gap-1"
-            >
-              Access your portal <ArrowRight className="h-3.5 w-3.5" />
-            </button>
-          </p>
-
-          <div className="flex flex-wrap justify-center gap-6 text-sm text-gray-500">
-            <span className="flex items-center gap-1.5"><CheckCircle className="h-4 w-4 text-green-500" /> No monthly fees to start</span>
-            <span className="flex items-center gap-1.5"><CheckCircle className="h-4 w-4 text-green-500" /> Only pay on card orders</span>
-            <span className="flex items-center gap-1.5"><CheckCircle className="h-4 w-4 text-green-500" /> Cancel anytime</span>
+      {/* ── FEATURE CARDS STRIP ── */}
+      <section className="bg-white border-b border-gray-100">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6">
+          <div className="grid grid-cols-2 lg:grid-cols-4 divide-x divide-y lg:divide-y-0 divide-gray-100">
+            {[
+              { icon: Box,         title: "Inventory Management",  desc: "Track stock in real time and never run out again." },
+              { icon: ReceiptText, title: "Invoicing",             desc: "Create and send professional invoices in seconds." },
+              { icon: UserCheck,   title: "Customer Management",   desc: "Manage customers, balances and order history easily." },
+              { icon: Wallet,      title: "Payment Tracking",      desc: "Track payments and get paid faster, every time." },
+            ].map(({ icon: Icon, title, desc }, i) => (
+              <div
+                key={i}
+                className="flex items-start gap-4 p-6 sm:p-8 group hover:bg-green-50/50 transition-colors duration-200"
+              >
+                <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0 group-hover:bg-green-200 transition-colors">
+                  <Icon className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-gray-900 text-sm sm:text-base mb-1">{title}</h3>
+                  <p className="text-gray-500 text-xs sm:text-sm leading-relaxed">{desc}</p>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </section>
@@ -281,12 +326,12 @@ export default function LandingPage() {
               <div className="p-4 text-center text-primary border-l border-gray-100">Quikpik</div>
             </div>
             {[
-              { label: "Monthly cost",     old: "£200–£500+",     new: "Free to start" },
-              { label: "Taking orders",    old: "Manual",         new: "Automated online" },
+              { label: "Monthly cost",     old: "£200–£500+",       new: "Free to start" },
+              { label: "Taking orders",    old: "Manual",           new: "Automated online" },
               { label: "Payments",         old: "Chasing invoices", new: "Instant card payments" },
-              { label: "Stock tracking",   old: "Spreadsheets",   new: "Real-time, automatic" },
-              { label: "Customer pricing", old: "Sent manually",  new: "Custom price lists" },
-              { label: "Contracts",        old: "Annual lock-in", new: "Cancel anytime" },
+              { label: "Stock tracking",   old: "Spreadsheets",     new: "Real-time, automatic" },
+              { label: "Customer pricing", old: "Sent manually",    new: "Custom price lists" },
+              { label: "Contracts",        old: "Annual lock-in",   new: "Cancel anytime" },
             ].map(({ label, old, new: newVal }, i) => (
               <div key={i} className={`grid grid-cols-3 text-sm border-b border-gray-50 ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}`}>
                 <div className="p-4 font-medium text-gray-700">{label}</div>
@@ -294,25 +339,6 @@ export default function LandingPage() {
                 <div className="p-4 text-center text-primary font-semibold border-l border-gray-100 flex items-center justify-center gap-1">
                   <CheckCircle className="h-4 w-4" /> {newVal}
                 </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── TRUST ── */}
-      <section className="py-14 sm:py-20 bg-white border-y border-gray-100">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6">
-          <div className="grid sm:grid-cols-3 gap-8 text-center">
-            {[
-              { icon: Shield,       color: "text-green-500", title: "Secure payments",          desc: "Powered by Stripe — the same payments infrastructure used by the world's fastest-growing companies." },
-              { icon: Zap,          color: "text-blue-500",  title: "Built for wholesalers",    desc: "Designed specifically for B2B wholesale businesses, not generic e-commerce." },
-              { icon: CheckCircle,  color: "text-purple-500", title: "Used by growing businesses", desc: "Wholesalers use Quikpik to take orders, manage stock, and get paid — all in one place." },
-            ].map(({ icon: Icon, color, title, desc }, i) => (
-              <div key={i} className="flex flex-col items-center text-center px-4">
-                <Icon className={`h-10 w-10 ${color} mb-4`} />
-                <h3 className="font-bold text-gray-900 mb-2">{title}</h3>
-                <p className="text-gray-500 text-sm leading-relaxed">{desc}</p>
               </div>
             ))}
           </div>
