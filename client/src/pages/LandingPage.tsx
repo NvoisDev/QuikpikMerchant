@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -17,6 +18,7 @@ import {
   AlertTriangle,
   ChevronRight,
   Menu,
+  X,
   Box,
   ReceiptText,
   UserCheck,
@@ -121,6 +123,7 @@ function DashboardMockup() {
 }
 
 export default function LandingPage() {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const handleGetStarted = () => { window.location.href = "/signup"; };
   const handleLogin = () => { window.location.href = "/login"; };
   const handleCustomerLogin = () => { window.location.href = "/customer-login"; };
@@ -137,6 +140,7 @@ export default function LandingPage() {
             <span className="text-xl font-bold text-primary">Quikpik</span>
           </div>
           <div className="flex items-center gap-2">
+            {/* Desktop login links */}
             <Button variant="ghost" onClick={handleCustomerLogin} className="hidden sm:inline-flex text-sm text-gray-600">
               Customer Login
             </Button>
@@ -146,8 +150,27 @@ export default function LandingPage() {
             <Button onClick={handleGetStarted} className="bg-primary hover:bg-primary/90 text-sm px-4">
               Start Free <ArrowRight className="ml-1 h-4 w-4" />
             </Button>
+            {/* Mobile hamburger */}
+            <button
+              className="sm:hidden ml-1 p-2 rounded-lg text-gray-600 hover:bg-gray-100"
+              onClick={() => setMobileMenuOpen(o => !o)}
+              aria-label="Menu"
+            >
+              {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </button>
           </div>
         </div>
+        {/* Mobile dropdown */}
+        {mobileMenuOpen && (
+          <div className="sm:hidden border-t border-gray-100 bg-white px-4 py-3 flex flex-col gap-2">
+            <Button variant="ghost" onClick={() => { setMobileMenuOpen(false); handleCustomerLogin(); }} className="justify-start text-sm text-gray-700 w-full">
+              Customer Login
+            </Button>
+            <Button variant="ghost" onClick={() => { setMobileMenuOpen(false); handleLogin(); }} className="justify-start text-sm text-gray-700 w-full">
+              Wholesaler Login
+            </Button>
+          </div>
+        )}
       </nav>
 
       {/* ── HERO ── */}
@@ -158,7 +181,7 @@ export default function LandingPage() {
             src="/hero-warehouse.jpg"
             alt=""
             aria-hidden="true"
-            className="w-full h-full object-cover object-center"
+            className="w-full h-full object-cover object-[65%_center]"
             loading="eager"
           />
           {/* left-to-right gradient so text stays readable */}
