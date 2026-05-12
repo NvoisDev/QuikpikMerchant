@@ -853,10 +853,10 @@ export class CustomerStorage extends OrderStorage {
     const previousMonthStart = new Date(currentMonthStart);
     previousMonthStart.setMonth(previousMonthStart.getMonth() - 1);
     
-    // Get total net revenue (subtotal minus platform fees) across all non-cancelled orders
+    // Get total gross revenue (subtotal, no fee deduction) across all non-cancelled orders
     const [revenueStats] = await db
       .select({
-        totalRevenue: sql<number>`COALESCE(SUM(COALESCE(CAST(${orders.subtotal} AS NUMERIC), CAST(${orders.total} AS NUMERIC)) - COALESCE(CAST(${orders.platformFee} AS NUMERIC), 0)), 0)`,
+        totalRevenue: sql<number>`COALESCE(SUM(COALESCE(CAST(${orders.subtotal} AS NUMERIC), CAST(${orders.total} AS NUMERIC))), 0)`,
         ordersCount: count(orders.id)
       })
       .from(orders)
@@ -868,7 +868,7 @@ export class CustomerStorage extends OrderStorage {
     // Get current month stats
     const [currentMonthStats] = await db
       .select({
-        currentRevenue: sql<number>`COALESCE(SUM(COALESCE(CAST(${orders.subtotal} AS NUMERIC), CAST(${orders.total} AS NUMERIC)) - COALESCE(CAST(${orders.platformFee} AS NUMERIC), 0)), 0)`,
+        currentRevenue: sql<number>`COALESCE(SUM(COALESCE(CAST(${orders.subtotal} AS NUMERIC), CAST(${orders.total} AS NUMERIC))), 0)`,
         currentOrders: count(orders.id)
       })
       .from(orders)
@@ -881,7 +881,7 @@ export class CustomerStorage extends OrderStorage {
     // Get previous month stats
     const [previousMonthStats] = await db
       .select({
-        previousRevenue: sql<number>`COALESCE(SUM(COALESCE(CAST(${orders.subtotal} AS NUMERIC), CAST(${orders.total} AS NUMERIC)) - COALESCE(CAST(${orders.platformFee} AS NUMERIC), 0)), 0)`,
+        previousRevenue: sql<number>`COALESCE(SUM(COALESCE(CAST(${orders.subtotal} AS NUMERIC), CAST(${orders.total} AS NUMERIC))), 0)`,
         previousOrders: count(orders.id)
       })
       .from(orders)
@@ -956,10 +956,10 @@ export class CustomerStorage extends OrderStorage {
     unpaidAmount: number;
     unpaidCount: number;
   }> {
-    // Get net revenue (subtotal minus platform fees) for the specified date range
+    // Get gross revenue (subtotal, no fee deduction) for the specified date range
     const [revenueStats] = await db
       .select({
-        totalRevenue: sql<number>`COALESCE(SUM(COALESCE(CAST(${orders.subtotal} AS NUMERIC), CAST(${orders.total} AS NUMERIC)) - COALESCE(CAST(${orders.platformFee} AS NUMERIC), 0)), 0)`,
+        totalRevenue: sql<number>`COALESCE(SUM(COALESCE(CAST(${orders.subtotal} AS NUMERIC), CAST(${orders.total} AS NUMERIC))), 0)`,
         ordersCount: count(orders.id)
       })
       .from(orders)
