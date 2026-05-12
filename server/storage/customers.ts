@@ -853,7 +853,7 @@ export class CustomerStorage extends OrderStorage {
     const previousMonthStart = new Date(currentMonthStart);
     previousMonthStart.setMonth(previousMonthStart.getMonth() - 1);
     
-    // Get total revenue — only count orders where payment has actually been collected (paymentStatus = 'paid')
+    // Get total net revenue (subtotal minus platform fees) across all non-cancelled orders
     const [revenueStats] = await db
       .select({
         totalRevenue: sql<number>`COALESCE(SUM(COALESCE(CAST(${orders.subtotal} AS NUMERIC), CAST(${orders.total} AS NUMERIC)) - COALESCE(CAST(${orders.platformFee} AS NUMERIC), 0)), 0)`,
@@ -862,11 +862,10 @@ export class CustomerStorage extends OrderStorage {
       .from(orders)
       .where(and(
         eq(orders.wholesalerId, wholesalerId),
-        sql`${orders.status} NOT IN ('cancelled', 'refunded')`,
-        sql`${orders.paymentStatus} = 'paid'`
+        sql`${orders.status} NOT IN ('cancelled', 'refunded')`
       ));
 
-    // Get current month stats (paid orders only)
+    // Get current month stats
     const [currentMonthStats] = await db
       .select({
         currentRevenue: sql<number>`COALESCE(SUM(COALESCE(CAST(${orders.subtotal} AS NUMERIC), CAST(${orders.total} AS NUMERIC)) - COALESCE(CAST(${orders.platformFee} AS NUMERIC), 0)), 0)`,
@@ -876,11 +875,10 @@ export class CustomerStorage extends OrderStorage {
       .where(and(
         eq(orders.wholesalerId, wholesalerId),
         sql`${orders.status} NOT IN ('cancelled', 'refunded')`,
-        sql`${orders.paymentStatus} = 'paid'`,
         sql`${orders.createdAt} >= ${currentMonthStart}`
       ));
 
-    // Get previous month stats (paid orders only)
+    // Get previous month stats
     const [previousMonthStats] = await db
       .select({
         previousRevenue: sql<number>`COALESCE(SUM(COALESCE(CAST(${orders.subtotal} AS NUMERIC), CAST(${orders.total} AS NUMERIC)) - COALESCE(CAST(${orders.platformFee} AS NUMERIC), 0)), 0)`,
@@ -890,7 +888,6 @@ export class CustomerStorage extends OrderStorage {
       .where(and(
         eq(orders.wholesalerId, wholesalerId),
         sql`${orders.status} NOT IN ('cancelled', 'refunded')`,
-        sql`${orders.paymentStatus} = 'paid'`,
         sql`${orders.createdAt} >= ${previousMonthStart} AND ${orders.createdAt} < ${currentMonthStart}`
       ));
 
@@ -959,7 +956,7 @@ export class CustomerStorage extends OrderStorage {
     unpaidAmount: number;
     unpaidCount: number;
   }> {
-    // Get revenue — only paid orders for the specified date range
+    // Get net revenue (subtotal minus platform fees) for the specified date range
     const [revenueStats] = await db
       .select({
         totalRevenue: sql<number>`COALESCE(SUM(COALESCE(CAST(${orders.subtotal} AS NUMERIC), CAST(${orders.total} AS NUMERIC)) - COALESCE(CAST(${orders.platformFee} AS NUMERIC), 0)), 0)`,
@@ -969,7 +966,6 @@ export class CustomerStorage extends OrderStorage {
       .where(and(
         eq(orders.wholesalerId, wholesalerId),
         sql`${orders.status} NOT IN ('cancelled', 'refunded')`,
-        sql`${orders.paymentStatus} = 'paid'`,
         sql`${orders.createdAt} >= ${fromDate} AND ${orders.createdAt} <= ${toDate}`
       ));
 
