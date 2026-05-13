@@ -87,7 +87,7 @@ describe('guest browsing regression coverage', () => {
     expect(customerHelpSource).not.toContain('Enter the last 4 digits');
     expect(helpPageSource).toContain('prices and ordering require approved customer access');
     expect(helpPageSource).toContain('Quikpik now supports seller discovery for customers');
-    expect(helpPageSource).toMatch(/Customer Service Fee\*\*: 5\.5% \+ £0\.50/);
+    expect(helpPageSource).toMatch(/Customer Service Fee\*\*: 1\.5% \+ £0\.50/);
     expect(helpPageSource).toMatch(/customer service fee is not (your|wholesaler) revenue/);
     expect(helpPageSource).toMatch(/No platform fee or customer service fee is collected unless an online payment is made later/);
     expect(helpPageSource).not.toContain('The Quikpik B2B wholesale marketplace is **coming soon**');

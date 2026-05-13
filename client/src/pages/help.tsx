@@ -1187,12 +1187,12 @@ Your payment account has two key states:
 
 | Fee | Who Pays | Rate | When Applied |
 |-----|----------|------|-------------|
-| **Platform Fee** | You (wholesaler) | 4.6% of order subtotal | Eligible online card orders only |
-| **Customer Service Fee** | Your customer | 5.5% + £0.50 | Added to customer card checkout total only |
+| **Platform Fee** | You (wholesaler) | 1.5% + £0.50 of order subtotal | Eligible online card orders only |
+| **Customer Service Fee** | Your customer | 1.5% + £0.50 | Added to customer card checkout total only |
 
-- **You Keep**: The order subtotal minus the 4.6% platform fee, paid directly to your Stripe account
-- **Customer Service Fee**: Shown to the customer at checkout — it is not your revenue and does not affect your payout
-- **Offline / Pay Later / Cash / Bank Transfer Orders**: No platform fee and no customer service fee is collected unless an online Stripe payment is made later
+- **You Keep**: The order subtotal minus the platform fee (1.5% + £0.50), paid directly to your Stripe account
+- **Customer Service Fee**: 1.5% + £0.50 shown to the customer at checkout — the customer service fee is not your revenue and does not affect your payout
+- **Offline / Pay Later / Cash / Bank Transfer Orders**: No platform fee or customer service fee is collected unless an online payment is made later
 
 #### Bank Transfers
 - Funds are transferred to your bank account automatically
@@ -1211,18 +1211,18 @@ Quikpik charges two separate fees on eligible online card orders. Neither fee ap
 
 | Fee | Rate | Who Pays | What It Covers |
 |-----|------|----------|---------------|
-| **Platform Fee** | 4.6% of order subtotal | You (wholesaler) | Quikpik's service charge for the platform |
-| **Customer Service Fee** | 5.5% + £0.50 | Your customer | Added on top of the order subtotal at checkout |
+| **Platform Fee** | 1.5% + £0.50 of order subtotal | You (wholesaler) | Quikpik's service charge for the platform |
+| **Customer Service Fee** | 1.5% + £0.50 | Your customer | Added on top of the order subtotal at checkout |
 
 #### How Each Fee Works
 
-**Platform Fee (4.6%)**
+**Platform Fee (1.5% + £0.50)**
 - Calculated on the order subtotal (product total before delivery)
 - Deducted from your payout automatically by Stripe — you never handle it manually
 - Appears as a line item in each order's payment summary so you can see exactly what was deducted
-- Your payout = order subtotal − platform fee
+- Your payout = order subtotal − (1.5% + £0.50)
 
-**Customer Service Fee (5.5% + £0.50)**
+**Customer Service Fee (1.5% + £0.50)**
 - Added to the customer's checkout total — they pay it on top of the order
 - It is not part of your revenue and does not affect your payout
 - Only shown to the customer during card checkout; not visible on Pay Later or offline orders
@@ -1234,10 +1234,10 @@ For a £100 order paid by card:
 | | Amount |
 |-|--------|
 | Order subtotal | £100.00 |
-| Customer service fee (5.5% + £0.50) | £6.00 |
-| **Customer pays** | **£106.00** |
-| Platform fee deducted (4.6%) | −£4.60 |
-| **You receive** | **£95.40** |
+| Customer service fee (1.5% + £0.50) | £2.00 |
+| **Customer pays** | **£102.00** |
+| Platform fee deducted (1.5% + £0.50) | −£2.00 |
+| **You receive** | **£98.00** |
 
 #### When Are Fees Charged?
 
@@ -1538,10 +1538,10 @@ Fees apply regardless of your subscription plan and are only charged on eligible
 
 | Fee | Rate | Paid By | Notes |
 |-----|------|---------|-------|
-| **Platform Fee** | 4.6% of order subtotal | You (wholesaler) | Deducted from your payout automatically |
-| **Customer Service Fee** | 5.5% + £0.50 | Your customer | Added to customer checkout total; not your revenue |
+| **Platform Fee** | 1.5% + £0.50 | You (wholesaler) | Deducted from your payout automatically |
+| **Customer Service Fee** | 1.5% + £0.50 | Your customer | Added to customer checkout total; not your revenue |
 
-- **Your payout** = Order subtotal − 4.6% platform fee
+- **Your payout** = Order subtotal − (1.5% + £0.50) platform fee
 - **Cash, bank transfer, cheque, and Pay Later orders**: No platform fee and no customer service fee. You receive 100% of the order subtotal.
 - **Payment processing**: Handled entirely by Stripe Connect — no manual action needed
         `
@@ -1643,7 +1643,7 @@ The payment summary in each order shows:
 
 #### Payment Flow
 1. **Customer Checkout**: Secure payment through Stripe Elements
-2. **Customer Service Fee**: 5.5% + £0.50 added to customer card checkouts (not your revenue)
+2. **Customer Service Fee**: 1.5% + £0.50 added to customer card checkouts (not your revenue)
 3. **Platform Fee**: A service fee deducted from the order subtotal for Quikpik
 4. **Wholesaler Payment**: Subtotal minus the platform fee transferred to your Stripe account
 5. **Invoice Generation**: Professional Stripe invoice automatically created and emailed

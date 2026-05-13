@@ -18,7 +18,7 @@ export type CheckoutInput = {
   couponDiscount?: number;
   /** Live fee config fetched from DB — uses hardcoded defaults when omitted. */
   feeConfig?: CustomerFeeConfig;
-  /** Per-wholesaler platform fee rate override (e.g. 0.02 for 2%). Falls back to PLATFORM_FEE_RATE (4.6%) when omitted. */
+  /** Per-wholesaler platform fee rate override (e.g. 0.02 for 2%). Falls back to PLATFORM_FEE_RATE (1.5% + £0.50) when omitted. */
   platformFeeRate?: number;
 };
 

@@ -53,8 +53,8 @@ describe('getCurrentFeeConfig', () => {
   it('falls back to hardcoded defaults when DB table is empty', async () => {
     mockFeeConfigRow = null;
     const cfg = await getCurrentFeeConfig();
-    // Hardcoded fallback: 5.5% + £0.50
-    expect(cfg.percentage).toBeCloseTo(0.055, 4);
+    // Hardcoded fallback: 1.5% + £0.50
+    expect(cfg.percentage).toBeCloseTo(0.015, 4);
     expect(cfg.fixed).toBeCloseTo(0.50, 2);
   });
 });

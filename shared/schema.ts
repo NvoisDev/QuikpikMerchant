@@ -654,7 +654,7 @@ export const orders = pgTable("orders", {
   status: varchar("status").notNull().default("pending"), // 'pending' | 'processing' | 'shipped' | 'completed' | 'cancelled'
   subtotal: decimal("subtotal", { precision: 10, scale: 2 }).notNull(),
   platformFee: decimal("platform_fee", { precision: 10, scale: 2 }).notNull(),
-  customerTransactionFee: decimal("customer_transaction_fee", { precision: 10, scale: 2 }).default("0.00"), // Customer transaction fee (5.5% + £0.50)
+  customerTransactionFee: decimal("customer_transaction_fee", { precision: 10, scale: 2 }).default("0.00"), // Customer transaction fee (1.5% + £0.50)
   feePercentageUsed: decimal("fee_percentage_used", { precision: 5, scale: 4 }), // Rate snapshot at order creation (e.g. 0.0550)
   fixedFeeUsed: decimal("fixed_fee_used", { precision: 6, scale: 2 }), // Fixed fee snapshot at order creation (e.g. 0.50)
   vatAmount: decimal("vat_amount", { precision: 10, scale: 2 }).default("0.00"), // VAT charged on the order (subtotal × vatRate when wholesaler has VAT enabled)
