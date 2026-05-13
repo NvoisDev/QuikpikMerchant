@@ -4,7 +4,7 @@ import { ilike } from "drizzle-orm";
 import {
   ADMIN_EMAILS, and, asc, count, db, desc, eq, geocodePostcode, getPlanLimits, getStripeClient,
   gte, inArray, isNull, lte, or, orders, requireAuth, sql, storage,
-  subscriptionPlans, SubscriptionService, teamMembers, userSubscriptions, users,
+  subscriptionPlans, SubscriptionService, teamMembers, unlockForUpgrade, userSubscriptions, users,
 } from "./shared";
 import { getProductLimit } from "../utils/plan-tier";
 
@@ -741,10 +741,13 @@ export function registerAdminCoreRoutes(app: Express): void {
         });
       }
 
+      const recoverUnlock = await unlockForUpgrade(recoverUser.id);
+
       return res.json({
         success: true, userId: recoverUser.id, userEmail: recoverUser.email,
         planId: resolvedPlanId, stripeSubscriptionId: stripeSub.id,
         periodEnd: recoverPeriodEnd.toISOString(),
+        unlocked: recoverUnlock,
       });
     } catch (error) {
       console.error('❌ Admin subscription activate error:', error);
@@ -838,10 +841,13 @@ export function registerAdminCoreRoutes(app: Express): void {
         });
       }
 
+      const syncUnlock = await unlockForUpgrade(syncUser.id);
+
       return res.json({
         success: true, userId: syncUser.id, userEmail: syncUser.email,
         planId: resolvedPlanId, stripeCustomerId: syncCustId,
         stripeSubscriptionId: syncSub.id, periodEnd: syncPeriodEnd.toISOString(), source: planSource,
+        unlocked: syncUnlock,
       });
     } catch (error) {
       console.error('❌ Admin sync-by-customer error:', error);
