@@ -111,7 +111,7 @@ function MarginOverview() {
       </div>
       <div className="grid grid-cols-2 gap-x-4 gap-y-2">
         <div>
-          <p className="text-xs text-slate-400 uppercase tracking-wide mb-0.5">Revenue</p>
+          <p className="text-xs text-slate-400 uppercase tracking-wide mb-0.5">Revenue (excl. fees)</p>
           <p className="text-sm font-medium text-slate-700">{fmt(seg.revenue)}</p>
         </div>
         <div>
@@ -172,7 +172,7 @@ function MarginOverview() {
                 </div>
               )}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <StatTile label="Total Revenue" value={fmt(marginData.total.revenue)} />
+                <StatTile label="Total Revenue (excl. fees)" value={fmt(marginData.total.revenue)} />
                 <StatTile label="Est. Cost" value={fmt(marginData.total.cost)} />
                 <StatTile label="Margin (£)" value={fmt(marginData.total.margin)} positive={marginData.total.margin >= 0} />
                 <StatTile label="Margin %" value={pct(marginData.total.marginPercent)} positive={marginData.total.marginPercent >= 0} />
@@ -601,7 +601,10 @@ export default function WholesalerDashboard() {
                 <AnimatedCardContent className="p-3 sm:p-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-white/80 text-xs sm:text-sm font-medium">Revenue</p>
+                      <div className="flex items-baseline gap-2">
+                        <p className="text-white/80 text-xs sm:text-sm font-medium">Revenue</p>
+                        <p className="text-white/50 text-xs">before fees</p>
+                      </div>
                       <p className="text-xl sm:text-3xl font-bold">{statsLoading ? '...' : formatCurrency(stats?.totalRevenue || 0)}</p>
                       <p className="text-white/80 text-xs mt-1">
                         {stats?.revenueChange !== undefined 
