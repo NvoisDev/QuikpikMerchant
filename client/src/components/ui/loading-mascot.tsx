@@ -65,15 +65,19 @@ const MascotSVG = ({ size = 'md', variant = 'default' }: { size: 'sm' | 'md' | '
         <circle cx="44" cy="30" r="2" fill="#1F2937" />
         <circle cx="56" cy="30" r="2" fill="#1F2937" />
         
-        {/* Smile */}
-        <motion.path 
-          d="M 42 38 Q 50 45 58 38" 
-          stroke="#1F2937" 
-          strokeWidth="2" 
-          fill="none"
-          animate={{ d: variant === 'success' ? ["M 42 38 Q 50 45 58 38", "M 42 35 Q 50 42 58 35"] : "M 42 38 Q 50 45 58 38" }}
+        {/* Smile — animated via scale to avoid SVG path morphing errors */}
+        <motion.g
+          style={{ transformOrigin: '50px 41px' }}
+          animate={{ scaleY: variant === 'success' ? [1, 1.3, 1] : 1 }}
           transition={{ duration: 0.8, repeat: Infinity, repeatType: "reverse" }}
-        />
+        >
+          <path
+            d="M 42 38 Q 50 45 58 38"
+            stroke="#1F2937"
+            strokeWidth="2"
+            fill="none"
+          />
+        </motion.g>
         
         {/* Arms */}
         <motion.ellipse 

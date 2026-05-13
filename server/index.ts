@@ -324,6 +324,26 @@ async function runStartupMigrations() {
      )`,
     // Platform fee percentage column — allows admin to set platform fee rate via UI
     `ALTER TABLE platform_fee_configs ADD COLUMN IF NOT EXISTS platform_fee_percentage DECIMAL(5,4)`,
+    // Subscription audit log table — tracks upgrade/downgrade/payment events per wholesaler
+    `CREATE TABLE IF NOT EXISTS subscription_audit_logs (
+      id SERIAL PRIMARY KEY,
+      user_id VARCHAR NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      event_type VARCHAR NOT NULL,
+      from_tier VARCHAR,
+      to_tier VARCHAR,
+      amount DECIMAL(10,2),
+      currency VARCHAR(3) DEFAULT 'GBP',
+      stripe_subscription_id VARCHAR,
+      stripe_customer_id VARCHAR,
+      reason TEXT,
+      metadata TEXT,
+      timestamp TIMESTAMP NOT NULL DEFAULT NOW(),
+      ip_address VARCHAR(45),
+      user_agent TEXT
+    )`,
+    `CREATE INDEX IF NOT EXISTS subscription_audit_user_id_idx ON subscription_audit_logs(user_id)`,
+    `CREATE INDEX IF NOT EXISTS subscription_audit_event_type_idx ON subscription_audit_logs(event_type)`,
+    `CREATE INDEX IF NOT EXISTS subscription_audit_timestamp_idx ON subscription_audit_logs(timestamp)`,
   ];
   for (const stmt of migrations) {
     await db.execute(sql.raw(stmt));

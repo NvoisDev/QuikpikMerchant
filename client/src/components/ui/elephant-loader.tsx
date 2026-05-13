@@ -110,16 +110,20 @@ export default function ElephantLoader({ message = 'Loading products...' }: Elep
             transition={{ duration: 0.8, repeat: Infinity, ease: 'easeInOut', delay: 0.4 }}
           />
 
-          {/* Tail — wags */}
-          <motion.path
-            d="M 118 84 Q 132 78 128 90"
-            stroke="#9aa5b1"
-            strokeWidth="5"
-            fill="none"
-            strokeLinecap="round"
-            animate={{ d: ['M 118 84 Q 132 78 128 90', 'M 118 84 Q 130 90 124 100', 'M 118 84 Q 132 78 128 90'] }}
+          {/* Tail — wags via rotation to avoid SVG path morphing errors */}
+          <motion.g
+            style={{ transformOrigin: '118px 84px' }}
+            animate={{ rotate: [0, 20, -20, 0] }}
             transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut' }}
-          />
+          >
+            <path
+              d="M 118 84 Q 132 78 128 90"
+              stroke="#9aa5b1"
+              strokeWidth="5"
+              fill="none"
+              strokeLinecap="round"
+            />
+          </motion.g>
         </svg>
       </motion.div>
 

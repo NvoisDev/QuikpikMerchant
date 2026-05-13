@@ -123,6 +123,21 @@ export function registerOrderReadRoutes(app: Express): void {
     }
   });
 
+  // GET /api/orders/stats  ← must be before /:id to avoid 'stats' being parsed as an orderId
+  app.get('/api/orders/stats', requireAuth, async (req: any, res) => {
+    try {
+      const wholesalerId = resolveWholesalerId(req);
+      const stats = await getOrderStats(wholesalerId, req.query.archiveTab as string || 'active');
+      res.json({ ...stats, isCapped: false });
+    } catch (error) {
+      console.error("❌ Error fetching order statistics:", error);
+      res.status(500).json({ 
+        message: "Failed to fetch order statistics",
+        error: process.env.NODE_ENV === 'development' ? (error instanceof Error ? error.message : String(error)) : undefined
+      });
+    }
+  });
+
   // GET /api/orders/:id
   app.get('/api/orders/:id', requireAuth, async (req: any, res) => {
     try {
@@ -325,25 +340,6 @@ export function registerOrderReadRoutes(app: Express): void {
       console.error("❌ Error fetching paginated orders:", error);
       res.status(500).json({ 
         message: "Failed to fetch orders",
-        error: process.env.NODE_ENV === 'development' ? (error instanceof Error ? error.message : String(error)) : undefined
-      });
-    }
-  });
-
-  // GET /api/orders/stats
-  app.get('/api/orders/stats', requireAuth, async (req: any, res) => {
-    try {
-      // Use authenticated user's ID for proper data isolation
-      const wholesalerId = resolveWholesalerId(req);
-      
-      // Aggregate directly in the database — no rows loaded into Node.js memory.
-      const stats = await getOrderStats(wholesalerId, req.query.archiveTab as string || 'active');
-
-      res.json({ ...stats, isCapped: false });
-    } catch (error) {
-      console.error("❌ Error fetching order statistics:", error);
-      res.status(500).json({ 
-        message: "Failed to fetch order statistics",
         error: process.env.NODE_ENV === 'development' ? (error instanceof Error ? error.message : String(error)) : undefined
       });
     }
