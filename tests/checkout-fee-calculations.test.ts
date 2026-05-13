@@ -11,7 +11,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { calculateCheckoutTotals } from '../server/routes/checkout-fee-calculations';
-import { CUSTOMER_FEE_RATE, CUSTOMER_FEE_FIXED, PLATFORM_FEE_RATE, PLATFORM_FEE_FIXED } from '../shared/utils/fees';
+import { CUSTOMER_FEE_RATE, CUSTOMER_FEE_FIXED, PLATFORM_FEE_RATE } from '../shared/utils/fees';
 
 describe('checkout fee composition — standard delivery order', () => {
   // £100 products + £10 delivery
@@ -29,12 +29,12 @@ describe('checkout fee composition — standard delivery order', () => {
     expect(result.totalCustomerPays).toBeCloseTo(110 + 110 * CUSTOMER_FEE_RATE + CUSTOMER_FEE_FIXED, 6);
   });
 
-  it('wholesaler platform fee is 1.5% + £0.50 of £110', () => {
-    expect(result.wholesalerPlatformFee).toBeCloseTo(110 * PLATFORM_FEE_RATE + PLATFORM_FEE_FIXED, 6);
+  it('wholesaler platform fee is 1.5% of £110', () => {
+    expect(result.wholesalerPlatformFee).toBeCloseTo(110 * PLATFORM_FEE_RATE, 6);
   });
 
   it('wholesalerReceives is amountBeforeFees minus platform fee', () => {
-    expect(result.wholesalerReceives).toBeCloseTo(110 - (110 * PLATFORM_FEE_RATE + PLATFORM_FEE_FIXED), 6);
+    expect(result.wholesalerReceives).toBeCloseTo(110 - 110 * PLATFORM_FEE_RATE, 6);
   });
 
   it('stripeAmountPence is totalCustomerPays converted to integer pence', () => {
@@ -64,8 +64,8 @@ describe('checkout fee composition — pickup order (zero delivery)', () => {
     expect(result.totalCustomerPays).toBeCloseTo(50 + 50 * CUSTOMER_FEE_RATE + CUSTOMER_FEE_FIXED, 6);
   });
 
-  it('wholesaler platform fee is 1.5% + £0.50 of £50', () => {
-    expect(result.wholesalerPlatformFee).toBeCloseTo(50 * PLATFORM_FEE_RATE + PLATFORM_FEE_FIXED, 6);
+  it('wholesaler platform fee is 1.5% of £50', () => {
+    expect(result.wholesalerPlatformFee).toBeCloseTo(50 * PLATFORM_FEE_RATE, 6);
   });
 
   it('stripeAmountPence is a positive integer', () => {

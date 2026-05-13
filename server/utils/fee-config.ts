@@ -105,7 +105,7 @@ export async function getFeeConfigForWholesaler(
  * Returns the effective platform fee rate for a specific wholesaler.
  * Uses the per-wholesaler `customFeePercentage` override when set (stored as raw %,
  * e.g. "2.00" = 2% → returned as 0.02 decimal rate).
- * Falls back to the hardcoded PLATFORM_FEE_RATE (1.5% + £0.50) when no override is set.
+ * Falls back to the hardcoded PLATFORM_FEE_RATE (1.5%) when no override is set.
  * Never throws.
  */
 export async function getWholesalerPlatformFeeRate(wholesalerId: string): Promise<number> {

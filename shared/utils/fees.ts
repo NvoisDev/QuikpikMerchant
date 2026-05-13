@@ -2,7 +2,7 @@
  * Quikpik platform fee calculations — single source of truth.
  *
  * Customer transaction fee: configurable via Admin (default 1.5% + £0.50).
- * Wholesaler platform fee:  1.5% + £0.50 of product subtotal (not shown to customers).
+ * Wholesaler platform fee:  1.5% of product subtotal (not shown to customers).
  *
  * The customer fee defaults are used as fallback when no DB config is available.
  * All order-creation call sites should fetch the current config and pass it in.
@@ -11,7 +11,6 @@
 export const CUSTOMER_FEE_RATE = 0.015;
 export const CUSTOMER_FEE_FIXED = 0.50;
 export const PLATFORM_FEE_RATE = 0.015;
-export const PLATFORM_FEE_FIXED = 0.50;
 
 export interface CustomerFeeConfig {
   percentage: number; // e.g. 0.015 for 1.5%
@@ -35,7 +34,7 @@ export function calculateCustomerFee(subtotal: number, delivery: number, config?
  * @param subtotal  Product subtotal (£)
  */
 export function calculatePlatformFee(subtotal: number): number {
-  return subtotal * PLATFORM_FEE_RATE + PLATFORM_FEE_FIXED;
+  return subtotal * PLATFORM_FEE_RATE;
 }
 
 /**
