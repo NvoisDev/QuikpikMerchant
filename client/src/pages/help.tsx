@@ -1,4 +1,5 @@
-import { useState, type ReactNode } from "react";
+import { useState, useMemo, type ReactNode } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -2366,6 +2367,177 @@ export default function Help() {
   const [selectedSection, setSelectedSection] = useState(helpSections[0].id);
   const [expandedArticles, setExpandedArticles] = useState<Record<string, boolean>>({});
 
+  const { data: feeRates } = useQuery<{ platformFee: { percentage: number }; customerFee: { percentage: number; fixed: number } }>({
+    queryKey: ['/api/fee-rates'],
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const pfPct = feeRates?.platformFee?.percentage ?? 0.015;
+  const cfPct = feeRates?.customerFee?.percentage ?? 0.015;
+  const cfFixed = feeRates?.customerFee?.fixed ?? 0.50;
+  const pfLabel = `${+(pfPct * 100).toFixed(4)}%`;
+  const cfLabel = `${+(cfPct * 100).toFixed(4)}% + £${cfFixed.toFixed(2)}`;
+  const exCustFee = (100 * cfPct + cfFixed).toFixed(2);
+  const exCustPays = (100 + 100 * cfPct + cfFixed).toFixed(2);
+  const exPlatFee = (100 * pfPct).toFixed(2);
+  const exReceive = (100 - 100 * pfPct).toFixed(2);
+
+  const mergedSections = useMemo(() => helpSections.map(section => ({
+    ...section,
+    articles: section.articles.map(article => {
+      if (article.title === "Transaction Fees Explained") {
+        return { ...article, content: `
+### Understanding Transaction Fees
+
+Quikpik charges two separate fees on eligible online card orders. Neither fee applies to cash, bank transfer, cheque, or Pay Later orders.
+
+#### The Two Fees
+
+| Fee | Rate | Who Pays | What It Covers |
+|-----|------|----------|---------------|
+| **Platform Fee** | ${pfLabel} of order subtotal | You (wholesaler) | Quikpik's service charge for the platform |
+| **Customer Service Fee** | ${cfLabel} | Your customer | Added on top of the order subtotal at checkout |
+
+#### How Each Fee Works
+
+**Platform Fee (${pfLabel})**
+- Calculated on the order subtotal (product total before delivery)
+- Deducted from your payout automatically by Stripe — you never handle it manually
+- Appears as a line item in each order's payment summary so you can see exactly what was deducted
+- Your payout = order subtotal − ${pfLabel}
+
+**Customer Service Fee (${cfLabel})**
+- Added to the customer's checkout total — they pay it on top of the order
+- It is not part of your revenue and does not affect your payout
+- Only shown to the customer during card checkout; not visible on Pay Later or offline orders
+
+#### Example Breakdown
+
+For a £100 order paid by card:
+
+| | Amount |
+|-|--------|
+| Order subtotal | £100.00 |
+| Customer service fee (${cfLabel}) | £${exCustFee} |
+| **Customer pays** | **£${exCustPays}** |
+| Platform fee deducted (${pfLabel}) | −£${exPlatFee} |
+| **You receive** | **£${exReceive}** |
+
+#### When Are Fees Charged?
+
+- ✅ **Online card payment** (Stripe checkout) — both fees apply
+- ✅ **Deposit payments via Stripe** — both fees apply to the deposit amount
+- ❌ **Pay Later orders** — no fees charged
+- ❌ **Cash / bank transfer / cheque orders** — no fees charged
+- ❌ **Offline payment recorded manually** — no fees charged
+
+#### Where to See Fees in the Platform
+
+- **Order detail panel**: Shows platform fee as a line item under the payment summary
+- **Revenue KPI card**: Displays gross order value (before platform fees) — labelled "before fees"
+- **Amount Owed card**: Shows outstanding balances net of platform fee — what you will actually receive
+- **Margin Overview**: Revenue shown before fees (labelled "excl. fees"); deduct platform fee separately for net figures
+- **Wholesaler payout email**: Shows subtotal, platform fee deducted, and your net amount
+        ` };
+      }
+      if (article.title === "Payment Processing Setup") {
+        return { ...article, content: `
+### Stripe Connect Payment Setup
+
+To receive payments from customers, you must set up Stripe Connect.
+
+#### Initial Setup
+1. **Go to Settings → Payments**
+2. **Click "Set up Payment Processing"**
+3. **Complete Stripe Onboarding**:
+   - Provide business information
+   - Add bank account details
+   - Verify your identity
+   - Complete tax information
+
+#### Payment Flow
+When customers pay:
+1. Customer pays their checkout total through Stripe
+2. Customer card checkouts include a customer service fee
+3. Quikpik automatically collects a platform fee from the order subtotal on eligible online card orders
+4. You receive the subtotal minus the platform fee directly to your bank account
+5. Order status updates to "Processing"
+
+#### Account Status
+Your payment account has two key states:
+- **Account Status**: Verified or Pending
+- **Payment Processing**: Enabled or Disabled
+
+#### Revenue Breakdown
+
+| Fee | Who Pays | Rate | When Applied |
+|-----|----------|------|-------------|
+| **Platform Fee** | You (wholesaler) | ${pfLabel} of order subtotal | Eligible online card orders only |
+| **Customer Service Fee** | Your customer | ${cfLabel} | Added to customer card checkout total only |
+
+- **You Keep**: The order subtotal minus the platform fee (${pfLabel}), paid directly to your Stripe account
+- **Customer Service Fee**: ${cfLabel} shown to the customer at checkout — the customer service fee is not your revenue and does not affect your payout
+- **Offline / Pay Later / Cash / Bank Transfer Orders**: No platform fee or customer service fee is collected unless an online payment is made later
+
+#### Bank Transfers
+- Funds are transferred to your bank account automatically
+- Transfer timing depends on your country (usually 2-7 business days)
+- View transfer history in your Stripe dashboard
+        ` };
+      }
+      if (article.title === "Billing & Payments") {
+        return { ...article, content: `
+### Managing Your Subscription
+
+#### Payment Methods
+- Subscriptions are processed via Stripe
+- Secure credit/debit card payments
+- Automatic monthly billing
+- Pro-rated upgrades/downgrades
+
+#### Billing Cycle
+- Monthly subscriptions bill on the same date each month
+- Upgrades are pro-rated for the current period
+- Downgrades take effect immediately with pro-rated credit
+
+#### Managing Subscription
+- **View Current Plan**: Check your active subscription
+- **Usage Monitoring**: Track product limits
+- **Payment History**: View past invoices
+- **Cancel Anytime**: No long-term contracts
+
+#### Plan Changes
+- **Upgrading**: Immediate access to new features
+- **Downgrading**: Changes take effect immediately with pro-rated credit
+- **Cancellation**: Account remains active until period end
+
+#### Transaction Fees
+
+Fees apply regardless of your subscription plan and are only charged on eligible online card payments through Stripe:
+
+| Fee | Rate | Paid By | Notes |
+|-----|------|---------|-------|
+| **Platform Fee** | ${pfLabel} | You (wholesaler) | Deducted from your payout automatically |
+| **Customer Service Fee** | ${cfLabel} | Your customer | Added to customer checkout total; not your revenue |
+
+- **Your payout** = Order subtotal − ${pfLabel} platform fee
+- **Cash, bank transfer, cheque, and Pay Later orders**: No platform fee and no customer service fee. You receive 100% of the order subtotal.
+- **Payment processing**: Handled entirely by Stripe Connect — no manual action needed
+        ` };
+      }
+      if (article.title === "Margin & Profitability Tracking") {
+        return {
+          ...article,
+          content: article.content.replace(
+            /Revenue minus the [\d.]+% platform fee/,
+            `Revenue minus the ${pfLabel} platform fee`
+          ),
+        };
+      }
+      return article;
+    }),
+  })), [pfPct, cfPct, cfFixed, pfLabel, cfLabel, exCustFee, exCustPays, exPlatFee, exReceive]);
+
   const toggleArticle = (articleTitle: string) => {
     setExpandedArticles(prev => ({
       ...prev,
@@ -2373,7 +2545,7 @@ export default function Help() {
     }));
   };
 
-  const filteredSections = helpSections.map(section => ({
+  const filteredSections = mergedSections.map(section => ({
     ...section,
     articles: section.articles.filter(article =>
       article.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -2381,7 +2553,7 @@ export default function Help() {
     )
   })).filter(section => section.articles.length > 0 || section.title.toLowerCase().includes(searchTerm.toLowerCase()));
 
-  const currentSection = helpSections.find(section => section.id === selectedSection);
+  const currentSection = mergedSections.find(section => section.id === selectedSection);
 
   const inlineFormat = (text: string) => {
     const boldParts = text.split(/\*\*/);

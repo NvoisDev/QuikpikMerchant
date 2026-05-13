@@ -28,6 +28,7 @@ export function SystemSettingsSection({ isAdmin }: { isAdmin: boolean }) {
   const [feeEditOpen, setFeeEditOpen] = useState(false);
   const [feeEditPct, setFeeEditPct] = useState("");
   const [feeEditFixed, setFeeEditFixed] = useState("");
+  const [feeEditPlatformPct, setFeeEditPlatformPct] = useState("");
   const [feeEditNotes, setFeeEditNotes] = useState("");
   const [feeConfirmOpen, setFeeConfirmOpen] = useState(false);
   const PREVIEW_ORDER_SIZE = 100;
@@ -43,14 +44,14 @@ export function SystemSettingsSection({ isAdmin }: { isAdmin: boolean }) {
     enabled: isAdmin,
   });
 
-  type FeeConfigRow = { id: number; customerPercentageFee: string; customerFixedFee: string; notes: string | null; createdBy: string; createdAt: string };
-  const { data: feeConfigData } = useQuery<{ current: { percentage: number; fixed: number; id: number | null; createdAt: string | null; createdBy: string | null }; history: FeeConfigRow[] }>({
+  type FeeConfigRow = { id: number; customerPercentageFee: string; customerFixedFee: string; platformFeePercentage: string | null; notes: string | null; createdBy: string; createdAt: string };
+  const { data: feeConfigData } = useQuery<{ current: { percentage: number; fixed: number; platformFeePercentage: number; id: number | null; createdAt: string | null; createdBy: string | null }; history: FeeConfigRow[] }>({
     queryKey: ["/api/admin/fee-config"],
     enabled: isAdmin,
   });
 
   const saveFeeConfigMutation = useMutation({
-    mutationFn: async (payload: { percentage: number; fixed: number; notes: string }) => {
+    mutationFn: async (payload: { percentage: number; fixed: number; platformFeePercentage: number; notes: string }) => {
       const res = await apiRequest("POST", "/api/admin/fee-config", payload);
       if (!res.ok) { const e = await res.json(); throw new Error(e.error || "Save failed"); }
       return res.json();
@@ -158,8 +159,9 @@ export function SystemSettingsSection({ isAdmin }: { isAdmin: boolean }) {
             <CardTitle className="text-sm font-semibold text-gray-700">Customer Transaction Fee</CardTitle>
             <Button size="sm" variant="outline" className="text-xs h-7 px-2.5" onClick={() => {
               const cur = feeConfigData?.current;
-              setFeeEditPct(cur ? (cur.percentage * 100).toFixed(2) : "5.50");
+              setFeeEditPct(cur ? (cur.percentage * 100).toFixed(2) : "1.50");
               setFeeEditFixed(cur ? cur.fixed.toFixed(2) : "0.50");
+              setFeeEditPlatformPct(cur ? (cur.platformFeePercentage * 100).toFixed(2) : "1.50");
               setFeeEditNotes("");
               setFeeEditOpen(true);
             }}>Edit</Button>
@@ -169,7 +171,13 @@ export function SystemSettingsSection({ isAdmin }: { isAdmin: boolean }) {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
               <p className="text-xs text-gray-500 mb-1">Merchant (Platform) Fee</p>
-              <p className="text-2xl font-bold text-gray-800">4.6<span className="text-base font-normal">%</span></p>
+              {feeConfigData?.current ? (
+                <p className="text-2xl font-bold text-gray-800">
+                  {(feeConfigData.current.platformFeePercentage * 100).toFixed(2)}<span className="text-base font-normal">%</span>
+                </p>
+              ) : (
+                <p className="text-2xl font-bold text-gray-800">1.50<span className="text-base font-normal">%</span></p>
+              )}
               <p className="text-xs text-gray-400 mt-1">Charged to wholesaler per order</p>
             </div>
             <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
@@ -179,7 +187,7 @@ export function SystemSettingsSection({ isAdmin }: { isAdmin: boolean }) {
                   {(feeConfigData.current.percentage * 100).toFixed(2)}<span className="text-base font-normal">% + £{Number(feeConfigData.current.fixed).toFixed(2)}</span>
                 </p>
               ) : (
-                <p className="text-2xl font-bold text-gray-800">5.50<span className="text-base font-normal">% + £0.50</span></p>
+                <p className="text-2xl font-bold text-gray-800">1.50<span className="text-base font-normal">% + £0.50</span></p>
               )}
               <p className="text-xs text-gray-400 mt-1">Charged to buyer per order</p>
             </div>
@@ -210,25 +218,39 @@ export function SystemSettingsSection({ isAdmin }: { isAdmin: boolean }) {
       <Dialog open={feeEditOpen} onOpenChange={setFeeEditOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Edit Customer Transaction Fee</DialogTitle>
+            <DialogTitle>Edit Platform Fees</DialogTitle>
             <DialogDescription>Changes apply to all new orders immediately. Existing orders retain their snapshotted rates.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
-            <div className="grid grid-cols-2 gap-3">
+            <div>
+              <p className="text-xs font-semibold text-gray-700 mb-2">Merchant (Platform) Fee</p>
               <div>
                 <label className="text-xs font-medium text-gray-600 mb-1 block">Percentage (%)</label>
                 <div className="relative">
-                  <input type="number" step="0.01" min="0" max="100" value={feeEditPct} onChange={e => setFeeEditPct(e.target.value)}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm pr-7 focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="5.50" />
+                  <input type="number" step="0.01" min="0" max="100" value={feeEditPlatformPct} onChange={e => setFeeEditPlatformPct(e.target.value)}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm pr-7 focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="1.50" />
                   <span className="absolute right-2.5 top-2 text-xs text-gray-400">%</span>
                 </div>
               </div>
-              <div>
-                <label className="text-xs font-medium text-gray-600 mb-1 block">Fixed fee (£)</label>
-                <div className="relative">
-                  <input type="number" step="0.01" min="0" value={feeEditFixed} onChange={e => setFeeEditFixed(e.target.value)}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm pl-6 focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="0.50" />
-                  <span className="absolute left-2.5 top-2 text-xs text-gray-400">£</span>
+            </div>
+            <div className="border-t border-gray-100 pt-3">
+              <p className="text-xs font-semibold text-gray-700 mb-2">Customer Transaction Fee</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-medium text-gray-600 mb-1 block">Percentage (%)</label>
+                  <div className="relative">
+                    <input type="number" step="0.01" min="0" max="100" value={feeEditPct} onChange={e => setFeeEditPct(e.target.value)}
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm pr-7 focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="1.50" />
+                    <span className="absolute right-2.5 top-2 text-xs text-gray-400">%</span>
+                  </div>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-600 mb-1 block">Fixed fee (£)</label>
+                  <div className="relative">
+                    <input type="number" step="0.01" min="0" value={feeEditFixed} onChange={e => setFeeEditFixed(e.target.value)}
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm pl-6 focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="0.50" />
+                    <span className="absolute left-2.5 top-2 text-xs text-gray-400">£</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -239,10 +261,13 @@ export function SystemSettingsSection({ isAdmin }: { isAdmin: boolean }) {
                 placeholder="e.g. Adjusted to cover Stripe fee increase" />
             </div>
             {(() => {
+              const pf = parseFloat(feeEditPlatformPct) / 100 || 0;
               const p = parseFloat(feeEditPct) / 100 || 0;
               const fixed = parseFloat(feeEditFixed) || 0;
-              const fee = parseFloat((PREVIEW_ORDER_SIZE * p + fixed).toFixed(2));
-              const total = parseFloat((PREVIEW_ORDER_SIZE + fee).toFixed(2));
+              const custFee = parseFloat((PREVIEW_ORDER_SIZE * p + fixed).toFixed(2));
+              const custPays = parseFloat((PREVIEW_ORDER_SIZE + custFee).toFixed(2));
+              const platFee = parseFloat((PREVIEW_ORDER_SIZE * pf).toFixed(2));
+              const youReceive = parseFloat((PREVIEW_ORDER_SIZE - platFee).toFixed(2));
               return (
                 <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 space-y-1.5">
                   <p className="text-xs font-medium text-gray-600">Preview — £{PREVIEW_ORDER_SIZE} order</p>
@@ -250,11 +275,18 @@ export function SystemSettingsSection({ isAdmin }: { isAdmin: boolean }) {
                     <span>Order subtotal</span><span>£{PREVIEW_ORDER_SIZE.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between text-xs text-gray-500">
-                    <span>Transaction fee ({(p * 100).toFixed(2)}% + £{fixed.toFixed(2)})</span>
-                    <span className="font-medium text-orange-600">+£{fee.toFixed(2)}</span>
+                    <span>Customer fee ({(p * 100).toFixed(2)}% + £{fixed.toFixed(2)})</span>
+                    <span className="font-medium text-orange-600">+£{custFee.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between text-xs font-semibold text-gray-800 border-t border-gray-200 pt-1">
-                    <span>Customer pays</span><span>£{total.toFixed(2)}</span>
+                    <span>Customer pays</span><span>£{custPays.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-xs text-gray-500 border-t border-gray-100 pt-1">
+                    <span>Platform fee ({(pf * 100).toFixed(2)}%)</span>
+                    <span className="font-medium text-red-500">−£{platFee.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-xs font-semibold text-green-700">
+                    <span>You receive</span><span>£{youReceive.toFixed(2)}</span>
                   </div>
                 </div>
               );
@@ -263,10 +295,15 @@ export function SystemSettingsSection({ isAdmin }: { isAdmin: boolean }) {
           <DialogFooter>
             <Button variant="outline" onClick={() => setFeeEditOpen(false)}>Cancel</Button>
             <Button className="bg-green-600 hover:bg-green-700 text-white" onClick={() => {
+              const pp = parseFloat(feeEditPlatformPct);
               const p = parseFloat(feeEditPct);
               const fixed = parseFloat(feeEditFixed);
+              if (isNaN(pp) || pp < 0 || pp > 100) {
+                toast({ title: "Invalid platform fee — must be 0–100%", variant: "destructive" });
+                return;
+              }
               if (isNaN(p) || isNaN(fixed) || p < 0 || p > 100 || fixed < 0) {
-                toast({ title: "Invalid values — check percentage (0–100) and fixed fee (≥ 0)", variant: "destructive" });
+                toast({ title: "Invalid customer fee — check percentage (0–100) and fixed fee (≥ 0)", variant: "destructive" });
                 return;
               }
               setFeeConfirmOpen(true);
@@ -281,18 +318,23 @@ export function SystemSettingsSection({ isAdmin }: { isAdmin: boolean }) {
       <Dialog open={feeConfirmOpen} onOpenChange={setFeeConfirmOpen}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>Confirm fee change</DialogTitle>
-            <DialogDescription>This will apply immediately to all new customer orders.</DialogDescription>
+            <DialogTitle>Confirm fee changes</DialogTitle>
+            <DialogDescription>This will apply immediately to all new orders.</DialogDescription>
           </DialogHeader>
           <div className="py-3 space-y-2">
-            <div className="flex justify-between text-sm"><span className="text-gray-500">New percentage</span><span className="font-medium">{feeEditPct}%</span></div>
-            <div className="flex justify-between text-sm"><span className="text-gray-500">New fixed fee</span><span className="font-medium">£{feeEditFixed}</span></div>
+            <div className="flex justify-between text-sm"><span className="text-gray-500">Platform fee</span><span className="font-medium">{feeEditPlatformPct}%</span></div>
+            <div className="flex justify-between text-sm"><span className="text-gray-500">Customer fee</span><span className="font-medium">{feeEditPct}% + £{feeEditFixed}</span></div>
             {feeEditNotes && <div className="text-xs text-gray-400 bg-gray-50 rounded-lg p-2">{feeEditNotes}</div>}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setFeeConfirmOpen(false)}>Go back</Button>
             <Button className="bg-green-600 hover:bg-green-700 text-white" disabled={saveFeeConfigMutation.isPending}
-              onClick={() => saveFeeConfigMutation.mutate({ percentage: parseFloat(feeEditPct) / 100, fixed: parseFloat(feeEditFixed), notes: feeEditNotes })}>
+              onClick={() => saveFeeConfigMutation.mutate({
+                percentage: parseFloat(feeEditPct) / 100,
+                fixed: parseFloat(feeEditFixed),
+                platformFeePercentage: parseFloat(feeEditPlatformPct) / 100,
+                notes: feeEditNotes,
+              })}>
               {saveFeeConfigMutation.isPending ? "Saving…" : "Confirm"}
             </Button>
           </DialogFooter>

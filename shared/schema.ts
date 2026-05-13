@@ -1850,8 +1850,9 @@ export const stripeProcessedEvents = pgTable("stripe_processed_events", {
 
 export const platformFeeConfigs = pgTable("platform_fee_configs", {
   id: serial("id").primaryKey(),
-  customerPercentageFee: decimal("customer_percentage_fee", { precision: 5, scale: 4 }).notNull(), // e.g. 0.0550 for 5.5%
+  customerPercentageFee: decimal("customer_percentage_fee", { precision: 5, scale: 4 }).notNull(), // e.g. 0.0150 for 1.5%
   customerFixedFee: decimal("customer_fixed_fee", { precision: 6, scale: 2 }).notNull(), // e.g. 0.50 for £0.50
+  platformFeePercentage: decimal("platform_fee_percentage", { precision: 5, scale: 4 }), // e.g. 0.0150 for 1.5%; null = use hardcoded default
   notes: varchar("notes"), // optional admin note explaining the change
   effectiveFrom: timestamp("effective_from").defaultNow().notNull(),
   createdBy: varchar("created_by").notNull(), // admin identifier

@@ -325,22 +325,46 @@ export function registerAdminSystemRoutes(app: Express): void {
   app.post('/api/admin/fee-config', requireAuth, async (req: any, res) => {
     try {
       if (!ADMIN_EMAILS.includes(getAdminEmail(req) || "")) return res.status(403).json({ error: 'Forbidden' });
-      const { percentage, fixed, notes } = req.body as { percentage: number; fixed: number; notes?: string };
+      const { percentage, fixed, platformFeePercentage, notes } = req.body as {
+        percentage: number;
+        fixed: number;
+        platformFeePercentage?: number;
+        notes?: string;
+      };
       if (typeof percentage !== 'number' || typeof fixed !== 'number') {
         return res.status(400).json({ error: 'percentage and fixed must be numbers.' });
       }
       if (percentage < 0 || percentage > 1) {
-        return res.status(400).json({ error: 'percentage must be between 0 and 1 (e.g. 0.055 for 5.5%).' });
+        return res.status(400).json({ error: 'percentage must be between 0 and 1 (e.g. 0.015 for 1.5%).' });
       }
       if (fixed < 0) {
         return res.status(400).json({ error: 'fixed must be >= 0.' });
       }
+      if (platformFeePercentage !== undefined) {
+        if (typeof platformFeePercentage !== 'number' || platformFeePercentage < 0 || platformFeePercentage > 1) {
+          return res.status(400).json({ error: 'platformFeePercentage must be a number between 0 and 1.' });
+        }
+      }
       const adminEmail = getAdminEmail(req) || 'unknown';
-      const saved = await saveFeeConfig({ percentage, fixed, notes, changedBy: adminEmail });
+      const saved = await saveFeeConfig({ percentage, fixed, platformFeePercentage, notes, changedBy: adminEmail });
       res.json({ ok: true, config: saved });
     } catch (error) {
       console.error('Admin fee-config POST error:', error);
       res.status(500).json({ error: 'Failed to save fee configuration.' });
+    }
+  });
+
+  // GET /api/fee-rates — public endpoint returning current platform & customer fee rates
+  app.get('/api/fee-rates', async (_req, res) => {
+    try {
+      const config = await getCurrentFeeConfig();
+      res.json({
+        platformFee: { percentage: config.platformFeePercentage },
+        customerFee: { percentage: config.percentage, fixed: config.fixed },
+      });
+    } catch (error) {
+      console.error('fee-rates GET error:', error);
+      res.status(500).json({ error: 'Failed to fetch fee rates.' });
     }
   });
 

@@ -9,8 +9,15 @@ import { platformFeeConfigs, users } from "../../shared/schema";
 import { desc, eq } from "drizzle-orm";
 import { CUSTOMER_FEE_RATE, CUSTOMER_FEE_FIXED, PLATFORM_FEE_RATE, type CustomerFeeConfig } from "../../shared/utils/fees";
 
+export type FeeConfigFull = CustomerFeeConfig & {
+  id: number | null;
+  createdAt: Date | null;
+  createdBy: string | null;
+  platformFeePercentage: number;
+};
+
 /** Always returns a valid fee config. Never throws. */
-export async function getCurrentFeeConfig(): Promise<CustomerFeeConfig & { id: number | null; createdAt: Date | null; createdBy: string | null }> {
+export async function getCurrentFeeConfig(): Promise<FeeConfigFull> {
   try {
     const [latest] = await db
       .select()
@@ -23,6 +30,9 @@ export async function getCurrentFeeConfig(): Promise<CustomerFeeConfig & { id: n
         id: latest.id,
         percentage: parseFloat(latest.customerPercentageFee),
         fixed: parseFloat(latest.customerFixedFee),
+        platformFeePercentage: latest.platformFeePercentage !== null && latest.platformFeePercentage !== undefined
+          ? parseFloat(latest.platformFeePercentage)
+          : PLATFORM_FEE_RATE,
         createdAt: latest.createdAt,
         createdBy: latest.createdBy,
       };
@@ -35,18 +45,28 @@ export async function getCurrentFeeConfig(): Promise<CustomerFeeConfig & { id: n
     id: null,
     percentage: CUSTOMER_FEE_RATE,
     fixed: CUSTOMER_FEE_FIXED,
+    platformFeePercentage: PLATFORM_FEE_RATE,
     createdAt: null,
     createdBy: null,
   };
 }
 
 /** Save a new fee config row (append-only). */
-export async function saveFeeConfig(opts: { percentage: number; fixed: number; notes?: string; changedBy: string }) {
+export async function saveFeeConfig(opts: {
+  percentage: number;
+  fixed: number;
+  platformFeePercentage?: number;
+  notes?: string;
+  changedBy: string;
+}) {
   const [row] = await db
     .insert(platformFeeConfigs)
     .values({
       customerPercentageFee: opts.percentage.toFixed(4),
       customerFixedFee: opts.fixed.toFixed(2),
+      platformFeePercentage: opts.platformFeePercentage !== undefined
+        ? opts.platformFeePercentage.toFixed(4)
+        : null,
       notes: opts.notes || null,
       createdBy: opts.changedBy,
     })
@@ -103,9 +123,10 @@ export async function getFeeConfigForWholesaler(
 
 /**
  * Returns the effective platform fee rate for a specific wholesaler.
- * Uses the per-wholesaler `customFeePercentage` override when set (stored as raw %,
- * e.g. "2.00" = 2% → returned as 0.02 decimal rate).
- * Falls back to the hardcoded PLATFORM_FEE_RATE (1.5%) when no override is set.
+ * Fallback chain:
+ *   1. Per-wholesaler `customFeePercentage` override on `users`
+ *   2. System-wide `platformFeeConfigs` table (platformFeePercentage column)
+ *   3. Hardcoded PLATFORM_FEE_RATE (1.5%)
  * Never throws.
  */
 export async function getWholesalerPlatformFeeRate(wholesalerId: string): Promise<number> {
@@ -125,7 +146,14 @@ export async function getWholesalerPlatformFeeRate(wholesalerId: string): Promis
   } catch (err) {
     console.error("[fee-config] getWholesalerPlatformFeeRate error, using default:", err);
   }
-  return PLATFORM_FEE_RATE;
+
+  // Fall back to system-wide DB config, then hardcoded constant
+  try {
+    const systemConfig = await getCurrentFeeConfig();
+    return systemConfig.platformFeePercentage;
+  } catch {
+    return PLATFORM_FEE_RATE;
+  }
 }
 
 /** Return last N fee config rows, newest first. */
