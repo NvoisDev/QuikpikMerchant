@@ -1,12 +1,9 @@
 import Stripe from "stripe";
 import { db } from "./db";
 import { users, subscriptionPlans, userSubscriptions } from "@shared/schema";
-import { eq, and, inArray, sql, lt, ne } from "drizzle-orm";
+import { eq, and, inArray, sql } from "drizzle-orm";
 
 import { getStripeClient } from "./stripeConfig";
-import { sendEmail } from "./sendgrid-service";
-import { generateDowngradeEffectiveEmail } from "./email-templates";
-import { enforceNewPlanLimits } from "./routes/shared";
 
 function requireStripe(isTestAccount: boolean | null | undefined) {
   if (isTestAccount == null) throw new Error("Missing isTestAccount context for Stripe operation");
@@ -882,18 +879,18 @@ export class SubscriptionService {
    * Downgrades them to free, enforces limits, and sends the standard email.
    */
   static async runExpiredSubscriptionDowngrades(): Promise<void> {
-    const now = new Date();
+    // Use raw SQL to avoid circular-import issues with Drizzle column references.
+    // cancelAtPeriodEnd lives on userSubscriptions; subscription_status = 'cancel_at_period_end'
+    // is set on users at the same time, so we filter on that column instead.
+    const result = await db.execute(sql`
+      SELECT id, email, first_name, last_name, business_name
+      FROM users
+      WHERE subscription_status = 'cancel_at_period_end'
+        AND subscription_period_end < NOW()
+        AND current_plan != 'free'
+    `);
 
-    const expiredUsers = await db
-      .select()
-      .from(users)
-      .where(
-        and(
-          eq(users.cancelAtPeriodEnd, true),
-          lt(users.subscriptionPeriodEnd, now),
-          ne(users.currentPlan, 'free')
-        )
-      );
+    const expiredUsers = result.rows as { id: string; email: string | null; first_name: string | null; last_name: string | null; business_name: string | null }[];
 
     if (expiredUsers.length === 0) {
       console.log('✅ Expired subscription check: no missed downgrades found.');
@@ -902,43 +899,46 @@ export class SubscriptionService {
 
     console.log(`⚠️  Expired subscription check: ${expiredUsers.length} missed downgrade(s) found — applying now.`);
 
+    // Dynamic imports to avoid circular dependencies at module evaluation time
+    const { sendEmail } = await import('./sendgrid-service');
+    const { generateDowngradeEffectiveEmail } = await import('./email-templates');
+    const { enforceNewPlanLimits } = await import('./routes/shared');
+
     for (const user of expiredUsers) {
       try {
-        await db.update(users).set({
-          subscriptionTier: 'free',
-          subscriptionStatus: 'free',
-          currentPlan: 'free',
-          productLimit: 2,
-          stripeSubscriptionId: null,
-          subscriptionPeriodStart: null,
-          subscriptionPeriodEnd: null,
-          cancelAtPeriodEnd: false,
-          updatedAt: new Date()
-        }).where(eq(users.id, user.id));
+        await db.execute(sql`
+          UPDATE users SET
+            subscription_tier = 'free',
+            subscription_status = 'free',
+            current_plan = 'free',
+            product_limit = 2,
+            stripe_subscription_id = NULL,
+            subscription_period_start = NULL,
+            subscription_period_end = NULL,
+            updated_at = NOW()
+          WHERE id = ${user.id}
+        `);
 
-        const [existingUserSub] = await db.select().from(userSubscriptions)
-          .where(eq(userSubscriptions.userId, user.id));
-
-        if (existingUserSub) {
-          await db.update(userSubscriptions).set({
-            planId: 'free',
-            stripeSubscriptionId: null,
-            status: 'free',
-            cancelAtPeriodEnd: null,
-            currentPeriodStart: null,
-            currentPeriodEnd: null,
-            updatedAt: new Date()
-          }).where(eq(userSubscriptions.userId, user.id));
-        }
+        await db.execute(sql`
+          UPDATE user_subscriptions SET
+            plan_id = 'free',
+            stripe_subscription_id = NULL,
+            status = 'free',
+            cancel_at_period_end = NULL,
+            current_period_start = NULL,
+            current_period_end = NULL,
+            updated_at = NOW()
+          WHERE user_id = ${user.id}
+        `);
 
         const enforcement = await enforceNewPlanLimits(user.id, 'free');
 
         if (user.email) {
           try {
             const { subject, html, text } = generateDowngradeEffectiveEmail({
-              firstName: user.firstName || '',
+              firstName: user.first_name || '',
               email: user.email,
-              businessName: user.businessName || 'Quikpik',
+              businessName: user.business_name || 'Quikpik',
               productsLocked: enforcement.productsLocked || undefined,
               teamMembersSuspended: enforcement.teamMembersSuspended || undefined,
               groupsArchived: enforcement.groupsArchived || undefined,
