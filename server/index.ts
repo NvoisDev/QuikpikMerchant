@@ -705,12 +705,21 @@ httpServer.listen({ port, host: '0.0.0.0', reusePort: true }, () => {
         const { SubscriptionService: SS } = await import("./subscription-service");
         await SS.runMonthlyPriceSwitchIfDue();
         await SS.runAnnualPlanMigrationIfDue();
+        await SS.runExpiredSubscriptionDowngrades();
         await fixStripePricesIfNeeded();
       } catch (error) {
         console.error('❌ Daily pricing/plan maintenance check failed:', error);
       }
     });
     console.log(`📅 Daily pricing & plan migration scheduler enabled (daily at 11 AM)`);
+
+    // Run once immediately at startup to catch any missed downgrades from webhook failures
+    try {
+      const { SubscriptionService: SS } = await import("./subscription-service");
+      await SS.runExpiredSubscriptionDowngrades();
+    } catch (err) {
+      console.error('❌ Startup expired subscription check failed:', err);
+    }
 
   } catch (error) {
     console.error("❌ Server initialisation error:", error);

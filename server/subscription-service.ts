@@ -1,9 +1,12 @@
 import Stripe from "stripe";
 import { db } from "./db";
 import { users, subscriptionPlans, userSubscriptions } from "@shared/schema";
-import { eq, and, inArray, sql } from "drizzle-orm";
+import { eq, and, inArray, sql, lt, ne } from "drizzle-orm";
 
 import { getStripeClient } from "./stripeConfig";
+import { sendEmail } from "./sendgrid-service";
+import { generateDowngradeEffectiveEmail } from "./email-templates";
+import { enforceNewPlanLimits } from "./routes/shared";
 
 function requireStripe(isTestAccount: boolean | null | undefined) {
   if (isTestAccount == null) throw new Error("Missing isTestAccount context for Stripe operation");
@@ -869,6 +872,87 @@ export class SubscriptionService {
     } catch (error) {
       console.error('❌ Failed to check feature access:', error);
       return false; // Fail safe - deny access on error
+    }
+  }
+
+  /**
+   * Safety net for missed Stripe webhooks.
+   * Finds all users with cancelAtPeriodEnd=true whose subscription period has
+   * already ended but whose plan wasn't downgraded (webhook was missed/failed).
+   * Downgrades them to free, enforces limits, and sends the standard email.
+   */
+  static async runExpiredSubscriptionDowngrades(): Promise<void> {
+    const now = new Date();
+
+    const expiredUsers = await db
+      .select()
+      .from(users)
+      .where(
+        and(
+          eq(users.cancelAtPeriodEnd, true),
+          lt(users.subscriptionPeriodEnd, now),
+          ne(users.currentPlan, 'free')
+        )
+      );
+
+    if (expiredUsers.length === 0) {
+      console.log('✅ Expired subscription check: no missed downgrades found.');
+      return;
+    }
+
+    console.log(`⚠️  Expired subscription check: ${expiredUsers.length} missed downgrade(s) found — applying now.`);
+
+    for (const user of expiredUsers) {
+      try {
+        await db.update(users).set({
+          subscriptionTier: 'free',
+          subscriptionStatus: 'free',
+          currentPlan: 'free',
+          productLimit: 2,
+          stripeSubscriptionId: null,
+          subscriptionPeriodStart: null,
+          subscriptionPeriodEnd: null,
+          cancelAtPeriodEnd: false,
+          updatedAt: new Date()
+        }).where(eq(users.id, user.id));
+
+        const [existingUserSub] = await db.select().from(userSubscriptions)
+          .where(eq(userSubscriptions.userId, user.id));
+
+        if (existingUserSub) {
+          await db.update(userSubscriptions).set({
+            planId: 'free',
+            stripeSubscriptionId: null,
+            status: 'free',
+            cancelAtPeriodEnd: null,
+            currentPeriodStart: null,
+            currentPeriodEnd: null,
+            updatedAt: new Date()
+          }).where(eq(userSubscriptions.userId, user.id));
+        }
+
+        const enforcement = await enforceNewPlanLimits(user.id, 'free');
+
+        if (user.email) {
+          try {
+            const { subject, html, text } = generateDowngradeEffectiveEmail({
+              firstName: user.firstName || '',
+              email: user.email,
+              businessName: user.businessName || 'Quikpik',
+              productsLocked: enforcement.productsLocked || undefined,
+              teamMembersSuspended: enforcement.teamMembersSuspended || undefined,
+              groupsArchived: enforcement.groupsArchived || undefined,
+            });
+            await sendEmail({ to: user.email, from: 'hello@quikpik.co', subject, html, text });
+          } catch (emailErr) {
+            console.error(`❌ Failed to send downgrade email to ${user.email}:`, emailErr);
+          }
+        }
+
+        console.log(`✅ Downgraded ${user.email || user.id} to free (missed webhook recovery).`);
+      } catch (err) {
+        console.error(`❌ Failed to downgrade user ${user.id}:`, err);
+      }
     }
   }
 }
