@@ -106,8 +106,9 @@ export class CustomerMgmtStorage extends BroadcastStorage {
     const allOrderStats = await db
       .select({
         customerId: orders.retailerId,
-        totalOrders: count(orders.id),
+        totalOrders: sql<number>`COUNT(CASE WHEN ${orders.status} != 'cancelled' THEN 1 END)`,
         totalSpent: sql<number>`COALESCE(SUM(CASE WHEN ${orders.paymentStatus} = 'paid' AND ${orders.status} != 'cancelled' THEN (COALESCE(${orders.subtotal}::numeric, ${orders.total}::numeric) - COALESCE(${orders.platformFee}::numeric, 0)) ELSE 0 END), 0)`,
+        totalInvoiced: sql<number>`COALESCE(SUM(CASE WHEN ${orders.status} != 'cancelled' THEN (COALESCE(${orders.subtotal}::numeric, ${orders.total}::numeric) - COALESCE(${orders.platformFee}::numeric, 0)) ELSE 0 END), 0)`,
         totalUnpaid: sql<number>`COALESCE(SUM(CASE WHEN (${orders.paymentStatus} IS NULL OR ${orders.paymentStatus} = 'unpaid') AND ${orders.status} != 'cancelled' THEN (COALESCE(${orders.subtotal}::numeric, ${orders.total}::numeric) - COALESCE(${orders.platformFee}::numeric, 0)) ELSE 0 END), 0)`,
         lastOrderDate: sql<Date>`MAX(${orders.createdAt})`
       })
@@ -160,6 +161,7 @@ export class CustomerMgmtStorage extends BroadcastStorage {
         groupNames: groups.map(g => g.groupName),
         totalOrders: Number(stats?.totalOrders ?? 0),
         totalSpent: Number(stats?.totalSpent ?? 0),
+        totalInvoiced: Number(stats?.totalInvoiced ?? 0),
         totalUnpaid: Number(stats?.totalUnpaid ?? 0),
         lastOrderDate: (stats?.lastOrderDate as Date | null) ?? null,
         groupIds: groups.map(g => g.groupId)
@@ -240,7 +242,7 @@ export class CustomerMgmtStorage extends BroadcastStorage {
       displayName: relationship.displayName ?? null,
       groups: scopedGroups.map(cg => cg.group),
       orders: customerOrders,
-      totalOrders: customerOrders.length,
+      totalOrders: customerOrders.filter(o => o.status !== 'cancelled').length,
       totalSpent,
       totalUnpaid
     };

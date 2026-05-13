@@ -118,6 +118,7 @@ interface Customer {
   groupNames: string[];
   groupIds: number[];
   totalOrders: number;
+  totalInvoiced: number;
   totalSpent: number;
   totalUnpaid?: number;
   lastOrderDate?: Date;
@@ -941,11 +942,11 @@ export default function Customers() {
                     <div className="flex items-center gap-4 shrink-0">
                       <div className="text-right hidden sm:block">
                         <p className="text-sm font-medium">{customer?.totalOrders || 0} orders</p>
-                        <p className="text-xs text-gray-500">{formatMoney(customer?.totalSpent || 0)}</p>
+                        <p className="text-xs text-gray-500">{formatMoney(customer?.totalInvoiced || 0)}</p>
                       </div>
                       <div className="sm:hidden text-right">
                         <p className="text-xs font-medium">{customer?.totalOrders || 0}</p>
-                        <p className="text-[10px] text-gray-500">{formatMoney(customer?.totalSpent || 0)}</p>
+                        <p className="text-[10px] text-gray-500">{formatMoney(customer?.totalInvoiced || 0)}</p>
                       </div>
                       <div onClick={(e) => e.stopPropagation()}>
                         <DropdownMenu>

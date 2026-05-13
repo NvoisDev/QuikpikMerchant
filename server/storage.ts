@@ -190,7 +190,8 @@ export interface IStorage {
   getAllCustomers(wholesalerId: string): Promise<(User & { 
     groupNames: string[]; 
     totalOrders: number; 
-    totalSpent: number; 
+    totalSpent: number;
+    totalInvoiced: number;
     lastOrderDate?: Date;
     groupIds: number[];
   })[]>;
