@@ -1184,15 +1184,76 @@ Your payment account has two key states:
 - **Payment Processing**: Enabled or Disabled
 
 #### Revenue Breakdown
-- **Platform Fee**: Quikpik's service charge on eligible online card orders
-- **Customer Service Fee**: 5.5% + £0.50 shown to the customer on card checkout only; it is not your revenue
-- **You Keep**: The order subtotal after the platform fee
-- **Offline / Pay Later Orders**: No platform fee or customer service fee is collected unless an online payment is made later
+
+| Fee | Who Pays | Rate | When Applied |
+|-----|----------|------|-------------|
+| **Platform Fee** | You (wholesaler) | 4.6% of order subtotal | Eligible online card orders only |
+| **Customer Service Fee** | Your customer | 5.5% + £0.50 | Added to customer card checkout total only |
+
+- **You Keep**: The order subtotal minus the 4.6% platform fee, paid directly to your Stripe account
+- **Customer Service Fee**: Shown to the customer at checkout — it is not your revenue and does not affect your payout
+- **Offline / Pay Later / Cash / Bank Transfer Orders**: No platform fee and no customer service fee is collected unless an online Stripe payment is made later
 
 #### Bank Transfers
 - Funds are transferred to your bank account automatically
 - Transfer timing depends on your country (usually 2-7 business days)
 - View transfer history in your Stripe dashboard
+        `
+      },
+      {
+        title: "Transaction Fees Explained",
+        content: `
+### Understanding Transaction Fees
+
+Quikpik charges two separate fees on eligible online card orders. Neither fee applies to cash, bank transfer, cheque, or Pay Later orders.
+
+#### The Two Fees
+
+| Fee | Rate | Who Pays | What It Covers |
+|-----|------|----------|---------------|
+| **Platform Fee** | 4.6% of order subtotal | You (wholesaler) | Quikpik's service charge for the platform |
+| **Customer Service Fee** | 5.5% + £0.50 | Your customer | Added on top of the order subtotal at checkout |
+
+#### How Each Fee Works
+
+**Platform Fee (4.6%)**
+- Calculated on the order subtotal (product total before delivery)
+- Deducted from your payout automatically by Stripe — you never handle it manually
+- Appears as a line item in each order's payment summary so you can see exactly what was deducted
+- Your payout = order subtotal − platform fee
+
+**Customer Service Fee (5.5% + £0.50)**
+- Added to the customer's checkout total — they pay it on top of the order
+- It is not part of your revenue and does not affect your payout
+- Only shown to the customer during card checkout; not visible on Pay Later or offline orders
+
+#### Example Breakdown
+
+For a £100 order paid by card:
+
+| | Amount |
+|-|--------|
+| Order subtotal | £100.00 |
+| Customer service fee (5.5% + £0.50) | £6.00 |
+| **Customer pays** | **£106.00** |
+| Platform fee deducted (4.6%) | −£4.60 |
+| **You receive** | **£95.40** |
+
+#### When Are Fees Charged?
+
+- ✅ **Online card payment** (Stripe checkout) — both fees apply
+- ✅ **Deposit payments via Stripe** — both fees apply to the deposit amount
+- ❌ **Pay Later orders** — no fees charged
+- ❌ **Cash / bank transfer / cheque orders** — no fees charged
+- ❌ **Offline payment recorded manually** — no fees charged
+
+#### Where to See Fees in the Platform
+
+- **Order detail panel**: Shows platform fee as a line item under the payment summary
+- **Revenue KPI card**: Displays gross order value (before platform fees) — labelled "before fees"
+- **Amount Owed card**: Shows outstanding balances net of platform fee — what you will actually receive
+- **Margin Overview**: Revenue shown before fees (labelled "excl. fees"); deduct platform fee separately for net figures
+- **Wholesaler payout email**: Shows subtotal, platform fee deducted, and your net amount
         `
       },
       {
@@ -1270,11 +1331,24 @@ Use the **Marketplace** page in the sidebar, or go to **/marketplace**, to view 
 
 The Analytics dashboard provides insights into your business performance.
 
-#### Key Metrics
-- **Total Revenue**: All-time earnings from orders
-- **Orders Count**: Total number of orders processed
-- **Active Products**: Currently available products
-- **Low Stock**: Products with low inventory
+#### Dashboard KPI Cards
+
+Your dashboard shows six at-a-glance cards:
+
+| Card | What It Shows |
+|------|--------------|
+| **Revenue** | Gross order value across all non-cancelled orders (before platform fees). Includes both paid and unpaid orders. Shows % change vs last month. |
+| **Amount Owed** | Total outstanding balance across unpaid invoices (subtotal minus platform fee) — what you will receive once those invoices are settled. |
+| **Total Orders** | Count of all non-cancelled orders. Shows % change vs last month. |
+| **Active Products** | Number of products currently set to Active status. |
+| **Low Stock Items** | Active products at or below their low-stock threshold. Tap "View items" to go to the Stock Alerts page. |
+| **WhatsApp Reach** | Number of customers reached via WhatsApp messages. |
+
+#### Revenue vs Amount Owed — What's the Difference?
+
+- **Revenue** is your gross total — the full order value before any fees, across all orders (paid and unpaid combined).
+- **Amount Owed** shows only unpaid orders, net of platform fees — i.e. the amount you will actually receive once those invoices are settled.
+- They are not additive: Revenue covers all orders; Amount Owed is a subset of those still outstanding.
 
 #### Revenue Analytics
 - **Revenue Trends**: Daily/weekly/monthly revenue charts
@@ -1309,9 +1383,11 @@ The **Margin Overview** panel in your Analytics dashboard shows a clear picture 
 
 | Metric | What It Means |
 |--------|--------------|
-| **Revenue** | Total value of completed orders |
-| **Cost** | Total cost of goods sold (based on cost prices set on your products or batches) |
+| **Total Revenue (excl. fees)** | Gross order value — the sum of item prices before any platform fees are deducted. This matches the Revenue figure on your dashboard. |
+| **Est. Cost** | Total cost of goods sold (based on cost prices set on your products or batches) |
 | **Gross Margin %** | (Revenue − Cost) ÷ Revenue × 100 — the percentage of revenue that is gross profit |
+
+> **Note on fees**: Revenue in the Margin Overview is shown before platform fees so it reflects the full selling price of your goods. Your actual take-home on online card orders is Revenue minus the 4.6% platform fee. For cash, bank transfer, and Pay Later orders there is no platform fee, so Revenue and take-home are the same.
 
 The panel breaks these figures down separately for **online orders** (customer portal card payments) and **invoice/offline sales** (Raise Invoice orders including Pay Later and cash orders), so you can compare the profitability of each channel.
 
@@ -1456,13 +1532,18 @@ Standard and Premium plans are also available on **annual billing** at a discoun
 - **Downgrading**: Changes take effect immediately with pro-rated credit
 - **Cancellation**: Account remains active until period end
 
-#### Service Fees
-Regardless of subscription plan:
-- **Platform Fee**: Quikpik's service charge on eligible online card orders, paid by the wholesaler
-- **Customer Service Fee**: 5.5% + £0.50 added to customer card checkouts only
-- **Payment Processing**: Handled by Stripe
-- **Your Revenue**: Order subtotal minus the platform fee; the customer service fee is not wholesaler revenue
-- **Offline / Pay Later Orders**: No platform fee or customer service fee is collected unless an online payment is made later
+#### Transaction Fees
+
+Fees apply regardless of your subscription plan and are only charged on eligible online card payments through Stripe:
+
+| Fee | Rate | Paid By | Notes |
+|-----|------|---------|-------|
+| **Platform Fee** | 4.6% of order subtotal | You (wholesaler) | Deducted from your payout automatically |
+| **Customer Service Fee** | 5.5% + £0.50 | Your customer | Added to customer checkout total; not your revenue |
+
+- **Your payout** = Order subtotal − 4.6% platform fee
+- **Cash, bank transfer, cheque, and Pay Later orders**: No platform fee and no customer service fee. You receive 100% of the order subtotal.
+- **Payment processing**: Handled entirely by Stripe Connect — no manual action needed
         `
       }
     ]
