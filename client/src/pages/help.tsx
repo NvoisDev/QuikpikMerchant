@@ -2369,7 +2369,7 @@ export default function Help() {
 
   const { data: feeRates } = useQuery<{ platformFee: { percentage: number }; customerFee: { percentage: number; fixed: number } }>({
     queryKey: ['/api/fee-rates'],
-    staleTime: 5 * 60 * 1000,
+    staleTime: 0,
   });
 
   const pfPct = feeRates?.platformFee?.percentage ?? 0.015;
