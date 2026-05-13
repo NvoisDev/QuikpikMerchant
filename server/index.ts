@@ -322,6 +322,8 @@ async function runStartupMigrations() {
        WHERE sm.product_id = p.id
          AND sm.movement_type = 'initial'
      )`,
+    // Platform fee percentage column — allows admin to set platform fee rate via UI
+    `ALTER TABLE platform_fee_configs ADD COLUMN IF NOT EXISTS platform_fee_percentage DECIMAL(5,4)`,
   ];
   for (const stmt of migrations) {
     await db.execute(sql.raw(stmt));
