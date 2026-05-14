@@ -982,15 +982,16 @@ export function registerOrderLifecycleRoutes(app: Express): void {
       }
 
       const pendingRefundAmount = returnedItems?.length > 0 ? refundAmount : amountPaidNum;
+      const isOfflinePayment = !order.stripePaymentIntentId;
       const refundNote = stripeRefundTotalPounds > 0
         ? `Stripe refund: £${stripeRefundTotalPounds.toFixed(2)}${stripeRefundError ? ` (partial — ${stripeRefundError})` : ''}`
         : stripeRefundError
           ? `Refund failed: £${pendingRefundAmount.toFixed(2)} (${stripeRefundError})`
           : amountPaidNum > 0
-            ? `Refund pending: £${pendingRefundAmount.toFixed(2)}`
+            ? (isOfflinePayment ? `Offline refund: £${pendingRefundAmount.toFixed(2)}` : `Refund pending: £${pendingRefundAmount.toFixed(2)}`)
             : 'No payment taken';
 
-      const refundProcessedNow = stripeRefundTotalPounds > 0;
+      const refundProcessedNow = stripeRefundTotalPounds > 0 || (isOfflinePayment && amountPaidNum > 0);
 
       await db.update(orders)
         .set({
@@ -998,6 +999,7 @@ export function registerOrderLifecycleRoutes(app: Express): void {
           amountRefunded: totalRefunded.toFixed(2),
           amountOutstanding: isFullCancellation ? '0.00' : undefined,
           refundReason: reason || 'Customer requested cancellation',
+          refundedAt: refundProcessedNow ? new Date() : undefined,
           cancelledAt: isFullCancellation ? new Date() : undefined,
           stockRestored: (order.stockRestoredCount || 0) + stockRestoredCount > 0,
           stockRestoredCount: (order.stockRestoredCount || 0) + stockRestoredCount,

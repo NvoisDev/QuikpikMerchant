@@ -1816,25 +1816,28 @@ export default function OrderDetail() {
                 const paidAmt = parseFloat(order.amountPaid || '0');
                 const isPartial = paidAmt > 0 && refundedAmt < paidAmt;
                 const isProcessed = !!order.refundedAt;
-                const canRetry = !isProcessed && !!order.stripePaymentIntentId;
+                const isOffline = !order.stripePaymentIntentId || (order.notes || '').includes('Offline refund:');
+                const canRetry = !isProcessed && !!order.stripePaymentIntentId && !isOffline;
                 const label = isPartial
-                  ? (isProcessed ? 'Partial refund to card' : 'Partial refund pending')
-                  : (isProcessed ? 'Refund to card' : 'Refund pending');
-                const dotColor = isProcessed ? 'bg-purple-500' : 'bg-amber-400';
-                const textColor = isProcessed ? 'text-purple-700' : 'text-amber-700';
+                  ? (isOffline ? 'Partial refund (offline)' : isProcessed ? 'Partial refund to card' : 'Partial refund pending')
+                  : (isOffline ? 'Refund (offline)' : isProcessed ? 'Refund to card' : 'Refund pending');
+                const dotColor = (isProcessed || isOffline) ? 'bg-purple-500' : 'bg-amber-400';
+                const textColor = (isProcessed || isOffline) ? 'text-purple-700' : 'text-amber-700';
                 return (
                   <div className="flex items-start gap-2">
                     <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${dotColor}`}></div>
                     <div>
                       <div className={`text-xs font-medium ${textColor}`}>{label}</div>
                       <div className="text-xs text-gray-500">
-                        {isProcessed
-                          ? new Date(order.refundedAt!).toLocaleDateString()
-                          : (order.notes || '').includes('Refund failed:')
-                            ? 'Sent to Stripe but failed — use Retry'
-                            : (order.notes || '').includes('Stripe refund:') || (order.notes || '').includes('Stripe retry refund submitted:')
-                              ? 'Refund pending Stripe confirmation'
-                              : 'Not yet sent to Stripe'}
+                        {isOffline
+                          ? (isProcessed ? new Date(order.refundedAt!).toLocaleDateString() : 'Handled offline — no Stripe required')
+                          : isProcessed
+                            ? new Date(order.refundedAt!).toLocaleDateString()
+                            : (order.notes || '').includes('Refund failed:')
+                              ? 'Sent to Stripe but failed — use Retry'
+                              : (order.notes || '').includes('Stripe refund:') || (order.notes || '').includes('Stripe retry refund submitted:')
+                                ? 'Refund pending Stripe confirmation'
+                                : 'Not yet sent to Stripe'}
                       </div>
                       {order.refundReason && !order.cancellationRequest && (
                         <div className="text-xs text-gray-400 mt-0.5">{order.refundReason}</div>
