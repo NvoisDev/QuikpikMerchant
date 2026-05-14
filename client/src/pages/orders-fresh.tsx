@@ -1247,10 +1247,11 @@ export default function OrdersFresh() {
                           {(() => {
                             const refAmt = parseFloat(order.amountRefunded || '0');
                             const paidAmt = parseFloat(order.amountPaid || '0');
+                            const isOffline = !order.stripePaymentIntentId;
                             if (refAmt > 0 && (order.status === 'cancelled' || refAmt >= paidAmt)) {
-                              return <Badge className="bg-purple-100 text-purple-800 text-xs">{order.refundedAt ? 'Refunded' : 'Refund Pending'}</Badge>;
+                              return <Badge className="bg-purple-100 text-purple-800 text-xs">{(order.refundedAt || isOffline) ? 'Refunded' : 'Refund Pending'}</Badge>;
                             } else if (refAmt > 0 && refAmt < paidAmt) {
-                              return <Badge className="bg-amber-100 text-amber-800 text-xs">{order.refundedAt ? 'Partial Refund' : 'Partial Refund Pending'}</Badge>;
+                              return <Badge className="bg-amber-100 text-amber-800 text-xs">{(order.refundedAt || isOffline) ? 'Partial Refund' : 'Partial Refund Pending'}</Badge>;
                             } else if (order.status === 'cancelled' && paidAmt === 0) {
                               return null;
                             } else if ((order.paymentStatus || '').toLowerCase() === 'paid') {
@@ -1294,10 +1295,11 @@ export default function OrdersFresh() {
                         {(() => {
                           const refAmt = parseFloat(order.amountRefunded || '0');
                           const paidAmt = parseFloat(order.amountPaid || '0');
+                          const isOffline = !order.stripePaymentIntentId;
                           if (refAmt > 0 && (order.status === 'cancelled' || refAmt >= paidAmt)) {
-                            return <Badge className="bg-purple-100 text-purple-800 text-xs"><CheckCircle className="w-2 h-2 mr-1" />{order.refundedAt ? 'Refunded' : 'Refund Pending'}</Badge>;
+                            return <Badge className="bg-purple-100 text-purple-800 text-xs"><CheckCircle className="w-2 h-2 mr-1" />{(order.refundedAt || isOffline) ? 'Refunded' : 'Refund Pending'}</Badge>;
                           } else if (refAmt > 0 && refAmt < paidAmt) {
-                            return <Badge className="bg-amber-100 text-amber-800 text-xs"><CheckCircle className="w-2 h-2 mr-1" />{order.refundedAt ? 'Partial Refund' : 'Partial Refund Pending'}</Badge>;
+                            return <Badge className="bg-amber-100 text-amber-800 text-xs"><CheckCircle className="w-2 h-2 mr-1" />{(order.refundedAt || isOffline) ? 'Partial Refund' : 'Partial Refund Pending'}</Badge>;
                           }
                           return null;
                         })()}
@@ -1411,10 +1413,11 @@ export default function OrdersFresh() {
                         {(() => {
                           const refAmt = parseFloat(order.amountRefunded || '0');
                           const paidAmt = parseFloat(order.amountPaid || '0');
+                          const isOffline = !order.stripePaymentIntentId;
                           if (refAmt > 0 && (order.status === 'cancelled' || refAmt >= paidAmt)) {
-                            return <Badge className="bg-purple-100 text-purple-800 text-xs">{order.refundedAt ? 'Refunded' : 'Refund Pending'}</Badge>;
+                            return <Badge className="bg-purple-100 text-purple-800 text-xs">{(order.refundedAt || isOffline) ? 'Refunded' : 'Refund Pending'}</Badge>;
                           } else if (refAmt > 0 && refAmt < paidAmt) {
-                            return <Badge className="bg-amber-100 text-amber-800 text-xs">{order.refundedAt ? 'Partial Refund' : 'Partial Refund Pending'}</Badge>;
+                            return <Badge className="bg-amber-100 text-amber-800 text-xs">{(order.refundedAt || isOffline) ? 'Partial Refund' : 'Partial Refund Pending'}</Badge>;
                           } else if (order.status === 'cancelled' && paidAmt === 0) {
                             return null;
                           } else if ((order.paymentStatus || '').toLowerCase() === 'paid') {

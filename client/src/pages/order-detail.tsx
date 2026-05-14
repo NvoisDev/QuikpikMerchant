@@ -1143,7 +1143,8 @@ export default function OrderDetail() {
                 const refAmt = parseFloat(order.amountRefunded || '0');
                 const paidAmt = parseFloat(order.amountPaid || '0');
                 const isFullRefund = paidAmt > 0 && refAmt >= paidAmt * 0.99;
-                if (!order.refundedAt) {
+                const isOffline = !order.stripePaymentIntentId;
+                if (!order.refundedAt && !isOffline) {
                   return <Badge className="bg-amber-100 text-amber-800 border-0 text-xs">Refund Pending</Badge>;
                 }
                 return isFullRefund
@@ -1530,7 +1531,8 @@ export default function OrderDetail() {
                       const refAmt = parseFloat(order.amountRefunded || '0');
                       const paidAmt = parseFloat(order.amountPaid || '0');
                       const isFullRefund = paidAmt > 0 && refAmt >= paidAmt * 0.99;
-                      if (order.refundedAt) {
+                      const isOffline = !order.stripePaymentIntentId;
+                      if (order.refundedAt || isOffline) {
                         return isFullRefund
                           ? <Badge className="bg-purple-100 text-purple-800 border-0">Refunded</Badge>
                           : <Badge className="bg-amber-100 text-amber-800 border-0">Partial Refund</Badge>;
