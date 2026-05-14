@@ -534,7 +534,7 @@ export async function unlockForUpgrade(userId: string): Promise<{ productsUnlock
     const lockedProducts = await db.select({ id: products.id }).from(products)
       .where(and(eq(products.wholesalerId, userId), eq(products.status, 'locked')));
     if (lockedProducts.length > 0) {
-      await db.update(products).set({ status: 'inactive' })
+      await db.update(products).set({ status: 'active' })
         .where(inArray(products.id, lockedProducts.map(p => p.id)));
       productsUnlocked = lockedProducts.length;
     }

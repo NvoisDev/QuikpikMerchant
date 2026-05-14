@@ -44,7 +44,6 @@ export function registerSubscriptionRoutes(app: Express): void {
   // POST /api/subscriptions/create-checkout-session
   app.post('/api/subscriptions/create-checkout-session', paymentLimiter, requireAuth, requireOwner, async (req: any, res) => {
     try {
-      const stripe = getStripeClient(Boolean(req.user.isTestAccount));
       const userId = req.user.id;
       const { priceId, idempotencyKey } = req.body;
 
@@ -61,8 +60,12 @@ export function registerSubscriptionRoutes(app: Express): void {
       }
 
       const targetPlan = validPlans[0];
-      
-      const isTestAccount = Boolean(req.user.isTestAccount);
+
+      // All subscription plan price IDs are live-mode prices. Even if an account is
+      // flagged is_test_account, we must use the live Stripe client for checkout —
+      // test-mode Stripe keys cannot see live-mode prices and will return a 404.
+      const isTestAccount = false;
+      const stripe = getStripeClient(false);
 
       // Get or create Stripe customer
       const stripeCustomerId = await SubscriptionService.getOrCreateStripeCustomer(userId, isTestAccount);
