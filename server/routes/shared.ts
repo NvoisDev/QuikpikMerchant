@@ -524,7 +524,7 @@ export async function enforceNewPlanLimits(
 }
 
 /**
- * Unlock products (locked → inactive) and price lists (isLocked → false) after an upgrade.
+ * Unlock products (locked → active) and price lists (isLocked → false) after an upgrade.
  * Safe to call on renewals — it's a no-op when nothing is locked.
  */
 export async function unlockForUpgrade(userId: string): Promise<{ productsUnlocked: number; priceListsUnlocked: number }> {
