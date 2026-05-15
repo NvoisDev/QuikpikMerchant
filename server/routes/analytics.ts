@@ -797,8 +797,8 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
 
         current.orderCount++;
 
-        // Only add to spend for paid/completed orders
-        if (['paid', 'processing', 'shipped', 'delivered', 'fulfilled', 'completed'].includes(order.status)) {
+        // Add to spend for all non-cancelled orders (includes pending invoices)
+        if (order.status !== 'cancelled') {
           const orderSubtotal = parseFloat(order.subtotal || order.total || '0');
           const orderPlatformFee = parseFloat(order.platformFee || '0');
           current.totalSpent += (orderSubtotal - orderPlatformFee);
