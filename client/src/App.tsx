@@ -185,6 +185,7 @@ function PublicRoutes() {
         <Route path="/auth-success" component={AuthSuccess} />
         <Route path="/select-wholesaler" component={WholesalerSelection} />
         <Route path="/accept-invitation/:token" component={({params}) => <AcceptInvitation token={params.token} />} />
+        <Route path="/admin" component={() => { useEffect(() => setLocation("/super-admin"), []); return null; }} />
         <Route path="/super-admin" component={SuperAdmin} />
         <Route path="/" component={LandingPage} />
         <Route path="/landing" component={LandingPage} />
@@ -275,7 +276,7 @@ function Router() {
     );
   }
   
-  const publicRoutes = ['/login', '/customer-login', '/landing', '/signup', '/signup-complete', '/auth-success', '/team-invitation', '/forgot-password', '/reset-password', '/admin', '/super-admin'];
+  const publicRoutes = ['/login', '/customer-login', '/landing', '/signup', '/signup-complete', '/auth-success', '/team-invitation', '/forgot-password', '/reset-password', '/super-admin'];
   const isPublicRoute = location.startsWith('/campaign/') || 
     location.startsWith('/marketplace/product/') || 
     location.startsWith('/customer/') || 

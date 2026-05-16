@@ -1,4 +1,5 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
+import { useLocation, useSearch } from "wouter";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -25,12 +26,14 @@ import { GlobalSearchBar } from "@/components/admin/GlobalSearchBar";
 const ADMIN_EMAILS = ["hello@quikpik.co", "mogunjemilua@gmail.com"];
 const GREEN = "#1a7a3d";
 
+const VALID_SECTIONS = new Set<SectionId>(["overview","wholesalers","customers","orders","products","financials","settings","plans","logs","map"]);
+
 function AdminLogin() {
   const [loading, setLoading] = useState(false);
   const handleGoogleLogin = async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/auth/google?returnTo=/admin");
+      const res = await fetch("/api/auth/google?returnTo=/super-admin");
       const data = await res.json();
       if (data.authUrl) window.location.href = data.authUrl;
       else setLoading(false);
@@ -78,15 +81,24 @@ function AccessDenied({ email, onSignOut }: { email: string; onSignOut: () => vo
 
 export default function SuperAdmin() {
   const { user, isLoading, isAuthenticated, logout } = useAuth();
-  const [activeSection, setActiveSection] = useState<SectionId>("overview");
+  const [, setLocation] = useLocation();
+  const search = useSearch();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [quickActionsOpen, setQuickActionsOpen] = useState(false);
   const [highlightedRecord, setHighlightedRecord] = useState<{ section: SectionId; id: string | number } | null>(null);
 
+  const rawSection = new URLSearchParams(search).get("section") || "overview";
+  const activeSection = (VALID_SECTIONS.has(rawSection as SectionId) ? rawSection : "overview") as SectionId;
+
+  const navigateToSection = useCallback((section: SectionId) => {
+    setLocation(`/super-admin?section=${section}`);
+    setSidebarOpen(false);
+  }, [setLocation]);
+
   const handleNavigate = useCallback((section: SectionId, id?: string | number) => {
-    setActiveSection(section);
+    setLocation(`/super-admin?section=${section}`);
     setHighlightedRecord(id !== undefined ? { section, id } : null);
-  }, []);
+  }, [setLocation]);
 
   const isAdmin = !!user && ADMIN_EMAILS.includes(user.email || "");
 
@@ -150,7 +162,7 @@ export default function SuperAdmin() {
               const Icon = section.icon;
               const isActive = activeSection === section.id;
               return (
-                <button key={section.id} onClick={() => { setActiveSection(section.id); setSidebarOpen(false); }}
+                <button key={section.id} onClick={() => navigateToSection(section.id)}
                   className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-all text-left ${isActive ? "bg-emerald-500/15 text-emerald-400 ring-1 ring-emerald-500/20" : "text-gray-400 hover:text-gray-100 hover:bg-gray-800/70"}`}>
                   <Icon className={`h-4 w-4 flex-shrink-0 ${isActive ? "text-emerald-400" : "text-gray-500"}`} />
                   <span className="truncate">{section.label}</span>
@@ -199,7 +211,7 @@ export default function SuperAdmin() {
 
         <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-screen-xl w-full mx-auto">
           {activeSection === "overview" && (
-            <OverviewSection stats={stats} statsLoading={statsLoading} revenueData={revenueData} revenueLoading={revenueLoading} isAdmin={isAdmin} onNavigate={setActiveSection} />
+            <OverviewSection stats={stats} statsLoading={statsLoading} revenueData={revenueData} revenueLoading={revenueLoading} isAdmin={isAdmin} onNavigate={(s) => navigateToSection(s as SectionId)} />
           )}
           {activeSection === "wholesalers" && (
             <WholesalersSection wholesalers={wholesalers} wholesalersLoading={wholesalersLoading} isAdmin={isAdmin} />
