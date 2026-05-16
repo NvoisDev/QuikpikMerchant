@@ -419,13 +419,13 @@ export default function Login() {
           </p>
           <p className="text-xs text-slate-400">
             By signing in, you agree to our{" "}
-            <a href="#" className="text-primary hover:underline">
+            <Link href="/terms" className="text-primary hover:underline">
               terms of service
-            </a>{" "}
+            </Link>{" "}
             and{" "}
-            <a href="#" className="text-primary hover:underline">
+            <Link href="/privacy" className="text-primary hover:underline">
               privacy policy
-            </a>
+            </Link>
             .
           </p>
         </div>

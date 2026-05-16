@@ -1,0 +1,188 @@
+Terms of Service — Quikpik
+
+Last updated: August 2026
+
+Welcome to Quikpik. By using Quikpik.app, you agree to these Terms of Service.
+
+1. About Quikpik
+
+Quikpik is a wholesale ordering and business management platform that helps wholesalers manage products, orders, invoices, inventory, customer communication, payments, and related business operations.
+
+2. Using the Platform
+
+You agree to:
+
+Provide accurate business information
+Keep your login details secure
+Use the platform lawfully
+Not misuse, copy, or interfere with the platform
+
+You are responsible for all activity under your account.
+
+3. Orders & Invoices
+
+Quikpik provides tools for creating and managing invoices, orders, stock, and customer communications. Businesses are responsible for:
+
+Ensuring pricing is accurate
+Managing their inventory correctly
+Reviewing invoices before sending
+Complying with tax and legal obligations
+
+Quikpik is not responsible for disputes between wholesalers and customers.
+
+4. Payments
+
+Where payments are processed through third-party providers (such as Stripe), those providers’ terms also apply. Quikpik does not store full payment card details.
+
+5. Messaging & Notifications
+
+The platform may send emails, SMS, or WhatsApp notifications based on your settings and actions taken within the platform.
+
+You are responsible for ensuring communications sent through Quikpik comply with applicable laws and customer consent requirements.
+
+6. Data & Privacy
+
+Your use of the platform is also governed by our Privacy Policy.
+
+We take reasonable measures to protect your data, but no online system can guarantee absolute security.
+
+7. Availability
+
+We aim to keep Quikpik available and reliable, but we do not guarantee uninterrupted access at all times. Features may change, improve, or be removed over time.
+
+8. Limitation of Liability
+
+Quikpik is provided “as is.” To the maximum extent permitted by law, Quikpik is not liable for:
+
+Loss of profits
+Business interruption
+Data loss
+Indirect or consequential damages
+9. Suspension or Termination
+
+We may suspend or terminate accounts that:
+
+Breach these terms
+Misuse the platform
+Attempt fraudulent or harmful activity
+
+You may stop using the platform at any time.
+
+10. Changes to These Terms
+
+We may update these Terms occasionally. Continued use of Quikpik after updates means you accept the revised terms.
+
+11. Contact
+
+For support or questions, contact us through:
+
+Quikpik.app
+
+Privacy Policy — Quikpik
+
+Last updated: August 2026
+
+1. Introduction
+
+Quikpik respects your privacy and is committed to protecting your information.
+
+This Privacy Policy explains how we collect, use, and store information when you use Quikpik.app.
+
+2. Information We Collect
+
+We may collect:
+
+Name and business details
+Email address and phone number
+Delivery and billing addresses
+Product, order, and invoice data
+Payment-related information
+Device and usage information
+3. How We Use Information
+
+We use your information to:
+
+Operate the platform
+Process orders and invoices
+Send notifications and updates
+Improve features and performance
+Provide support
+Prevent fraud and misuse
+4. Payments
+
+Payments may be processed by third-party payment providers such as Stripe. Payment information is handled according to their security standards and policies.
+
+5. Communications
+
+Quikpik may send:
+
+Order notifications
+Invoice communications
+Account alerts
+Operational updates
+
+Users can manage certain notification preferences within platform settings.
+
+6. Data Storage & Security
+
+We use reasonable technical and organisational measures to protect your data. However, no online service can guarantee complete security.
+
+7. Sharing Information
+
+We do not sell your personal data.
+
+We may share limited information with trusted third-party providers required to operate the platform, including payment processors, messaging providers, hosting services, and analytics tools.
+
+8. Cookies & Analytics
+
+Quikpik may use cookies and analytics tools to improve the platform experience and understand usage trends.
+
+9. Your Rights
+
+Depending on your location, you may have rights to:
+
+Access your data
+Correct inaccurate information
+Request deletion of your data
+Object to certain processing activities
+10. Changes to This Policy
+
+We may update this Privacy Policy from time to time. Continued use of Quikpik after updates means you accept the revised policy.
+
+11. Contact
+
+For questions about privacy or data handling, contact:
+
+Quikpik.app
+
+And here’s the prompt for your agent to add it safely:
+
+Add full Terms of Service and Privacy Policy pages to the platform without breaking any existing functionality, routing, authentication, styling, SEO, or layout.
+
+Requirements:
+
+Create:
+/terms
+/privacy
+Add footer/auth-page links:
+“By signing in, you agree to our Terms of Service and Privacy Policy.”
+
+Both links should route correctly.
+
+Match existing Quikpik styling:
+Clean
+Professional
+Mobile responsive
+Same typography and spacing system
+Use existing layout/container components where possible
+Do NOT:
+Change authentication logic
+Change existing routes
+Break onboarding/login/register flows
+Add unnecessary dependencies
+Modify unrelated files
+Ensure:
+Pages are indexable
+Proper page titles/meta descriptions exist
+Internal links work correctly
+Use the exact copy provided for both pages unless minor formatting adjustments are needed for readability.

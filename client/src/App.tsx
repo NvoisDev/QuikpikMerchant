@@ -47,6 +47,8 @@ const Customers = lazy(() => import("@/pages/customers"));
 const CustomerRegistrationRequests = lazy(() => import("@/pages/customer-registration-requests"));
 const AuthSuccess = lazy(() => import("@/pages/auth-success"));
 const SuperAdmin = lazy(() => import("@/pages/super-admin"));
+const TermsOfService = lazy(() => import("@/pages/TermsOfService"));
+const PrivacyPolicy = lazy(() => import("@/pages/PrivacyPolicy"));
 const SubscriptionPricing = lazy(() => import("@/pages/SubscriptionPricing"));
 const QuickQuote = lazy(() => import("@/pages/quick-quote"));
 const CustomerDetail = lazy(() => import("@/pages/customer-detail"));
@@ -185,6 +187,8 @@ function PublicRoutes() {
         <Route path="/auth-success" component={AuthSuccess} />
         <Route path="/select-wholesaler" component={WholesalerSelection} />
         <Route path="/accept-invitation/:token" component={({params}) => <AcceptInvitation token={params.token} />} />
+        <Route path="/terms" component={TermsOfService} />
+        <Route path="/privacy" component={PrivacyPolicy} />
         <Route path="/admin" component={() => { useEffect(() => setLocation("/super-admin"), []); return null; }} />
         <Route path="/super-admin" component={SuperAdmin} />
         <Route path="/" component={LandingPage} />
@@ -276,7 +280,7 @@ function Router() {
     );
   }
   
-  const publicRoutes = ['/login', '/customer-login', '/landing', '/signup', '/signup-complete', '/auth-success', '/team-invitation', '/forgot-password', '/reset-password', '/super-admin'];
+  const publicRoutes = ['/login', '/customer-login', '/landing', '/signup', '/signup-complete', '/auth-success', '/team-invitation', '/forgot-password', '/reset-password', '/super-admin', '/terms', '/privacy'];
   const isPublicRoute = location.startsWith('/campaign/') || 
     location.startsWith('/marketplace/product/') || 
     location.startsWith('/customer/') || 
