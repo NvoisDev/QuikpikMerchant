@@ -1175,8 +1175,15 @@ export default function WholesalerDashboard() {
             {/* Recent Orders */}
             <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
               <CardHeader>
-                <CardTitle className="text-xl font-bold text-gray-900">Recent Orders</CardTitle>
-                <p className="text-sm text-gray-600">Latest customer orders</p>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-xl font-bold text-gray-900">Recent Orders</CardTitle>
+                    <p className="text-sm text-gray-600">Latest customer orders</p>
+                  </div>
+                  <Link href="/orders">
+                    <button className="text-sm text-green-600 hover:text-green-700 font-medium">View All →</button>
+                  </Link>
+                </div>
               </CardHeader>
               <CardContent>
                 {ordersLoading ? (

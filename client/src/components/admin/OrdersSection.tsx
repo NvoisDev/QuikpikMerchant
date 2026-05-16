@@ -223,9 +223,11 @@ export function OrdersSection({ revenueData, revenueLoading, wholesalers, isAdmi
                               <span className="text-xs text-gray-600 bg-gray-100 border border-gray-200 px-1.5 py-0.5 rounded">{(o.status || "pending").replace(/_/g, " ")}</span>
                             </TableCell>
                             <TableCell>
-                              {o.paymentStatus === "paid"
-                                ? <span className="text-xs px-1.5 py-0.5 rounded border bg-[#f0faf4] border-[#bbdfc8]" style={{ color: GREEN }}>paid</span>
-                                : <span className="text-xs px-1.5 py-0.5 rounded bg-gray-50 text-gray-500 border border-gray-200">{o.paymentStatus || "pending"}</span>
+                              {o.paymentStatus === "paid" && (o.refundedAt || (parseFloat(o.refundAmount || '0') > 0))
+                                ? <span className="text-xs px-1.5 py-0.5 rounded border bg-purple-50 border-purple-200 text-purple-700">refunded</span>
+                                : o.paymentStatus === "paid"
+                                  ? <span className="text-xs px-1.5 py-0.5 rounded border bg-[#f0faf4] border-[#bbdfc8]" style={{ color: GREEN }}>paid</span>
+                                  : <span className="text-xs px-1.5 py-0.5 rounded bg-gray-50 text-gray-500 border border-gray-200">{o.paymentStatus || "pending"}</span>
                               }
                             </TableCell>
                             <TableCell className="text-xs text-gray-400">{o.createdAt ? format(new Date(o.createdAt), "dd MMM yy") : "—"}</TableCell>

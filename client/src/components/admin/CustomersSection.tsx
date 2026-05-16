@@ -224,8 +224,16 @@ export function CustomersSection({ isAdmin, highlightedId }: { isAdmin: boolean;
                           </div>
                           <div className="flex items-center gap-2">
                             <span className="font-medium text-gray-700">{fmt(parseFloat(o.subtotal || "0"))}</span>
-                            <span className={`px-1.5 py-0.5 rounded text-xs border ${o.paymentStatus === "paid" ? "bg-green-50 border-green-200 text-green-700" : "bg-gray-100 border-gray-200 text-gray-500"}`}>
-                              {o.paymentStatus || "pending"}
+                            <span className={`px-1.5 py-0.5 rounded text-xs border ${
+                              o.paymentStatus === "paid" && (o.refundedAt || (parseFloat(o.refundAmount || '0') > 0))
+                                ? "bg-purple-50 border-purple-200 text-purple-700"
+                                : o.paymentStatus === "paid"
+                                  ? "bg-green-50 border-green-200 text-green-700"
+                                  : "bg-gray-100 border-gray-200 text-gray-500"
+                            }`}>
+                              {o.paymentStatus === "paid" && (o.refundedAt || (parseFloat(o.refundAmount || '0') > 0))
+                                ? "refunded"
+                                : o.paymentStatus || "pending"}
                             </span>
                           </div>
                         </div>
