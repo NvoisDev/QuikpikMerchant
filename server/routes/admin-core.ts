@@ -245,6 +245,7 @@ export function registerAdminCoreRoutes(app: Express): void {
           platformFee: orders.platformFee, total: orders.total, status: orders.status,
           paymentStatus: orders.paymentStatus, createdAt: orders.createdAt,
           stripeActualFee: orders.stripeActualFee, paymentMethod: orders.paymentMethod,
+          refundedAt: orders.refundedAt, amountRefunded: orders.amountRefunded,
         })
         .from(orders)
         .innerJoin(users, eq(orders.wholesalerId, users.id))
