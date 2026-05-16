@@ -58,14 +58,14 @@ function AppLayoutInner({ children }: AppLayoutProps) {
       // Wipe the full cache so no impersonated data lingers after returning
       // to the admin panel. Everything re-fetches fresh as the real admin.
       queryClient.clear();
-      setLocation("/admin");
+      setLocation("/super-admin");
     },
     onError: () => {
       // Always clear local state even if the server request fails (e.g. expired token)
       // so the banner never stays "stuck" in an irrecoverable state
       exitImpersonation();
       queryClient.clear();
-      setLocation("/admin");
+      setLocation("/super-admin");
     },
   });
 
