@@ -879,7 +879,7 @@ export default function ProductManagement() {
               <div key={product.id} className="space-y-3">
                 <Card
                   className={`transition-all duration-200 ${product.status === 'locked' ? 'opacity-50 grayscale border-gray-200 cursor-not-allowed' : 'hover:shadow-md hover:border-slate-300 cursor-pointer'}`}
-                  onClick={() => product.status !== 'locked' && handleEdit(product)}
+                  onClick={() => product.status !== 'locked' && navigate(`/products/${product.id}`)}
                 >
                   <CardContent className="p-3 sm:p-4">
                     <div className="flex items-start gap-3">
