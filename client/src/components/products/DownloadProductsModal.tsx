@@ -13,8 +13,12 @@ function fmtExportDate(val: string | null | undefined): string {
   return new Date(val).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
 }
 
-function humanStatus(s: string): string {
-  return s === "active" ? "In Stock" : s === "out_of_stock" ? "Out of Stock" : "Inactive";
+function humanStatus(s: string, stock: number | null | undefined, threshold: number | null | undefined): string {
+  if (s === "inactive") return "Inactive";
+  const stockVal = stock ?? 0;
+  if (s === "out_of_stock" || stockVal === 0) return "Out of Stock";
+  if (stockVal <= (threshold ?? 50)) return "Low Stock";
+  return "In Stock";
 }
 
 function triggerFileDownload(blob: Blob, filename: string) {
@@ -68,7 +72,7 @@ export default function DownloadProductsModal({ open, onClose, products, isViewe
           "Currency": p.currency ?? "",
           "MOQ": p.moq ?? "",
           "Remaining Stock": p.stock ?? "",
-          "Status": humanStatus(p.status ?? ""),
+          "Status": humanStatus(p.status ?? "", p.stock, p.lowStockThreshold),
           "Selling Format": p.sellingFormat ?? "",
           "Pack Qty": p.quantityInPack ?? "",
           "Unit of Measure": p.unitOfMeasure ?? "",
