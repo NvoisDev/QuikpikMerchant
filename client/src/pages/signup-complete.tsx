@@ -375,10 +375,10 @@ export default function SignupComplete() {
                         name="orderNumberPrefix"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-sm font-medium">Order Number Prefix</FormLabel>
+                            <FormLabel className="text-sm font-medium">Invoice Number Prefix</FormLabel>
                             <FormControl>
                               <Input
-                                placeholder="ORD"
+                                placeholder="INV"
                                 maxLength={6}
                                 {...field}
                                 onChange={(e) =>

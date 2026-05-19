@@ -816,7 +816,7 @@ export default function Settings() {
     logoType: user?.logoType || 'business',
     logoUrl: user?.logoUrl || '',
     pickupAddress: user?.pickupAddress || '',
-    orderNumberPrefix: user?.orderNumberPrefix || 'ORD',
+    orderNumberPrefix: user?.orderNumberPrefix || 'INV',
     defaultCountryCode: user?.defaultCountryCode || '+44',
     legalBusinessName: user?.legalBusinessName || '',
     vatNumber: user?.vatNumber || '',
@@ -845,7 +845,7 @@ export default function Settings() {
         logoType: user.logoType || 'business',
         logoUrl: user.logoUrl || '',
         pickupAddress: user.pickupAddress || '',
-        orderNumberPrefix: user.orderNumberPrefix || 'ORD',
+        orderNumberPrefix: user.orderNumberPrefix || 'INV',
         defaultCountryCode: user.defaultCountryCode || '+44',
         legalBusinessName: user.legalBusinessName || '',
         vatNumber: user.vatNumber || '',
@@ -1314,7 +1314,7 @@ export default function Settings() {
                               logoType: user?.logoType || 'business',
                               logoUrl: user?.logoUrl || '',
                               pickupAddress: user?.pickupAddress || '',
-                              orderNumberPrefix: user?.orderNumberPrefix || 'ORD',
+                              orderNumberPrefix: user?.orderNumberPrefix || 'INV',
                               defaultCountryCode: user?.defaultCountryCode || '+44',
                               legalBusinessName: user?.legalBusinessName || '',
                               vatNumber: user?.vatNumber || '',
@@ -1372,10 +1372,10 @@ export default function Settings() {
                           <dd className="mt-1 text-sm text-gray-900">{user.timezone || 'UTC'}</dd>
                         </div>
                         <div>
-                          <dt className="text-sm font-medium text-gray-500">Order Number Prefix</dt>
+                          <dt className="text-sm font-medium text-gray-500">Invoice Number Prefix</dt>
                           <dd className="mt-1 text-sm text-gray-900">
-                            {user.orderNumberPrefix || 'ORD'}
-                            <span className="ml-2 text-gray-400 text-xs">(e.g. {(user.orderNumberPrefix || 'ORD').toUpperCase()}-{String((user.orderNumberCounter ?? 0) + 1).padStart(3, '0')})</span>
+                            {user.orderNumberPrefix || 'INV'}
+                            <span className="ml-2 text-gray-400 text-xs">(e.g. {(user.orderNumberPrefix || 'INV').toUpperCase()}-{String((user.orderNumberCounter ?? 0) + 1).padStart(3, '0')})</span>
                           </dd>
                         </div>
                         <div>
@@ -1507,22 +1507,22 @@ export default function Settings() {
                           </select>
                         </div>
                         <div>
-                          <label className="text-sm font-medium text-gray-500">Order Number Prefix</label>
+                          <label className="text-sm font-medium text-gray-500">Invoice Number Prefix</label>
                           <input
                             type="text"
                             value={businessForm.orderNumberPrefix}
                             onChange={(e) => setBusinessForm({...businessForm, orderNumberPrefix: e.target.value.toUpperCase()})}
                             maxLength={6}
-                            placeholder="ORD"
+                            placeholder="INV"
                             className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 uppercase"
                           />
                           <p className="mt-1 text-xs text-gray-400">
-                            1–6 uppercase letters. Next order:{' '}
+                            1–6 uppercase letters. Next invoice:{' '}
                             {isLoadingCounter ? (
                               <span className="font-medium text-gray-400">…</span>
                             ) : (
                               <span className="font-medium text-gray-600">
-                                {(businessForm.orderNumberPrefix.trim() || 'ORD').toUpperCase()}-{String((orderCounterData?.counter ?? 0) + 1).padStart(3, '0')}
+                                {(businessForm.orderNumberPrefix.trim() || 'INV').toUpperCase()}-{String((orderCounterData?.counter ?? 0) + 1).padStart(3, '0')}
                               </span>
                             )}
                           </p>
