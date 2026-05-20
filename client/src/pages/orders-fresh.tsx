@@ -202,7 +202,7 @@ export default function OrdersFresh() {
   const [paymentStatusFilter, setPaymentStatusFilter] = useState('');
   const [deliveryTypeFilter, setDeliveryTypeFilter] = useState('');
   const [dateRangeFilter, setDateRangeFilter] = useState('');
-  const [pickingStatusFilter, setPickingStatusFilter] = useState('');
+  const [pickingStatusFilter, setPickingStatusFilter] = useState(() => localStorage.getItem('orders_pickingStatusFilter') ?? '');
   const [orderStats, setOrderStats] = useState<{
     ordersCount: number;
     totalRevenue: number;
@@ -214,6 +214,15 @@ export default function OrdersFresh() {
   const ordersPerPage = 20;
   const { toast } = useToast();
   
+  // Persist picking status filter to localStorage
+  useEffect(() => {
+    if (pickingStatusFilter) {
+      localStorage.setItem('orders_pickingStatusFilter', pickingStatusFilter);
+    } else {
+      localStorage.removeItem('orders_pickingStatusFilter');
+    }
+  }, [pickingStatusFilter]);
+
   // Mobile draft banner
   useEffect(() => {
     if (!user?.id) {
