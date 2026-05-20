@@ -1258,28 +1258,30 @@ export default function OrdersFresh() {
               variant="outline"
               disabled={isBulkUpdating}
               onClick={() => handleBulkPickingUpdate('picking')}
-              className="flex-1 text-blue-600 border-blue-200 hover:bg-blue-50 min-h-[44px] gap-1.5 text-xs sm:text-sm"
+              className="flex-1 min-w-0 text-blue-600 border-blue-200 hover:bg-blue-50 min-h-[44px] px-2 sm:px-4 whitespace-normal text-center flex-col sm:flex-row gap-1 text-xs sm:text-sm"
             >
-              {isBulkUpdating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Package className="h-4 w-4" />}
-              Mark as Picking
+              {isBulkUpdating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Package className="h-4 w-4 shrink-0" />}
+              <span className="sm:hidden leading-tight">Picking</span>
+              <span className="hidden sm:inline">Mark as Picking</span>
             </Button>
             <Button
               variant="outline"
               disabled={isBulkUpdating}
               onClick={() => handleBulkPickingUpdate('packed')}
-              className="flex-1 text-emerald-600 border-emerald-200 hover:bg-emerald-50 min-h-[44px] gap-1.5 text-xs sm:text-sm"
+              className="flex-1 min-w-0 text-emerald-600 border-emerald-200 hover:bg-emerald-50 min-h-[44px] px-2 sm:px-4 whitespace-normal text-center flex-col sm:flex-row gap-1 text-xs sm:text-sm"
             >
-              {isBulkUpdating ? <Loader2 className="h-4 w-4 animate-spin" /> : <PackageCheck className="h-4 w-4" />}
-              Mark as Packed
+              {isBulkUpdating ? <Loader2 className="h-4 w-4 animate-spin" /> : <PackageCheck className="h-4 w-4 shrink-0" />}
+              <span className="sm:hidden leading-tight">Packed</span>
+              <span className="hidden sm:inline">Mark as Packed</span>
             </Button>
             <Button
               variant="outline"
               disabled={isBulkUpdating}
               onClick={() => handleBulkPickingUpdate('reset')}
-              className="flex-1 text-slate-600 border-slate-200 hover:bg-slate-50 min-h-[44px] gap-1.5 text-xs sm:text-sm"
+              className="flex-1 min-w-0 text-slate-600 border-slate-200 hover:bg-slate-50 min-h-[44px] px-2 sm:px-4 whitespace-normal text-center flex-col sm:flex-row gap-1 text-xs sm:text-sm"
             >
-              {isBulkUpdating ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
-              Reset
+              {isBulkUpdating ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4 shrink-0" />}
+              <span>Reset</span>
             </Button>
           </div>
         </div>
