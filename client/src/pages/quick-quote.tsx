@@ -840,6 +840,11 @@ export default function QuickQuote() {
                 )}
                 Share Invoice
               </Button>
+              <Link href={`/orders/${createdQuote.id}`} className="flex-1">
+                <Button className="w-full bg-blue-600 hover:bg-blue-700">
+                  Start Picking
+                </Button>
+              </Link>
               <Link href="/orders" className="flex-1">
                 <Button className="w-full bg-green-600 hover:bg-green-700">
                   View Orders

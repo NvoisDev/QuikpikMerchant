@@ -344,6 +344,33 @@ async function runStartupMigrations() {
     `CREATE INDEX IF NOT EXISTS subscription_audit_user_id_idx ON subscription_audit_logs(user_id)`,
     `CREATE INDEX IF NOT EXISTS subscription_audit_event_type_idx ON subscription_audit_logs(event_type)`,
     `CREATE INDEX IF NOT EXISTS subscription_audit_timestamp_idx ON subscription_audit_logs(timestamp)`,
+    // Task #1072: Picking / checklist mode — two additive tables, no existing tables touched
+    `CREATE TABLE IF NOT EXISTS order_picking (
+      id SERIAL PRIMARY KEY,
+      order_id INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+      picking_status VARCHAR(20) NOT NULL DEFAULT 'not_started',
+      completed_at TIMESTAMP,
+      completed_by VARCHAR(255),
+      reset_at TIMESTAMP,
+      reset_by VARCHAR(255),
+      created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+    )`,
+    `CREATE INDEX IF NOT EXISTS order_picking_order_id_idx ON order_picking(order_id)`,
+    `CREATE UNIQUE INDEX IF NOT EXISTS order_picking_order_id_uniq ON order_picking(order_id)`,
+    `CREATE TABLE IF NOT EXISTS order_item_picks (
+      id SERIAL PRIMARY KEY,
+      order_id INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+      order_item_id INTEGER NOT NULL REFERENCES order_items(id) ON DELETE CASCADE,
+      is_picked BOOLEAN NOT NULL DEFAULT FALSE,
+      picked_at TIMESTAMP,
+      picked_by VARCHAR(255),
+      created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+    )`,
+    `CREATE INDEX IF NOT EXISTS order_item_picks_order_id_idx ON order_item_picks(order_id)`,
+    `CREATE INDEX IF NOT EXISTS order_item_picks_item_id_idx ON order_item_picks(order_item_id)`,
+    `CREATE UNIQUE INDEX IF NOT EXISTS order_item_picks_order_item_id_uniq ON order_item_picks(order_item_id)`,
   ];
   for (const stmt of migrations) {
     await db.execute(sql.raw(stmt));

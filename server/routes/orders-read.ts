@@ -313,11 +313,22 @@ export function registerOrderReadRoutes(app: Express): void {
         profileNameMap = profiles.reduce((acc, p) => { acc[p.id] = p.name; return acc; }, {} as Record<number, string>);
       }
 
-      // Attach cancellation request and business profile name to each order
+      // Batch-fetch picking status for this page's orders
+      let pickingStatusMap: Record<number, string> = {};
+      if (orderIds.length > 0) {
+        const { orderPicking } = await import("@shared/schema");
+        const pickingRows = await db.select({ orderId: orderPicking.orderId, pickingStatus: orderPicking.pickingStatus })
+          .from(orderPicking)
+          .where(inArray(orderPicking.orderId, orderIds));
+        pickingRows.forEach(p => { pickingStatusMap[p.orderId] = p.pickingStatus; });
+      }
+
+      // Attach cancellation request, business profile name, and picking status to each order
       const ordersWithRequests = ordersResult.map(order => ({
         ...order,
         cancellationRequest: cancellationRequestsMap[order.id] || null,
         businessProfileName: order.businessProfileId ? (profileNameMap[order.businessProfileId] ?? null) : null,
+        pickingStatus: pickingStatusMap[order.id] ?? 'not_started',
       }));
       
       res.json({

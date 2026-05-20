@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Separator } from "@/components/ui/separator";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Search, Package, DollarSign, Clock, Users, CheckCircle, X, Truck, MapPin, Camera, Image as ImageIcon, RefreshCw, Eye, FileText, UserPen, ShoppingCart, Loader2, MoreVertical, Share2 } from "lucide-react";
+import { PickingStatusBadge } from "@/components/orders/PickingMode";
 import ElephantLoader from "@/components/ui/elephant-loader";
 import PageHeader from "@/components/PageHeader";
 import { Link, useLocation } from "wouter";
@@ -78,6 +79,7 @@ interface Order {
     responseMessage?: string;
     refundType?: string;
   };
+  pickingStatus?: string;
 }
 
 interface OrderItem {
@@ -1289,6 +1291,9 @@ export default function OrdersFresh() {
                               )}
                             </Badge>
                           )}
+                          {order.pickingStatus && order.pickingStatus !== 'not_started' && (
+                            <PickingStatusBadge status={order.pickingStatus} />
+                          )}
                         </div>
                       </TableCell>
                       <TableCell className="text-xs">
@@ -1456,6 +1461,9 @@ export default function OrdersFresh() {
                               <><MapPin className="w-3 h-3 mr-1" />Collection</>
                             )}
                           </Badge>
+                        )}
+                        {order.pickingStatus && order.pickingStatus !== 'not_started' && (
+                          <PickingStatusBadge status={order.pickingStatus} />
                         )}
                       </div>
 

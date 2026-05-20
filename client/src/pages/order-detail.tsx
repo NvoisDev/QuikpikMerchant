@@ -17,7 +17,7 @@ import {
 import {
   DollarSign, Clock, CheckCircle, X, Truck, MapPin, Camera, Image as ImageIcon,
   RefreshCw, FileText, Loader2, Share2, Package, ChevronLeft, Home, Building, Warehouse, Building2,
-  Pencil, Plus, Minus, Search, MessageCircle, MoreHorizontal, Copy, Link
+  Pencil, Plus, Minus, Search, MessageCircle, MoreHorizontal, Copy, Link, ClipboardList
 } from "lucide-react";
 import { useAuth, type AuthUser } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -28,6 +28,7 @@ import { QuoteActivityLog } from "@/components/orders/QuoteActivityLog";
 import { EditQuoteView } from "@/components/orders/EditQuoteView";
 import { CancelOrderView } from "@/components/orders/CancelOrderView";
 import { useSidebarContext } from "@/contexts/sidebar-context";
+import { PickingMode } from "@/components/orders/PickingMode";
 
 interface OrderItem {
   id: number;
@@ -311,6 +312,7 @@ export default function OrderDetail() {
   const [editProductDialogOpen, setEditProductDialogOpen] = useState(false);
   const [editProductSearch, setEditProductSearch] = useState('');
   const [isGeneratingPaymentLink, setIsGeneratingPaymentLink] = useState(false);
+  const [showPickingMode, setShowPickingMode] = useState(false);
 
   const swipeTouchStartX = useRef<number | null>(null);
   const swipeTouchStartY = useRef<number | null>(null);
@@ -1160,7 +1162,7 @@ export default function OrderDetail() {
               )}
               </div>
               {!isViewer && order.status !== 'cancelled' && (
-                <div className="flex items-center gap-1.5 flex-shrink-0">
+                <div className="flex items-center gap-1.5 flex-shrink-0 flex-wrap">
                   <Button
                     variant="outline"
                     size="sm"
@@ -1180,6 +1182,15 @@ export default function OrderDetail() {
                   >
                     {isSharingInvoice ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Share2 className="h-3.5 w-3.5" />}
                     Share
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 px-2.5 text-xs gap-1.5 text-blue-700 border-blue-300 bg-blue-50 hover:bg-blue-100"
+                    onClick={() => setShowPickingMode(true)}
+                  >
+                    <ClipboardList className="h-3.5 w-3.5" />
+                    Pick
                   </Button>
                 </div>
               )}
@@ -2010,6 +2021,24 @@ export default function OrderDetail() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* ── Picking Mode overlay ─────────────────────────────────────────────── */}
+      {showPickingMode && order && (
+        <PickingMode
+          orderId={order.id}
+          orderItems={(order.items || []).map(item => ({
+            id: item.id,
+            productId: item.productId,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+            product: item.product,
+            sellingType: item.sellingType,
+            freeItems: item.freeItems,
+          }))}
+          orderNumber={order.orderNumber}
+          onClose={() => setShowPickingMode(false)}
+        />
+      )}
     </div>
   );
 }

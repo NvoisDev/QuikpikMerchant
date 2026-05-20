@@ -1893,6 +1893,47 @@ export const insertUserSubscriptionSchema = createInsertSchema(userSubscriptions
 export type InsertUserSubscription = z.infer<typeof insertUserSubscriptionSchema>;
 export type UserSubscription = typeof userSubscriptions.$inferSelect;
 
+// ─── Picking / Checklist ─────────────────────────────────────────────────────
+// Two additive tables — no existing tables touched.
+// order_picking  : one row per order; tracks overall picking status + audit trail
+// order_item_picks: one row per order_item; tracks per-item pick state
+
+export const orderPicking = pgTable("order_picking", {
+  id: serial("id").primaryKey(),
+  orderId: integer("order_id").notNull().references(() => orders.id, { onDelete: "cascade" }),
+  pickingStatus: varchar("picking_status", { length: 20 }).notNull().default("not_started"),
+  completedAt: timestamp("completed_at"),
+  completedBy: varchar("completed_by", { length: 255 }),
+  resetAt: timestamp("reset_at"),
+  resetBy: varchar("reset_by", { length: 255 }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  orderIdIdx: index("order_picking_order_id_idx").on(table.orderId),
+}));
+
+export const orderItemPicks = pgTable("order_item_picks", {
+  id: serial("id").primaryKey(),
+  orderId: integer("order_id").notNull().references(() => orders.id, { onDelete: "cascade" }),
+  orderItemId: integer("order_item_id").notNull().references(() => orderItems.id, { onDelete: "cascade" }),
+  isPicked: boolean("is_picked").notNull().default(false),
+  pickedAt: timestamp("picked_at"),
+  pickedBy: varchar("picked_by", { length: 255 }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  orderIdIdx: index("order_item_picks_order_id_idx").on(table.orderId),
+  orderItemIdIdx: index("order_item_picks_item_id_idx").on(table.orderItemId),
+}));
+
+export const insertOrderPickingSchema = createInsertSchema(orderPicking).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertOrderPicking = z.infer<typeof insertOrderPickingSchema>;
+export type OrderPicking = typeof orderPicking.$inferSelect;
+
+export const insertOrderItemPickSchema = createInsertSchema(orderItemPicks).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertOrderItemPick = z.infer<typeof insertOrderItemPickSchema>;
+export type OrderItemPick = typeof orderItemPicks.$inferSelect;
+
 // User types
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
