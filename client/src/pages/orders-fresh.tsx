@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Search, Package, DollarSign, Clock, Users, CheckCircle, X, Truck, MapPin, Camera, Image as ImageIcon, RefreshCw, Eye, FileText, UserPen, ShoppingCart, Loader2, MoreVertical, Share2 } from "lucide-react";
+import { Search, Package, DollarSign, Clock, Users, CheckCircle, X, Truck, MapPin, Camera, Image as ImageIcon, RefreshCw, Eye, FileText, UserPen, ShoppingCart, Loader2, MoreVertical, Share2, PackageCheck, RotateCcw } from "lucide-react";
 import { PickingStatusBadge } from "@/components/orders/PickingMode";
 import ElephantLoader from "@/components/ui/elephant-loader";
 import PageHeader from "@/components/PageHeader";
@@ -203,6 +203,8 @@ export default function OrdersFresh() {
   const [deliveryTypeFilter, setDeliveryTypeFilter] = useState('');
   const [dateRangeFilter, setDateRangeFilter] = useState('');
   const [pickingStatusFilter, setPickingStatusFilter] = useState(() => localStorage.getItem('orders_pickingStatusFilter') ?? '');
+  const [selectedOrderIds, setSelectedOrderIds] = useState<Set<number>>(new Set());
+  const [isBulkUpdating, setIsBulkUpdating] = useState(false);
   const [orderStats, setOrderStats] = useState<{
     ordersCount: number;
     totalRevenue: number;
@@ -327,6 +329,7 @@ export default function OrdersFresh() {
         });
         
         setOrders(data.orders);
+        setSelectedOrderIds(new Set());
         setTotalOrders(data.total);
         setTotalPages(data.totalPages);
         setCurrentPage(page);
@@ -585,6 +588,30 @@ export default function OrdersFresh() {
       });
     } finally {
       setUpdatingOrderId(null);
+    }
+  };
+
+  // Bulk picking status update
+  const handleBulkPickingUpdate = async (action: 'picking' | 'packed' | 'reset') => {
+    if (selectedOrderIds.size === 0) return;
+    setIsBulkUpdating(true);
+    try {
+      const response = await fetch('/api/orders/bulk-picking', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderIds: Array.from(selectedOrderIds), action }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Failed to update');
+      const label = action === 'picking' ? 'Picking' : action === 'packed' ? 'Packed' : 'Reset';
+      toast({ title: `${data.updatedCount} order${data.updatedCount !== 1 ? 's' : ''} marked as ${label}` });
+      setSelectedOrderIds(new Set());
+      await loadOrders(currentPage, searchQuery);
+    } catch (err: any) {
+      toast({ title: 'Bulk update failed', description: err.message, variant: 'destructive' });
+    } finally {
+      setIsBulkUpdating(false);
     }
   };
 
@@ -1207,6 +1234,54 @@ export default function OrdersFresh() {
         </DialogContent>
       </Dialog>
 
+      {/* Bulk Picking Toolbar */}
+      {selectedOrderIds.size > 0 && !isViewer && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 bg-white border border-slate-200 shadow-lg rounded-xl px-4 py-3">
+          <span className="text-sm font-medium text-slate-700 mr-1">
+            {selectedOrderIds.size} selected
+          </span>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={isBulkUpdating}
+            onClick={() => handleBulkPickingUpdate('picking')}
+            className="text-blue-600 border-blue-200 hover:bg-blue-50 h-8 gap-1.5"
+          >
+            {isBulkUpdating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Package className="h-3.5 w-3.5" />}
+            Mark as Picking
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={isBulkUpdating}
+            onClick={() => handleBulkPickingUpdate('packed')}
+            className="text-emerald-600 border-emerald-200 hover:bg-emerald-50 h-8 gap-1.5"
+          >
+            {isBulkUpdating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <PackageCheck className="h-3.5 w-3.5" />}
+            Mark as Packed
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={isBulkUpdating}
+            onClick={() => handleBulkPickingUpdate('reset')}
+            className="text-slate-600 border-slate-200 hover:bg-slate-50 h-8 gap-1.5"
+          >
+            {isBulkUpdating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCcw className="h-3.5 w-3.5" />}
+            Reset
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            disabled={isBulkUpdating}
+            onClick={() => setSelectedOrderIds(new Set())}
+            className="text-slate-400 hover:text-slate-600 h-8 w-8 p-0"
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
+
       {/* Orders Table */}
       <Card>
         <CardHeader>
@@ -1234,6 +1309,23 @@ export default function OrdersFresh() {
                 <Table>
                 <TableHeader>
                   <TableRow>
+                    {!isViewer && (
+                      <TableHead className="w-8 pr-0">
+                        <input
+                          type="checkbox"
+                          className="rounded border-slate-300 accent-emerald-600 cursor-pointer"
+                          checked={filteredByPicking.length > 0 && filteredByPicking.every(o => selectedOrderIds.has(o.id))}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedOrderIds(new Set(filteredByPicking.map(o => o.id)));
+                            } else {
+                              setSelectedOrderIds(new Set());
+                            }
+                          }}
+                          title="Select all"
+                        />
+                      </TableHead>
+                    )}
                     <TableHead className="text-xs">Order #</TableHead>
                     <TableHead className="text-xs">Customer</TableHead>
                     <TableHead className="text-xs">Net Amount</TableHead>
@@ -1250,12 +1342,26 @@ export default function OrdersFresh() {
                       <Fragment key={order.id}>
                         {showSeparator && (
                           <TableRow className="bg-slate-50 hover:bg-slate-50">
-                            <TableCell colSpan={5} className="py-2 px-4">
+                            <TableCell colSpan={!isViewer ? 6 : 5} className="py-2 px-4">
                               <span className="text-xs font-semibold text-gray-500">{currentLabel}</span>
                             </TableCell>
                           </TableRow>
                         )}
-                    <TableRow className="cursor-pointer hover:bg-slate-50 transition-colors" onClick={() => loadOrderDetails(order)}>
+                    <TableRow className={`cursor-pointer hover:bg-slate-50 transition-colors ${selectedOrderIds.has(order.id) ? 'bg-emerald-50/50' : ''}`} onClick={() => loadOrderDetails(order)}>
+                      {!isViewer && (
+                        <TableCell className="w-8 pr-0" onClick={(e) => e.stopPropagation()}>
+                          <input
+                            type="checkbox"
+                            className="rounded border-slate-300 accent-emerald-600 cursor-pointer"
+                            checked={selectedOrderIds.has(order.id)}
+                            onChange={(e) => {
+                              const next = new Set(selectedOrderIds);
+                              if (e.target.checked) next.add(order.id); else next.delete(order.id);
+                              setSelectedOrderIds(next);
+                            }}
+                          />
+                        </TableCell>
+                      )}
                       <TableCell className="font-medium text-xs">
                         <div>{order.orderNumber || `#${order.id}`}</div>
                         {order.businessProfileName && (
@@ -1421,18 +1527,34 @@ export default function OrdersFresh() {
                           <span className="text-xs font-semibold text-gray-500">{currentLabel}</span>
                         </div>
                       )}
-                  <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => loadOrderDetails(order)}>
+                  <Card className={`cursor-pointer hover:shadow-md transition-shadow ${selectedOrderIds.has(order.id) ? 'ring-2 ring-emerald-400' : ''}`} onClick={() => loadOrderDetails(order)}>
                     <CardContent className="p-4">
                       <div className="flex justify-between items-start mb-3">
-                        <div>
-                          <div className="font-semibold text-sm">{order.orderNumber || `#${order.id}`}</div>
-                          <div className="text-xs text-gray-500">{new Date(order.createdAt).toLocaleDateString()}</div>
-                          {(() => { const due = getBalanceDueDate(order); return due ? <div className="text-xs text-amber-600 font-medium">Due {due.toLocaleDateString('en-GB')}</div> : null; })()}
-                          {order.businessProfileName && (
-                            <Badge className="mt-0.5 bg-blue-50 text-blue-700 border border-blue-200 text-xs font-normal px-1.5 py-0" variant="outline">
-                              {order.businessProfileName}
-                            </Badge>
+                        <div className="flex items-start gap-2">
+                          {!isViewer && (
+                            <div onClick={(e) => e.stopPropagation()} className="pt-0.5">
+                              <input
+                                type="checkbox"
+                                className="rounded border-slate-300 accent-emerald-600 cursor-pointer"
+                                checked={selectedOrderIds.has(order.id)}
+                                onChange={(e) => {
+                                  const next = new Set(selectedOrderIds);
+                                  if (e.target.checked) next.add(order.id); else next.delete(order.id);
+                                  setSelectedOrderIds(next);
+                                }}
+                              />
+                            </div>
                           )}
+                          <div>
+                            <div className="font-semibold text-sm">{order.orderNumber || `#${order.id}`}</div>
+                            <div className="text-xs text-gray-500">{new Date(order.createdAt).toLocaleDateString()}</div>
+                            {(() => { const due = getBalanceDueDate(order); return due ? <div className="text-xs text-amber-600 font-medium">Due {due.toLocaleDateString('en-GB')}</div> : null; })()}
+                            {order.businessProfileName && (
+                              <Badge className="mt-0.5 bg-blue-50 text-blue-700 border border-blue-200 text-xs font-normal px-1.5 py-0" variant="outline">
+                                {order.businessProfileName}
+                              </Badge>
+                            )}
+                          </div>
                         </div>
                         <div className="text-right flex items-center gap-2">
                           <div>

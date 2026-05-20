@@ -9,6 +9,92 @@ import { orderPicking, orderItemPicks } from "@shared/schema";
 
 export function registerPickingRoutes(app: Express): void {
 
+  // POST /api/orders/bulk-picking
+  // Bulk-update picking status for multiple orders at once.
+  // action: 'picking' | 'packed' | 'reset'
+  app.post('/api/orders/bulk-picking', requireAuth, async (req: any, res) => {
+    try {
+      const wholesalerId = resolveWholesalerId(req);
+      const userId: string = req.user?.claims?.sub ?? req.user?.id ?? 'unknown';
+      const { orderIds, action } = req.body as { orderIds: number[]; action: string };
+
+      if (!Array.isArray(orderIds) || orderIds.length === 0) {
+        return res.status(400).json({ error: 'orderIds must be a non-empty array' });
+      }
+      if (!['picking', 'packed', 'reset'].includes(action)) {
+        return res.status(400).json({ error: 'action must be picking, packed, or reset' });
+      }
+
+      // Verify all orders belong to this wholesaler
+      const ownedOrders = await db.select({ id: orders.id })
+        .from(orders)
+        .where(and(inArray(orders.id, orderIds), eq(orders.wholesalerId, wholesalerId)));
+      const ownedIds = ownedOrders.map(o => o.id);
+      if (ownedIds.length === 0) return res.status(403).json({ error: 'No accessible orders found' });
+
+      const now = new Date();
+
+      for (const orderId of ownedIds) {
+        if (action === 'picking') {
+          // Directly set status to 'picking' without touching item picks
+          const [existing] = await db.select().from(orderPicking).where(eq(orderPicking.orderId, orderId));
+          if (existing) {
+            await db.update(orderPicking)
+              .set({ pickingStatus: 'picking', updatedAt: now })
+              .where(eq(orderPicking.id, existing.id));
+          } else {
+            await db.insert(orderPicking).values({ orderId, pickingStatus: 'picking' });
+          }
+        } else if (action === 'packed') {
+          // Mark all items as picked and set status to packed
+          const items = await db.select({ id: orderItems.id }).from(orderItems).where(eq(orderItems.orderId, orderId));
+          for (const item of items) {
+            const [existing] = await db.select().from(orderItemPicks)
+              .where(and(eq(orderItemPicks.orderItemId, item.id), eq(orderItemPicks.orderId, orderId)))
+              .limit(1);
+            if (existing) {
+              await db.update(orderItemPicks)
+                .set({ isPicked: true, pickedAt: now, pickedBy: userId, updatedAt: now })
+                .where(and(eq(orderItemPicks.id, existing.id), eq(orderItemPicks.orderId, orderId)));
+            } else {
+              await db.insert(orderItemPicks).values({ orderId, orderItemId: item.id, isPicked: true, pickedAt: now, pickedBy: userId });
+            }
+          }
+          const [existingPicking] = await db.select().from(orderPicking).where(eq(orderPicking.orderId, orderId));
+          if (existingPicking) {
+            await db.update(orderPicking)
+              .set({ pickingStatus: 'packed', completedAt: now, completedBy: userId, updatedAt: now })
+              .where(eq(orderPicking.id, existingPicking.id));
+          } else {
+            await db.insert(orderPicking).values({ orderId, pickingStatus: 'packed', completedAt: now, completedBy: userId });
+          }
+        } else if (action === 'reset') {
+          // Reset all item picks and set status to not_started
+          const items = await db.select({ id: orderItems.id }).from(orderItems).where(eq(orderItems.orderId, orderId));
+          const itemIds = items.map(i => i.id);
+          if (itemIds.length > 0) {
+            await db.update(orderItemPicks)
+              .set({ isPicked: false, pickedAt: null, pickedBy: null, updatedAt: now })
+              .where(and(inArray(orderItemPicks.orderItemId, itemIds), eq(orderItemPicks.orderId, orderId)));
+          }
+          const [existingPicking] = await db.select().from(orderPicking).where(eq(orderPicking.orderId, orderId));
+          if (existingPicking) {
+            await db.update(orderPicking)
+              .set({ pickingStatus: 'not_started', completedAt: null, completedBy: null, resetAt: now, resetBy: userId, updatedAt: now })
+              .where(eq(orderPicking.id, existingPicking.id));
+          } else {
+            await db.insert(orderPicking).values({ orderId, pickingStatus: 'not_started', resetAt: now, resetBy: userId });
+          }
+        }
+      }
+
+      res.json({ success: true, updatedCount: ownedIds.length });
+    } catch (err) {
+      console.error('[picking] bulk update error:', err);
+      res.status(500).json({ error: 'Failed to bulk-update picking status' });
+    }
+  });
+
   // GET /api/orders/:id/picking
   // Returns current picking state + full item details (product name, qty, image)
   app.get('/api/orders/:id/picking', requireAuth, async (req: any, res) => {
