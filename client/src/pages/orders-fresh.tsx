@@ -1291,7 +1291,7 @@ export default function OrdersFresh() {
                               )}
                             </Badge>
                           )}
-                          {order.pickingStatus && order.pickingStatus !== 'not_started' && (
+                          {order.pickingStatus && (
                             <PickingStatusBadge status={order.pickingStatus} />
                           )}
                         </div>
@@ -1462,7 +1462,7 @@ export default function OrdersFresh() {
                             )}
                           </Badge>
                         )}
-                        {order.pickingStatus && order.pickingStatus !== 'not_started' && (
+                        {order.pickingStatus && (
                           <PickingStatusBadge status={order.pickingStatus} />
                         )}
                       </div>

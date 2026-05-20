@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { PickingMode } from "@/components/orders/PickingMode";
 import { useSidebarContext } from "@/contexts/sidebar-context";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
@@ -155,6 +156,7 @@ export default function QuickQuote() {
     orderNumber: string;
     paymentLink: string;
   } | null>(null);
+  const [showPickingMode, setShowPickingMode] = useState(false);
   const [isSharingInvoice, setIsSharingInvoice] = useState(false);
   const [newCustomer, setNewCustomer] = useState({
     firstName: '',
@@ -840,11 +842,12 @@ export default function QuickQuote() {
                 )}
                 Share Invoice
               </Button>
-              <Link href={`/orders/${createdQuote.id}`} className="flex-1">
-                <Button className="w-full bg-blue-600 hover:bg-blue-700">
-                  Start Picking
-                </Button>
-              </Link>
+              <Button
+                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                onClick={() => setShowPickingMode(true)}
+              >
+                Start Picking
+              </Button>
               <Link href="/orders" className="flex-1">
                 <Button className="w-full bg-green-600 hover:bg-green-700">
                   View Orders
@@ -854,6 +857,14 @@ export default function QuickQuote() {
           </CardContent>
         </Card>
       </div>
+
+      {showPickingMode && createdQuote && (
+        <PickingMode
+          orderId={createdQuote.id}
+          orderNumber={createdQuote.orderNumber}
+          onClose={() => setShowPickingMode(false)}
+        />
+      )}
     );
   }
 

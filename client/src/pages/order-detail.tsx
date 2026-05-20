@@ -2026,15 +2026,6 @@ export default function OrderDetail() {
       {showPickingMode && order && (
         <PickingMode
           orderId={order.id}
-          orderItems={(order.items || []).map(item => ({
-            id: item.id,
-            productId: item.productId,
-            quantity: item.quantity,
-            unitPrice: item.unitPrice,
-            product: item.product,
-            sellingType: item.sellingType,
-            freeItems: item.freeItems,
-          }))}
           orderNumber={order.orderNumber}
           onClose={() => setShowPickingMode(false)}
         />

@@ -2,15 +2,15 @@ import type { Express } from "express";
 import { resolveWholesalerId } from "../utils/resolveWholesalerId";
 import {
   db, requireAuth,
-  orders, orderItems,
-  eq, inArray,
+  orders, orderItems, products,
+  eq, and, inArray,
 } from "./shared";
 import { orderPicking, orderItemPicks } from "@shared/schema";
 
 export function registerPickingRoutes(app: Express): void {
 
   // GET /api/orders/:id/picking
-  // Returns the current picking state for an order: overall status + per-item flags
+  // Returns current picking state + full item details (product name, qty, image)
   app.get('/api/orders/:id/picking', requireAuth, async (req: any, res) => {
     try {
       const orderId = parseInt(req.params.id);
@@ -27,13 +27,30 @@ export function registerPickingRoutes(app: Express): void {
       // Fetch or initialise picking row
       const [pickingRow] = await db.select().from(orderPicking).where(eq(orderPicking.orderId, orderId));
 
-      // Fetch all items for this order
-      const items = await db.select().from(orderItems).where(eq(orderItems.orderId, orderId));
+      // Fetch all items for this order, joined with product details
+      const itemRows = await db.select({
+        id: orderItems.id,
+        orderId: orderItems.orderId,
+        productId: orderItems.productId,
+        quantity: orderItems.quantity,
+        sellingType: orderItems.sellingType,
+        freeItems: orderItems.freeItems,
+        productName: products.name,
+        productImageUrl: products.imageUrl,
+        productUnitSize: products.unitSize,
+        productUnitOfMeasure: products.unitOfMeasure,
+      }).from(orderItems)
+        .leftJoin(products, eq(products.id, orderItems.productId))
+        .where(eq(orderItems.orderId, orderId));
 
-      // Fetch existing item pick rows
-      const itemIds = items.map(i => i.id);
+      // Fetch existing item pick rows — scoped to this order's items only
+      const itemIds = itemRows.map(i => i.id);
       const existingPicks = itemIds.length > 0
-        ? await db.select().from(orderItemPicks).where(inArray(orderItemPicks.orderItemId, itemIds))
+        ? await db.select().from(orderItemPicks)
+            .where(and(
+              inArray(orderItemPicks.orderItemId, itemIds),
+              eq(orderItemPicks.orderId, orderId),
+            ))
         : [];
       const picksMap: Record<number, typeof existingPicks[0]> = {};
       existingPicks.forEach(p => { picksMap[p.orderItemId] = p; });
@@ -44,9 +61,16 @@ export function registerPickingRoutes(app: Express): void {
         completedBy: pickingRow?.completedBy ?? null,
         resetAt: pickingRow?.resetAt ?? null,
         resetBy: pickingRow?.resetBy ?? null,
-        items: items.map(item => ({
+        items: itemRows.map(item => ({
           orderItemId: item.id,
           productId: item.productId,
+          quantity: item.quantity,
+          sellingType: item.sellingType,
+          freeItems: item.freeItems,
+          productName: item.productName ?? `Product #${item.productId}`,
+          productImageUrl: item.productImageUrl ?? null,
+          productUnitSize: item.productUnitSize ?? null,
+          productUnitOfMeasure: item.productUnitOfMeasure ?? null,
           isPicked: picksMap[item.id]?.isPicked ?? false,
           pickedAt: picksMap[item.id]?.pickedAt ?? null,
           pickedBy: picksMap[item.id]?.pickedBy ?? null,
@@ -59,7 +83,7 @@ export function registerPickingRoutes(app: Express): void {
   });
 
   // PATCH /api/orders/:id/picking/items/:itemId
-  // Toggle isPicked for a single order item
+  // Toggle isPicked for a single order item (item must belong to this order)
   app.patch('/api/orders/:id/picking/items/:itemId', requireAuth, async (req: any, res) => {
     try {
       const orderId = parseInt(req.params.id);
@@ -69,18 +93,29 @@ export function registerPickingRoutes(app: Express): void {
       const wholesalerId = resolveWholesalerId(req);
       const userId: string = req.user?.claims?.sub ?? req.user?.id ?? 'unknown';
 
-      // Verify access
+      // Verify order access
       const [order] = await db.select({ id: orders.id, wholesalerId: orders.wholesalerId })
         .from(orders).where(eq(orders.id, orderId)).limit(1);
       if (!order) return res.status(404).json({ error: 'Order not found' });
       if (order.wholesalerId !== wholesalerId) return res.status(403).json({ error: 'Access denied' });
 
+      // Verify the item belongs to this exact order (prevents cross-order contamination)
+      const [orderItem] = await db.select({ id: orderItems.id })
+        .from(orderItems)
+        .where(and(eq(orderItems.id, orderItemId), eq(orderItems.orderId, orderId)))
+        .limit(1);
+      if (!orderItem) return res.status(404).json({ error: 'Order item not found in this order' });
+
       const { isPicked } = req.body;
       const now = new Date();
 
-      // Upsert item pick row
+      // Upsert item pick row — always scoped to both orderId and orderItemId
       const [existing] = await db.select().from(orderItemPicks)
-        .where(eq(orderItemPicks.orderItemId, orderItemId)).limit(1);
+        .where(and(
+          eq(orderItemPicks.orderItemId, orderItemId),
+          eq(orderItemPicks.orderId, orderId),
+        ))
+        .limit(1);
 
       if (existing) {
         await db.update(orderItemPicks)
@@ -90,7 +125,10 @@ export function registerPickingRoutes(app: Express): void {
             pickedBy: isPicked ? userId : null,
             updatedAt: now,
           })
-          .where(eq(orderItemPicks.id, existing.id));
+          .where(and(
+            eq(orderItemPicks.id, existing.id),
+            eq(orderItemPicks.orderId, orderId),
+          ));
       } else {
         await db.insert(orderItemPicks).values({
           orderId,
@@ -126,17 +164,27 @@ export function registerPickingRoutes(app: Express): void {
       if (!order) return res.status(404).json({ error: 'Order not found' });
       if (order.wholesalerId !== wholesalerId) return res.status(403).json({ error: 'Access denied' });
 
-      const items = await db.select().from(orderItems).where(eq(orderItems.orderId, orderId));
+      // Fetch only items that belong to this order
+      const items = await db.select({ id: orderItems.id })
+        .from(orderItems)
+        .where(eq(orderItems.orderId, orderId));
       const now = new Date();
 
       // Upsert every item to isPicked = true
       for (const item of items) {
         const [existing] = await db.select().from(orderItemPicks)
-          .where(eq(orderItemPicks.orderItemId, item.id)).limit(1);
+          .where(and(
+            eq(orderItemPicks.orderItemId, item.id),
+            eq(orderItemPicks.orderId, orderId),
+          ))
+          .limit(1);
         if (existing) {
           await db.update(orderItemPicks)
             .set({ isPicked: true, pickedAt: now, pickedBy: userId, updatedAt: now })
-            .where(eq(orderItemPicks.id, existing.id));
+            .where(and(
+              eq(orderItemPicks.id, existing.id),
+              eq(orderItemPicks.orderId, orderId),
+            ));
         } else {
           await db.insert(orderItemPicks).values({
             orderId,
@@ -185,15 +233,21 @@ export function registerPickingRoutes(app: Express): void {
       if (!order) return res.status(404).json({ error: 'Order not found' });
       if (order.wholesalerId !== wholesalerId) return res.status(403).json({ error: 'Access denied' });
 
-      const items = await db.select().from(orderItems).where(eq(orderItems.orderId, orderId));
+      // Fetch only items belonging to this order
+      const items = await db.select({ id: orderItems.id })
+        .from(orderItems)
+        .where(eq(orderItems.orderId, orderId));
       const now = new Date();
       const itemIds = items.map(i => i.id);
 
-      // Reset all item picks
+      // Reset item picks — constrained to this order (both columns)
       if (itemIds.length > 0) {
         await db.update(orderItemPicks)
           .set({ isPicked: false, pickedAt: null, pickedBy: null, updatedAt: now })
-          .where(inArray(orderItemPicks.orderItemId, itemIds));
+          .where(and(
+            inArray(orderItemPicks.orderItemId, itemIds),
+            eq(orderItemPicks.orderId, orderId),
+          ));
       }
 
       // Reset overall picking row
@@ -220,12 +274,20 @@ export function registerPickingRoutes(app: Express): void {
 }
 
 // ── Helper: recalculate overall picking status based on item pick states ────
+// Only touches the order_picking and order_item_picks tables — no stock,
+// no notifications, no analytics, no order status changes.
 async function _recalcPickingStatus(orderId: number, userId: string) {
-  const items = await db.select().from(orderItems).where(eq(orderItems.orderId, orderId));
+  const items = await db.select({ id: orderItems.id })
+    .from(orderItems)
+    .where(eq(orderItems.orderId, orderId));
   if (items.length === 0) return;
 
+  const itemIds = items.map(i => i.id);
   const picks = await db.select().from(orderItemPicks)
-    .where(inArray(orderItemPicks.orderItemId, items.map(i => i.id)));
+    .where(and(
+      inArray(orderItemPicks.orderItemId, itemIds),
+      eq(orderItemPicks.orderId, orderId),
+    ));
 
   const pickedCount = picks.filter(p => p.isPicked).length;
   const totalCount = items.length;

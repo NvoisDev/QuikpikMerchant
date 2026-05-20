@@ -1,11 +1,10 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import {
-  X,
   CheckCircle,
   Circle,
   RefreshCw,
@@ -15,21 +14,20 @@ import {
   RotateCcw,
 } from "lucide-react";
 
-interface OrderItem {
-  id: number;
+// ── API response shape (from GET /api/orders/:id/picking) ────────────────────
+interface PickingStateItem {
+  orderItemId: number;
   productId: number;
   quantity: number;
-  unitPrice: string;
-  product: {
-    id: number;
-    name: string;
-    imageUrl?: string;
-    packQuantity?: number;
-    unitSize?: string | null;
-    unitOfMeasure?: string | null;
-  };
-  sellingType?: 'units' | 'pallets';
-  freeItems?: number;
+  sellingType?: string | null;
+  freeItems?: number | null;
+  productName: string;
+  productImageUrl: string | null;
+  productUnitSize: string | null;
+  productUnitOfMeasure: string | null;
+  isPicked: boolean;
+  pickedAt: string | null;
+  pickedBy: string | null;
 }
 
 interface PickingState {
@@ -38,23 +36,16 @@ interface PickingState {
   completedBy: string | null;
   resetAt: string | null;
   resetBy: string | null;
-  items: Array<{
-    orderItemId: number;
-    productId: number;
-    isPicked: boolean;
-    pickedAt: string | null;
-    pickedBy: string | null;
-  }>;
+  items: PickingStateItem[];
 }
 
 interface Props {
   orderId: number;
-  orderItems: OrderItem[];
   orderNumber?: string;
   onClose: () => void;
 }
 
-export function PickingMode({ orderId, orderItems, orderNumber, onClose }: Props) {
+export function PickingMode({ orderId, orderNumber, onClose }: Props) {
   const { toast } = useToast();
   const [optimisticPicks, setOptimisticPicks] = useState<Record<number, boolean>>({});
   const [showResetConfirm, setShowResetConfirm] = useState(false);
@@ -64,22 +55,22 @@ export function PickingMode({ orderId, orderItems, orderNumber, onClose }: Props
     refetchOnWindowFocus: false,
   });
 
-  // Build a merged view: server state + optimistic overrides
+  const items: PickingStateItem[] = pickingState?.items ?? [];
+
+  // Merged view: server state + optimistic overrides
   const getItemPicked = useCallback((orderItemId: number): boolean => {
     if (orderItemId in optimisticPicks) return optimisticPicks[orderItemId];
     return pickingState?.items.find(i => i.orderItemId === orderItemId)?.isPicked ?? false;
   }, [optimisticPicks, pickingState]);
 
-  const pickedCount = orderItems.filter(item => getItemPicked(item.id)).length;
-  const totalCount = orderItems.length;
+  const pickedCount = items.filter(item => getItemPicked(item.orderItemId)).length;
+  const totalCount = items.length;
   const progressPct = totalCount > 0 ? Math.round((pickedCount / totalCount) * 100) : 0;
 
-  // Derive display status from optimistic state
-  const derivedStatus: PickingState['pickingStatus'] =
+  const displayStatus: PickingState['pickingStatus'] =
     pickedCount === 0 ? 'not_started' :
     pickedCount === totalCount ? 'packed' :
     'picking';
-  const displayStatus = derivedStatus;
 
   const toggleItemMutation = useMutation({
     mutationFn: async ({ orderItemId, isPicked }: { orderItemId: number; isPicked: boolean }) => {
@@ -90,7 +81,6 @@ export function PickingMode({ orderId, orderItems, orderNumber, onClose }: Props
       queryClient.invalidateQueries({ queryKey: [`/api/orders/${orderId}/picking`] });
     },
     onError: (_err, { orderItemId, isPicked }) => {
-      // Roll back optimistic update
       setOptimisticPicks(prev => ({ ...prev, [orderItemId]: !isPicked }));
       toast({ title: "Error", description: "Could not save pick status. Please try again.", variant: "destructive" });
     },
@@ -103,7 +93,7 @@ export function PickingMode({ orderId, orderItems, orderNumber, onClose }: Props
     },
     onMutate: () => {
       const allPicked: Record<number, boolean> = {};
-      orderItems.forEach(item => { allPicked[item.id] = true; });
+      items.forEach(item => { allPicked[item.orderItemId] = true; });
       setOptimisticPicks(allPicked);
     },
     onSuccess: () => {
@@ -125,7 +115,7 @@ export function PickingMode({ orderId, orderItems, orderNumber, onClose }: Props
     },
     onMutate: () => {
       const allUnpicked: Record<number, boolean> = {};
-      orderItems.forEach(item => { allUnpicked[item.id] = false; });
+      items.forEach(item => { allUnpicked[item.orderItemId] = false; });
       setOptimisticPicks(allUnpicked);
       setShowResetConfirm(false);
     },
@@ -144,7 +134,6 @@ export function PickingMode({ orderId, orderItems, orderNumber, onClose }: Props
   const handleToggle = (orderItemId: number) => {
     const current = getItemPicked(orderItemId);
     const next = !current;
-    // Instant optimistic update
     setOptimisticPicks(prev => ({ ...prev, [orderItemId]: next }));
     toggleItemMutation.mutate({ orderItemId, isPicked: next });
   };
@@ -213,31 +202,31 @@ export function PickingMode({ orderId, orderItems, orderNumber, onClose }: Props
           <div className="flex items-center justify-center h-40">
             <RefreshCw className="h-6 w-6 text-slate-400 animate-spin" />
           </div>
-        ) : orderItems.length === 0 ? (
+        ) : items.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-40 text-slate-400 gap-2">
             <Package className="h-8 w-8" />
             <p className="text-sm">No items in this order</p>
           </div>
         ) : (
           <ul className="divide-y divide-slate-100">
-            {orderItems.map((item) => {
-              const picked = getItemPicked(item.id);
+            {items.map((item) => {
+              const picked = getItemPicked(item.orderItemId);
               return (
                 <li
-                  key={item.id}
+                  key={item.orderItemId}
                   className={`flex items-center gap-4 px-4 py-3.5 cursor-pointer transition-colors active:bg-slate-50 select-none ${
                     picked ? 'bg-green-50' : 'bg-white hover:bg-slate-50'
                   }`}
-                  onClick={() => handleToggle(item.id)}
+                  onClick={() => handleToggle(item.orderItemId)}
                   role="checkbox"
                   aria-checked={picked}
                 >
                   {/* Thumbnail */}
                   <div className="shrink-0 w-12 h-12 rounded-lg overflow-hidden bg-slate-100 border border-slate-200">
-                    {item.product?.imageUrl ? (
+                    {item.productImageUrl ? (
                       <img
-                        src={item.product.imageUrl}
-                        alt={item.product.name}
+                        src={item.productImageUrl}
+                        alt={item.productName}
                         className={`w-full h-full object-cover transition-opacity ${picked ? 'opacity-50' : 'opacity-100'}`}
                       />
                     ) : (
@@ -250,17 +239,17 @@ export function PickingMode({ orderId, orderItems, orderNumber, onClose }: Props
                   {/* Info */}
                   <div className="flex-1 min-w-0">
                     <p className={`text-sm font-medium leading-tight truncate ${picked ? 'text-slate-400 line-through' : 'text-slate-900'}`}>
-                      {item.product?.name || `Product #${item.productId}`}
+                      {item.productName}
                     </p>
                     <p className="text-xs text-slate-500 mt-0.5">
                       Qty: <span className="font-semibold text-slate-700">{item.quantity}</span>
                       {item.sellingType === 'pallets' && ' pallets'}
-                      {item.product?.unitSize ? ` · ${item.product.unitSize}` : ''}
+                      {item.productUnitSize ? ` · ${item.productUnitSize}` : ''}
                       {(item.freeItems ?? 0) > 0 && ` + ${item.freeItems} free`}
                     </p>
                   </div>
 
-                  {/* Checkbox */}
+                  {/* Checkbox — minimum 48px tap target */}
                   <div className="shrink-0 w-10 h-10 flex items-center justify-center">
                     {picked ? (
                       <CheckCircle className="h-8 w-8 text-green-500" />
@@ -278,29 +267,32 @@ export function PickingMode({ orderId, orderItems, orderNumber, onClose }: Props
       {/* ── Footer actions ──────────────────────────────────────────── */}
       <div className="px-4 py-3 border-t border-slate-200 bg-white space-y-2">
         {showResetConfirm ? (
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              className="flex-1"
-              onClick={() => setShowResetConfirm(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              size="sm"
-              className="flex-1 bg-red-600 hover:bg-red-700 text-white"
-              onClick={() => resetMutation.mutate()}
-              disabled={resetMutation.isPending}
-            >
-              {resetMutation.isPending ? (
-                <RefreshCw className="h-3.5 w-3.5 animate-spin mr-1" />
-              ) : (
-                <RotateCcw className="h-3.5 w-3.5 mr-1" />
-              )}
-              Yes, Reset
-            </Button>
-          </div>
+          <>
+            <p className="text-xs text-center text-slate-500">This will uncheck all items. Are you sure?</p>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex-1"
+                onClick={() => setShowResetConfirm(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+                onClick={() => resetMutation.mutate()}
+                disabled={resetMutation.isPending}
+              >
+                {resetMutation.isPending ? (
+                  <RefreshCw className="h-3.5 w-3.5 animate-spin mr-1" />
+                ) : (
+                  <RotateCcw className="h-3.5 w-3.5 mr-1" />
+                )}
+                Yes, Reset
+              </Button>
+            </div>
+          </>
         ) : (
           <div className="flex gap-2">
             <Button
@@ -328,9 +320,6 @@ export function PickingMode({ orderId, orderItems, orderNumber, onClose }: Props
             </Button>
           </div>
         )}
-        {showResetConfirm && (
-          <p className="text-xs text-center text-slate-500">This will uncheck all items. Are you sure?</p>
-        )}
       </div>
     </div>
   );
@@ -354,5 +343,10 @@ export function PickingStatusBadge({ status }: { status: string }) {
       </Badge>
     );
   }
-  return null;
+  // not_started — shown as a subtle grey badge
+  return (
+    <Badge className="bg-slate-100 text-slate-500 border-slate-200 text-xs" variant="outline">
+      Not Picked
+    </Badge>
+  );
 }
