@@ -22,6 +22,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Home, Building, Warehouse, ChevronLeft, ChevronRight } from "lucide-react";
 import { useCurrency } from "@/hooks/useCurrency";
+import { useSidebarContext } from "@/contexts/sidebar-context";
 import { formatCurrency } from "@/lib/currencies";
 import { getOfflinePaymentDefaultAmount } from "@/lib/order-payment-balances";
 
@@ -184,6 +185,7 @@ const WholesalerDeliveryAddressDisplay = ({ addressId }: { addressId: number }) 
 export default function OrdersFresh() {
   const { formatMoney } = useCurrency();
   const { user, isLoading: authLoading } = useAuth();
+  const { isDesktopCollapsed } = useSidebarContext();
   const [, navigate] = useLocation();
   const isViewer = (user as AuthUser)?.teamMemberRole === 'viewer';
   const [mobileDraft, setMobileDraft] = useState<{ selectedCustomer?: { businessName?: string; firstName?: string }; savedAt?: number } | null>(null);
@@ -1236,49 +1238,50 @@ export default function OrdersFresh() {
 
       {/* Bulk Picking Toolbar */}
       {selectedOrderIds.size > 0 && !isViewer && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 bg-white border border-slate-200 shadow-lg rounded-xl px-4 py-3">
-          <span className="text-sm font-medium text-slate-700 mr-1">
-            {selectedOrderIds.size} selected
-          </span>
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={isBulkUpdating}
-            onClick={() => handleBulkPickingUpdate('picking')}
-            className="text-blue-600 border-blue-200 hover:bg-blue-50 h-8 gap-1.5"
-          >
-            {isBulkUpdating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Package className="h-3.5 w-3.5" />}
-            Mark as Picking
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={isBulkUpdating}
-            onClick={() => handleBulkPickingUpdate('packed')}
-            className="text-emerald-600 border-emerald-200 hover:bg-emerald-50 h-8 gap-1.5"
-          >
-            {isBulkUpdating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <PackageCheck className="h-3.5 w-3.5" />}
-            Mark as Packed
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={isBulkUpdating}
-            onClick={() => handleBulkPickingUpdate('reset')}
-            className="text-slate-600 border-slate-200 hover:bg-slate-50 h-8 gap-1.5"
-          >
-            {isBulkUpdating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCcw className="h-3.5 w-3.5" />}
-            Reset
-          </Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            disabled={isBulkUpdating}
-            onClick={() => setSelectedOrderIds(new Set())}
-            className="text-slate-400 hover:text-slate-600 h-8 w-8 p-0"
-          >
-            <X className="h-4 w-4" />
-          </Button>
+        <div className={`fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 shadow-lg z-50 px-4 py-3 ${isDesktopCollapsed ? "lg:left-14" : "lg:left-64"}`}>
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium text-slate-700">
+              {selectedOrderIds.size} order{selectedOrderIds.size !== 1 ? 's' : ''} selected
+            </span>
+            <Button
+              size="sm"
+              variant="ghost"
+              disabled={isBulkUpdating}
+              onClick={() => setSelectedOrderIds(new Set())}
+              className="text-slate-400 hover:text-slate-600 h-8 w-8 p-0"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              disabled={isBulkUpdating}
+              onClick={() => handleBulkPickingUpdate('picking')}
+              className="flex-1 text-blue-600 border-blue-200 hover:bg-blue-50 min-h-[44px] gap-1.5 text-xs sm:text-sm"
+            >
+              {isBulkUpdating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Package className="h-4 w-4" />}
+              Mark as Picking
+            </Button>
+            <Button
+              variant="outline"
+              disabled={isBulkUpdating}
+              onClick={() => handleBulkPickingUpdate('packed')}
+              className="flex-1 text-emerald-600 border-emerald-200 hover:bg-emerald-50 min-h-[44px] gap-1.5 text-xs sm:text-sm"
+            >
+              {isBulkUpdating ? <Loader2 className="h-4 w-4 animate-spin" /> : <PackageCheck className="h-4 w-4" />}
+              Mark as Packed
+            </Button>
+            <Button
+              variant="outline"
+              disabled={isBulkUpdating}
+              onClick={() => handleBulkPickingUpdate('reset')}
+              className="flex-1 text-slate-600 border-slate-200 hover:bg-slate-50 min-h-[44px] gap-1.5 text-xs sm:text-sm"
+            >
+              {isBulkUpdating ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
+              Reset
+            </Button>
+          </div>
         </div>
       )}
 
