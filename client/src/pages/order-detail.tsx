@@ -301,6 +301,8 @@ export default function OrderDetail() {
 
   const [isMarkAsPaidOpen, setIsMarkAsPaidOpen] = useState(false);
   const [isFulfillConfirmOpen, setIsFulfillConfirmOpen] = useState(false);
+  const [isPickingWarningOpen, setIsPickingWarningOpen] = useState(false);
+  const [pendingFulfillAction, setPendingFulfillAction] = useState<'mark_fulfilled' | 'ready_for_collection' | null>(null);
   const [markAsPaidAmount, setMarkAsPaidAmount] = useState('');
   const [markAsPaidMethod, setMarkAsPaidMethod] = useState('cash');
   const [markAsPaidNote, setMarkAsPaidNote] = useState('');
@@ -372,6 +374,15 @@ export default function OrderDetail() {
   const stripeReady = stripeConnectStatus?.isConnected === true;
   const isOfflinePayment = OFFLINE_PAYMENT_METHODS.includes(order?.paymentMethod || '');
   const canUsePaymentLink = !isOfflinePayment && stripeReady;
+
+  const { data: pickingStateData } = useQuery<{
+    pickingStatus: 'not_started' | 'picking' | 'packed';
+    items: Array<{ orderItemId: number; isPicked: boolean }>;
+  }>({
+    queryKey: [`/api/orders/${order?.id}/picking`],
+    enabled: !!order?.id,
+  });
+  const isFullyPicked = pickingStateData?.pickingStatus === 'packed';
 
   useEffect(() => {
     if (!id) return;
@@ -1006,14 +1017,28 @@ export default function OrderDetail() {
       label: 'Ready for Collection',
       color: 'bg-orange-500 hover:bg-orange-600',
       icon: <Clock className="h-4 w-4 mr-2" />,
-      onClick: markReadyForCollection,
+      onClick: () => {
+        if (!isFullyPicked) {
+          setPendingFulfillAction('ready_for_collection');
+          setIsPickingWarningOpen(true);
+        } else {
+          markReadyForCollection();
+        }
+      },
       loading: updatingOrderId === order.id,
     },
     mark_fulfilled: {
       label: 'Mark as Fulfilled',
       color: 'bg-green-600 hover:bg-green-700',
       icon: <CheckCircle className="h-4 w-4 mr-2" />,
-      onClick: () => setIsFulfillConfirmOpen(true),
+      onClick: () => {
+        if (!isFullyPicked) {
+          setPendingFulfillAction('mark_fulfilled');
+          setIsPickingWarningOpen(true);
+        } else {
+          setIsFulfillConfirmOpen(true);
+        }
+      },
       loading: updatingOrderId === order.id,
     },
   };
@@ -1926,6 +1951,47 @@ export default function OrderDetail() {
           </div>
         </div>
       )}
+
+      {/* ── Picking Warning Dialog ────────────────────────────────────────── */}
+      <Dialog open={isPickingWarningOpen} onOpenChange={setIsPickingWarningOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ClipboardList className="h-4 w-4 text-amber-500" />
+              Order Not Fully Picked
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-gray-500 pt-1">
+            This order hasn't been fully picked yet. Continue anyway?
+          </p>
+          <div className="flex gap-2 pt-2">
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={() => {
+                setIsPickingWarningOpen(false);
+                setPendingFulfillAction(null);
+              }}
+            >
+              Go Back
+            </Button>
+            <Button
+              className="flex-1 bg-amber-500 hover:bg-amber-600 text-white"
+              onClick={() => {
+                setIsPickingWarningOpen(false);
+                if (pendingFulfillAction === 'mark_fulfilled') {
+                  setIsFulfillConfirmOpen(true);
+                } else if (pendingFulfillAction === 'ready_for_collection') {
+                  markReadyForCollection();
+                }
+                setPendingFulfillAction(null);
+              }}
+            >
+              Continue Anyway
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* ── Fulfill Confirmation Dialog ───────────────────────────────────── */}
       <Dialog open={isFulfillConfirmOpen} onOpenChange={setIsFulfillConfirmOpen}>
