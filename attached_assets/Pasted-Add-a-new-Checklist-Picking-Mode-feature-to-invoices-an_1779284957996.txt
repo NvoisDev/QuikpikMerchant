@@ -1,0 +1,136 @@
+Add a new “Checklist / Picking Mode” feature to invoices and order preparation flows without breaking any existing invoice, stock, payment, notification, analytics, or order lifecycle logic.
+
+IMPORTANT:
+This must be a strictly additive feature.
+Do NOT modify or interfere with:
+- stock deduction logic
+- invoice totals
+- payment flows
+- order approval/send logic
+- analytics/reporting
+- invoice PDFs
+- notifications
+- existing order statuses
+- existing invoice edit behaviour
+
+The checklist feature is operational only and must NOT affect inventory calculations.
+
+Feature Requirements
+
+1. Add a “Checklist Mode” button to invoice/order pages
+- Visible on:
+  - invoice detail page
+  - order detail page
+  - mobile and desktop
+- Opens a picking/checklist interface
+
+2. Checklist UI
+Each invoice item should display:
+- checkbox
+- product name
+- ordered quantity
+- unit
+- optional product image thumbnail if available
+
+Example:
+☐ Peak Milk — 5 cartons
+☐ Indomie Chicken — 2 boxes
+
+3. Checklist behaviour
+- Users can tick items as they physically pick them
+- Ticks save instantly via API
+- Progress indicator:
+  - e.g. “7 of 10 items picked”
+- Add:
+  - “Mark all picked”
+  - “Reset checklist”
+
+4. Database changes
+Add additive fields/tables only.
+Recommended:
+- invoice_item_checklists
+OR
+- pickedQuantity / isPicked on order items
+
+Must support:
+- per-item picked state
+- timestamps
+- optional pickedBy user ID
+- optional completedAt timestamp
+
+DO NOT alter historical stock records or invoice financial logic.
+
+5. Picking Status
+Add lightweight operational statuses:
+- Not Started
+- Picking
+- Packed
+
+These statuses:
+- must NOT affect payment status
+- must NOT affect invoice status
+- must NOT affect analytics/revenue
+- are operational-only metadata
+
+6. Orders Table Integration
+Add:
+- checklist progress badge
+- packed indicator
+- quick visibility in order summary tables
+
+Example:
+Picking: 4/10
+Packed ✓
+
+7. Mobile Optimisation
+This feature must be highly mobile-friendly because wholesalers will use it while walking around warehouses.
+
+Requirements:
+- large tap targets
+- sticky progress bar on mobile
+- smooth scrolling
+- instant checkbox response
+- no page refreshes
+
+8. Persistence & Reliability
+Checklist state must:
+- persist across refreshes
+- persist across sessions
+- work safely with multiple staff users
+- not duplicate records
+- not create race conditions
+
+9. Audit Safety
+Track:
+- who completed picking
+- when it was completed
+- who reset checklist
+
+10. Permissions
+- wholesalers and team members can use checklist mode
+- customers/retailers cannot access it
+
+11. Testing
+Add regression tests to ensure:
+- stock calculations remain unchanged
+- invoice totals remain unchanged
+- checklist actions do not trigger notifications
+- checklist actions do not modify analytics
+- checklist actions do not create stock movements
+- existing invoice flows still work perfectly
+
+12. Performance
+Do not introduce:
+- unnecessary polling
+- large rerenders
+- N+1 queries
+- unbounded queries
+
+Reuse existing order/invoice fetching patterns where possible.
+
+13. UX Goal
+The experience should feel like:
+“warehouse picking mode”
+for wholesalers preparing customer orders quickly and accurately.
+
+This feature should improve operational workflow without making the app feel enterprise-heavy or complicated.
