@@ -775,6 +775,7 @@ export default function QuickQuote() {
 
   if (createdQuote) {
     return (
+      <>
       <div className="p-4 md:p-6 max-w-2xl mx-auto">
         <Card>
           <CardHeader className="text-center p-4 md:p-6">
@@ -865,6 +866,7 @@ export default function QuickQuote() {
           onClose={() => setShowPickingMode(false)}
         />
       )}
+      </>
     );
   }
 
