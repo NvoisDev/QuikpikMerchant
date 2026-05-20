@@ -1520,7 +1520,7 @@ export default function OrdersFresh() {
               </div>
               
               {/* Mobile Cards */}
-              <div className="lg:hidden space-y-3">
+              <div className={`lg:hidden space-y-3 ${selectedOrderIds.size > 0 && !isViewer ? 'pb-28' : ''}`}>
                 {filteredByPicking.slice(0, 50).map((order, index, arr) => {
                   const currentLabel = order.createdAt ? getDateLabel(order.createdAt) : '';
                   const prevLabel = index > 0 && arr[index - 1].createdAt ? getDateLabel(arr[index - 1].createdAt) : '';
