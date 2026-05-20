@@ -202,6 +202,7 @@ export default function OrdersFresh() {
   const [paymentStatusFilter, setPaymentStatusFilter] = useState('');
   const [deliveryTypeFilter, setDeliveryTypeFilter] = useState('');
   const [dateRangeFilter, setDateRangeFilter] = useState('');
+  const [pickingStatusFilter, setPickingStatusFilter] = useState('');
   const [orderStats, setOrderStats] = useState<{
     ordersCount: number;
     totalRevenue: number;
@@ -729,7 +730,19 @@ export default function OrdersFresh() {
         }
       })
     : filteredByDelivery;
-  
+
+  // Apply picking status filter client-side
+  const filteredByPicking = pickingStatusFilter
+    ? filteredByDate.filter(o => (o.pickingStatus || 'not_started') === pickingStatusFilter)
+    : filteredByDate;
+
+  // Counts per picking state (from all currently loaded orders, before picking filter)
+  const pickingCounts = {
+    not_started: orders.filter(o => (o.pickingStatus || 'not_started') === 'not_started').length,
+    picking: orders.filter(o => o.pickingStatus === 'picking').length,
+    packed: orders.filter(o => o.pickingStatus === 'packed').length,
+  };
+
   const getDateLabel = (dateStr: string) => {
     const date = new Date(dateStr);
     const now = new Date();
@@ -743,14 +756,14 @@ export default function OrdersFresh() {
     return date.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined });
   };
 
-  const displayedOrders = filteredByDate.length;
+  const displayedOrders = filteredByPicking.length;
   // Net Revenue excludes cancelled orders (they represent £0 actual revenue) - with null safety
-  const totalValue = filteredByDate
+  const totalValue = filteredByPicking
     .filter(o => (o.status || '').toLowerCase() !== 'cancelled')
     .reduce((sum, order) => sum + calculateNetAmount(order), 0);
   // Stats reflect the current tab's orders - with null safety
-  const paidOrders = filteredByDate.filter(o => (o.paymentStatus || '') === 'paid').length;
-  const unfulfilledOrders = filteredByDate.filter(o => UNFULFILLED_STATUSES.includes((o.status || '').toLowerCase())).length;
+  const paidOrders = filteredByPicking.filter(o => (o.paymentStatus || '') === 'paid').length;
+  const unfulfilledOrders = filteredByPicking.filter(o => UNFULFILLED_STATUSES.includes((o.status || '').toLowerCase())).length;
   
   // Tab badge counts come from server stats (accurate across all pages)
   const activeCount = orderStats?.activeCount ?? 0;
@@ -892,7 +905,7 @@ export default function OrdersFresh() {
       <div className="flex border-b border-slate-200">
         {customerIdFilter && (
           <button
-            onClick={() => { setArchiveTab('all'); deliveryTypeRef.current = ''; paymentStatusRef.current = ''; statusFilterRef.current = ''; setStatusFilter(''); setPaymentStatusFilter(''); setDeliveryTypeFilter(''); setDateRangeFilter(''); loadOrders(1, searchQuery, 'all'); if (!customerIdFilter) loadOrderStats('all'); }}
+            onClick={() => { setArchiveTab('all'); deliveryTypeRef.current = ''; paymentStatusRef.current = ''; statusFilterRef.current = ''; setStatusFilter(''); setPaymentStatusFilter(''); setDeliveryTypeFilter(''); setDateRangeFilter(''); setPickingStatusFilter(''); loadOrders(1, searchQuery, 'all'); if (!customerIdFilter) loadOrderStats('all'); }}
             className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
               archiveTab === 'all'
                 ? 'border-emerald-600 text-emerald-600'
@@ -906,7 +919,7 @@ export default function OrdersFresh() {
           </button>
         )}
         <button
-          onClick={() => { setArchiveTab('active'); deliveryTypeRef.current = ''; paymentStatusRef.current = ''; statusFilterRef.current = ''; setStatusFilter(''); setPaymentStatusFilter(''); setDeliveryTypeFilter(''); setDateRangeFilter(''); loadOrders(1, searchQuery, 'active'); if (!customerIdFilter) loadOrderStats('active'); }}
+          onClick={() => { setArchiveTab('active'); deliveryTypeRef.current = ''; paymentStatusRef.current = ''; statusFilterRef.current = ''; setStatusFilter(''); setPaymentStatusFilter(''); setDeliveryTypeFilter(''); setDateRangeFilter(''); setPickingStatusFilter(''); loadOrders(1, searchQuery, 'active'); if (!customerIdFilter) loadOrderStats('active'); }}
           className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
             archiveTab === 'active'
               ? 'border-emerald-600 text-emerald-600'
@@ -919,7 +932,7 @@ export default function OrdersFresh() {
           </span>
         </button>
         <button
-          onClick={() => { setArchiveTab('archived'); deliveryTypeRef.current = ''; paymentStatusRef.current = ''; statusFilterRef.current = ''; setStatusFilter(''); setPaymentStatusFilter(''); setDeliveryTypeFilter(''); setDateRangeFilter(''); loadOrders(1, searchQuery, 'archived'); if (!customerIdFilter) loadOrderStats('archived'); }}
+          onClick={() => { setArchiveTab('archived'); deliveryTypeRef.current = ''; paymentStatusRef.current = ''; statusFilterRef.current = ''; setStatusFilter(''); setPaymentStatusFilter(''); setDeliveryTypeFilter(''); setDateRangeFilter(''); setPickingStatusFilter(''); loadOrders(1, searchQuery, 'archived'); if (!customerIdFilter) loadOrderStats('archived'); }}
           className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
             archiveTab === 'archived'
               ? 'border-emerald-600 text-emerald-600'
@@ -1006,8 +1019,19 @@ export default function OrdersFresh() {
             <option value="30">Last 30 days</option>
             <option value="90">Last 90 days</option>
           </select>
+
+          <select
+            className="flex-1 min-w-[130px] sm:flex-none px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 bg-white"
+            value={pickingStatusFilter}
+            onChange={(e) => setPickingStatusFilter(e.target.value)}
+          >
+            <option value="">All Picking</option>
+            <option value="not_started">Not Started ({pickingCounts.not_started})</option>
+            <option value="picking">Picking ({pickingCounts.picking})</option>
+            <option value="packed">Packed ({pickingCounts.packed})</option>
+          </select>
           
-          {(searchQuery || statusFilter || paymentStatusFilter || deliveryTypeFilter || dateRangeFilter) && (
+          {(searchQuery || statusFilter || paymentStatusFilter || deliveryTypeFilter || dateRangeFilter || pickingStatusFilter) && (
             <Button
               variant="ghost"
               size="sm"
@@ -1020,6 +1044,7 @@ export default function OrdersFresh() {
                 setPaymentStatusFilter('');
                 setDeliveryTypeFilter('');
                 setDateRangeFilter('');
+                setPickingStatusFilter('');
                 loadOrders(1, '');
               }}
               className="text-sm whitespace-nowrap"
@@ -1179,7 +1204,7 @@ export default function OrdersFresh() {
           <CardTitle className="text-lg">Recent Orders</CardTitle>
         </CardHeader>
         <CardContent>
-          {filteredByDate.length === 0 ? (
+          {filteredByPicking.length === 0 ? (
             <div className="text-center py-8">
               <Package className="h-12 w-12 mx-auto text-gray-400 mb-4" />
               <p className="text-gray-500">
@@ -1208,7 +1233,7 @@ export default function OrdersFresh() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredByDate.slice(0, 50).map((order, index, arr) => {
+                  {filteredByPicking.slice(0, 50).map((order, index, arr) => {
                     const currentLabel = order.createdAt ? getDateLabel(order.createdAt) : '';
                     const prevLabel = index > 0 && arr[index - 1].createdAt ? getDateLabel(arr[index - 1].createdAt) : '';
                     const showSeparator = index === 0 || currentLabel !== prevLabel;
@@ -1376,7 +1401,7 @@ export default function OrdersFresh() {
               
               {/* Mobile Cards */}
               <div className="lg:hidden space-y-3">
-                {filteredByStatus.slice(0, 50).map((order, index, arr) => {
+                {filteredByPicking.slice(0, 50).map((order, index, arr) => {
                   const currentLabel = order.createdAt ? getDateLabel(order.createdAt) : '';
                   const prevLabel = index > 0 && arr[index - 1].createdAt ? getDateLabel(arr[index - 1].createdAt) : '';
                   const showSeparator = index === 0 || currentLabel !== prevLabel;
