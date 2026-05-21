@@ -436,9 +436,9 @@ export default function WholesalerDashboard() {
     } else {
     }
 
-    // Fallback to clipboard copying
+    // Fallback to clipboard copying — copy just the URL so it opens correctly when pasted
     try {
-      await navigator.clipboard.writeText(`${businessName}\n${customerPortalUrl}\n\nCheck out ${businessName} - browse our wholesale products and place orders directly!`);
+      await navigator.clipboard.writeText(customerPortalUrl);
       toast({
         title: "Store Link Copied!",
         description: "Store link copied to clipboard. Paste it anywhere to share!",

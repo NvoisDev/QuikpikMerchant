@@ -426,8 +426,16 @@ export function registerBrowsingRoutes(app: Express): void {
       // correct fee without a separate /api/config/customer-fee round-trip.
       const effectiveFeeConfig = await getFeeConfigForWholesaler(id);
 
+      // Replace the raw logoUrl (may be a large base64 data URL) with the
+      // proper serving endpoint so the response stays small and the image loads
+      // reliably on the WelcomePage and customer portal.
+      const resolvedLogoUrl = wholesaler.logoType === 'custom'
+        ? `/api/logo/${wholesaler.id}`
+        : (wholesaler.logoUrl && String(wholesaler.logoUrl).startsWith('http') ? wholesaler.logoUrl : null);
+
       res.json({
         ...wholesaler,
+        logoUrl: resolvedLogoUrl,
         effectiveFeeConfig: {
           percentage: effectiveFeeConfig.percentage,
           fixed: effectiveFeeConfig.fixed,
