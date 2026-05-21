@@ -408,7 +408,9 @@ export default function WholesalerDashboard() {
   const handleShareStore = async () => {
     // Use team member's parent wholesaler ID if user is team member
     const effectiveUserId = user?.role === 'team_member' && user?.wholesalerId ? user.wholesalerId : user?.id;
-    const customerPortalUrl = `https://quikpik.app/customer/${effectiveUserId}`;
+    // Prefer the custom store slug URL when set — gives a cleaner shareable link
+    const storeIdentifier = (user?.role === 'team_member' ? null : user?.storeSlug) || effectiveUserId;
+    const customerPortalUrl = `https://quikpik.app/customer/${storeIdentifier}`;
     const businessName = user?.businessName || "My Store";
     
     const shareData = {

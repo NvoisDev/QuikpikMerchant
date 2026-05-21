@@ -123,6 +123,17 @@ export function registerBrowsingRoutes(app: Express): void {
         return res.status(400).json({ error: 'Wholesaler ID is required' });
       }
 
+      // Resolve store slug → real user ID so custom store URLs work correctly.
+      // The param may be a slug (e.g. "my-shop") or the canonical user ID — handle both.
+      if (!wholesalerId.startsWith('user_')) {
+        const slugResult = await db.execute(
+          sql`SELECT id FROM users WHERE store_slug = ${wholesalerId} AND role = 'wholesaler' LIMIT 1`
+        );
+        if (slugResult.rows.length > 0) {
+          wholesalerId = (slugResult.rows[0] as any).id as string;
+        }
+      }
+
       // 🔒 SUBSCRIPTION FEATURE GATING: Check wholesaler's subscription limits
       const limits = await getUserPlanLimits(wholesalerId);
       const productLimit = limits.limits.products;
