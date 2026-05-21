@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Store, ShieldCheck, MessageCircle, CheckCircle2, Tag, LogIn } from "lucide-react";
+import { Loader2, Store, ShieldCheck, MessageCircle, CheckCircle2, Tag, LogIn, UserPlus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { CountryCodePicker, detectCountryDialCode } from "@/components/ui/country-code-picker";
 import { formatPhoneToInternational } from "@shared/phone-utils";
@@ -83,6 +83,11 @@ export default function WelcomePage() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
   const phoneRef = useRef<HTMLInputElement>(null);
+  const formRef = useRef<HTMLDivElement>(null);
+
+  const scrollToForm = () => {
+    formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
 
   // Check for existing session — redirect if already authenticated
   useEffect(() => {
@@ -137,7 +142,6 @@ export default function WelcomePage() {
       })
       .catch((err) => {
         console.error('[WelcomePage] failed to load preview products:', err);
-        toast({ title: "Couldn't load products", description: "Product preview failed to load.", variant: "destructive" });
       });
   }, [wholesalerId]);
 
@@ -241,7 +245,6 @@ export default function WelcomePage() {
       {/* Header */}
       <div className="bg-gradient-to-br from-green-600 to-emerald-700 px-4 pt-10 pb-8 text-white text-center">
         <div className="max-w-md mx-auto">
-          {/* Wholesaler logo / initials */}
           {wholesaler?.logoUrl ? (
             <img
               src={wholesaler.logoUrl}
@@ -278,14 +281,45 @@ export default function WelcomePage() {
         </div>
       </div>
 
+      {/* Primary CTA — visible immediately below the header */}
+      <div className="bg-white px-4 pt-5 pb-4 border-b border-gray-100">
+        <div className="max-w-md mx-auto">
+          <div className="flex gap-3">
+            <Button
+              variant="outline"
+              className="flex-1 h-12 border-green-600 text-green-700 hover:bg-green-50 font-semibold rounded-xl text-sm gap-2"
+              onClick={() => setLocation(`/store/${wholesalerId}`)}
+            >
+              <LogIn className="h-4 w-4" />
+              Sign In
+            </Button>
+            <Button
+              className="flex-1 h-12 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-xl text-sm gap-2"
+              onClick={scrollToForm}
+            >
+              <UserPlus className="h-4 w-4" />
+              Request Access
+            </Button>
+          </div>
+          <p className="text-xs text-gray-400 text-center mt-2">
+            Already a customer? Sign in. New here? Request access below.
+          </p>
+        </div>
+      </div>
+
       {/* Product Preview */}
       {previewProducts.length > 0 && (
         <div className="px-4 py-6 bg-gray-50">
           <div className="max-w-md mx-auto">
-            <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-xl px-4 py-3 mb-4">
+            {/* "Sign up" banner — clicking scrolls to form */}
+            <button
+              onClick={scrollToForm}
+              className="w-full flex items-center gap-2 bg-green-50 border border-green-200 rounded-xl px-4 py-3 mb-4 text-left hover:bg-green-100 transition-colors"
+            >
               <Tag className="h-4 w-4 text-green-600 flex-shrink-0" />
-              <p className="text-sm font-medium text-green-800">Sign up to see prices and place orders.</p>
-            </div>
+              <p className="text-sm font-medium text-green-800 flex-1">Sign up to see prices and place orders.</p>
+              <span className="text-xs font-semibold text-green-700 underline underline-offset-2">Get access →</span>
+            </button>
 
             {/* Category filter chips */}
             {(() => {
@@ -348,7 +382,13 @@ export default function WelcomePage() {
                       {product.category && (
                         <p className="text-xs text-gray-400 truncate mt-0.5">{product.category}</p>
                       )}
-                      <p className="text-xs text-green-600 font-semibold mt-1">Sign up to see price</p>
+                      {/* Tapping "Sign up to see price" scrolls to the form */}
+                      <button
+                        onClick={scrollToForm}
+                        className="text-xs text-green-600 font-semibold mt-1 hover:underline"
+                      >
+                        Sign up to see price
+                      </button>
                     </div>
                   </div>
                 );
@@ -358,31 +398,8 @@ export default function WelcomePage() {
         </div>
       )}
 
-      {/* Sign-in prompt for existing customers */}
-      <div className="px-4 pt-6 pb-2">
-        <div className="max-w-md mx-auto">
-          <div className="bg-white border border-gray-200 rounded-2xl shadow-sm flex items-center gap-4 px-5 py-4">
-            <div className="w-9 h-9 rounded-full bg-green-50 flex items-center justify-center flex-shrink-0">
-              <LogIn className="h-[18px] w-[18px] text-green-600" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-gray-900 leading-tight">Already have an account?</p>
-              <p className="text-xs text-gray-500 mt-0.5">Sign in to see prices and place orders.</p>
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              className="flex-shrink-0 border-green-600 text-green-700 hover:bg-green-50 font-semibold rounded-xl"
-              onClick={() => setLocation(`/store/${wholesalerId}`)}
-            >
-              Sign In
-            </Button>
-          </div>
-        </div>
-      </div>
-
-      {/* Form */}
-      <div className="flex-1 px-4 py-6">
+      {/* Registration form */}
+      <div ref={formRef} className="flex-1 px-4 py-6 scroll-mt-4">
         <div className="max-w-md mx-auto">
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
             <h2 className="text-lg font-bold text-gray-900 mb-1">Request Account Access</h2>
@@ -428,7 +445,6 @@ export default function WelcomePage() {
                     onChange={(e) => setPhoneLocal(e.target.value)}
                     className="flex-1 h-12 rounded-xl border-gray-200 focus:border-green-500 focus:ring-green-500 text-base"
                     autoComplete="tel-national"
-                    autoFocus
                     required
                   />
                 </div>
@@ -507,7 +523,7 @@ export default function WelcomePage() {
               <Button
                 type="submit"
                 disabled={isSubmitting || !name.trim() || phoneLocal.replace(/\D/g, "").length < 7}
-                className="w-full h-13 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-xl text-base mt-2 h-12"
+                className="w-full h-12 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-xl text-base mt-2"
               >
                 {isSubmitting ? (
                   <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Sending Request…</>
@@ -516,6 +532,17 @@ export default function WelcomePage() {
                 )}
               </Button>
 
+              {/* Sign-in reminder at bottom of form */}
+              <p className="text-center text-xs text-gray-400 pt-1">
+                Already a customer?{" "}
+                <button
+                  type="button"
+                  onClick={() => setLocation(`/store/${wholesalerId}`)}
+                  className="text-green-600 font-semibold hover:underline"
+                >
+                  Sign in here
+                </button>
+              </p>
             </form>
           </div>
         </div>

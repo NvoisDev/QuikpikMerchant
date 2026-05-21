@@ -438,16 +438,20 @@ export default function WholesalerDashboard() {
     }
 
     // Fallback to clipboard copying — copy just the URL so it opens correctly when pasted
+    const noSlugHint = !user?.storeSlug
+      ? " Set a custom store URL in Settings for a cleaner link."
+      : "";
     try {
       await navigator.clipboard.writeText(customerPortalUrl);
       toast({
         title: "Store Link Copied!",
-        description: "Store link copied to clipboard. Paste it anywhere to share!",
+        description: `Store link copied to clipboard. Paste it anywhere to share!${noSlugHint}`,
+        duration: noSlugHint ? 6000 : 3000,
       });
     } catch (error) {
       toast({
         title: "Share Store",
-        description: `Copy this link: ${customerPortalUrl}`,
+        description: `Copy this link: ${customerPortalUrl}${noSlugHint}`,
         variant: "default",
         duration: 8000,
       });
