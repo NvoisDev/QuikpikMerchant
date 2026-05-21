@@ -60,6 +60,7 @@ interface PLProduct {
   name: string;
   price: string;
   palletPrice?: string | null;
+  status?: string;
 }
 
 interface PriceListFormInput {
@@ -568,7 +569,7 @@ export function PriceListManagementDialog({
                                         </span>
                                       )}
                                       {!hasFixed && !hasPct && (
-                                        <span className="text-muted-foreground italic">no price set</span>
+                                        <span className="text-muted-foreground italic">standard price</span>
                                       )}
                                     </div>
                                   );
@@ -805,19 +806,24 @@ export function PriceListManagementDialog({
                   onChange={e => setPlProductSearch(e.target.value)} className="mt-1" />
                 {plProductSearch && (
                   <div className="border rounded-md mt-1 max-h-40 overflow-y-auto bg-white shadow-sm">
-                    {productsForPL
-                      .filter(p => p.name?.toLowerCase().includes(plProductSearch.toLowerCase()) && !priceListItems.some(i => i.productId === p.id))
-                      .slice(0, 8)
-                      .map(p => (
+                    {(() => {
+                      const searchResults = productsForPL
+                        .filter(p =>
+                          p.status === 'active' &&
+                          p.name?.toLowerCase().includes(plProductSearch.toLowerCase()) &&
+                          !priceListItems.some(i => i.productId === p.id)
+                        )
+                        .slice(0, 8);
+                      return searchResults.length === 0 ? (
+                        <div className="px-3 py-2 text-sm text-muted-foreground">No matching active products to add</div>
+                      ) : searchResults.map(p => (
                         <div key={p.id} className="flex items-center justify-between px-3 py-2 hover:bg-gray-50 cursor-pointer text-sm"
                           onClick={() => { addProductToPL(p); setPlProductSearch(""); }}>
                           <span>{p.name}</span>
                           <span className="text-muted-foreground">{formatMoney(p.price || "0")}</span>
                         </div>
-                      ))}
-                    {productsForPL.filter(p => p.name?.toLowerCase().includes(plProductSearch.toLowerCase()) && !priceListItems.some(i => i.productId === p.id)).length === 0 && (
-                      <div className="px-3 py-2 text-sm text-muted-foreground">No more products to add</div>
-                    )}
+                      ));
+                    })()}
                   </div>
                 )}
               </div>
@@ -826,7 +832,7 @@ export function PriceListManagementDialog({
                 <div className="text-center py-8 text-muted-foreground text-sm">No products added yet. Search above to add products.</div>
               ) : (
                 <div className="space-y-2">
-                  <p className="text-xs text-muted-foreground">Set a fixed price OR a % discount for each product (not both).</p>
+                  <p className="text-xs text-muted-foreground">Set a fixed price OR a % discount. Leave both blank to use the standard price.</p>
                   {priceListItems.map((item) => {
                     const product = item.product;
                     const standardPrice = parseFloat(product?.price || "0");
@@ -857,14 +863,18 @@ export function PriceListManagementDialog({
                               disabled={!!item.customPrice} />
                           </div>
                         </div>
-                        {(item.customPrice || item.discountPercentage) && (
+                        {item.customPrice && (
                           <p className="text-xs text-green-700 mt-1">
-                            Customer price: {formatMoney(
-                              item.customPrice
-                                ? parseFloat(item.customPrice)
-                                : (standardPrice * (1 - parseFloat(item.discountPercentage) / 100))
-                            )}
+                            Customer price: {formatMoney(parseFloat(item.customPrice) || 0)}
                           </p>
+                        )}
+                        {item.discountPercentage && !item.customPrice && (
+                          <p className="text-xs text-green-700 mt-1">
+                            Customer price: {formatMoney(standardPrice * (1 - parseFloat(item.discountPercentage) / 100))}
+                          </p>
+                        )}
+                        {!item.customPrice && !item.discountPercentage && (
+                          <p className="text-xs text-muted-foreground mt-1">Standard price will apply</p>
                         )}
                         {product?.palletPrice != null && (
                           <div className="mt-2 pt-2 border-t border-gray-200">
@@ -893,27 +903,14 @@ export function PriceListManagementDialog({
               <Button className="w-full bg-green-600 hover:bg-green-700"
                 disabled={savePLItemsMutation.isPending || !managingPriceList}
                 onClick={() => {
-                  const incomplete = priceListItems
-                    .filter(i => !i.customPrice?.trim() && !i.discountPercentage?.trim())
-                    .map(i => i.productId);
-                  if (incomplete.length > 0) {
-                    setIncompletePLItems(new Set(incomplete));
-                    toast({
-                      title: "Pricing required",
-                      description: `${incomplete.length} product${incomplete.length > 1 ? "s" : ""} ${incomplete.length > 1 ? "are" : "is"} missing a fixed price or discount. Please complete pricing before saving.`,
-                      variant: "destructive",
-                    });
-                    return;
-                  }
                   setIncompletePLItems(new Set());
                   const items = priceListItems.map(i => ({
                     productId: i.productId,
-                    product: i.product,
-                    customPrice: i.customPrice || "",
-                    discountPercentage: i.discountPercentage || "",
-                    customPalletPrice: i.customPalletPrice || "",
+                    customPrice: i.customPrice?.trim() || null,
+                    discountPercentage: i.discountPercentage?.trim() || null,
+                    customPalletPrice: i.customPalletPrice?.trim() || null,
                   }));
-                  savePLItemsMutation.mutate({ id: managingPriceList!.id, items });
+                  savePLItemsMutation.mutate({ id: managingPriceList!.id, items: items as any });
                 }}>
                 {savePLItemsMutation.isPending ? "Saving..." : "Save Products"}
               </Button>
@@ -1062,7 +1059,7 @@ export function PriceListManagementDialog({
                                       {formatMoney(standard)}
                                     </td>
                                     <td className="px-3 py-2.5 text-right font-semibold text-green-700">
-                                      {priced ? formatMoney(custom) : <span className="text-muted-foreground font-normal text-xs italic">no price set</span>}
+                                      {priced ? formatMoney(custom) : <span className="text-muted-foreground font-normal text-xs italic">standard price</span>}
                                     </td>
                                     <td className="px-3 py-2.5 text-right">
                                       {priced && saving > 0 ? (
