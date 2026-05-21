@@ -161,11 +161,17 @@ async function sendPaymentReminder(
   const wholesalerResult = await db.select({
     businessName: users.businessName,
     email: users.email,
+    notificationPreferences: users.notificationPreferences,
   })
   .from(users)
   .where(sql`${users.id} = ${order.wholesalerId}`)
   .limit(1);
   
+  if (!wholesalerResult[0]) return;
+
+  const notifPrefs = (wholesalerResult[0] as any).notificationPreferences || {};
+  if (notifPrefs.paymentReminderEnabled === false) return;
+
   const businessName = wholesalerResult[0]?.businessName || 'Your supplier';
   const outstandingAmount = parseFloat(order.amountOutstanding || '0');
   const formattedDueDate = dueDate.toLocaleDateString('en-GB', { 

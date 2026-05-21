@@ -655,6 +655,59 @@ export function registerAuthCoreRoutes(app: Express): void {
     }
   });
 
+  // GET /api/settings/notification-preferences
+  app.get('/api/settings/notification-preferences', requireAuth, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user) return res.status(404).json({ message: 'User not found' });
+      const prefs = (user.notificationPreferences as Record<string, unknown>) || {};
+      res.json({
+        stockAlertFrequency: prefs.stockAlertFrequency ?? 'daily',
+        stockAlertChannel: prefs.stockAlertChannel ?? 'email',
+        paymentReminderEnabled: prefs.paymentReminderEnabled !== false,
+        promotionReminderEnabled: prefs.promotionReminderEnabled !== false,
+      });
+    } catch (error) {
+      console.error('Error fetching notification preferences:', error);
+      res.status(500).json({ message: 'Failed to fetch notification preferences' });
+    }
+  });
+
+  // PATCH /api/settings/notification-preferences
+  app.patch('/api/settings/notification-preferences', requireAuth, requireNotViewer, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user) return res.status(404).json({ message: 'User not found' });
+
+      const { stockAlertFrequency, stockAlertChannel, paymentReminderEnabled, promotionReminderEnabled } = req.body;
+
+      const validFrequencies = ['daily', 'weekly', 'critical_only'];
+      const validChannels = ['email', 'sms', 'both', 'off'];
+
+      if (stockAlertFrequency !== undefined && !validFrequencies.includes(stockAlertFrequency)) {
+        return res.status(400).json({ message: 'Invalid stockAlertFrequency' });
+      }
+      if (stockAlertChannel !== undefined && !validChannels.includes(stockAlertChannel)) {
+        return res.status(400).json({ message: 'Invalid stockAlertChannel' });
+      }
+
+      const existing = (user.notificationPreferences as Record<string, unknown>) || {};
+      const updated = {
+        ...existing,
+        ...(stockAlertFrequency !== undefined && { stockAlertFrequency }),
+        ...(stockAlertChannel !== undefined && { stockAlertChannel }),
+        ...(paymentReminderEnabled !== undefined && { paymentReminderEnabled: Boolean(paymentReminderEnabled) }),
+        ...(promotionReminderEnabled !== undefined && { promotionReminderEnabled: Boolean(promotionReminderEnabled) }),
+      };
+
+      await storage.updateUserSettings(req.user.id, { notificationPreferences: updated });
+      res.json({ success: true, preferences: updated });
+    } catch (error) {
+      console.error('Error saving notification preferences:', error);
+      res.status(500).json({ message: 'Failed to save notification preferences' });
+    }
+  });
+
   // PATCH /api/settings/default-low-stock-threshold
   app.patch('/api/settings/default-low-stock-threshold', requireAuth, requireNotViewer, async (req: any, res) => {
     try {

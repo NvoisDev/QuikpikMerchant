@@ -18,6 +18,16 @@ export interface StockAlert {
   suggestedReorderQuantity: number;
 }
 
+type StockAlertFrequency = 'daily' | 'weekly' | 'critical_only';
+type StockAlertChannel = 'email' | 'sms' | 'both' | 'off';
+
+interface NotificationPrefs {
+  stockAlertFrequency?: StockAlertFrequency;
+  stockAlertChannel?: StockAlertChannel;
+  lastWeeklyStockAlertAt?: string | null;
+  [key: string]: unknown;
+}
+
 export class StockAlertService {
   /**
    * Check all products for low stock and send alerts to wholesalers
@@ -56,6 +66,8 @@ export class StockAlertService {
 
       // Group products by wholesaler
       const alertsByWholesaler = new Map<string, StockAlert[]>();
+      const wholesalerPrefs = new Map<string, NotificationPrefs>();
+      const wholesalerData = new Map<string, any>();
 
       for (const product of lowStockProducts) {
         const wholesaler = await db
@@ -66,16 +78,32 @@ export class StockAlertService {
 
         if (wholesaler.length === 0) continue;
 
-        const wholesalerData = wholesaler[0];
+        const wData = wholesaler[0];
+        wholesalerData.set(product.wholesalerId, wData);
+
+        const prefs: NotificationPrefs = (wData.notificationPreferences as NotificationPrefs) || {};
+        wholesalerPrefs.set(product.wholesalerId, prefs);
+
+        const channel: StockAlertChannel = prefs.stockAlertChannel || 'email';
+        if (channel === 'off') continue;
+
+        const frequency: StockAlertFrequency = prefs.stockAlertFrequency || 'daily';
+
+        // Critical only: skip products that aren't out or critically low (≤5 and ≤ moq)
+        if (frequency === 'critical_only') {
+          const isCritical = (product.stock || 0) <= 0 || ((product.stock || 0) <= 5 && (product.stock || 0) <= (product.moq || 1));
+          if (!isCritical) continue;
+        }
+
         const suggestedReorderQuantity = Math.max(
-          (product.moq || 10) * 3, // 3x MOQ as suggested reorder
-          100 // Minimum suggestion of 100 units
+          (product.moq || 10) * 3,
+          100
         );
 
         const threshold = Math.max(product.moq || 1, product.lowStockThreshold || 50);
-        const logoUrl = wholesalerData.logoType === 'custom' && wholesalerData.logoUrl
+        const logoUrl = wData.logoType === 'custom' && wData.logoUrl
           ? `https://quikpik.app/api/logo/${product.wholesalerId}`
-          : (wholesalerData.logoUrl?.startsWith('http') ? wholesalerData.logoUrl : undefined);
+          : (wData.logoUrl?.startsWith('http') ? wData.logoUrl : undefined);
 
         const alert: StockAlert = {
           productId: product.id,
@@ -83,9 +111,9 @@ export class StockAlertService {
           currentStock: product.stock || 0,
           minimumThreshold: threshold,
           wholesalerId: product.wholesalerId,
-          wholesalerName: wholesalerData.businessName || `${wholesalerData.firstName || ''} ${wholesalerData.lastName || ''}`.trim(),
-          wholesalerEmail: wholesalerData.email || undefined,
-          wholesalerPhone: wholesalerData.phoneNumber || undefined,
+          wholesalerName: wData.businessName || `${wData.firstName || ''} ${wData.lastName || ''}`.trim(),
+          wholesalerEmail: wData.email || undefined,
+          wholesalerPhone: wData.phoneNumber || undefined,
           wholesalerLogoUrl: logoUrl,
           suggestedReorderQuantity
         };
@@ -100,8 +128,28 @@ export class StockAlertService {
 
       for (const entry of Array.from(alertsByWholesaler.entries())) {
         const [wholesalerId, alerts] = entry;
-        await this.sendStockAlerts(alerts);
+        const prefs = wholesalerPrefs.get(wholesalerId) || {};
+        const frequency: StockAlertFrequency = prefs.stockAlertFrequency || 'daily';
+
+        // Weekly cadence check: skip if already sent within 7 days
+        if (frequency === 'weekly') {
+          const lastSent = prefs.lastWeeklyStockAlertAt ? new Date(prefs.lastWeeklyStockAlertAt) : null;
+          const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+          if (lastSent && lastSent > sevenDaysAgo) {
+            continue;
+          }
+        }
+
+        const channel: StockAlertChannel = prefs.stockAlertChannel || 'email';
+        await this.sendStockAlerts(alerts, channel);
         allAlertedProductIds.push(...alerts.map(a => a.productId));
+
+        // Update lastWeeklyStockAlertAt for weekly cadence
+        if (frequency === 'weekly') {
+          const wData = wholesalerData.get(wholesalerId);
+          const updatedPrefs = { ...(wData?.notificationPreferences || {}), lastWeeklyStockAlertAt: new Date().toISOString() };
+          await db.update(users).set({ notificationPreferences: updatedPrefs }).where(eq(users.id, wholesalerId));
+        }
       }
 
       if (allAlertedProductIds.length > 0) {
@@ -117,24 +165,23 @@ export class StockAlertService {
   }
 
   /**
-   * Send stock alerts to a wholesaler via multiple channels, and to all active team members
+   * Send stock alerts to a wholesaler via selected channel, and to all active team members
    */
-  private async sendStockAlerts(alerts: StockAlert[]): Promise<void> {
+  private async sendStockAlerts(alerts: StockAlert[], channel: StockAlertChannel): Promise<void> {
     if (alerts.length === 0) return;
 
-    const wholesaler = alerts[0]; // All alerts are for the same wholesaler
-    const productCount = alerts.length;
+    const wholesaler = alerts[0];
 
-    // Generate alert messages
     const messages = this.generateAlertMessages(alerts);
 
-    // Send to account owner via all available channels
+    const sendEmail = channel === 'email' || channel === 'both';
+    const sendSms = channel === 'sms' || channel === 'both';
+
     await Promise.allSettled([
-      this.sendEmailAlert(wholesaler, messages.email),
-      this.sendWhatsAppAlert(wholesaler, messages.whatsapp)
+      sendEmail ? this.sendEmailAlert(wholesaler, messages.email) : Promise.resolve(),
+      sendSms ? this.sendWhatsAppAlert(wholesaler, messages.whatsapp) : Promise.resolve(),
     ]);
 
-    // Send to active team members (email always; SMS if they have a phone number)
     try {
       const members = await db
         .select({
@@ -149,9 +196,11 @@ export class StockAlertService {
         ));
 
       for (const member of members) {
-        const memberAlertOverride = { ...wholesaler, wholesalerEmail: member.email };
-        await this.sendEmailAlert(memberAlertOverride, messages.email);
-        if (member.phoneNumber) {
+        if (sendEmail) {
+          const memberAlertOverride = { ...wholesaler, wholesalerEmail: member.email };
+          await this.sendEmailAlert(memberAlertOverride, messages.email);
+        }
+        if (sendSms && member.phoneNumber) {
           await this.sendWhatsAppAlert({ ...wholesaler, wholesalerPhone: member.phoneNumber }, messages.whatsapp);
         }
       }
@@ -168,8 +217,7 @@ export class StockAlertService {
     const wholesaler = alerts[0];
     const productCount = alerts.length;
     const totalSuggestedValue = alerts.reduce((sum, alert) => {
-      // Estimate value by getting price from products (this is simplified)
-      return sum + (alert.suggestedReorderQuantity * 10); // Rough estimate
+      return sum + (alert.suggestedReorderQuantity * 10);
     }, 0);
 
     const urgentProducts = alerts.filter(alert => alert.currentStock <= 5);
@@ -225,7 +273,7 @@ export class StockAlertService {
         to: wholesaler.wholesalerEmail,
         from: 'hello@quikpik.co',
         subject: emailContent.subject,
-        text: emailContent.body.replace(/<[^>]*>/g, ''), // Strip HTML for text version
+        text: emailContent.body.replace(/<[^>]*>/g, ''),
         html: emailContent.body
       });
     } catch (error) {

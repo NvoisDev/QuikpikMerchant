@@ -324,6 +324,12 @@ export class PromotionNotificationService {
         return;
       }
 
+      const [wRow] = await db.select({ notificationPreferences: users.notificationPreferences }).from(users).where(eq(users.id, wholesalerId)).limit(1);
+      const notifPrefs = (wRow?.notificationPreferences as any) || {};
+      if (notifPrefs.promotionReminderEnabled === false) {
+        return;
+      }
+
       const customers = await storage.getAllCustomers(wholesalerId);
 
       if (customers.length === 0) {

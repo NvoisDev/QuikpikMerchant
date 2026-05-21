@@ -14,6 +14,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 
 interface BusinessProfile {
   id: number;
@@ -624,6 +626,46 @@ export default function Settings() {
   const tabFromUrl = urlParams.get('tab');
   const [activeTab, setActiveTab] = useState(tabFromUrl || "account");
   const [thresholdInput, setThresholdInput] = useState("");
+
+  const { data: notifPrefs, isLoading: notifPrefsLoading } = useQuery<{
+    stockAlertFrequency: string;
+    stockAlertChannel: string;
+    paymentReminderEnabled: boolean;
+    promotionReminderEnabled: boolean;
+  }>({
+    queryKey: ["/api/settings/notification-preferences"],
+  });
+
+  const [notifForm, setNotifForm] = useState({
+    stockAlertFrequency: 'daily',
+    stockAlertChannel: 'email',
+    paymentReminderEnabled: true,
+    promotionReminderEnabled: true,
+  });
+
+  useEffect(() => {
+    if (notifPrefs) {
+      setNotifForm({
+        stockAlertFrequency: notifPrefs.stockAlertFrequency || 'daily',
+        stockAlertChannel: notifPrefs.stockAlertChannel || 'email',
+        paymentReminderEnabled: notifPrefs.paymentReminderEnabled !== false,
+        promotionReminderEnabled: notifPrefs.promotionReminderEnabled !== false,
+      });
+    }
+  }, [notifPrefs]);
+
+  const saveNotifPrefsMutation = useMutation({
+    mutationFn: async (prefs: typeof notifForm) => {
+      const r = await apiRequest("PATCH", "/api/settings/notification-preferences", prefs);
+      if (!r.ok) { const e = await r.json(); throw new Error(e.message || "Failed to save"); }
+      return r.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/settings/notification-preferences"] });
+      toast({ title: "Notification preferences saved" });
+    },
+    onError: (e: Error) => toast({ title: e.message, variant: "destructive" }),
+  });
 
   const downloadQR = () => {
     const canvas = qrRef.current;
@@ -2043,14 +2085,91 @@ export default function Settings() {
                     </div>
                   </div>
 
-                  {/* Other notifications */}
-                  <div className="space-y-3">
-                    <h4 className="font-semibold text-gray-800 text-sm sm:text-base">Other Notifications</h4>
-                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 sm:p-4">
-                      <p className="text-sm text-gray-600">
-                        Order confirmations, payment receipts, and WhatsApp broadcast messages are sent automatically — no configuration needed.
-                      </p>
+                  {/* Stock alert controls */}
+                  <div className="border border-gray-200 rounded-lg divide-y divide-gray-100">
+                    <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-sm font-medium text-gray-800 mb-1">Alert frequency</p>
+                        <p className="text-xs text-gray-500 mb-2">How often you want to receive stock alerts</p>
+                        <Select
+                          value={notifForm.stockAlertFrequency}
+                          onValueChange={(v) => setNotifForm(f => ({ ...f, stockAlertFrequency: v }))}
+                          disabled={notifPrefsLoading}
+                        >
+                          <SelectTrigger className="w-full">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="daily">Daily — as soon as stock drops below threshold</SelectItem>
+                            <SelectItem value="weekly">Weekly — at most once every 7 days</SelectItem>
+                            <SelectItem value="critical_only">Critical only — only when stock hits zero or near-zero</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-800 mb-1">Alert channel</p>
+                        <p className="text-xs text-gray-500 mb-2">How you want to be notified</p>
+                        <Select
+                          value={notifForm.stockAlertChannel}
+                          onValueChange={(v) => setNotifForm(f => ({ ...f, stockAlertChannel: v }))}
+                          disabled={notifPrefsLoading}
+                        >
+                          <SelectTrigger className="w-full">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="email">Email only</SelectItem>
+                            <SelectItem value="sms">SMS / WhatsApp only</SelectItem>
+                            <SelectItem value="both">Both email and SMS</SelectItem>
+                            <SelectItem value="off">Off — no stock alerts</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
+                  </div>
+
+                  {/* Customer-facing automated messages */}
+                  <div className="space-y-3 pt-2">
+                    <div>
+                      <h4 className="font-semibold text-gray-800 text-sm sm:text-base">Automated Customer Messages</h4>
+                      <p className="text-xs text-gray-500 mt-0.5">These are sent automatically to your customers. Toggle them off to stop sending.</p>
+                    </div>
+                    <div className="border border-gray-200 rounded-lg divide-y divide-gray-100">
+                      <div className="flex items-center justify-between p-4">
+                        <div>
+                          <p className="text-sm font-medium text-gray-800">Payment reminders</p>
+                          <p className="text-xs text-gray-500 mt-0.5">Remind customers 3 days before, on the day, and when a balance payment becomes overdue</p>
+                        </div>
+                        <Switch
+                          checked={notifForm.paymentReminderEnabled}
+                          onCheckedChange={(v) => setNotifForm(f => ({ ...f, paymentReminderEnabled: v }))}
+                          disabled={notifPrefsLoading}
+                        />
+                      </div>
+                      <div className="flex items-center justify-between p-4">
+                        <div>
+                          <p className="text-sm font-medium text-gray-800">Promotion alerts</p>
+                          <p className="text-xs text-gray-500 mt-0.5">Notify customers when one of your promotions starts or ends today</p>
+                        </div>
+                        <Switch
+                          checked={notifForm.promotionReminderEnabled}
+                          onCheckedChange={(v) => setNotifForm(f => ({ ...f, promotionReminderEnabled: v }))}
+                          disabled={notifPrefsLoading}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end pt-1">
+                    <Button
+                      size="sm"
+                      onClick={() => saveNotifPrefsMutation.mutate(notifForm)}
+                      disabled={saveNotifPrefsMutation.isPending || notifPrefsLoading}
+                      className="flex items-center gap-1.5"
+                    >
+                      <Save className="h-3.5 w-3.5" />
+                      {saveNotifPrefsMutation.isPending ? "Saving..." : "Save preferences"}
+                    </Button>
                   </div>
                 </div>
               )}

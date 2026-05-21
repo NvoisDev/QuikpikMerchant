@@ -185,7 +185,12 @@ export const users = pgTable("users", {
     sms: true,
     orderUpdates: true,
     stockAlerts: true,
-    marketingEmails: false
+    marketingEmails: false,
+    stockAlertFrequency: 'daily',
+    stockAlertChannel: 'email',
+    paymentReminderEnabled: true,
+    promotionReminderEnabled: true,
+    lastWeeklyStockAlertAt: null
   }),
   
   storeTagline: varchar("store_tagline").default("Premium wholesale products"), // Customizable customer portal tagline
