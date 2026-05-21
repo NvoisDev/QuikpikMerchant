@@ -2205,8 +2205,9 @@ export default function Settings() {
                         <Info className="h-4 w-4 flex-shrink-0 mt-0.5 text-blue-500" />
                         <ul className="space-y-1 text-blue-700">
                           <li>• Stock levels are checked automatically every day at <strong>8 AM</strong></li>
-                          <li>• You receive an email when any product drops to or below its threshold</li>
-                          <li>• Each product can only trigger <strong>one alert per 24 hours</strong></li>
+                          <li>• <strong>Daily</strong> alerts send as soon as a product drops to or below its threshold</li>
+                          <li>• <strong>Weekly</strong> alerts send a single digest on your chosen day — each product can only appear once per calendar week</li>
+                          <li>• <strong>Critical only</strong> sends immediately for products at zero or critically low stock</li>
                         </ul>
                       </div>
 
