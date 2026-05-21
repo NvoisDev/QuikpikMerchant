@@ -415,7 +415,6 @@ export default function WholesalerDashboard() {
     
     const shareData = {
       title: `${businessName} - Wholesale Store`,
-      text: `Check out ${businessName}! Browse our wholesale products and place orders directly.`,
       url: customerPortalUrl,
     };
 
