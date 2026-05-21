@@ -7,11 +7,42 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { AlertTriangle, Package, Check, X, Settings, Eye, Info, Clock } from "lucide-react";
+import { AlertTriangle, Package, Check, X, Settings, Eye, Info, Clock, Calendar } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { formatDistanceToNow } from "date-fns";
 import { formatCurrency } from "@/lib/currencies";
+
+const ALERT_DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+function isThisCalendarWeek(date: Date): boolean {
+  const now = new Date();
+  const monday = new Date(now);
+  const dow = now.getDay();
+  monday.setDate(now.getDate() - (dow === 0 ? 6 : dow - 1));
+  monday.setHours(0, 0, 0, 0);
+  return date >= monday;
+}
+
+function getNextAlertDate(day: number, lastSentAt?: string | null): string {
+  const today = new Date();
+  const todayDay = today.getDay();
+  let daysUntil = day - todayDay;
+  if (daysUntil < 0) daysUntil += 7;
+  const alreadySentThisWeek = lastSentAt ? isThisCalendarWeek(new Date(lastSentAt)) : false;
+  if (daysUntil === 0 && !alreadySentThisWeek) return 'Today';
+  const offsetDays = (daysUntil === 0 && alreadySentThisWeek) ? 7 : daysUntil;
+  const next = new Date(today);
+  next.setDate(today.getDate() + offsetDays);
+  return `${ALERT_DAY_NAMES[day]} ${next.getDate()} ${MONTHS_SHORT[next.getMonth()]}`;
+}
+
+interface NotificationPreferences {
+  stockAlertFrequency: string;
+  stockAlertDay: number;
+  lastWeeklyStockAlertSentAt?: string | null;
+}
 
 interface ExpiringBatch {
   batchId: number;
@@ -72,6 +103,11 @@ export default function StockAlerts() {
   // Fetch user info for default threshold
   const { data: user } = useQuery<User>({
     queryKey: ['/api/auth/user'],
+  });
+
+  // Fetch notification preferences (for weekly alert schedule banner)
+  const { data: notifPrefs } = useQuery<NotificationPreferences>({
+    queryKey: ['/api/settings/notification-preferences'],
   });
 
   // Mark alert as read
@@ -266,6 +302,16 @@ export default function StockAlerts() {
             Stock is checked daily at <strong>8 AM</strong>. Products at or below their threshold appear here and trigger an email alert — one per product per 24 hours. Use <strong>Adjust</strong> on any card to set a per-product threshold.
           </p>
         </div>
+
+        {/* Weekly alert schedule banner */}
+        {notifPrefs?.stockAlertFrequency === 'weekly' && (
+          <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-lg px-4 py-2.5 text-sm text-green-700">
+            <Calendar className="h-4 w-4 flex-shrink-0 text-green-500" />
+            <span>
+              Next alert: <span className="font-medium">{getNextAlertDate(notifPrefs.stockAlertDay ?? 1, notifPrefs.lastWeeklyStockAlertSentAt)}</span>
+            </span>
+          </div>
+        )}
 
         {/* Expiring Soon section */}
         {expiringBatches.length > 0 && (
