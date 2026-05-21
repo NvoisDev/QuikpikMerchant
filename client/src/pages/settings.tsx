@@ -618,14 +618,25 @@ function CollectionAddressesSection() {
 const ALERT_DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 const MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
-function getNextAlertDate(day: number): string {
+function isThisCalendarWeek(date: Date): boolean {
+  const now = new Date();
+  const monday = new Date(now);
+  monday.setHours(0, 0, 0, 0);
+  const dow = now.getDay();
+  monday.setDate(now.getDate() - (dow === 0 ? 6 : dow - 1));
+  return date >= monday;
+}
+
+function getNextAlertDate(day: number, lastSentAt?: string | null): string {
   const today = new Date();
   const todayDay = today.getDay();
   let daysUntil = day - todayDay;
   if (daysUntil < 0) daysUntil += 7;
-  if (daysUntil === 0) return 'Today';
+  const alreadySentThisWeek = lastSentAt ? isThisCalendarWeek(new Date(lastSentAt)) : false;
+  if (daysUntil === 0 && !alreadySentThisWeek) return 'Today';
+  const offsetDays = (daysUntil === 0 && alreadySentThisWeek) ? 7 : daysUntil;
   const next = new Date(today);
-  next.setDate(today.getDate() + daysUntil);
+  next.setDate(today.getDate() + offsetDays);
   return `${ALERT_DAY_NAMES[day]} ${next.getDate()} ${MONTHS_SHORT[next.getMonth()]}`;
 }
 
@@ -655,6 +666,7 @@ export default function Settings() {
     stockAlertFrequency: 'daily',
     stockAlertChannel: 'email',
     stockAlertDay: 1,
+    lastWeeklyStockAlertSentAt: null as string | null,
     paymentReminderEnabled: true,
     paymentReminderChannel: 'email',
     promotionReminderEnabled: true,
@@ -667,6 +679,7 @@ export default function Settings() {
         stockAlertFrequency: notifPrefs.stockAlertFrequency || 'daily',
         stockAlertChannel: notifPrefs.stockAlertChannel || 'email',
         stockAlertDay: (notifPrefs as any).stockAlertDay ?? 1,
+        lastWeeklyStockAlertSentAt: (notifPrefs as any).lastWeeklyStockAlertSentAt ?? null,
         paymentReminderEnabled: notifPrefs.paymentReminderEnabled !== false,
         paymentReminderChannel: (notifPrefs as any).paymentReminderChannel || 'email',
         promotionReminderEnabled: notifPrefs.promotionReminderEnabled !== false,
@@ -728,7 +741,16 @@ export default function Settings() {
   const saveMemberNotifPrefsMutation = useMutation({
     mutationFn: async (prefs: typeof memberNotifForm) => {
       if (!myTeamMemberRecord?.id) throw new Error("Team member record not found");
-      const r = await apiRequest("PATCH", `/api/team-members/${myTeamMemberRecord.id}/notification-preferences`, prefs);
+      const payload: Record<string, unknown> = {
+        stockAlertFrequency: prefs.stockAlertFrequency,
+        stockAlertChannel: prefs.stockAlertChannel,
+      };
+      if (prefs.stockAlertDay !== null) {
+        payload.stockAlertDay = prefs.stockAlertDay;
+      } else if (prefs.stockAlertFrequency === 'weekly') {
+        payload.stockAlertDay = 1;
+      }
+      const r = await apiRequest("PATCH", `/api/team-members/${myTeamMemberRecord.id}/notification-preferences`, payload);
       if (!r.ok) { const e = await r.json(); throw new Error(e.message || "Failed to save"); }
       return r.json();
     },
@@ -2287,7 +2309,7 @@ export default function Settings() {
                               </SelectContent>
                             </Select>
                             <p className="text-xs text-gray-400">
-                              Next alert: <span className="font-medium text-gray-600">{getNextAlertDate(notifForm.stockAlertDay)}</span>
+                              Next alert: <span className="font-medium text-gray-600">{getNextAlertDate(notifForm.stockAlertDay, notifForm.lastWeeklyStockAlertSentAt)}</span>
                             </p>
                           </div>
                         )}

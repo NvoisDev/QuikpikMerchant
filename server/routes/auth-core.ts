@@ -665,6 +665,7 @@ export function registerAuthCoreRoutes(app: Express): void {
         stockAlertFrequency: prefs.stockAlertFrequency ?? 'daily',
         stockAlertChannel: prefs.stockAlertChannel ?? 'email',
         stockAlertDay: prefs.stockAlertDay ?? 1,
+        lastWeeklyStockAlertSentAt: prefs.lastWeeklyStockAlertSentAt ?? null,
         paymentReminderEnabled: prefs.paymentReminderEnabled !== false,
         paymentReminderChannel: prefs.paymentReminderChannel ?? 'email',
         promotionReminderEnabled: prefs.promotionReminderEnabled !== false,

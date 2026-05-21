@@ -198,7 +198,7 @@ export class StockAlertService {
         }
 
         // Team members are notified independently of owner cadence, using their own preferences
-        const membersNotified = await this.notifyTeamMembers(alerts, wholesalerId, channel, frequency);
+        const membersNotified = await this.notifyTeamMembers(alerts, wholesalerId, channel, frequency, prefs);
 
         // Only mark products as alerted when at least one notification was actually sent
         if (ownerNotified || membersNotified) {
@@ -235,7 +235,8 @@ export class StockAlertService {
     alerts: StockAlert[],
     wholesalerId: string,
     ownerChannel: StockAlertChannel,
-    ownerFrequency: StockAlertFrequency
+    ownerFrequency: StockAlertFrequency,
+    ownerPrefs: NotificationPrefs
   ): Promise<boolean> {
     if (alerts.length === 0) return false;
     let anySent = false;
@@ -282,7 +283,7 @@ export class StockAlertService {
             ...memberPrefs,
             stockAlertDay: typeof memberPrefs.stockAlertDay === 'number'
               ? memberPrefs.stockAlertDay
-              : prefs.stockAlertDay,
+              : ownerPrefs.stockAlertDay,
           };
           if (!shouldSendWeeklyToday(effectiveMemberPrefs)) continue;
         }
