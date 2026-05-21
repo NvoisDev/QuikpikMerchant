@@ -634,6 +634,7 @@ export default function Settings() {
     promotionReminderEnabled: boolean;
   }>({
     queryKey: ["/api/settings/notification-preferences"],
+    enabled: user?.role !== 'team_member',
   });
 
   const [notifForm, setNotifForm] = useState({
@@ -667,6 +668,51 @@ export default function Settings() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/settings/notification-preferences"] });
       toast({ title: "Notification preferences saved" });
+    },
+    onError: (e: Error) => toast({ title: e.message, variant: "destructive" }),
+  });
+
+  // Team member notification preferences
+  const isTeamMember = user?.role === 'team_member';
+  const { data: myTeamMemberRecord } = useQuery<{
+    id: number;
+    email: string;
+    firstName: string | null;
+    lastName: string | null;
+    role: string;
+    status: string;
+    phoneNumber: string | null;
+    notificationPreferences: Record<string, string>;
+  }>({
+    queryKey: ["/api/team-members/me"],
+    enabled: isTeamMember,
+  });
+
+  const [memberNotifForm, setMemberNotifForm] = useState({
+    stockAlertFrequency: 'inherit',
+    stockAlertChannel: 'inherit',
+  });
+
+  useEffect(() => {
+    if (myTeamMemberRecord?.notificationPreferences) {
+      const prefs = myTeamMemberRecord.notificationPreferences as Record<string, string>;
+      setMemberNotifForm({
+        stockAlertFrequency: prefs.stockAlertFrequency || 'inherit',
+        stockAlertChannel: prefs.stockAlertChannel || 'inherit',
+      });
+    }
+  }, [myTeamMemberRecord]);
+
+  const saveMemberNotifPrefsMutation = useMutation({
+    mutationFn: async (prefs: typeof memberNotifForm) => {
+      if (!myTeamMemberRecord?.id) throw new Error("Team member record not found");
+      const r = await apiRequest("PATCH", `/api/team-members/${myTeamMemberRecord.id}/notification-preferences`, prefs);
+      if (!r.ok) { const e = await r.json(); throw new Error(e.message || "Failed to save"); }
+      return r.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/team-members/me"] });
+      toast({ title: "Your notification preferences saved" });
     },
     onError: (e: Error) => toast({ title: e.message, variant: "destructive" }),
   });
@@ -2034,63 +2080,133 @@ export default function Settings() {
                     <p className="text-gray-500 text-sm">Control how and when you receive alerts from the platform.</p>
                   </div>
 
-                  {/* Stock Alerts Section */}
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-2">
-                      <AlertTriangle className="h-4 w-4 text-amber-500" />
-                      <h4 className="font-semibold text-gray-800 text-sm sm:text-base">Stock Alerts</h4>
-                    </div>
-
-                    {/* How it works */}
-                    <div className="flex gap-3 bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4 text-sm text-blue-800">
-                      <Info className="h-4 w-4 flex-shrink-0 mt-0.5 text-blue-500" />
-                      <ul className="space-y-1 text-blue-700">
-                        <li>• Stock levels are checked automatically every day at <strong>8 AM</strong></li>
-                        <li>• You receive an email when any product drops to or below its threshold</li>
-                        <li>• Each product can only trigger <strong>one alert per 24 hours</strong></li>
-                      </ul>
-                    </div>
-
-                    {/* Default threshold setting */}
-                    <div className="border border-gray-200 rounded-lg p-4 space-y-3">
-                      <div>
-                        <p className="text-sm font-medium text-gray-800">Default Low Stock Threshold</p>
-                        <p className="text-xs text-gray-500 mt-0.5">
-                          Used for any product that doesn't have its own threshold set. Also applied automatically to all new products you create. Current default:{" "}
-                          <strong>{userSettings?.defaultLowStockThreshold ?? user?.defaultLowStockThreshold ?? 50} units</strong>
+                  {/* Team member: own stock alert preferences */}
+                  {isTeamMember && (
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2">
+                        <AlertTriangle className="h-4 w-4 text-amber-500" />
+                        <h4 className="font-semibold text-gray-800 text-sm sm:text-base">My Stock Alert Preferences</h4>
+                      </div>
+                      <div className="flex gap-3 bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4 text-sm text-blue-800">
+                        <Info className="h-4 w-4 flex-shrink-0 mt-0.5 text-blue-500" />
+                        <p className="text-blue-700">
+                          Set your own alert channel and frequency. Choosing <strong>Inherit from account</strong> will use whatever the account owner has configured.
                         </p>
                       </div>
-                      <div className="flex gap-2 items-center">
-                        <Input
-                          type="number"
-                          min="0"
-                          placeholder={String(userSettings?.defaultLowStockThreshold ?? user?.defaultLowStockThreshold ?? 50)}
-                          value={thresholdInput}
-                          onChange={(e) => setThresholdInput(e.target.value)}
-                          className="w-32"
-                        />
-                        <span className="text-sm text-gray-500">units</span>
+                      <div className="border border-gray-200 rounded-lg p-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <p className="text-sm font-medium text-gray-800 mb-1">Alert frequency</p>
+                          <p className="text-xs text-gray-500 mb-2">How often you want to receive stock alerts</p>
+                          <Select
+                            value={memberNotifForm.stockAlertFrequency}
+                            onValueChange={(v) => setMemberNotifForm(f => ({ ...f, stockAlertFrequency: v }))}
+                            disabled={!myTeamMemberRecord}
+                          >
+                            <SelectTrigger className="w-full">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="inherit">Inherit from account</SelectItem>
+                              <SelectItem value="daily">Daily — as soon as stock drops below threshold</SelectItem>
+                              <SelectItem value="weekly">Weekly — at most once every 7 days</SelectItem>
+                              <SelectItem value="critical_only">Critical only — only when stock hits zero or near-zero</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-gray-800 mb-1">Alert channel</p>
+                          <p className="text-xs text-gray-500 mb-2">How you want to be notified</p>
+                          <Select
+                            value={memberNotifForm.stockAlertChannel}
+                            onValueChange={(v) => setMemberNotifForm(f => ({ ...f, stockAlertChannel: v }))}
+                            disabled={!myTeamMemberRecord}
+                          >
+                            <SelectTrigger className="w-full">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="inherit">Inherit from account</SelectItem>
+                              <SelectItem value="email">Email only</SelectItem>
+                              <SelectItem value="sms">SMS / WhatsApp only</SelectItem>
+                              <SelectItem value="both">Both email and SMS</SelectItem>
+                              <SelectItem value="off">Off — no stock alerts for me</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      <div className="flex justify-end">
                         <Button
                           size="sm"
-                          onClick={handleSaveThreshold}
-                          disabled={!thresholdInput || updateThresholdMutation.isPending}
+                          onClick={() => saveMemberNotifPrefsMutation.mutate(memberNotifForm)}
+                          disabled={saveMemberNotifPrefsMutation.isPending || !myTeamMemberRecord}
                           className="flex items-center gap-1.5"
                         >
                           <Save className="h-3.5 w-3.5" />
-                          {updateThresholdMutation.isPending ? "Saving..." : "Save"}
+                          {saveMemberNotifPrefsMutation.isPending ? "Saving..." : "Save preferences"}
                         </Button>
                       </div>
-                      <p className="text-xs text-gray-400">
-                        To set a custom threshold per product, visit the{" "}
-                        <Link href="/stock-alerts" className="text-blue-600 hover:underline inline-flex items-center gap-1">
-                          Stock Alerts page <ExternalLink className="h-3 w-3" />
-                        </Link>
-                      </p>
                     </div>
-                  </div>
+                  )}
 
-                  {/* Stock alert controls */}
-                  <div className="border border-gray-200 rounded-lg divide-y divide-gray-100">
+                  {/* Stock Alerts Section (owner/admin only) */}
+                  {!isTeamMember && (
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2">
+                        <AlertTriangle className="h-4 w-4 text-amber-500" />
+                        <h4 className="font-semibold text-gray-800 text-sm sm:text-base">Stock Alerts</h4>
+                      </div>
+
+                      {/* How it works */}
+                      <div className="flex gap-3 bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4 text-sm text-blue-800">
+                        <Info className="h-4 w-4 flex-shrink-0 mt-0.5 text-blue-500" />
+                        <ul className="space-y-1 text-blue-700">
+                          <li>• Stock levels are checked automatically every day at <strong>8 AM</strong></li>
+                          <li>• You receive an email when any product drops to or below its threshold</li>
+                          <li>• Each product can only trigger <strong>one alert per 24 hours</strong></li>
+                        </ul>
+                      </div>
+
+                      {/* Default threshold setting */}
+                      <div className="border border-gray-200 rounded-lg p-4 space-y-3">
+                        <div>
+                          <p className="text-sm font-medium text-gray-800">Default Low Stock Threshold</p>
+                          <p className="text-xs text-gray-500 mt-0.5">
+                            Used for any product that doesn't have its own threshold set. Also applied automatically to all new products you create. Current default:{" "}
+                            <strong>{userSettings?.defaultLowStockThreshold ?? user?.defaultLowStockThreshold ?? 50} units</strong>
+                          </p>
+                        </div>
+                        <div className="flex gap-2 items-center">
+                          <Input
+                            type="number"
+                            min="0"
+                            placeholder={String(userSettings?.defaultLowStockThreshold ?? user?.defaultLowStockThreshold ?? 50)}
+                            value={thresholdInput}
+                            onChange={(e) => setThresholdInput(e.target.value)}
+                            className="w-32"
+                          />
+                          <span className="text-sm text-gray-500">units</span>
+                          <Button
+                            size="sm"
+                            onClick={handleSaveThreshold}
+                            disabled={!thresholdInput || updateThresholdMutation.isPending}
+                            className="flex items-center gap-1.5"
+                          >
+                            <Save className="h-3.5 w-3.5" />
+                            {updateThresholdMutation.isPending ? "Saving..." : "Save"}
+                          </Button>
+                        </div>
+                        <p className="text-xs text-gray-400">
+                          To set a custom threshold per product, visit the{" "}
+                          <Link href="/stock-alerts" className="text-blue-600 hover:underline inline-flex items-center gap-1">
+                            Stock Alerts page <ExternalLink className="h-3 w-3" />
+                          </Link>
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Stock alert controls (owner/wholesaler only) */}
+                  {!isTeamMember && <div className="border border-gray-200 rounded-lg divide-y divide-gray-100">
                     <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <p className="text-sm font-medium text-gray-800 mb-1">Alert frequency</p>
@@ -2130,10 +2246,10 @@ export default function Settings() {
                         </Select>
                       </div>
                     </div>
-                  </div>
+                  </div>}
 
-                  {/* Customer-facing automated messages */}
-                  <div className="space-y-3 pt-2">
+                  {/* Customer-facing automated messages (owner/wholesaler only) */}
+                  {!isTeamMember && <div className="space-y-3 pt-2">
                     <div>
                       <h4 className="font-semibold text-gray-800 text-sm sm:text-base">Automated Customer Messages</h4>
                       <p className="text-xs text-gray-500 mt-0.5">These are sent automatically to your customers. Toggle them off to stop sending.</p>
@@ -2200,9 +2316,9 @@ export default function Settings() {
                         )}
                       </div>
                     </div>
-                  </div>
+                  </div>}
 
-                  <div className="flex justify-end pt-1">
+                  {!isTeamMember && <div className="flex justify-end pt-1">
                     <Button
                       size="sm"
                       onClick={() => saveNotifPrefsMutation.mutate(notifForm)}
@@ -2212,7 +2328,7 @@ export default function Settings() {
                       <Save className="h-3.5 w-3.5" />
                       {saveNotifPrefsMutation.isPending ? "Saving..." : "Save preferences"}
                     </Button>
-                  </div>
+                  </div>}
                 </div>
               )}
 

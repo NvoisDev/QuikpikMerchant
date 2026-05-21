@@ -83,10 +83,42 @@ export function registerAuthTeamRoutes(app: Express): void {
     }
   });
 
+  // GET /api/team-members/me — returns only the current user's own team member record (safe for team_member role)
+  app.get('/api/team-members/me', requireAuth, async (req: any, res) => {
+    try {
+      if (req.user.role !== 'team_member') {
+        return res.status(403).json({ message: "Only team members can use this endpoint" });
+      }
+      const wholesalerId = resolveWholesalerId(req);
+      const allMembers = await storage.getTeamMembers(wholesalerId);
+      const self = allMembers.find((m: any) => m.email?.toLowerCase() === req.user.email?.toLowerCase());
+      if (!self) {
+        return res.status(404).json({ message: "Team member record not found" });
+      }
+      // Return only safe fields — never expose inviteToken or other internal fields
+      res.json({
+        id: self.id,
+        email: self.email,
+        firstName: self.firstName,
+        lastName: self.lastName,
+        role: self.role,
+        status: self.status,
+        phoneNumber: self.phoneNumber,
+        notificationPreferences: self.notificationPreferences || {},
+      });
+    } catch (error) {
+      console.error("Error fetching own team member record:", error);
+      res.status(500).json({ message: "Failed to fetch team member record" });
+    }
+  });
+
   // GET /api/team-members
   app.get('/api/team-members', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.id;
+      if (req.user.role === 'team_member') {
+        return res.status(403).json({ message: "Use /api/team-members/me to access your own record" });
+      }
+      const userId = resolveWholesalerId(req);
       const members = await storage.getTeamMembers(userId);
       res.json(members);
     } catch (error) {
@@ -271,6 +303,55 @@ export function registerAuthTeamRoutes(app: Express): void {
     } catch (error) {
       console.error("Error resending team invitation:", error);
       res.status(500).json({ message: "Failed to resend invitation" });
+    }
+  });
+
+  // PATCH /api/team-members/:id/notification-preferences
+  app.patch('/api/team-members/:id/notification-preferences', requireAuth, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const memberId = parseInt(id);
+      const ownerId = resolveWholesalerId(req);
+
+      const allMembers = await storage.getTeamMembers(ownerId);
+      const target = allMembers.find((m: any) => m.id === memberId);
+
+      if (!target) {
+        return res.status(404).json({ message: "Team member not found" });
+      }
+
+      // Team members can only update their own preferences
+      if (req.user.role === 'team_member') {
+        const isSelf = target.email.toLowerCase() === req.user.email.toLowerCase();
+        if (!isSelf) {
+          return res.status(403).json({ message: "You can only update your own notification preferences" });
+        }
+      }
+
+      const { stockAlertFrequency, stockAlertChannel } = req.body;
+
+      const validFrequencies = ['daily', 'weekly', 'critical_only', 'inherit'];
+      const validChannels = ['email', 'sms', 'both', 'off', 'inherit'];
+
+      if (stockAlertFrequency && !validFrequencies.includes(stockAlertFrequency)) {
+        return res.status(400).json({ message: "Invalid stockAlertFrequency" });
+      }
+      if (stockAlertChannel && !validChannels.includes(stockAlertChannel)) {
+        return res.status(400).json({ message: "Invalid stockAlertChannel" });
+      }
+
+      const currentPrefs = (target.notificationPreferences as Record<string, unknown>) || {};
+      const updatedPrefs = {
+        ...currentPrefs,
+        ...(stockAlertFrequency !== undefined ? { stockAlertFrequency } : {}),
+        ...(stockAlertChannel !== undefined ? { stockAlertChannel } : {}),
+      };
+
+      await storage.updateTeamMember(memberId, { notificationPreferences: updatedPrefs });
+      res.json({ message: "Notification preferences saved", notificationPreferences: updatedPrefs });
+    } catch (error) {
+      console.error("Error updating team member notification preferences:", error);
+      res.status(500).json({ message: "Failed to update notification preferences" });
     }
   });
 

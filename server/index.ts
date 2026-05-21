@@ -371,6 +371,8 @@ async function runStartupMigrations() {
     `CREATE INDEX IF NOT EXISTS order_item_picks_order_id_idx ON order_item_picks(order_id)`,
     `CREATE INDEX IF NOT EXISTS order_item_picks_item_id_idx ON order_item_picks(order_item_id)`,
     `CREATE UNIQUE INDEX IF NOT EXISTS order_item_picks_order_item_id_uniq ON order_item_picks(order_item_id)`,
+    // Task #1091: Per-team-member notification preferences for stock alerts
+    `ALTER TABLE team_members ADD COLUMN IF NOT EXISTS notification_preferences jsonb DEFAULT '{}'`,
   ];
   for (const stmt of migrations) {
     await db.execute(sql.raw(stmt));

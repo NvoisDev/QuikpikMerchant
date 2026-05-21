@@ -323,6 +323,7 @@ export const teamMembers = pgTable("team_members", {
   joinedAt: timestamp("joined_at"),
   lastLoginAt: timestamp("last_login_at"),
   lastSeenAt: timestamp("last_seen_at"), // Updated by presence ping every 60 s
+  notificationPreferences: jsonb("notification_preferences").default({}), // Per-member overrides: { stockAlertChannel, stockAlertFrequency }
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => ({

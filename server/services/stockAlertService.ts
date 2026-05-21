@@ -101,9 +101,6 @@ export class StockAlertService {
         const prefs: NotificationPrefs = (wData.notificationPreferences as NotificationPrefs) || {};
         wholesalerPrefs.set(product.wholesalerId, prefs);
 
-        const channel: StockAlertChannel = prefs.stockAlertChannel || 'email';
-        if (channel === 'off') continue;
-
         const frequency: StockAlertFrequency = prefs.stockAlertFrequency || 'daily';
 
         // Critical only: stock is completely out, OR stock is below MOQ with no pending replenishment orders
@@ -154,32 +151,48 @@ export class StockAlertService {
         const [wholesalerId, alerts] = entry;
         const prefs = wholesalerPrefs.get(wholesalerId) || {};
         const frequency: StockAlertFrequency = prefs.stockAlertFrequency || 'daily';
+        const channel: StockAlertChannel = prefs.stockAlertChannel || 'email';
 
-        // Weekly cadence check: skip if already sent within 7 days
-        if (frequency === 'weekly') {
-          const lastSent = prefs.lastWeeklyStockAlertSentAt ? new Date(prefs.lastWeeklyStockAlertSentAt) : null;
-          const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-          if (lastSent && lastSent > sevenDaysAgo) {
-            continue;
+        // Owner notification — respects the owner's cadence
+        let ownerNotified = false;
+        if (channel !== 'off') {
+          if (frequency === 'weekly') {
+            const lastSent = prefs.lastWeeklyStockAlertSentAt ? new Date(prefs.lastWeeklyStockAlertSentAt) : null;
+            const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+            if (!lastSent || lastSent <= sevenDaysAgo) {
+              await this.sendOwnerAlerts(alerts, channel);
+              ownerNotified = true;
+            }
+          } else {
+            await this.sendOwnerAlerts(alerts, channel);
+            ownerNotified = true;
           }
         }
 
-        const channel: StockAlertChannel = prefs.stockAlertChannel || 'email';
-        await this.sendStockAlerts(alerts, channel);
-        allAlertedProductIds.push(...alerts.map(a => a.productId));
+        if (ownerNotified) {
+          allAlertedProductIds.push(...alerts.map(a => a.productId));
+          if (frequency === 'weekly') {
+            const wData = wholesalerDataMap.get(wholesalerId);
+            const updatedPrefs = { ...(wData?.notificationPreferences || {}), lastWeeklyStockAlertSentAt: new Date().toISOString() };
+            await db.update(users).set({ notificationPreferences: updatedPrefs }).where(eq(users.id, wholesalerId));
+          }
+        }
 
-        if (frequency === 'weekly') {
-          const wData = wholesalerDataMap.get(wholesalerId);
-          const updatedPrefs = { ...(wData?.notificationPreferences || {}), lastWeeklyStockAlertSentAt: new Date().toISOString() };
-          await db.update(users).set({ notificationPreferences: updatedPrefs }).where(eq(users.id, wholesalerId));
+        // Team members are notified independently of owner cadence, using their own preferences
+        const membersNotified = await this.notifyTeamMembers(alerts, wholesalerId, channel, frequency);
+
+        // Only mark products as alerted when at least one notification was actually sent
+        if (ownerNotified || membersNotified) {
+          allAlertedProductIds.push(...alerts.map(a => a.productId));
         }
       }
 
       if (allAlertedProductIds.length > 0) {
+        const uniqueIds = [...new Set(allAlertedProductIds)];
         await db
           .update(products)
           .set({ lastStockAlertSentAt: new Date() })
-          .where(inArray(products.id, allAlertedProductIds));
+          .where(inArray(products.id, uniqueIds));
       }
 
     } catch (error) {
@@ -187,43 +200,114 @@ export class StockAlertService {
     }
   }
 
-  private async sendStockAlerts(alerts: StockAlert[], channel: StockAlertChannel): Promise<void> {
+  private async sendOwnerAlerts(alerts: StockAlert[], channel: StockAlertChannel): Promise<void> {
     if (alerts.length === 0) return;
-
     const wholesaler = alerts[0];
     const messages = this.generateAlertMessages(alerts);
     const doEmail = channel === 'email' || channel === 'both';
     const doSms = channel === 'sms' || channel === 'both';
-
     await Promise.allSettled([
       doEmail ? this.sendEmailAlert(wholesaler, messages.email) : Promise.resolve(),
       doSms ? this.sendWhatsAppAlert(wholesaler, messages.whatsapp) : Promise.resolve(),
     ]);
+  }
 
+  private async notifyTeamMembers(
+    alerts: StockAlert[],
+    wholesalerId: string,
+    ownerChannel: StockAlertChannel,
+    ownerFrequency: StockAlertFrequency
+  ): Promise<boolean> {
+    if (alerts.length === 0) return false;
+    let anySent = false;
     try {
       const members = await db
         .select({
+          id: teamMembers.id,
           email: teamMembers.email,
           phoneNumber: teamMembers.phoneNumber,
           firstName: teamMembers.firstName,
+          notificationPreferences: teamMembers.notificationPreferences,
         })
         .from(teamMembers)
         .where(and(
-          eq(teamMembers.wholesalerId, wholesaler.wholesalerId),
+          eq(teamMembers.wholesalerId, wholesalerId),
           eq(teamMembers.status, 'active')
         ));
 
+      const wholesaler = alerts[0];
+
       for (const member of members) {
-        if (doEmail) {
+        const memberPrefs = (member.notificationPreferences as NotificationPrefs) || {};
+
+        // Whether the member has an explicit (non-inherit) frequency preference
+        const memberHasExplicitFrequency =
+          !!memberPrefs.stockAlertFrequency && memberPrefs.stockAlertFrequency !== 'inherit';
+
+        // Resolve effective channel and frequency — fall back to owner's setting when 'inherit' or unset
+        const memberChannel: StockAlertChannel =
+          (memberPrefs.stockAlertChannel && memberPrefs.stockAlertChannel !== 'inherit')
+            ? memberPrefs.stockAlertChannel as StockAlertChannel
+            : ownerChannel;
+
+        const memberFrequency: StockAlertFrequency =
+          memberHasExplicitFrequency
+            ? memberPrefs.stockAlertFrequency as StockAlertFrequency
+            : ownerFrequency;
+
+        if (memberChannel === 'off') continue;
+
+        // Per-member weekly cadence check
+        if (memberFrequency === 'weekly') {
+          const lastSent = memberPrefs.lastWeeklyStockAlertSentAt ? new Date(memberPrefs.lastWeeklyStockAlertSentAt) : null;
+          const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+          if (lastSent && lastSent > sevenDaysAgo) continue;
+        }
+
+        // Per-member critical_only filter.
+        // When the member explicitly sets critical_only but the owner's list includes non-critical items
+        // (owner is daily or weekly), filter down to urgently low products.
+        // When the frequency is inherited and owner is also critical_only, the product list is already
+        // filtered at collection time — no additional filtering needed.
+        let memberAlerts = alerts;
+        if (memberFrequency === 'critical_only') {
+          const ownerAlsoFiltersCritical = ownerFrequency === 'critical_only';
+          if (memberHasExplicitFrequency && !ownerAlsoFiltersCritical) {
+            // Member explicitly wants critical_only but owner's list includes non-critical items
+            memberAlerts = alerts.filter(a => a.currentStock <= 0 || a.currentStock < a.minimumThreshold);
+            if (memberAlerts.length === 0) continue;
+          }
+          // If !memberHasExplicitFrequency (inherited) or ownerAlsoFiltersCritical, alerts are already
+          // correctly pre-filtered at collection time — use them as-is
+        }
+
+        const messages = this.generateAlertMessages(memberAlerts);
+        const doEmail = memberChannel === 'email' || memberChannel === 'both';
+        const doSms = memberChannel === 'sms' || memberChannel === 'both';
+
+        let memberNotificationSent = false;
+        if (doEmail && member.email) {
           await this.sendEmailAlert({ ...wholesaler, wholesalerEmail: member.email }, messages.email);
+          memberNotificationSent = true;
         }
         if (doSms && member.phoneNumber) {
           await this.sendWhatsAppAlert({ ...wholesaler, wholesalerPhone: member.phoneNumber }, messages.whatsapp);
+          memberNotificationSent = true;
+        }
+
+        if (memberNotificationSent) {
+          anySent = true;
+          // Update weekly last-sent timestamp for this member — scoped by id to avoid cross-tenant coupling
+          if (memberFrequency === 'weekly') {
+            const updatedMemberPrefs = { ...memberPrefs, lastWeeklyStockAlertSentAt: new Date().toISOString() };
+            await db.update(teamMembers).set({ notificationPreferences: updatedMemberPrefs }).where(eq(teamMembers.id, member.id));
+          }
         }
       }
     } catch (error) {
-      console.error(`❌ Failed to send stock alerts to team members for ${wholesaler.wholesalerName}:`, error);
+      console.error(`❌ Failed to send stock alerts to team members for wholesaler ${wholesalerId}:`, error);
     }
+    return anySent;
   }
 
   private generateAlertMessages(alerts: StockAlert[]) {
