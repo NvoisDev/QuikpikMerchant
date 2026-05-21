@@ -188,6 +188,7 @@ export const users = pgTable("users", {
     marketingEmails: false,
     stockAlertFrequency: 'daily',
     stockAlertChannel: 'email',
+    stockAlertDay: 1,
     paymentReminderEnabled: true,
     paymentReminderChannel: 'email',
     promotionReminderEnabled: true,

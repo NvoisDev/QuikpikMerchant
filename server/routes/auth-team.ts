@@ -328,7 +328,7 @@ export function registerAuthTeamRoutes(app: Express): void {
         }
       }
 
-      const { stockAlertFrequency, stockAlertChannel } = req.body;
+      const { stockAlertFrequency, stockAlertChannel, stockAlertDay } = req.body;
 
       const validFrequencies = ['daily', 'weekly', 'critical_only', 'inherit'];
       const validChannels = ['email', 'sms', 'both', 'off', 'inherit'];
@@ -339,12 +339,16 @@ export function registerAuthTeamRoutes(app: Express): void {
       if (stockAlertChannel && !validChannels.includes(stockAlertChannel)) {
         return res.status(400).json({ message: "Invalid stockAlertChannel" });
       }
+      if (stockAlertDay !== undefined && (typeof stockAlertDay !== 'number' || stockAlertDay < 0 || stockAlertDay > 6)) {
+        return res.status(400).json({ message: "Invalid stockAlertDay (must be 0–6)" });
+      }
 
       const currentPrefs = (target.notificationPreferences as Record<string, unknown>) || {};
       const updatedPrefs = {
         ...currentPrefs,
         ...(stockAlertFrequency !== undefined ? { stockAlertFrequency } : {}),
         ...(stockAlertChannel !== undefined ? { stockAlertChannel } : {}),
+        ...(stockAlertDay !== undefined ? { stockAlertDay } : {}),
       };
 
       await storage.updateTeamMember(memberId, { notificationPreferences: updatedPrefs });

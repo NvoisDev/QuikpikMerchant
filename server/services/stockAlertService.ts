@@ -24,8 +24,29 @@ type StockAlertChannel = 'email' | 'sms' | 'both' | 'off';
 interface NotificationPrefs {
   stockAlertFrequency?: StockAlertFrequency;
   stockAlertChannel?: StockAlertChannel;
+  stockAlertDay?: number;
   lastWeeklyStockAlertSentAt?: string | null;
   [key: string]: unknown;
+}
+
+/** Returns true if the given date falls within the current ISO calendar week (Mon–Sun). */
+function isThisCalendarWeek(date: Date): boolean {
+  const now = new Date();
+  const monday = new Date(now);
+  monday.setHours(0, 0, 0, 0);
+  const dow = now.getDay();
+  monday.setDate(now.getDate() - (dow === 0 ? 6 : dow - 1));
+  return date >= monday;
+}
+
+/** Returns true if today is the chosen day AND we haven't already sent this calendar week. */
+function shouldSendWeeklyToday(prefs: NotificationPrefs): boolean {
+  const targetDay = typeof prefs.stockAlertDay === 'number' ? prefs.stockAlertDay : 1; // default Monday
+  const todayDay = new Date().getDay();
+  if (todayDay !== targetDay) return false;
+  const lastSent = prefs.lastWeeklyStockAlertSentAt ? new Date(prefs.lastWeeklyStockAlertSentAt) : null;
+  if (lastSent && isThisCalendarWeek(lastSent)) return false;
+  return true;
 }
 
 async function hasPendingOrders(productId: number, wholesalerId: string): Promise<boolean> {
@@ -157,9 +178,7 @@ export class StockAlertService {
         let ownerNotified = false;
         if (channel !== 'off') {
           if (frequency === 'weekly') {
-            const lastSent = prefs.lastWeeklyStockAlertSentAt ? new Date(prefs.lastWeeklyStockAlertSentAt) : null;
-            const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-            if (!lastSent || lastSent <= sevenDaysAgo) {
+            if (shouldSendWeeklyToday(prefs)) {
               await this.sendOwnerAlerts(alerts, channel);
               ownerNotified = true;
             }
@@ -257,11 +276,15 @@ export class StockAlertService {
 
         if (memberChannel === 'off') continue;
 
-        // Per-member weekly cadence check
+        // Per-member weekly cadence check — uses member's own stockAlertDay (falls back to owner's)
         if (memberFrequency === 'weekly') {
-          const lastSent = memberPrefs.lastWeeklyStockAlertSentAt ? new Date(memberPrefs.lastWeeklyStockAlertSentAt) : null;
-          const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-          if (lastSent && lastSent > sevenDaysAgo) continue;
+          const effectiveMemberPrefs: NotificationPrefs = {
+            ...memberPrefs,
+            stockAlertDay: typeof memberPrefs.stockAlertDay === 'number'
+              ? memberPrefs.stockAlertDay
+              : prefs.stockAlertDay,
+          };
+          if (!shouldSendWeeklyToday(effectiveMemberPrefs)) continue;
         }
 
         // Per-member critical_only filter.

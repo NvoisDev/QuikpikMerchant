@@ -664,6 +664,7 @@ export function registerAuthCoreRoutes(app: Express): void {
       res.json({
         stockAlertFrequency: prefs.stockAlertFrequency ?? 'daily',
         stockAlertChannel: prefs.stockAlertChannel ?? 'email',
+        stockAlertDay: prefs.stockAlertDay ?? 1,
         paymentReminderEnabled: prefs.paymentReminderEnabled !== false,
         paymentReminderChannel: prefs.paymentReminderChannel ?? 'email',
         promotionReminderEnabled: prefs.promotionReminderEnabled !== false,
@@ -681,7 +682,7 @@ export function registerAuthCoreRoutes(app: Express): void {
       const user = await storage.getUser(req.user.id);
       if (!user) return res.status(404).json({ message: 'User not found' });
 
-      const { stockAlertFrequency, stockAlertChannel, paymentReminderEnabled, paymentReminderChannel, promotionReminderEnabled, promotionReminderChannel } = req.body;
+      const { stockAlertFrequency, stockAlertChannel, stockAlertDay, paymentReminderEnabled, paymentReminderChannel, promotionReminderEnabled, promotionReminderChannel } = req.body;
 
       const validFrequencies = ['daily', 'weekly', 'critical_only'];
       const validChannels = ['email', 'sms', 'both', 'off'];
@@ -691,6 +692,9 @@ export function registerAuthCoreRoutes(app: Express): void {
       }
       if (stockAlertChannel !== undefined && !validChannels.includes(stockAlertChannel)) {
         return res.status(400).json({ message: 'Invalid stockAlertChannel' });
+      }
+      if (stockAlertDay !== undefined && (typeof stockAlertDay !== 'number' || stockAlertDay < 0 || stockAlertDay > 6)) {
+        return res.status(400).json({ message: 'Invalid stockAlertDay (must be 0–6)' });
       }
       if (paymentReminderChannel !== undefined && !validChannels.includes(paymentReminderChannel)) {
         return res.status(400).json({ message: 'Invalid paymentReminderChannel' });
@@ -704,6 +708,7 @@ export function registerAuthCoreRoutes(app: Express): void {
         ...existing,
         ...(stockAlertFrequency !== undefined && { stockAlertFrequency }),
         ...(stockAlertChannel !== undefined && { stockAlertChannel }),
+        ...(stockAlertDay !== undefined && { stockAlertDay }),
         ...(paymentReminderEnabled !== undefined && { paymentReminderEnabled: Boolean(paymentReminderEnabled) }),
         ...(paymentReminderChannel !== undefined && { paymentReminderChannel }),
         ...(promotionReminderEnabled !== undefined && { promotionReminderEnabled: Boolean(promotionReminderEnabled) }),

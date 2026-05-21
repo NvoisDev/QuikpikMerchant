@@ -615,6 +615,20 @@ function CollectionAddressesSection() {
   );
 }
 
+const ALERT_DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+function getNextAlertDate(day: number): string {
+  const today = new Date();
+  const todayDay = today.getDay();
+  let daysUntil = day - todayDay;
+  if (daysUntil < 0) daysUntil += 7;
+  if (daysUntil === 0) return 'Today';
+  const next = new Date(today);
+  next.setDate(today.getDate() + daysUntil);
+  return `${ALERT_DAY_NAMES[day]} ${next.getDate()} ${MONTHS_SHORT[next.getMonth()]}`;
+}
+
 export default function Settings() {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -640,6 +654,7 @@ export default function Settings() {
   const [notifForm, setNotifForm] = useState({
     stockAlertFrequency: 'daily',
     stockAlertChannel: 'email',
+    stockAlertDay: 1,
     paymentReminderEnabled: true,
     paymentReminderChannel: 'email',
     promotionReminderEnabled: true,
@@ -651,6 +666,7 @@ export default function Settings() {
       setNotifForm({
         stockAlertFrequency: notifPrefs.stockAlertFrequency || 'daily',
         stockAlertChannel: notifPrefs.stockAlertChannel || 'email',
+        stockAlertDay: (notifPrefs as any).stockAlertDay ?? 1,
         paymentReminderEnabled: notifPrefs.paymentReminderEnabled !== false,
         paymentReminderChannel: (notifPrefs as any).paymentReminderChannel || 'email',
         promotionReminderEnabled: notifPrefs.promotionReminderEnabled !== false,
@@ -688,17 +704,23 @@ export default function Settings() {
     enabled: isTeamMember,
   });
 
-  const [memberNotifForm, setMemberNotifForm] = useState({
+  const [memberNotifForm, setMemberNotifForm] = useState<{
+    stockAlertFrequency: string;
+    stockAlertChannel: string;
+    stockAlertDay: number | null;
+  }>({
     stockAlertFrequency: 'inherit',
     stockAlertChannel: 'inherit',
+    stockAlertDay: null,
   });
 
   useEffect(() => {
     if (myTeamMemberRecord?.notificationPreferences) {
-      const prefs = myTeamMemberRecord.notificationPreferences as Record<string, string>;
+      const prefs = myTeamMemberRecord.notificationPreferences as Record<string, any>;
       setMemberNotifForm({
         stockAlertFrequency: prefs.stockAlertFrequency || 'inherit',
         stockAlertChannel: prefs.stockAlertChannel || 'inherit',
+        stockAlertDay: typeof prefs.stockAlertDay === 'number' ? prefs.stockAlertDay : null,
       });
     }
   }, [myTeamMemberRecord]);
@@ -2108,10 +2130,32 @@ export default function Settings() {
                             <SelectContent>
                               <SelectItem value="inherit">Inherit from account</SelectItem>
                               <SelectItem value="daily">Daily — as soon as stock drops below threshold</SelectItem>
-                              <SelectItem value="weekly">Weekly — at most once every 7 days</SelectItem>
+                              <SelectItem value="weekly">Weekly — on a chosen day each week</SelectItem>
                               <SelectItem value="critical_only">Critical only — only when stock hits zero or near-zero</SelectItem>
                             </SelectContent>
                           </Select>
+                          {memberNotifForm.stockAlertFrequency === 'weekly' && (
+                            <div className="mt-2 space-y-1.5">
+                              <p className="text-xs text-gray-500">Send on</p>
+                              <Select
+                                value={String(memberNotifForm.stockAlertDay ?? 1)}
+                                onValueChange={(v) => setMemberNotifForm(f => ({ ...f, stockAlertDay: parseInt(v) }))}
+                                disabled={!myTeamMemberRecord}
+                              >
+                                <SelectTrigger className="w-full">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {ALERT_DAY_NAMES.map((name, i) => (
+                                    <SelectItem key={i} value={String(i)}>{name}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <p className="text-xs text-gray-400">
+                                Next alert: <span className="font-medium text-gray-600">{getNextAlertDate(memberNotifForm.stockAlertDay ?? 1)}</span>
+                              </p>
+                            </div>
+                          )}
                         </div>
                         <div>
                           <p className="text-sm font-medium text-gray-800 mb-1">Alert channel</p>
@@ -2221,10 +2265,32 @@ export default function Settings() {
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="daily">Daily — as soon as stock drops below threshold</SelectItem>
-                            <SelectItem value="weekly">Weekly — at most once every 7 days</SelectItem>
+                            <SelectItem value="weekly">Weekly — on a chosen day each week</SelectItem>
                             <SelectItem value="critical_only">Critical only — only when stock hits zero or near-zero</SelectItem>
                           </SelectContent>
                         </Select>
+                        {notifForm.stockAlertFrequency === 'weekly' && (
+                          <div className="mt-3 space-y-1.5">
+                            <p className="text-xs text-gray-500">Send on</p>
+                            <Select
+                              value={String(notifForm.stockAlertDay)}
+                              onValueChange={(v) => setNotifForm(f => ({ ...f, stockAlertDay: parseInt(v) }))}
+                              disabled={notifPrefsLoading}
+                            >
+                              <SelectTrigger className="w-full">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {ALERT_DAY_NAMES.map((name, i) => (
+                                  <SelectItem key={i} value={String(i)}>{name}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <p className="text-xs text-gray-400">
+                              Next alert: <span className="font-medium text-gray-600">{getNextAlertDate(notifForm.stockAlertDay)}</span>
+                            </p>
+                          </div>
+                        )}
                       </div>
                       <div>
                         <p className="text-sm font-medium text-gray-800 mb-1">Alert channel</p>
