@@ -37,12 +37,13 @@ export default function ShareBellControls({ variant = "light" }: ShareBellContro
       user?.role === "team_member" && user.wholesalerId
         ? user.wholesalerId
         : user?.id;
-    const customerPortalUrl = `https://quikpik.app/customer/${effectiveUserId}`;
+    // Prefer custom store slug for a cleaner URL when one has been set
+    const storeIdentifier = (user?.role === "team_member" ? null : user?.storeSlug) || effectiveUserId;
+    const customerPortalUrl = `https://quikpik.app/customer/${storeIdentifier}`;
     const businessName = user?.businessName || "My Store";
 
     const shareData = {
       title: `${businessName} - Wholesale Store`,
-      text: `Check out ${businessName}! Browse our wholesale products and place orders directly.`,
       url: customerPortalUrl,
     };
 
@@ -58,18 +59,20 @@ export default function ShareBellControls({ variant = "light" }: ShareBellContro
       }
     }
 
+    const noSlugHint = !user?.storeSlug
+      ? " Set a custom store URL in Settings for a cleaner link."
+      : "";
     try {
-      await navigator.clipboard.writeText(
-        `${businessName}\n${customerPortalUrl}\n\nCheck out ${businessName} - browse our wholesale products and place orders directly!`
-      );
+      await navigator.clipboard.writeText(customerPortalUrl);
       toast({
         title: "Store Link Copied!",
-        description: "Store link copied to clipboard. Paste it anywhere to share!",
+        description: `Store link copied to clipboard. Paste it anywhere to share!${noSlugHint}`,
+        duration: noSlugHint ? 6000 : 3000,
       });
     } catch {
       toast({
         title: "Share Store",
-        description: `Copy this link: ${customerPortalUrl}`,
+        description: `Copy this link: ${customerPortalUrl}${noSlugHint}`,
         duration: 8000,
       });
     }
