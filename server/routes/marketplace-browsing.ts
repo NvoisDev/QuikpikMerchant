@@ -433,8 +433,13 @@ export function registerBrowsingRoutes(app: Express): void {
         ? `/api/logo/${wholesaler.id}`
         : (wholesaler.logoUrl && String(wholesaler.logoUrl).startsWith('http') ? wholesaler.logoUrl : null);
 
+      // Omit the products array — it is not used by the WelcomePage or customer
+      // portal branding layer (products are fetched via separate endpoints).
+      // Stripping it keeps this response small regardless of catalogue size.
+      const { products: _products, ...wholesalerBranding } = wholesaler as any;
+
       res.json({
-        ...wholesaler,
+        ...wholesalerBranding,
         logoUrl: resolvedLogoUrl,
         effectiveFeeConfig: {
           percentage: effectiveFeeConfig.percentage,
