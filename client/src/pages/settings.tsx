@@ -745,9 +745,11 @@ export default function Settings() {
         stockAlertFrequency: prefs.stockAlertFrequency,
         stockAlertChannel: prefs.stockAlertChannel,
       };
-      if (prefs.stockAlertDay !== null) {
+      if (prefs.stockAlertFrequency === 'inherit' || prefs.stockAlertFrequency !== 'weekly') {
+        // Not explicitly weekly — omit day so any stale stored value doesn't persist as an override
+      } else if (prefs.stockAlertDay !== null) {
         payload.stockAlertDay = prefs.stockAlertDay;
-      } else if (prefs.stockAlertFrequency === 'weekly') {
+      } else {
         payload.stockAlertDay = 1;
       }
       const r = await apiRequest("PATCH", `/api/team-members/${myTeamMemberRecord.id}/notification-preferences`, payload);

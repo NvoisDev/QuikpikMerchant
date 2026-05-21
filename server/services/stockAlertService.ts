@@ -277,11 +277,13 @@ export class StockAlertService {
 
         if (memberChannel === 'off') continue;
 
-        // Per-member weekly cadence check — uses member's own stockAlertDay (falls back to owner's)
+        // Per-member weekly cadence check
+        // Member day only applies when the member *explicitly* set weekly.
+        // When frequency is inherited, always use the owner's stockAlertDay.
         if (memberFrequency === 'weekly') {
           const effectiveMemberPrefs: NotificationPrefs = {
             ...memberPrefs,
-            stockAlertDay: typeof memberPrefs.stockAlertDay === 'number'
+            stockAlertDay: memberHasExplicitFrequency && typeof memberPrefs.stockAlertDay === 'number'
               ? memberPrefs.stockAlertDay
               : ownerPrefs.stockAlertDay,
           };
