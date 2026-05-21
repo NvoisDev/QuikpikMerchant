@@ -665,7 +665,9 @@ export function registerAuthCoreRoutes(app: Express): void {
         stockAlertFrequency: prefs.stockAlertFrequency ?? 'daily',
         stockAlertChannel: prefs.stockAlertChannel ?? 'email',
         paymentReminderEnabled: prefs.paymentReminderEnabled !== false,
+        paymentReminderChannel: prefs.paymentReminderChannel ?? 'email',
         promotionReminderEnabled: prefs.promotionReminderEnabled !== false,
+        promotionReminderChannel: prefs.promotionReminderChannel ?? 'email',
       });
     } catch (error) {
       console.error('Error fetching notification preferences:', error);
@@ -679,7 +681,7 @@ export function registerAuthCoreRoutes(app: Express): void {
       const user = await storage.getUser(req.user.id);
       if (!user) return res.status(404).json({ message: 'User not found' });
 
-      const { stockAlertFrequency, stockAlertChannel, paymentReminderEnabled, promotionReminderEnabled } = req.body;
+      const { stockAlertFrequency, stockAlertChannel, paymentReminderEnabled, paymentReminderChannel, promotionReminderEnabled, promotionReminderChannel } = req.body;
 
       const validFrequencies = ['daily', 'weekly', 'critical_only'];
       const validChannels = ['email', 'sms', 'both', 'off'];
@@ -690,6 +692,12 @@ export function registerAuthCoreRoutes(app: Express): void {
       if (stockAlertChannel !== undefined && !validChannels.includes(stockAlertChannel)) {
         return res.status(400).json({ message: 'Invalid stockAlertChannel' });
       }
+      if (paymentReminderChannel !== undefined && !validChannels.includes(paymentReminderChannel)) {
+        return res.status(400).json({ message: 'Invalid paymentReminderChannel' });
+      }
+      if (promotionReminderChannel !== undefined && !validChannels.includes(promotionReminderChannel)) {
+        return res.status(400).json({ message: 'Invalid promotionReminderChannel' });
+      }
 
       const existing = (user.notificationPreferences as Record<string, unknown>) || {};
       const updated = {
@@ -697,7 +705,9 @@ export function registerAuthCoreRoutes(app: Express): void {
         ...(stockAlertFrequency !== undefined && { stockAlertFrequency }),
         ...(stockAlertChannel !== undefined && { stockAlertChannel }),
         ...(paymentReminderEnabled !== undefined && { paymentReminderEnabled: Boolean(paymentReminderEnabled) }),
+        ...(paymentReminderChannel !== undefined && { paymentReminderChannel }),
         ...(promotionReminderEnabled !== undefined && { promotionReminderEnabled: Boolean(promotionReminderEnabled) }),
+        ...(promotionReminderChannel !== undefined && { promotionReminderChannel }),
       };
 
       await storage.updateUserSettings(req.user.id, { notificationPreferences: updated });

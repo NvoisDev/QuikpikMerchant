@@ -170,7 +170,10 @@ async function sendPaymentReminder(
   if (!wholesalerResult[0]) return;
 
   const notifPrefs = (wholesalerResult[0] as any).notificationPreferences || {};
-  if (notifPrefs.paymentReminderEnabled === false) return;
+  const paymentChannel: string = notifPrefs.paymentReminderChannel || 'email';
+  if (notifPrefs.paymentReminderEnabled === false || paymentChannel === 'off') return;
+  const sendEmailChannel = paymentChannel === 'email' || paymentChannel === 'both';
+  const sendSmsChannel = paymentChannel === 'sms' || paymentChannel === 'both';
 
   const businessName = wholesalerResult[0]?.businessName || 'Your supplier';
   const outstandingAmount = parseFloat(order.amountOutstanding || '0');
@@ -196,7 +199,7 @@ async function sendPaymentReminder(
   const orderRef = order.orderNumber || 'your order';
   const itemsPart = itemsSummary ? ` (${itemsSummary})` : '';
   
-  if (order.customerEmail) {
+  if (sendEmailChannel && order.customerEmail) {
     try {
       await sendPaymentReminderEmail({
         to: order.customerEmail,
@@ -213,7 +216,7 @@ async function sendPaymentReminder(
     }
   }
   
-  if (order.customerPhone) {
+  if (sendSmsChannel && order.customerPhone) {
     try {
       let smsMessage: string;
       const payPart = paymentLink ? ` Pay here: ${paymentLink}` : ' Please contact us to arrange payment.';

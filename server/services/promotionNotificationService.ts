@@ -326,9 +326,12 @@ export class PromotionNotificationService {
 
       const [wRow] = await db.select({ notificationPreferences: users.notificationPreferences }).from(users).where(eq(users.id, wholesalerId)).limit(1);
       const notifPrefs = (wRow?.notificationPreferences as any) || {};
-      if (notifPrefs.promotionReminderEnabled === false) {
+      const promoChannel: string = notifPrefs.promotionReminderChannel || 'email';
+      if (notifPrefs.promotionReminderEnabled === false || promoChannel === 'off') {
         return;
       }
+      const sendEmailPromo = promoChannel === 'email' || promoChannel === 'both';
+      const sendSmsPromo = promoChannel === 'sms' || promoChannel === 'both';
 
       const customers = await storage.getAllCustomers(wholesalerId);
 
@@ -358,7 +361,7 @@ export class PromotionNotificationService {
       let smsSent = 0;
 
       for (const customer of customers) {
-        if (customer.email) {
+        if (sendEmailPromo && customer.email) {
           const ok = await sendEmail({
             to: customer.email,
             from: "hello@quikpik.co",
@@ -369,7 +372,7 @@ export class PromotionNotificationService {
           if (ok) emailsSent++;
         }
 
-        if (customer.phoneNumber) {
+        if (sendSmsPromo && customer.phoneNumber) {
           const result = await ReliableSMSService.sendMarketingSMS(customer.phoneNumber, smsText);
           if (result.success) smsSent++;
         }

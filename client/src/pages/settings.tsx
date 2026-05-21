@@ -640,7 +640,9 @@ export default function Settings() {
     stockAlertFrequency: 'daily',
     stockAlertChannel: 'email',
     paymentReminderEnabled: true,
+    paymentReminderChannel: 'email',
     promotionReminderEnabled: true,
+    promotionReminderChannel: 'email',
   });
 
   useEffect(() => {
@@ -649,7 +651,9 @@ export default function Settings() {
         stockAlertFrequency: notifPrefs.stockAlertFrequency || 'daily',
         stockAlertChannel: notifPrefs.stockAlertChannel || 'email',
         paymentReminderEnabled: notifPrefs.paymentReminderEnabled !== false,
+        paymentReminderChannel: (notifPrefs as any).paymentReminderChannel || 'email',
         promotionReminderEnabled: notifPrefs.promotionReminderEnabled !== false,
+        promotionReminderChannel: (notifPrefs as any).promotionReminderChannel || 'email',
       });
     }
   }, [notifPrefs]);
@@ -2135,27 +2139,65 @@ export default function Settings() {
                       <p className="text-xs text-gray-500 mt-0.5">These are sent automatically to your customers. Toggle them off to stop sending.</p>
                     </div>
                     <div className="border border-gray-200 rounded-lg divide-y divide-gray-100">
-                      <div className="flex items-center justify-between p-4">
-                        <div>
-                          <p className="text-sm font-medium text-gray-800">Payment reminders</p>
-                          <p className="text-xs text-gray-500 mt-0.5">Remind customers 3 days before, on the day, and when a balance payment becomes overdue</p>
+                      <div className="p-4 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium text-gray-800">Payment reminders</p>
+                            <p className="text-xs text-gray-500 mt-0.5">Remind customers 3 days before, on the day, and when a balance payment becomes overdue</p>
+                          </div>
+                          <Switch
+                            checked={notifForm.paymentReminderEnabled}
+                            onCheckedChange={(v) => setNotifForm(f => ({ ...f, paymentReminderEnabled: v }))}
+                            disabled={notifPrefsLoading}
+                          />
                         </div>
-                        <Switch
-                          checked={notifForm.paymentReminderEnabled}
-                          onCheckedChange={(v) => setNotifForm(f => ({ ...f, paymentReminderEnabled: v }))}
-                          disabled={notifPrefsLoading}
-                        />
+                        {notifForm.paymentReminderEnabled && (
+                          <Select
+                            value={notifForm.paymentReminderChannel}
+                            onValueChange={(v) => setNotifForm(f => ({ ...f, paymentReminderChannel: v }))}
+                            disabled={notifPrefsLoading}
+                          >
+                            <SelectTrigger className="w-full sm:w-56">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="email">Email only</SelectItem>
+                              <SelectItem value="sms">SMS / WhatsApp only</SelectItem>
+                              <SelectItem value="both">Both email and SMS</SelectItem>
+                              <SelectItem value="off">Off — no payment reminders</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        )}
                       </div>
-                      <div className="flex items-center justify-between p-4">
-                        <div>
-                          <p className="text-sm font-medium text-gray-800">Promotion alerts</p>
-                          <p className="text-xs text-gray-500 mt-0.5">Notify customers when one of your promotions starts or ends today</p>
+                      <div className="p-4 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium text-gray-800">Promotion alerts</p>
+                            <p className="text-xs text-gray-500 mt-0.5">Notify customers when one of your promotions starts or ends today</p>
+                          </div>
+                          <Switch
+                            checked={notifForm.promotionReminderEnabled}
+                            onCheckedChange={(v) => setNotifForm(f => ({ ...f, promotionReminderEnabled: v }))}
+                            disabled={notifPrefsLoading}
+                          />
                         </div>
-                        <Switch
-                          checked={notifForm.promotionReminderEnabled}
-                          onCheckedChange={(v) => setNotifForm(f => ({ ...f, promotionReminderEnabled: v }))}
-                          disabled={notifPrefsLoading}
-                        />
+                        {notifForm.promotionReminderEnabled && (
+                          <Select
+                            value={notifForm.promotionReminderChannel}
+                            onValueChange={(v) => setNotifForm(f => ({ ...f, promotionReminderChannel: v }))}
+                            disabled={notifPrefsLoading}
+                          >
+                            <SelectTrigger className="w-full sm:w-56">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="email">Email only</SelectItem>
+                              <SelectItem value="sms">SMS / WhatsApp only</SelectItem>
+                              <SelectItem value="both">Both email and SMS</SelectItem>
+                              <SelectItem value="off">Off — no promotion alerts</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        )}
                       </div>
                     </div>
                   </div>
