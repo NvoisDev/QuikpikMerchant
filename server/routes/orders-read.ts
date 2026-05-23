@@ -382,12 +382,12 @@ export function registerOrderReadRoutes(app: Express): void {
             phoneNumber: users.phoneNumber,
           }).from(users).where(inArray(users.id, retailerIds)),
           db.select({
-            retailerId: wholesalerCustomerRelationships.retailerId,
+            retailerId: wholesalerCustomerRelationships.customerId,
             displayName: wholesalerCustomerRelationships.displayName,
           }).from(wholesalerCustomerRelationships).where(
             and(
               eq(wholesalerCustomerRelationships.wholesalerId, wholesalerId),
-              inArray(wholesalerCustomerRelationships.retailerId, retailerIds)
+              inArray(wholesalerCustomerRelationships.customerId, retailerIds)
             )
           ),
         ]);
