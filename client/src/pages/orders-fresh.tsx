@@ -753,9 +753,11 @@ export default function OrdersFresh() {
   };
 
   // Calculate net amount: only deduct the actual stored platform fee — never fall back to a default rate
+  const OFFLINE_PAYMENT_METHODS_LOCAL = ['cash', 'bank_transfer', 'cheque', 'pay_later', 'other'];
   const calculateNetAmount = (order: Order) => {
     const subtotal = parseFloat(order.subtotal || '0');
     const deliveryCost = parseFloat(order.deliveryCost || '0');
+    if (OFFLINE_PAYMENT_METHODS_LOCAL.includes(order.paymentMethod || '')) return subtotal + deliveryCost;
     const actualPlatformFee = parseFloat(order.platformFee || '0');
     if (actualPlatformFee <= 0) return subtotal + deliveryCost;
     return (subtotal + deliveryCost) - actualPlatformFee;
@@ -1512,7 +1514,7 @@ export default function OrdersFresh() {
                       <TableCell className="font-medium text-xs">
                         <div>
                           <div>{formatMoney(calculateNetAmount(order))}</div>
-                          <div className="text-xs text-gray-500">{parseFloat(order.platformFee || '0') > 0 ? 'After platform fee' : 'No platform fee'}</div>
+                          <div className="text-xs text-gray-500">{parseFloat(order.platformFee || '0') > 0 && !OFFLINE_PAYMENT_METHODS_LOCAL.includes(order.paymentMethod || '') ? 'After platform fee' : 'No platform fee'}</div>
                         </div>
                       </TableCell>
                       <TableCell className="text-xs">

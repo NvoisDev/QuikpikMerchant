@@ -263,6 +263,8 @@ const isStripePayment = (order: Order): boolean => {
 const calculateNetAmount = (order: Order) => {
   const subtotal = parseFloat(order.subtotal || '0');
   const deliveryCost = parseFloat(order.deliveryCost || '0');
+  // Offline orders never incur a platform fee — ignore any legacy stored value
+  if (OFFLINE_PAYMENT_METHODS.includes(order.paymentMethod || '')) return subtotal + deliveryCost;
   // Only deduct what is actually stored — never fall back to a default rate
   const actualPlatformFee = parseFloat(order.platformFee || '0');
   if (actualPlatformFee <= 0) return subtotal + deliveryCost;
@@ -1507,7 +1509,7 @@ export default function OrderDetail() {
                   })())}</span>
                 </div>
                 <div className="text-xs text-gray-400 mt-0.5">
-                  {parseFloat(order.platformFee || '0') > 0 ? 'After platform fee' : isStripePayment(order) ? 'No platform fee charged' : 'No platform fee for offline payments'}
+                  {parseFloat(order.platformFee || '0') > 0 && !isOfflinePayment ? 'After platform fee' : isStripePayment(order) ? 'No platform fee charged' : 'No platform fee for offline payments'}
                 </div>
               </div>
             </div>
