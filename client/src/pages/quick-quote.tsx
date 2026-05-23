@@ -61,7 +61,7 @@ import {
   X,
   ChevronDown,
 } from "lucide-react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { DialogDescription } from "@/components/ui/dialog";
 import { QuoteItemCard } from "@/components/orders/QuoteItemCard";
 
@@ -142,6 +142,7 @@ export default function QuickQuote() {
   const { user } = useAuth();
   const { isDesktopCollapsed } = useSidebarContext();
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [quoteItems, setQuoteItems] = useState<QuoteItem[]>([]);
   const [productDialogOpen, setProductDialogOpen] = useState(false);
@@ -155,6 +156,11 @@ export default function QuickQuote() {
     id: number;
     orderNumber: string;
     paymentLink: string;
+  } | null>(null);
+  const [savedDraftResult, setSavedDraftResult] = useState<{
+    id: number;
+    customerName: string;
+    isUpdate: boolean;
   } | null>(null);
   const [showPickingMode, setShowPickingMode] = useState(false);
   const [isSharingInvoice, setIsSharingInvoice] = useState(false);
@@ -485,13 +491,15 @@ export default function QuickQuote() {
         return resp.json();
       }
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['/api/orders/drafts'] });
-      toast({
-        title: editingDraftId ? 'Draft updated' : 'Draft saved',
-        description: editingDraftId
-          ? 'Changes saved to your draft invoice.'
-          : 'Find it in the Drafts tab on the Orders page.',
+      const customerName = selectedCustomer?.businessName
+        || [selectedCustomer?.firstName, selectedCustomer?.lastName].filter(Boolean).join(' ')
+        || 'your customer';
+      setSavedDraftResult({
+        id: data.id ?? editingDraftId ?? 0,
+        customerName,
+        isUpdate: !!editingDraftId,
       });
     },
     onError: (error: Error) => {
@@ -901,6 +909,7 @@ export default function QuickQuote() {
     setInputValues({});
     setCostValues({});
     setCreatedQuote(null);
+    setSavedDraftResult(null);
     setSendMethod('sms');
     setDepositPercentage(100);
     setBalanceDueDays(0);
@@ -1014,6 +1023,58 @@ export default function QuickQuote() {
         />
       )}
       </>
+    );
+  }
+
+  if (savedDraftResult) {
+    return (
+      <div className="p-4 md:p-6 max-w-2xl mx-auto">
+        <Card>
+          <CardHeader className="text-center p-4 md:p-6">
+            <div className="mx-auto w-12 h-12 md:w-16 md:h-16 bg-green-100 rounded-full flex items-center justify-center mb-3 md:mb-4">
+              <Check className="h-6 w-6 md:h-8 md:w-8 text-green-600" />
+            </div>
+            <CardTitle className="text-xl md:text-2xl">
+              {savedDraftResult.isUpdate ? 'Draft Updated!' : 'Draft Saved!'}
+            </CardTitle>
+            <CardDescription className="text-sm">
+              {savedDraftResult.isUpdate
+                ? `Your draft for ${savedDraftResult.customerName} has been updated.`
+                : `Your draft for ${savedDraftResult.customerName} has been saved. You can find it in the Drafts tab.`}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-4 md:p-6 pt-0">
+            <div className="bg-amber-50 border border-amber-200 p-3 md:p-4 rounded-lg text-center mb-4">
+              <p className="text-sm text-amber-800 font-medium">Draft — not yet sent</p>
+              <p className="text-xs text-amber-600 mt-1">
+                Approve and send this draft when you're ready to notify the customer.
+              </p>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-2">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={resetQuote}
+              >
+                New Invoice
+              </Button>
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => setSavedDraftResult(null)}
+              >
+                Continue Editing
+              </Button>
+              <Button
+                className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                onClick={() => setLocation('/orders?tab=drafts')}
+              >
+                View Drafts
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     );
   }
 
