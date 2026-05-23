@@ -2178,36 +2178,46 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone, currency = '
         ) : (
         <div className="space-y-2">
           {paginatedOrders.map((order: Order, index: number) => {
+            const isCancelled = order.status === 'cancelled';
             return (
-            <Card key={order.id} className="border-l-4 border-l-blue-500 hover:shadow-md transition-shadow cursor-pointer" onClick={() => setSelectedOrder(order)}>
+            <Card key={order.id} className={`border-l-4 hover:shadow-md transition-shadow cursor-pointer ${isCancelled ? 'border-l-gray-400 bg-gray-50 opacity-80' : 'border-l-blue-500'}`} onClick={() => setSelectedOrder(order)}>
               <CardContent className="p-3 sm:p-4">
                 <div className="space-y-3">
+                  {isCancelled && (
+                    <div className="flex items-center justify-center">
+                      <span className="w-full text-center text-xs font-bold tracking-wide text-red-600 bg-red-50 border border-red-200 rounded px-2 py-1">
+                        CANCELLED
+                      </span>
+                    </div>
+                  )}
                   {/* Order header with badges */}
                   <div className="flex flex-wrap items-center gap-2">
-                    <div className="text-sm font-semibold">{order.orderNumber}</div>
-                    <Badge className={`${getStatusColor(order.status)} text-xs`}>
-                      {getStatusIcon(order.status)}
-                      <span className="ml-1">{getStatusLabel(order.status)}</span>
-                    </Badge>
+                    <div className={`text-sm font-semibold ${isCancelled ? 'text-gray-400' : ''}`}>{order.orderNumber}</div>
+                    {!isCancelled && (
+                      <Badge className={`${getStatusColor(order.status)} text-xs`}>
+                        {getStatusIcon(order.status)}
+                        <span className="ml-1">{getStatusLabel(order.status)}</span>
+                      </Badge>
+                    )}
                     <Badge 
                       variant="outline" 
-                      className={`text-xs ${order.fulfillmentType === 'delivery' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-slate-100 text-slate-700 border-slate-200'}`}
+                      className={`text-xs ${isCancelled ? 'bg-gray-100 text-gray-400 border-gray-300' : order.fulfillmentType === 'delivery' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-slate-100 text-slate-700 border-slate-200'}`}
                     >
                       {order.fulfillmentType === 'delivery' ? '🚚 Delivery' : '📦 Collection'}
                     </Badge>
-                    {order.amountRefunded && parseFloat(order.amountRefunded) > 0 ? (
+                    {!isCancelled && (order.amountRefunded && parseFloat(order.amountRefunded) > 0 ? (
                       <Badge className="bg-purple-100 text-purple-800 text-xs">
                         Refunded
                       </Badge>
-                    ) : order.status !== 'cancelled' ? (
+                    ) : (
                       <Badge className={`${getPaymentStatusColor(order.paymentStatus || 'unpaid')} text-xs`}>
                         {getPaymentStatusLabel(order.paymentStatus || 'unpaid')}
                       </Badge>
-                    ) : null}
-                    <Badge variant="outline" className={`text-xs ${order.isQuote ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : 'bg-teal-50 text-teal-700 border-teal-200'}`}>
+                    ))}
+                    <Badge variant="outline" className={`text-xs ${isCancelled ? 'bg-gray-100 text-gray-400 border-gray-300' : order.isQuote ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : 'bg-teal-50 text-teal-700 border-teal-200'}`}>
                       {order.isQuote ? <><FileText className="h-3 w-3 mr-1" /> Invoice</> : <><ShoppingCart className="h-3 w-3 mr-1" /> Online Order</>}
                     </Badge>
-                    {isQuoteEdited(order) && (
+                    {!isCancelled && isQuoteEdited(order) && (
                       <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-300">
                         <RefreshCw className="h-3 w-3 mr-1" /> Invoice updated
                       </Badge>
@@ -2229,7 +2239,7 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone, currency = '
                         <Calendar className="h-3 w-3 flex-shrink-0" />
                         <span>{format(new Date(order.date), 'MMM d, yyyy')}</span>
                       </div>
-                      <div className="text-sm font-semibold text-green-600">
+                      <div className={`text-sm font-semibold ${isCancelled ? 'line-through text-gray-400' : 'text-green-600'}`}>
                         {fmt(parseFloat(order.total))}
                       </div>
                     </div>

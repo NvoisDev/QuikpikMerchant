@@ -84,12 +84,21 @@ export function RecentOrdersSection({ wholesalerId, customerPhone, onViewAllOrde
         </Button>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-        {recentOrders.map((order: Order) => (
-          <div key={order.id} className="border rounded-lg p-3 space-y-2">
+        {recentOrders.map((order: Order) => {
+          const isCancelled = order.status === 'cancelled';
+          return (
+          <div key={order.id} className={`border rounded-lg p-3 space-y-2 ${isCancelled ? 'bg-gray-50 border-gray-300 opacity-80' : ''}`}>
+            {isCancelled && (
+              <div className="flex items-center justify-center">
+                <span className="w-full text-center text-xs font-bold tracking-wide text-red-600 bg-red-50 border border-red-200 rounded px-2 py-1">
+                  CANCELLED
+                </span>
+              </div>
+            )}
             <div className="flex items-start justify-between gap-2">
-              <span className="font-semibold text-sm pt-0.5">{order.orderNumber}</span>
+              <span className={`font-semibold text-sm pt-0.5 ${isCancelled ? 'text-gray-400' : ''}`}>{order.orderNumber}</span>
               <div className="flex flex-col items-end gap-1">
-                {order.paymentStatus !== 'paid' && order.status !== 'cancelled' && (
+                {order.paymentStatus !== 'paid' && !isCancelled && (
                   <PayBalanceButton order={order} customerPhone={customerPhone} />
                 )}
                 <span className="text-xs text-gray-400">
@@ -99,16 +108,18 @@ export function RecentOrdersSection({ wholesalerId, customerPhone, onViewAllOrde
             </div>
 
             <div className="flex items-center gap-1.5 flex-wrap">
-              <Badge className={`${getStatusColor(order.status)} text-xs`}>
-                {getStatusIcon(order.status)}
-                <span className="ml-1">{getStatusLabel(order.status || '')}</span>
-              </Badge>
-              {order.paymentStatus && order.status !== 'cancelled' && (
+              {!isCancelled && (
+                <Badge className={`${getStatusColor(order.status)} text-xs`}>
+                  {getStatusIcon(order.status)}
+                  <span className="ml-1">{getStatusLabel(order.status || '')}</span>
+                </Badge>
+              )}
+              {order.paymentStatus && !isCancelled && (
                 <Badge className={`${getPaymentStatusColor(order.paymentStatus)} text-xs`}>
                   {getPaymentStatusLabel(order.paymentStatus)}
                 </Badge>
               )}
-              <Badge variant="outline" className={`text-xs ${order.isQuote ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : 'bg-teal-50 text-teal-700 border-teal-200'}`}>
+              <Badge variant="outline" className={`text-xs ${isCancelled ? 'bg-gray-100 text-gray-400 border-gray-300' : order.isQuote ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : 'bg-teal-50 text-teal-700 border-teal-200'}`}>
                 {order.isQuote ? <><FileText className="h-3 w-3 mr-1" /> Invoice</> : <><ShoppingCart className="h-3 w-3 mr-1" /> Online</>}
               </Badge>
             </div>
@@ -119,7 +130,9 @@ export function RecentOrdersSection({ wholesalerId, customerPhone, onViewAllOrde
               ) : (
                 <span className="flex items-center gap-1"><MapPin className="h-3 w-3" /> Collection</span>
               )}
-              <span className="font-medium text-gray-900">{formatCurrency(parseFloat(order.total || order.subtotal), defaultCurrency || 'GBP')}</span>
+              <span className={`font-medium ${isCancelled ? 'line-through text-gray-400' : 'text-gray-900'}`}>
+                {formatCurrency(parseFloat(order.total || order.subtotal), defaultCurrency || 'GBP')}
+              </span>
               {order.items && order.items.length > 0 && (
                 <span>{order.items.length} item{order.items.length > 1 ? 's' : ''}</span>
               )}
@@ -137,7 +150,8 @@ export function RecentOrdersSection({ wholesalerId, customerPhone, onViewAllOrde
               />
             </div>
           </div>
-        ))}
+          );
+        })}
       </div>
 
       {selectedOrderForDetails && (
