@@ -650,6 +650,7 @@ export default function Settings() {
     promotionReminderChannel: 'email',
     weeklyOrderDigestEnabled: true,
     weeklyOrderDigestDay: 1,
+    lastWeeklyOrderDigestSentAt: null as string | null,
   });
 
   useEffect(() => {
@@ -665,6 +666,7 @@ export default function Settings() {
         promotionReminderChannel: (notifPrefs as any).promotionReminderChannel || 'email',
         weeklyOrderDigestEnabled: notifPrefs.weeklyOrderDigestEnabled !== false,
         weeklyOrderDigestDay: (notifPrefs as any).weeklyOrderDigestDay ?? 1,
+        lastWeeklyOrderDigestSentAt: (notifPrefs as any).lastWeeklyOrderDigestSentAt ?? null,
       });
     }
   }, [notifPrefs]);
@@ -2357,6 +2359,9 @@ export default function Settings() {
                                   ))}
                                 </SelectContent>
                               </Select>
+                              <p className="text-xs text-gray-400">
+                                Next digest: <span className="font-medium text-gray-600">{getNextAlertDate(notifForm.weeklyOrderDigestDay, notifForm.lastWeeklyOrderDigestSentAt)}</span>
+                              </p>
                             </div>
                           )}
                         </div>
