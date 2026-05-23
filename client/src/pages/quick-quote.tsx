@@ -2107,12 +2107,13 @@ export default function QuickQuote() {
       <div className={`fixed bottom-0 right-0 z-50 bg-white border-t border-gray-200 px-4 py-3 flex items-center justify-between gap-3 shadow-lg left-0 ${isDesktopCollapsed ? "lg:left-14" : "lg:left-64"}`}>
         <div className="min-w-0">
           {editingDraftId && (
-            <span className="inline-block text-xs text-amber-600 font-medium bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5 mb-1">
+            <span className="sm:hidden inline-block text-xs text-amber-600 font-medium bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5 mb-1">
               Editing draft
             </span>
           )}
           <p className="text-xs text-gray-500 leading-tight">
             {quoteItems.length} {quoteItems.length === 1 ? 'item' : 'items'} · {fulfillmentType === 'pickup' ? 'Collection' : 'Delivery'}
+            {editingDraftId && <span className="hidden sm:inline ml-1 text-amber-600 font-medium"> · Editing draft</span>}
           </p>
           <p className="text-lg font-bold leading-tight">{formatCurrency(calculateTotal())}</p>
         </div>
