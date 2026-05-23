@@ -340,7 +340,7 @@ export default function OrdersFresh() {
           variant: 'destructive',
         } as any);
       } else {
-        toast({ title: 'Failed to approve', description: err?.message || 'Failed to approve draft', variant: 'destructive' } as any);
+        toast({ title: 'Failed to approve', description: 'Failed to approve draft', variant: 'destructive' } as any);
       }
     } finally {
       setIsApprovingDraft(null);
