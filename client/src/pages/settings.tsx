@@ -649,6 +649,7 @@ export default function Settings() {
     promotionReminderEnabled: true,
     promotionReminderChannel: 'email',
     weeklyOrderDigestEnabled: true,
+    weeklyOrderDigestDay: 1,
   });
 
   useEffect(() => {
@@ -663,6 +664,7 @@ export default function Settings() {
         promotionReminderEnabled: notifPrefs.promotionReminderEnabled !== false,
         promotionReminderChannel: (notifPrefs as any).promotionReminderChannel || 'email',
         weeklyOrderDigestEnabled: notifPrefs.weeklyOrderDigestEnabled !== false,
+        weeklyOrderDigestDay: (notifPrefs as any).weeklyOrderDigestDay ?? 1,
       });
     }
   }, [notifPrefs]);
@@ -2326,11 +2328,11 @@ export default function Settings() {
                         <p className="text-xs text-gray-500 mt-0.5">Alerts sent to you about your own account and orders.</p>
                       </div>
                       <div className="border border-gray-200 rounded-lg divide-y divide-gray-100">
-                        <div className="p-4 space-y-1">
+                        <div className="p-4 space-y-3">
                           <div className="flex items-center justify-between">
                             <div>
                               <p className="text-sm font-medium text-gray-800">Weekly unfulfilled order digest</p>
-                              <p className="text-xs text-gray-500 mt-0.5">Receive a weekly email every Monday listing orders that have been unfulfilled for more than 15 days</p>
+                              <p className="text-xs text-gray-500 mt-0.5">Receive a weekly email listing orders that have been unfulfilled for more than 15 days</p>
                             </div>
                             <Switch
                               checked={notifForm.weeklyOrderDigestEnabled}
@@ -2338,6 +2340,25 @@ export default function Settings() {
                               disabled={notifPrefsLoading}
                             />
                           </div>
+                          {notifForm.weeklyOrderDigestEnabled && (
+                            <div className="space-y-1.5">
+                              <p className="text-xs text-gray-500">Send on</p>
+                              <Select
+                                value={String(notifForm.weeklyOrderDigestDay)}
+                                onValueChange={(v) => setNotifForm(f => ({ ...f, weeklyOrderDigestDay: parseInt(v) }))}
+                                disabled={notifPrefsLoading}
+                              >
+                                <SelectTrigger className="w-full sm:w-56">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {ALERT_DAY_NAMES.map((name, i) => (
+                                    <SelectItem key={i} value={String(i)}>{name}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>

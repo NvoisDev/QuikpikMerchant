@@ -65,6 +65,10 @@ async function processWholesalerDigest(
 
   if (prefs.weeklyOrderDigestEnabled === false) return false;
 
+  const chosenDay = typeof prefs.weeklyOrderDigestDay === 'number' ? prefs.weeklyOrderDigestDay : 1;
+  const todayDay = new Date().getDay();
+  if (todayDay !== chosenDay) return false;
+
   const lastSentRaw = prefs.lastWeeklyOrderDigestSentAt as string | null | undefined;
   if (lastSentRaw) {
     const lastSent = new Date(lastSentRaw);

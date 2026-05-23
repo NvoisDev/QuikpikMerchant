@@ -671,6 +671,7 @@ export function registerAuthCoreRoutes(app: Express): void {
         promotionReminderEnabled: prefs.promotionReminderEnabled !== false,
         promotionReminderChannel: prefs.promotionReminderChannel ?? 'email',
         weeklyOrderDigestEnabled: prefs.weeklyOrderDigestEnabled !== false,
+        weeklyOrderDigestDay: prefs.weeklyOrderDigestDay ?? 1,
       });
     } catch (error) {
       console.error('Error fetching notification preferences:', error);
@@ -684,7 +685,7 @@ export function registerAuthCoreRoutes(app: Express): void {
       const user = await storage.getUser(req.user.id);
       if (!user) return res.status(404).json({ message: 'User not found' });
 
-      const { stockAlertFrequency, stockAlertChannel, stockAlertDay, paymentReminderEnabled, paymentReminderChannel, promotionReminderEnabled, promotionReminderChannel, weeklyOrderDigestEnabled } = req.body;
+      const { stockAlertFrequency, stockAlertChannel, stockAlertDay, paymentReminderEnabled, paymentReminderChannel, promotionReminderEnabled, promotionReminderChannel, weeklyOrderDigestEnabled, weeklyOrderDigestDay } = req.body;
 
       const validFrequencies = ['daily', 'weekly', 'critical_only'];
       const validChannels = ['email', 'sms', 'both', 'off'];
@@ -697,6 +698,9 @@ export function registerAuthCoreRoutes(app: Express): void {
       }
       if (stockAlertDay !== undefined && (typeof stockAlertDay !== 'number' || stockAlertDay < 0 || stockAlertDay > 6)) {
         return res.status(400).json({ message: 'Invalid stockAlertDay (must be 0–6)' });
+      }
+      if (weeklyOrderDigestDay !== undefined && (typeof weeklyOrderDigestDay !== 'number' || weeklyOrderDigestDay < 0 || weeklyOrderDigestDay > 6)) {
+        return res.status(400).json({ message: 'Invalid weeklyOrderDigestDay (must be 0–6)' });
       }
       if (paymentReminderChannel !== undefined && !validChannels.includes(paymentReminderChannel)) {
         return res.status(400).json({ message: 'Invalid paymentReminderChannel' });
@@ -716,6 +720,7 @@ export function registerAuthCoreRoutes(app: Express): void {
         ...(promotionReminderEnabled !== undefined && { promotionReminderEnabled: Boolean(promotionReminderEnabled) }),
         ...(promotionReminderChannel !== undefined && { promotionReminderChannel }),
         ...(weeklyOrderDigestEnabled !== undefined && { weeklyOrderDigestEnabled: Boolean(weeklyOrderDigestEnabled) }),
+        ...(weeklyOrderDigestDay !== undefined && { weeklyOrderDigestDay }),
       };
 
       await storage.updateUserSettings(req.user.id, { notificationPreferences: updated });
