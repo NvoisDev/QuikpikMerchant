@@ -670,6 +670,7 @@ export function registerAuthCoreRoutes(app: Express): void {
         paymentReminderChannel: prefs.paymentReminderChannel ?? 'email',
         promotionReminderEnabled: prefs.promotionReminderEnabled !== false,
         promotionReminderChannel: prefs.promotionReminderChannel ?? 'email',
+        weeklyOrderDigestEnabled: prefs.weeklyOrderDigestEnabled !== false,
       });
     } catch (error) {
       console.error('Error fetching notification preferences:', error);
@@ -683,7 +684,7 @@ export function registerAuthCoreRoutes(app: Express): void {
       const user = await storage.getUser(req.user.id);
       if (!user) return res.status(404).json({ message: 'User not found' });
 
-      const { stockAlertFrequency, stockAlertChannel, stockAlertDay, paymentReminderEnabled, paymentReminderChannel, promotionReminderEnabled, promotionReminderChannel } = req.body;
+      const { stockAlertFrequency, stockAlertChannel, stockAlertDay, paymentReminderEnabled, paymentReminderChannel, promotionReminderEnabled, promotionReminderChannel, weeklyOrderDigestEnabled } = req.body;
 
       const validFrequencies = ['daily', 'weekly', 'critical_only'];
       const validChannels = ['email', 'sms', 'both', 'off'];
@@ -714,6 +715,7 @@ export function registerAuthCoreRoutes(app: Express): void {
         ...(paymentReminderChannel !== undefined && { paymentReminderChannel }),
         ...(promotionReminderEnabled !== undefined && { promotionReminderEnabled: Boolean(promotionReminderEnabled) }),
         ...(promotionReminderChannel !== undefined && { promotionReminderChannel }),
+        ...(weeklyOrderDigestEnabled !== undefined && { weeklyOrderDigestEnabled: Boolean(weeklyOrderDigestEnabled) }),
       };
 
       await storage.updateUserSettings(req.user.id, { notificationPreferences: updated });

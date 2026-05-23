@@ -286,4 +286,58 @@ export async function sendStripeVerifiedEmail(data: {
   });
 }
 
-export default { sendEmail, sendOrderConfirmationEmail, sendOrderPhotoNotificationEmail, sendWholesalerOrderNotification, sendPaymentReminderEmail, sendStripeVerifiedEmail };
+export async function sendWeeklyOrderDigestEmail(data: {
+  wholesalerEmail: string;
+  businessName: string;
+  orders: Array<{
+    orderNumber: string;
+    customerName: string;
+    createdAt: Date;
+    status: string;
+    total: number;
+  }>;
+}): Promise<boolean> {
+  const { wrapCustomerEmail, emailCard, emailButton, emailHeading, emailTable } = await import('./email-templates');
+
+  const today = new Date();
+  const orderRows = data.orders.map((o) => {
+    const ageMs = today.getTime() - new Date(o.createdAt).getTime();
+    const ageDays = Math.floor(ageMs / (1000 * 60 * 60 * 24));
+    const statusLabel = o.status.charAt(0).toUpperCase() + o.status.slice(1);
+    return [
+      o.orderNumber,
+      o.customerName,
+      `${ageDays} day${ageDays !== 1 ? 's' : ''}`,
+      statusLabel,
+      `£${o.total.toFixed(2)}`,
+    ];
+  });
+
+  const appBase = process.env.APP_URL || 'https://quikpik.app';
+  const ordersLink = `${appBase}/orders?status=unfulfilled`;
+
+  const countWord = data.orders.length === 1 ? '1 order' : `${data.orders.length} orders`;
+
+  const body = `${emailHeading('Weekly Order Digest', { color: '#10b981', size: '22px' })}
+<p style="font-size:16px;margin:0 0 8px">Hi ${data.businessName},</p>
+<p style="margin:0 0 20px">You have <strong>${countWord}</strong> that ${data.orders.length === 1 ? 'has' : 'have'} been unfulfilled for more than 15 days. Here's a summary:</p>
+${emailTable(['Order #', 'Customer', 'Age', 'Status', 'Value'], orderRows)}
+${emailCard(`<p style="margin:0;color:#92400e;font-size:14px">These orders may need your attention. Fulfilling or following up on them promptly helps keep your customers happy.</p>`, { borderColor: '#f59e0b', bgColor: '#fffbeb' })}
+${emailButton('View Unfulfilled Orders', ordersLink, '#10b981')}
+<p style="margin:20px 0 4px;font-size:13px;color:#6b7280">You're receiving this because you have unfulfilled orders older than 15 days. You can turn off this digest in your <a href="${appBase}/settings?tab=notifications" style="color:#10b981;text-decoration:none">notification settings</a>.</p>`;
+
+  const html = wrapCustomerEmail(
+    body,
+    { businessName: data.businessName },
+    { preheader: `You have ${countWord} awaiting fulfilment — ${data.orders[0].orderNumber}${data.orders.length > 1 ? ' and more' : ''}` }
+  );
+
+  return await sendEmail({
+    to: data.wholesalerEmail,
+    from: 'hello@quikpik.co',
+    subject: `Weekly Digest: ${countWord} awaiting fulfilment`,
+    html,
+  });
+}
+
+export default { sendEmail, sendOrderConfirmationEmail, sendOrderPhotoNotificationEmail, sendWholesalerOrderNotification, sendPaymentReminderEmail, sendStripeVerifiedEmail, sendWeeklyOrderDigestEmail };

@@ -414,6 +414,7 @@ export default function OrdersFresh() {
 
     const customerIdParam = urlParams.get('customerId');
     const searchParam = urlParams.get('search');
+    const statusParam = urlParams.get('status');
 
     const initialTab = customerIdParam ? 'all' : 'active';
     if (customerIdParam) {
@@ -423,6 +424,10 @@ export default function OrdersFresh() {
     }
     if (searchParam) {
       setSearchQuery(searchParam);
+    }
+    if (statusParam) {
+      setStatusFilter(statusParam);
+      statusFilterRef.current = statusParam;
     }
 
     const orderId = urlParams.get('id');

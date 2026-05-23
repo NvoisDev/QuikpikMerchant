@@ -17,6 +17,7 @@ process.on('unhandledRejection', (reason) => {
 import { validateDatabaseConnection } from "./health";
 import { startDatabaseMaintenance } from "./database-maintenance";
 import { checkAndSendPaymentReminders } from "./payment-reminders";
+import { checkAndSendWeeklyOrderDigests } from "./services/weeklyOrderDigestService";
 import cron from 'node-cron';
 import { db } from "./db";
 import { sql, eq, inArray } from "drizzle-orm";
@@ -763,6 +764,17 @@ httpServer.listen({ port, host: '0.0.0.0', reusePort: true }, () => {
       }
     });
     console.log(`📅 Daily pricing & plan migration scheduler enabled (daily at 11 AM)`);
+
+    cron.schedule('0 7 * * *', async () => {
+      console.log('📬 Running weekly order digest check...');
+      try {
+        const sent = await checkAndSendWeeklyOrderDigests();
+        if (sent > 0) console.log(`📬 Weekly order digest: ${sent} email(s) sent`);
+      } catch (error) {
+        console.error('❌ Weekly order digest check failed:', error);
+      }
+    });
+    console.log(`📬 Weekly order digest enabled (daily check, sends once per week per wholesaler)`);
 
     // Run once immediately at startup to catch any missed downgrades from webhook failures
     try {

@@ -633,6 +633,7 @@ export default function Settings() {
     stockAlertChannel: string;
     paymentReminderEnabled: boolean;
     promotionReminderEnabled: boolean;
+    weeklyOrderDigestEnabled: boolean;
   }>({
     queryKey: ["/api/settings/notification-preferences"],
     enabled: user?.role !== 'team_member',
@@ -647,6 +648,7 @@ export default function Settings() {
     paymentReminderChannel: 'email',
     promotionReminderEnabled: true,
     promotionReminderChannel: 'email',
+    weeklyOrderDigestEnabled: true,
   });
 
   useEffect(() => {
@@ -660,6 +662,7 @@ export default function Settings() {
         paymentReminderChannel: (notifPrefs as any).paymentReminderChannel || 'email',
         promotionReminderEnabled: notifPrefs.promotionReminderEnabled !== false,
         promotionReminderChannel: (notifPrefs as any).promotionReminderChannel || 'email',
+        weeklyOrderDigestEnabled: notifPrefs.weeklyOrderDigestEnabled !== false,
       });
     }
   }, [notifPrefs]);
@@ -2314,6 +2317,31 @@ export default function Settings() {
                       </div>
                     </div>
                   </div>}
+
+                  {/* Platform alerts for the wholesaler themselves (owner/admin only) */}
+                  {!isTeamMember && (
+                    <div className="space-y-3 pt-2">
+                      <div>
+                        <h4 className="font-semibold text-gray-800 text-sm sm:text-base">My Platform Alerts</h4>
+                        <p className="text-xs text-gray-500 mt-0.5">Alerts sent to you about your own account and orders.</p>
+                      </div>
+                      <div className="border border-gray-200 rounded-lg divide-y divide-gray-100">
+                        <div className="p-4 space-y-1">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-sm font-medium text-gray-800">Weekly unfulfilled order digest</p>
+                              <p className="text-xs text-gray-500 mt-0.5">Receive a weekly email every Monday listing orders that have been unfulfilled for more than 15 days</p>
+                            </div>
+                            <Switch
+                              checked={notifForm.weeklyOrderDigestEnabled}
+                              onCheckedChange={(v) => setNotifForm(f => ({ ...f, weeklyOrderDigestEnabled: v }))}
+                              disabled={notifPrefsLoading}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Customer-facing automated messages (owner/wholesaler only) */}
                   {!isTeamMember && <div className="space-y-3 pt-2">
