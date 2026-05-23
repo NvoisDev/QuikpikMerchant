@@ -1022,7 +1022,7 @@ export default function OrdersFresh() {
             ? ` for ${mobileDraft.selectedCustomer.businessName || mobileDraft.selectedCustomer.firstName}`
             : ''} saved {mobileDraft.savedAt ? `on ${new Date(mobileDraft.savedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}` : 'earlier'}.
         </p>
-        <Button size="sm" className="bg-amber-600 hover:bg-amber-700 text-white shrink-0" onClick={() => navigate('/quick-quote')}>
+        <Button size="sm" className="bg-amber-600 hover:bg-amber-700 text-white shrink-0" onClick={() => navigate('/quick-quote?resume=1')}>
           Resume
         </Button>
         <Button size="sm" variant="ghost" className="text-amber-600 hover:bg-amber-100 shrink-0 p-1" onClick={() => {

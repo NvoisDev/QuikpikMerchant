@@ -392,6 +392,12 @@ export default function QuickQuote() {
     toast({ title: "Draft resumed", description: "Your saved invoice has been restored." });
   };
 
+  useEffect(() => {
+    if (savedDraft && typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('resume') === '1') {
+      resumeDraft();
+    }
+  }, [savedDraft]);
+
   const clearDraft = () => {
     if (draftKey) localStorage.removeItem(draftKey);
     setSavedDraft(null);
