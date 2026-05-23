@@ -86,6 +86,37 @@ export function registerOrderReadRoutes(app: Express): void {
     }
   });
 
+  // GET /api/orders/stale-count — orders unfulfilled for 15+ days
+  app.get('/api/orders/stale-count', requireAuth, async (req: any, res) => {
+    try {
+      const wholesalerId = resolveWholesalerId(req);
+      const fifteenDaysAgo = new Date(Date.now() - 15 * 24 * 60 * 60 * 1000);
+      const UNFULFILLED_STATUSES = ['pending', 'paid', 'confirmed', 'processing'];
+
+      const staleCondition = and(
+        eq(orders.wholesalerId, wholesalerId),
+        inArray(orders.status, UNFULFILLED_STATUSES),
+        sql`${orders.createdAt} < ${fifteenDaysAgo.toISOString()}`
+      );
+
+      const [countResult, previewResult] = await Promise.all([
+        db.select({ count: sql<number>`count(*)` }).from(orders).where(staleCondition),
+        db.select({
+          id: orders.id,
+          orderNumber: orders.orderNumber,
+          customerName: orders.customerName,
+          createdAt: orders.createdAt,
+          status: orders.status,
+        }).from(orders).where(staleCondition).orderBy(orders.createdAt).limit(3),
+      ]);
+
+      res.json({ count: Number(countResult[0]?.count || 0), orders: previewResult });
+    } catch (error) {
+      console.error("Error fetching stale order count:", error);
+      res.status(500).json({ message: "Failed to fetch stale count" });
+    }
+  });
+
   // GET /api/orders
   app.get('/api/orders', requireAuth, async (req: any, res) => {
     try {
@@ -245,6 +276,7 @@ export function registerOrderReadRoutes(app: Express): void {
       const paymentStatusParam = req.query.paymentStatus as string | undefined;
       const fulfillmentTypeParam = req.query.fulfillmentType as string | undefined;
       const statusParam = req.query.status as string | undefined;
+      const staleParam = req.query.stale as string | undefined;
       // Use authenticated user's ID for proper data isolation - SECURITY FIX
       const wholesalerId = resolveWholesalerId(req);
       
@@ -287,6 +319,14 @@ export function registerOrderReadRoutes(app: Express): void {
         } else {
           searchConditions.push(eq(orders.status, statusParam));
         }
+      }
+
+      // Stale filter: unfulfilled orders created more than 15 days ago
+      if (staleParam === '1') {
+        const UNFULFILLED_STATUSES = ['pending', 'paid', 'confirmed', 'processing'];
+        const fifteenDaysAgo = new Date(Date.now() - 15 * 24 * 60 * 60 * 1000);
+        searchConditions.push(inArray(orders.status, UNFULFILLED_STATUSES));
+        searchConditions.push(sql`${orders.createdAt} < ${fifteenDaysAgo.toISOString()}`);
       }
 
       // Archived = cancelled OR (fulfilled AND paid)

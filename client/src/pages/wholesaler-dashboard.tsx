@@ -17,7 +17,7 @@ import InteractiveActionCard from "@/components/interactive-action-card";
 import { DateRangePicker, type DateRange } from "@/components/DateRangePicker";
 import { useState, useEffect } from 'react';
 import { useToast } from "@/hooks/use-toast";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, Clock } from "lucide-react";
 import { subDays, startOfToday, endOfDay, format, eachDayOfInterval, differenceInDays } from "date-fns";
 
 import StatsCard from "@/components/stats-card";
@@ -272,6 +272,16 @@ export default function WholesalerDashboard() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [showFloatingMenu]);
+
+  const { data: staleOrderData } = useQuery<{ count: number; orders: { id: number; orderNumber?: string; customerName?: string; createdAt: string; status: string }[] }>({
+    queryKey: ["/api/orders/stale-count"],
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    retry: false,
+    enabled: !!user,
+    refetchInterval: 5 * 60 * 1000,
+  });
+  const staleCount = staleOrderData?.count ?? 0;
 
   const { data: stats, isLoading: statsLoading, error: statsError } = useQuery<DashboardStats>({
     queryKey: ["/api/analytics/stats"],
@@ -584,6 +594,56 @@ export default function WholesalerDashboard() {
                         </Link>
                       </div>
                     </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Stale Orders Banner */}
+          {staleCount > 0 && (
+            <div className="mb-6 sm:mb-8">
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 sm:p-5">
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0 w-8 h-8 bg-amber-100 rounded-full flex items-center justify-center mt-0.5">
+                    <Clock className="h-4 w-4 text-amber-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-sm font-semibold text-amber-900">
+                      {staleCount === 1
+                        ? "1 order has been waiting for over 15 days"
+                        : `${staleCount} orders have been waiting for over 15 days`}
+                    </h3>
+                    <p className="text-xs text-amber-700 mt-0.5">
+                      These active orders haven't been fulfilled yet — check if any need attention.
+                    </p>
+                    {staleOrderData?.orders && staleOrderData.orders.length > 0 && (
+                      <ul className="mt-2 space-y-1">
+                        {staleOrderData.orders.map(o => {
+                          const daysOld = Math.floor((Date.now() - new Date(o.createdAt).getTime()) / (1000 * 60 * 60 * 24));
+                          return (
+                            <li key={o.id} className="flex items-center gap-2 text-xs text-amber-800">
+                              <span className="inline-block w-1.5 h-1.5 rounded-full bg-amber-400 flex-shrink-0" />
+                              <span className="font-medium">{o.orderNumber || `#${o.id}`}</span>
+                              {o.customerName && <span className="text-amber-600">— {o.customerName}</span>}
+                              <span className="text-amber-500 ml-auto flex-shrink-0">{daysOld}d old</span>
+                            </li>
+                          );
+                        })}
+                        {staleCount > (staleOrderData?.orders?.length ?? 0) && (
+                          <li className="text-xs text-amber-600 pl-3.5">
+                            + {staleCount - staleOrderData.orders.length} more
+                          </li>
+                        )}
+                      </ul>
+                    )}
+                  </div>
+                  <div className="flex-shrink-0">
+                    <Link href="/orders?stale=1">
+                      <Button size="sm" className="bg-amber-500 hover:bg-amber-600 text-white text-xs h-8">
+                        View Orders
+                      </Button>
+                    </Link>
                   </div>
                 </div>
               </div>

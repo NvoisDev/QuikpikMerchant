@@ -79,6 +79,14 @@ export default function Sidebar() {
   });
   const pendingOrderCount = pendingOrderData?.count ?? 0;
 
+  const { data: staleOrderData } = useQuery<{ count: number }>({
+    queryKey: ["/api/orders/stale-count"],
+    enabled: !!user && checkTabAccess("orders"),
+    refetchInterval: 5 * 60_000,
+    staleTime: 5 * 60_000,
+  });
+  const staleOrderCount = staleOrderData?.count ?? 0;
+
   const planTier = getBaseTier((subscriptionData as { user?: { currentPlan?: string } } | undefined)?.user?.currentPlan);
   const isPremiumUser = planTier === "premium";
   const isStandardUser = planTier === "standard";
@@ -185,6 +193,7 @@ export default function Sidebar() {
 
                 const isOrders = item.name === "Orders";
                 const showOrderBadge = isOrders && pendingOrderCount > 0;
+                const showStaleBadge = isOrders && staleOrderCount > 0;
 
                 const itemContent = (
                   <Link
@@ -220,8 +229,8 @@ export default function Sidebar() {
                             )}
                           />
                           {/* Dot indicator — collapsed mode (desktop icon-rail + mobile when sidebar is icon-only) */}
-                          {showOrderBadge && dc && (
-                            <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-amber-500" />
+                          {(showOrderBadge || showStaleBadge) && dc && (
+                            <span className={cn("absolute -top-1 -right-1 h-2 w-2 rounded-full", showStaleBadge ? "bg-orange-500" : "bg-amber-500")} />
                           )}
                         </span>
                         {/* Label: always visible on mobile, hidden on desktop when collapsed */}
@@ -238,6 +247,11 @@ export default function Sidebar() {
                               {pendingOrderCount > 99 ? "99+" : pendingOrderCount}
                             </span>
                           )}
+                          {showStaleBadge && (
+                            <span className={cn("text-[10px] text-white px-1.5 py-0.5 rounded font-medium", showOrderBadge ? "bg-orange-500" : "ml-auto bg-orange-500")}>
+                              {staleOrderCount > 15 ? "15d+" : `${staleOrderCount} old`}
+                            </span>
+                          )}
                           {isLocked && <Crown className="h-3.5 w-3.5 text-amber-500 flex-shrink-0" />}
                           {showSoonBadge && (
                             <span className="text-[10px] bg-slate-800 text-slate-500 px-1.5 py-0.5 rounded font-medium border border-slate-700">
@@ -252,6 +266,11 @@ export default function Sidebar() {
                           {showOrderBadge && (
                             <span className="text-[10px] bg-amber-500 text-white px-1.5 py-0.5 rounded-full font-bold min-w-[18px] text-center leading-4">
                               {pendingOrderCount > 99 ? "99+" : pendingOrderCount}
+                            </span>
+                          )}
+                          {showStaleBadge && (
+                            <span className="text-[10px] bg-orange-500 text-white px-1.5 py-0.5 rounded font-medium">
+                              {staleOrderCount > 15 ? "15d+" : `${staleOrderCount} old`}
                             </span>
                           )}
                           {isLocked && <Crown className="h-3.5 w-3.5 text-amber-500 flex-shrink-0" />}
@@ -279,6 +298,7 @@ export default function Sidebar() {
                       {item.name}
                       {showSoonBadge ? " (Coming soon)" : ""}
                       {showOrderBadge ? ` — ${pendingOrderCount} active` : ""}
+                      {showStaleBadge ? ` · ${staleOrderCount} over 15 days` : ""}
                     </TooltipContent>
                   </Tooltip>
                 ) : (

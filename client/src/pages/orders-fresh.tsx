@@ -308,11 +308,13 @@ export default function OrdersFresh() {
     }
   };
 
+  const [staleFilterActive, setStaleFilterActive] = useState(false);
   const customerIdRef = useRef(customerIdFilter);
   customerIdRef.current = customerIdFilter;
   const deliveryTypeRef = useRef('');
   const paymentStatusRef = useRef('');
   const statusFilterRef = useRef('');
+  const staleFilterRef = useRef(false);
 
   const handleDeleteDraft = async (draftId: number) => {
     if (!window.confirm('Delete this draft invoice?')) return;
@@ -374,6 +376,7 @@ export default function OrdersFresh() {
         ...(deliveryTypeRef.current && { fulfillmentType: deliveryTypeRef.current }),
         ...(paymentStatusRef.current && { paymentStatus: paymentStatusRef.current }),
         ...(statusFilterRef.current && { status: statusFilterRef.current }),
+        ...(staleFilterRef.current && { stale: '1' }),
       });
       const response = await fetch(`/api/orders-paginated?${params}`, {
         credentials: 'include',
@@ -415,11 +418,17 @@ export default function OrdersFresh() {
     const customerIdParam = urlParams.get('customerId');
     const searchParam = urlParams.get('search');
     const statusParam = urlParams.get('status');
+    const staleParam = urlParams.get('stale');
 
-    const initialTab = customerIdParam ? 'all' : 'active';
+    const initialTab = customerIdParam ? 'all' : staleParam ? 'all' : 'active';
     if (customerIdParam) {
       setCustomerIdFilter(customerIdParam);
       customerIdRef.current = customerIdParam;
+      setArchiveTab('all');
+    }
+    if (staleParam) {
+      staleFilterRef.current = true;
+      setStaleFilterActive(true);
       setArchiveTab('all');
     }
     if (searchParam) {
@@ -1086,7 +1095,25 @@ export default function OrdersFresh() {
         </button>
       </div>
 
-      {showUnfulfilledReminder && (
+      {staleFilterActive && (
+        <div className="mx-4 md:mx-6 mt-3 flex items-center gap-2 rounded-lg border border-orange-200 bg-orange-50 px-4 py-2.5 text-sm">
+          <Clock className="h-4 w-4 text-orange-600 shrink-0" />
+          <p className="flex-1 text-orange-800 font-medium">Showing orders unfulfilled for 15+ days</p>
+          <button
+            className="shrink-0 text-orange-500 hover:text-orange-700 transition-colors text-xs underline"
+            onClick={() => {
+              staleFilterRef.current = false;
+              setStaleFilterActive(false);
+              setArchiveTab('active');
+              loadOrders(1, searchQuery, 'active');
+            }}
+          >
+            Clear filter
+          </button>
+        </div>
+      )}
+
+      {showUnfulfilledReminder && !staleFilterActive && (
         <div className="mx-4 md:mx-6 mt-3 flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm">
           <Clock className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
           <div className="flex-1 min-w-0">
