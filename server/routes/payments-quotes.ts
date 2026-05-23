@@ -169,7 +169,7 @@ export function registerQuoteRoutes(app: Express): void {
         feePercentageUsed: quoteFeePercentageUsed,
         fixedFeeUsed: quoteFixedFeeUsed,
       } = isOffline
-        ? { customerTransactionFee: 0, platformFee: subtotal * feeRate, feePercentageUsed: '0.0000', fixedFeeUsed: '0.00' }
+        ? { customerTransactionFee: 0, platformFee: 0, feePercentageUsed: '0.0000', fixedFeeUsed: '0.00' }
         : calculateOrderPricing({ subtotal, deliveryCost: 0, feeConfig, platformFeeRate: feeRate });
 
       // VAT calculation — wholesaler already fetched above
@@ -982,7 +982,7 @@ export function registerQuoteRoutes(app: Express): void {
       const feeConfigEdit = await getFeeConfigForWholesaler(wholesalerId);
       const customerTransactionFee = isOfflineEdit ? 0 : calculateCustomerFee(subtotal, 0, feeConfigEdit);
       const feeRate = isOfflineEdit ? 0 : await getWholesalerFeeRate(wholesalerId);
-      const platformFee = subtotal * feeRate;
+      const platformFee = isOfflineEdit ? 0 : subtotal * feeRate;
 
       // VAT calculation — wholesaler already fetched above
       const editVatEnabled = wholesaler?.vatEnabled ?? false;

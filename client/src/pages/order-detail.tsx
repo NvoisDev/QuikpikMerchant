@@ -1445,7 +1445,7 @@ export default function OrderDetail() {
                   </div>
                 );
               })()}
-              {parseFloat(order.platformFee || '0') > 0 && (
+              {parseFloat(order.platformFee || '0') > 0 && !isOfflinePayment && (
                 <div className="flex justify-between text-red-600">
                   <span>Less platform fee</span>
                   <span>-{formatMoney(parseFloat(order.platformFee || '0'))}</span>

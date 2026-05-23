@@ -509,7 +509,19 @@ export function registerOrderLifecycleRoutes(app: Express): void {
             ? `\nDelivery: £${parseFloat(approvedOrder.deliveryCost!).toFixed(2)}`
             : '';
           const wholesalerContact = wholesaler.phoneNumber || wholesaler.email || '';
-          const message = `Hi ${customerGreeting}! ${businessName} has sent you an invoice.\n\nItems:\n${itemsList}${deliveryChargeText}\n\nTotal: £${totalDisplay}\nPayment: Pay Later\n\nPlease arrange payment directly with ${businessName}.${wholesalerContact ? `\n\nContact ${businessName}: ${wholesalerContact}` : ''}`;
+          const paymentMethodLabels: Record<string, string> = {
+            bank_transfer: 'Bank Transfer',
+            cash: 'Cash',
+            cheque: 'Cheque',
+            pay_later: 'Pay Later',
+            other: 'Other',
+          };
+          const orderPaymentMethod = approvedOrder.paymentMethod || 'bank_transfer';
+          const paymentLabel = paymentMethodLabels[orderPaymentMethod] || orderPaymentMethod;
+          const arrangementSentence = orderPaymentMethod === 'pay_later'
+            ? `Please arrange payment with ${businessName} directly.`
+            : `Please arrange payment via ${paymentLabel.toLowerCase()} directly with ${businessName}.`;
+          const message = `Hi ${customerGreeting}! ${businessName} has sent you an invoice.\n\nItems:\n${itemsList}${deliveryChargeText}\n\nTotal: £${totalDisplay}\nPayment: ${paymentLabel}\n\n${arrangementSentence}${wholesalerContact ? `\n\nContact ${businessName}: ${wholesalerContact}` : ''}`;
 
           await sendWhatsAppMessage({ to: customer.phoneNumber, message });
         }
