@@ -316,7 +316,39 @@ export default function WholesalerDashboard() {
   });
 
   const [notifOpen, setNotifOpen] = useState(false);
+  const [staleBannerDismissed, setStaleBannerDismissed] = useState(false);
   const [, navigate] = useLocation();
+
+  useEffect(() => {
+    if (!user?.id || !staleOrderData) return;
+    const currentMaxId = staleOrderData.orders.length > 0
+      ? Math.max(...staleOrderData.orders.map(o => o.id))
+      : 0;
+    const stored = localStorage.getItem(`quikpik_stale_banner_${user.id}`);
+    if (stored) {
+      try {
+        const { expiry, maxId } = JSON.parse(stored);
+        if (Date.now() < expiry && currentMaxId <= maxId) {
+          setStaleBannerDismissed(true);
+          return;
+        }
+      } catch {}
+    }
+    setStaleBannerDismissed(false);
+  }, [user?.id, staleOrderData]);
+
+  const dismissStaleBanner = () => {
+    if (user?.id) {
+      const maxId = staleOrderData && staleOrderData.orders.length > 0
+        ? Math.max(...staleOrderData.orders.map(o => o.id))
+        : 0;
+      localStorage.setItem(
+        `quikpik_stale_banner_${user.id}`,
+        JSON.stringify({ expiry: Date.now() + 7 * 24 * 60 * 60 * 1000, maxId })
+      );
+    }
+    setStaleBannerDismissed(true);
+  };
 
   const { data: notifCounts } = useQuery<{ total: number; stockAlerts: number; registrationRequests: number }>({
     queryKey: ["/api/notifications/count"],
@@ -601,7 +633,7 @@ export default function WholesalerDashboard() {
           )}
 
           {/* Stale Orders Banner */}
-          {staleCount > 0 && (
+          {staleCount > 0 && !staleBannerDismissed && (
             <div className="mb-6 sm:mb-8">
               <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 sm:p-5">
                 <div className="flex items-start gap-3">
@@ -638,12 +670,19 @@ export default function WholesalerDashboard() {
                       </ul>
                     )}
                   </div>
-                  <div className="flex-shrink-0">
+                  <div className="flex-shrink-0 flex items-center gap-2">
                     <Link href="/orders?stale=1">
                       <Button size="sm" className="bg-amber-500 hover:bg-amber-600 text-white text-xs h-8">
                         View Orders
                       </Button>
                     </Link>
+                    <button
+                      onClick={dismissStaleBanner}
+                      className="text-amber-500 hover:text-amber-700 transition-colors p-1"
+                      aria-label="Dismiss"
+                    >
+                      ×
+                    </button>
                   </div>
                 </div>
               </div>
