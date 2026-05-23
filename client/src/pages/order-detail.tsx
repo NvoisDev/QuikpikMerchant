@@ -1943,9 +1943,30 @@ export default function OrderDetail() {
       {/* ── Sticky action bar ─────────────────────────────────────────────── */}
       {primaryAction && (
         <div className={`fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg px-4 py-3 z-50 ${isDesktopCollapsed ? "lg:left-14" : "lg:left-64"}`}>
-          <div className="max-w-lg mx-auto">
+          <div className="max-w-lg mx-auto flex items-center gap-3">
+            {/* Order context — gives mobile users reference even when scrolled down */}
+            <div className="min-w-0 flex-1">
+              <p className="text-xs text-gray-500 leading-tight truncate">
+                {order.orderNumber || `#${order.id}`}
+              </p>
+              <span className={`inline-block text-xs font-medium rounded px-1.5 py-0.5 mt-0.5 ${
+                order.status === 'fulfilled'            ? 'bg-blue-100 text-blue-800'   :
+                order.status === 'ready_for_collection' ? 'bg-yellow-100 text-yellow-800' :
+                order.status === 'cancelled'            ? 'bg-red-100 text-red-800'    :
+                order.status === 'picking'              ? 'bg-purple-100 text-purple-800' :
+                order.status === 'packed'               ? 'bg-indigo-100 text-indigo-800' :
+                'bg-gray-100 text-gray-600'
+              }`}>
+                {order.status === 'fulfilled'            ? 'Fulfilled'  :
+                 order.status === 'ready_for_collection' ? 'Ready'      :
+                 order.status === 'cancelled'            ? 'Cancelled'  :
+                 order.status === 'picking'              ? 'Picking'    :
+                 order.status === 'packed'               ? 'Packed'     :
+                 'Unfulfilled'}
+              </span>
+            </div>
             <Button
-              className={`w-full text-white min-h-[48px] rounded-xl text-sm font-semibold ${primaryActionConfig[primaryAction].color} disabled:opacity-50`}
+              className={`shrink-0 text-white min-h-[44px] rounded-xl text-sm font-semibold whitespace-nowrap ${primaryActionConfig[primaryAction].color} disabled:opacity-50`}
               onClick={primaryActionConfig[primaryAction].onClick}
               disabled={!!(primaryActionConfig[primaryAction].loading) || updatingOrderId === order.id}
             >
