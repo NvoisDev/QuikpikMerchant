@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { PickingMode } from "@/components/orders/PickingMode";
 import { useSidebarContext } from "@/contexts/sidebar-context";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -226,6 +226,68 @@ export default function QuickQuote() {
   });
   const stripeReady = stripeConnectStatus?.isConnected === true;
 
+  // Draft editing support — reads ?draftId= from URL
+  const editingDraftId = useMemo(() => {
+    if (typeof window === 'undefined') return null;
+    const id = new URLSearchParams(window.location.search).get('draftId');
+    return id ? parseInt(id) : null;
+  }, []);
+
+  const { data: allDrafts = [] } = useQuery<any[]>({
+    queryKey: ['/api/orders/drafts'],
+    enabled: !!editingDraftId,
+  });
+  const draftForEdit = useMemo(
+    () => (editingDraftId ? allDrafts.find((d: any) => d.id === editingDraftId) ?? null : null),
+    [editingDraftId, allDrafts]
+  );
+
+  // Pre-fill form from draft when data is available
+  useEffect(() => {
+    if (!draftForEdit || !customers.length || !products.length) return;
+    const customer = customers.find((c: any) => c.id === draftForEdit.retailerId);
+    if (customer) setSelectedCustomer(customer as any);
+    if (draftForEdit.fulfillmentType) setFulfillmentType(draftForEdit.fulfillmentType as any);
+    if (draftForEdit.depositPercentage != null) setDepositPercentage(draftForEdit.depositPercentage as any);
+    if (draftForEdit.balanceDueDays != null) setBalanceDueDays(draftForEdit.balanceDueDays as any);
+    if (draftForEdit.paymentMethod) setQuotePaymentMethod(draftForEdit.paymentMethod as any);
+    if (draftForEdit.collectionAddressId) setCollectionAddressId(draftForEdit.collectionAddressId);
+    if (draftForEdit.deliveryCost && parseFloat(draftForEdit.deliveryCost) > 0) {
+      setDeliveryCharge(String(parseFloat(draftForEdit.deliveryCost)));
+    }
+    if (draftForEdit.items && draftForEdit.items.length > 0) {
+      const prefilled: QuoteItem[] = draftForEdit.items.map((item: any) => {
+        const product = products.find((p: any) => p.id === item.productId);
+        if (!product) return null;
+        const price = parseFloat(item.unitPrice);
+        return {
+          productId: item.productId,
+          productName: product.name,
+          originalPrice: price,
+          customPrice: price,
+          quantity: item.quantity,
+          sellingType: (item.sellingType || 'units') as 'units' | 'pallets',
+          unitsPerPallet: product.unitsPerPallet,
+          promotionalOffers: product.promotionalOffers,
+          costPrice: product.costPrice ? parseFloat(product.costPrice) : 0,
+          weightKg: 0,
+          packQuantity: product.packQuantity ?? undefined,
+          unitSize: product.sizePerUnit ?? undefined,
+          unitOfMeasure: product.unitOfMeasure ?? undefined,
+          stockCount: product.stock ?? 0,
+        } as QuoteItem;
+      }).filter(Boolean) as QuoteItem[];
+      if (prefilled.length > 0) {
+        setQuoteItems(prefilled);
+        const restored: Record<string, { price: string; qty: string }> = {};
+        prefilled.forEach(item => {
+          restored[String(item.productId)] = { price: String(item.customPrice), qty: String(item.quantity) };
+        });
+        setInputValues(restored);
+      }
+    }
+  }, [draftForEdit?.id, customers.length, products.length]);
+
   const paymentMethodInitialized = useRef(false);
   useEffect(() => {
     if (stripeConnectStatus === undefined) return;
@@ -393,6 +455,50 @@ export default function QuickQuote() {
     },
   });
 
+  const saveAsDraftMutation = useMutation({
+    mutationFn: async () => {
+      if (!selectedCustomer || quoteItems.length === 0) {
+        throw new Error('Select a customer and add at least one item first');
+      }
+      const body = {
+        customerId: selectedCustomer.id,
+        items: quoteItems.map(item => ({
+          productId: item.productId,
+          quantity: item.quantity,
+          customPrice: item.customPrice,
+          sellingType: item.sellingType,
+        })),
+        fulfillmentType,
+        deliveryCharge: parseFloat(deliveryCharge) || 0,
+        ...(fulfillmentType === 'delivery' && deliveryAddressText ? { deliveryAddress: deliveryAddressText } : {}),
+        paymentMethod: quotePaymentMethod,
+        depositPercentage,
+        balanceDueDays,
+        ...(collectionAddressId ? { collectionAddressId } : {}),
+        ...(selectedProfileId ? { businessProfileId: selectedProfileId } : {}),
+      };
+      if (editingDraftId) {
+        const resp = await apiRequest('PATCH', `/api/orders/${editingDraftId}/draft`, body);
+        return resp.json();
+      } else {
+        const resp = await apiRequest('POST', '/api/orders/draft', body);
+        return resp.json();
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/orders/drafts'] });
+      toast({
+        title: editingDraftId ? 'Draft updated' : 'Draft saved',
+        description: editingDraftId
+          ? 'Changes saved to your draft invoice.'
+          : 'Find it in the Drafts tab on the Orders page.',
+      });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Error saving draft', description: error.message, variant: 'destructive' });
+    },
+  });
+
   const createQuoteMutation = useMutation({
     mutationFn: async (data: {
       customerId: string;
@@ -424,13 +530,20 @@ export default function QuickQuote() {
       }
       return response.json();
     },
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       setCreatedQuote({
         id: data.orderId,
         orderNumber: data.orderNumber,
         paymentLink: data.paymentLink
       });
       if (draftKey) localStorage.removeItem(draftKey);
+      // If we were editing a draft, delete it now that the invoice has been created
+      if (editingDraftId) {
+        try {
+          await apiRequest('DELETE', `/api/orders/${editingDraftId}/draft`);
+          queryClient.invalidateQueries({ queryKey: ['/api/orders/drafts'] });
+        } catch {}
+      }
       queryClient.invalidateQueries({ queryKey: ['/api/orders'] });
       queryClient.invalidateQueries({ queryKey: ['/api/products'] });
       toast({
@@ -1900,11 +2013,29 @@ export default function QuickQuote() {
         <div className="min-w-0">
           <p className="text-xs text-gray-500 leading-tight">
             {quoteItems.length} {quoteItems.length === 1 ? 'item' : 'items'} · {fulfillmentType === 'pickup' ? 'Collection' : 'Delivery'}
+            {editingDraftId ? <span className="ml-1 text-amber-600 font-medium"> · Editing draft</span> : ''}
           </p>
           <p className="text-lg font-bold leading-tight">{formatCurrency(calculateTotal())}</p>
         </div>
+        <div className="flex gap-2 shrink-0">
+          <Button
+            variant="outline"
+            size="lg"
+            disabled={!selectedCustomer || quoteItems.length === 0 || saveAsDraftMutation.isPending}
+            onClick={() => saveAsDraftMutation.mutate()}
+            className="border-amber-300 text-amber-700 hover:bg-amber-50"
+          >
+            {saveAsDraftMutation.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <>
+                <Clock className="h-4 w-4 mr-1.5" />
+                <span className="hidden sm:inline">{editingDraftId ? 'Save Changes' : 'Save Draft'}</span>
+              </>
+            )}
+          </Button>
         <Button
-          className="bg-green-600 hover:bg-green-700 shrink-0"
+          className="bg-green-600 hover:bg-green-700"
           size="lg"
           disabled={!selectedCustomer || quoteItems.length === 0 || quoteItems.some(item => item.customPrice <= 0 || item.quantity < 1) || createQuoteMutation.isPending}
           onClick={handleCreateQuote}
@@ -1918,6 +2049,7 @@ export default function QuickQuote() {
             </>
           )}
         </Button>
+        </div>
       </div>
     </div>
   );

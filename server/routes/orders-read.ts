@@ -22,6 +22,24 @@ export async function resolveInvoiceWholesaler(order: any, wholesaler: any): Pro
 }
 
 export function registerOrderReadRoutes(app: Express): void {
+  // GET /api/orders/drafts — list draft orders for the authenticated wholesaler
+  app.get('/api/orders/drafts', requireAuth, async (req: any, res) => {
+    try {
+      const wholesalerId = resolveWholesalerId(req);
+      const drafts = await db.select().from(orders)
+        .where(and(eq(orders.wholesalerId, wholesalerId), sql`${orders.status} = 'draft'`))
+        .orderBy(desc(orders.createdAt));
+      const draftsWithItems = await Promise.all(drafts.map(async (draft) => {
+        const items = await storage.getOrderItems(draft.id);
+        return { ...draft, items };
+      }));
+      res.json(draftsWithItems);
+    } catch (error) {
+      console.error('Error fetching drafts:', error);
+      res.status(500).json({ error: 'Failed to fetch drafts' });
+    }
+  });
+
   // GET /api/orders/pending-count
   app.get('/api/orders/pending-count', requireAuth, async (req: any, res) => {
     try {
@@ -31,6 +49,7 @@ export function registerOrderReadRoutes(app: Express): void {
         .from(orders)
         .where(and(
           eq(orders.wholesalerId, wholesalerId),
+          sql`${orders.status} != 'draft'`,
           sql`NOT (${orders.status} = 'cancelled' OR (${orders.status} = 'fulfilled' AND ${orders.paymentStatus} = 'paid'))`
         ));
 
@@ -204,7 +223,8 @@ export function registerOrderReadRoutes(app: Express): void {
       const wholesalerId = resolveWholesalerId(req);
       
       // Build search conditions - customerId takes priority over text search
-      const searchConditions: any[] = [eq(orders.wholesalerId, wholesalerId)];
+      // Always exclude draft orders from the main orders list
+      const searchConditions: any[] = [eq(orders.wholesalerId, wholesalerId), sql`${orders.status} != 'draft'`];
       if (customerId) {
         searchConditions.push(eq(orders.retailerId, customerId));
       } else if (search && search.trim()) {

@@ -19,7 +19,7 @@ import { Link, useLocation } from "wouter";
 import { useAuth, type AuthUser } from "@/hooks/useAuth";
 import { DynamicTooltip } from "@/components/ui/dynamic-tooltip";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Home, Building, Warehouse, ChevronLeft, ChevronRight } from "lucide-react";
 import { useCurrency } from "@/hooks/useCurrency";
 import { useSidebarContext } from "@/contexts/sidebar-context";
@@ -200,7 +200,7 @@ export default function OrdersFresh() {
   const [isSearching, setIsSearching] = useState(false);
   const [customerIdFilter, setCustomerIdFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
-  const [archiveTab, setArchiveTab] = useState<'active' | 'archived' | 'all'>('active');
+  const [archiveTab, setArchiveTab] = useState<'active' | 'archived' | 'all' | 'drafts'>('active');
   const [paymentStatusFilter, setPaymentStatusFilter] = useState('');
   const [deliveryTypeFilter, setDeliveryTypeFilter] = useState('');
   const [dateRangeFilter, setDateRangeFilter] = useState('');
@@ -216,6 +216,13 @@ export default function OrdersFresh() {
     archivedCount: number;
   } | null>(null);
   const ordersPerPage = 20;
+
+  // Draft orders
+  const { data: draftOrders = [], refetch: refetchDrafts } = useQuery<any[]>({
+    queryKey: ['/api/orders/drafts'],
+  });
+  const [isDeletingDraft, setIsDeletingDraft] = useState<number | null>(null);
+  const [isApprovingDraft, setIsApprovingDraft] = useState<number | null>(null);
   const { toast } = useToast();
   
   // Persist picking status filter to localStorage
@@ -300,7 +307,40 @@ export default function OrdersFresh() {
   const paymentStatusRef = useRef('');
   const statusFilterRef = useRef('');
 
+  const handleDeleteDraft = async (draftId: number) => {
+    if (!window.confirm('Delete this draft invoice?')) return;
+    setIsDeletingDraft(draftId);
+    try {
+      await apiRequest('DELETE', `/api/orders/${draftId}/draft`);
+      refetchDrafts();
+      toast({ title: 'Draft deleted' });
+    } catch {
+      toast({ title: 'Failed to delete draft', variant: 'destructive' } as any);
+    } finally {
+      setIsDeletingDraft(null);
+    }
+  };
+
+  const handleApproveDraft = async (draftId: number) => {
+    setIsApprovingDraft(draftId);
+    try {
+      await apiRequest('POST', `/api/orders/${draftId}/approve`);
+      refetchDrafts();
+      queryClient.invalidateQueries({ queryKey: ['/api/orders-paginated'] });
+      setArchiveTab('active');
+      loadOrders(1, '', 'active');
+      toast({ title: 'Invoice approved!', description: 'Order is now active and customer notified.' });
+    } catch (err: any) {
+      let msg = 'Failed to approve draft';
+      try { const d = await err?.response?.json?.(); msg = d?.error || msg; } catch {}
+      toast({ title: 'Failed to approve', description: msg, variant: 'destructive' } as any);
+    } finally {
+      setIsApprovingDraft(null);
+    }
+  };
+
   const loadOrders = async (page = 1, search = '', tab = archiveTab) => {
+    if (tab === 'drafts') return;
     setLoading(true);
     setError(null);
     
@@ -982,9 +1022,24 @@ export default function OrdersFresh() {
             {orderStats?.archivedCount ?? '...'}
           </span>
         </button>
+        <button
+          onClick={() => setArchiveTab('drafts')}
+          className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+            archiveTab === 'drafts'
+              ? 'border-amber-500 text-amber-600'
+              : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+          }`}
+        >
+          Drafts
+          {draftOrders.length > 0 && (
+            <span className="ml-2 px-2 py-0.5 text-xs rounded-full bg-amber-50 text-amber-700">
+              {draftOrders.length}
+            </span>
+          )}
+        </button>
       </div>
 
-      {/* Search and Filter - sticky */}
+      {archiveTab !== 'drafts' && (
       <div className="sticky top-14 lg:top-0 z-10 bg-white border-b border-slate-100 py-2 -mx-4 md:-mx-6 px-4 md:px-6 mb-2">
       <div className="flex flex-col gap-2">
         <div className="relative">
@@ -1093,6 +1148,77 @@ export default function OrdersFresh() {
         </div>
       </div>
       </div>
+      )}
+
+      {/* Drafts list - shown when Drafts tab is active */}
+      {archiveTab === 'drafts' && (
+        <div className="space-y-3">
+          {draftOrders.length === 0 ? (
+            <div className="text-center py-12 text-slate-500">
+              <Clock className="h-10 w-10 mx-auto mb-3 text-slate-300" />
+              <p className="text-sm font-medium">No draft invoices</p>
+              <p className="text-xs text-slate-400 mt-1">Save a quote as draft from the invoice form to continue it later.</p>
+              <Button size="sm" className="mt-4" variant="outline" onClick={() => { window.location.href = '/quick-quote'; }}>
+                Create Invoice
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {draftOrders.map((draft: any) => (
+                <div key={draft.id} className="bg-white border border-amber-100 rounded-lg p-4 flex flex-col sm:flex-row sm:items-center gap-3 shadow-sm">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">Draft</span>
+                      <span className="font-semibold text-slate-800 truncate">{draft.customerName || 'Unknown Customer'}</span>
+                    </div>
+                    <div className="flex items-center gap-3 mt-1 flex-wrap">
+                      <span className="text-sm font-bold text-slate-900">{formatMoney(parseFloat(draft.total || draft.subtotal || '0'))}</span>
+                      {draft.paymentMethod && (
+                        <span className="text-xs text-slate-500 capitalize">{draft.paymentMethod.replace(/_/g, ' ')}</span>
+                      )}
+                      <span className="text-xs text-slate-500">{draft.fulfillmentType === 'pickup' ? 'Collection' : 'Delivery'}</span>
+                      <span className="text-xs text-slate-400">{new Date(draft.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                    </div>
+                  </div>
+                  <div className="flex gap-2 shrink-0">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => { window.location.href = `/quick-quote?draftId=${draft.id}`; }}
+                      className="text-slate-600 border-slate-200 hover:bg-slate-50"
+                    >
+                      Edit
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={isDeletingDraft === draft.id}
+                      onClick={() => handleDeleteDraft(draft.id)}
+                      className="text-red-600 border-red-200 hover:bg-red-50"
+                    >
+                      {isDeletingDraft === draft.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <X className="h-3.5 w-3.5" />}
+                    </Button>
+                    <Button
+                      size="sm"
+                      disabled={isApprovingDraft === draft.id}
+                      onClick={() => handleApproveDraft(draft.id)}
+                      className="bg-green-600 hover:bg-green-700 text-white"
+                    >
+                      {isApprovingDraft === draft.id ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />
+                      ) : (
+                        <CheckCircle className="h-3.5 w-3.5 mr-1" />
+                      )}
+                      <span className="hidden sm:inline">Approve &amp; Send</span>
+                      <span className="sm:hidden">Approve</span>
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Statistics Cards - only show on Active tab */}
       {archiveTab === 'active' && (

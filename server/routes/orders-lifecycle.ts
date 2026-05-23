@@ -146,6 +146,299 @@ async function restockUnitsToOrigin(
 }
 
 export function registerOrderLifecycleRoutes(app: Express): void {
+  // ── Draft Invoice Endpoints ──────────────────────────────────────────────────
+
+  // POST /api/orders/draft — save current form state as a draft (no stock, no notifications)
+  app.post('/api/orders/draft', requireAuth, requireNotViewer, requireMemberPermission('orders'), async (req: any, res) => {
+    try {
+      const wholesalerId = resolveWholesalerId(req);
+      const {
+        customerId, items,
+        fulfillmentType = 'pickup',
+        deliveryCharge = 0,
+        deliveryAddress = null,
+        paymentMethod = 'bank_transfer',
+        businessProfileId = null,
+        collectionAddressId = null,
+        depositPercentage = 100,
+        balanceDueDays = 0,
+        notes = null,
+      } = req.body;
+
+      if (!customerId || !items || items.length === 0) {
+        return res.status(400).json({ error: 'Customer and at least one item are required' });
+      }
+
+      const customer = await storage.getUser(customerId);
+      if (!customer) return res.status(404).json({ error: 'Customer not found' });
+
+      let subtotal = 0;
+      const orderItemsList: any[] = [];
+      for (const item of items) {
+        const product = await storage.getProduct(item.productId);
+        if (!product || product.wholesalerId !== wholesalerId) {
+          return res.status(400).json({ error: `Product ${item.productId} not found` });
+        }
+        const unitPrice = typeof item.customPrice === 'number' ? item.customPrice : parseFloat(product.price);
+        const itemTotal = unitPrice * item.quantity;
+        subtotal += itemTotal;
+        orderItemsList.push({
+          productId: item.productId,
+          quantity: item.quantity,
+          unitPrice: unitPrice.toFixed(2),
+          total: itemTotal.toFixed(2),
+          sellingType: item.sellingType || 'units',
+          appliedOfferLabel: null,
+          freeItems: 0,
+        });
+      }
+
+      const deliveryCostNum = parseFloat(String(deliveryCharge || 0)) || 0;
+
+      const [draftOrder] = await db.insert(orders).values({
+        wholesalerId,
+        retailerId: customerId,
+        customerName: `${customer.firstName || ''} ${customer.lastName || ''}`.trim() || customer.businessName || 'Customer',
+        customerEmail: customer.email || null,
+        customerPhone: customer.phoneNumber || null,
+        orderNumber: null,
+        status: 'draft',
+        subtotal: subtotal.toFixed(2),
+        total: (subtotal + deliveryCostNum).toFixed(2),
+        platformFee: '0.00',
+        customerTransactionFee: '0.00',
+        feePercentageUsed: '0.0000',
+        fixedFeeUsed: '0.00',
+        vatAmount: '0.00',
+        amountPaid: '0.00',
+        amountOutstanding: (subtotal + deliveryCostNum).toFixed(2),
+        paymentMethod: paymentMethod || 'bank_transfer',
+        fulfillmentType: fulfillmentType || 'pickup',
+        deliveryAddress: deliveryAddress || null,
+        deliveryCost: deliveryCostNum.toFixed(2),
+        shippingTotal: deliveryCostNum.toFixed(2),
+        depositPercentage: depositPercentage || 100,
+        balanceDueDays: balanceDueDays || 0,
+        businessProfileId: businessProfileId ? parseInt(String(businessProfileId)) : null,
+        collectionAddressId: collectionAddressId ? parseInt(String(collectionAddressId)) : null,
+        notes: notes || null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      } as any).returning();
+
+      if (!draftOrder) return res.status(500).json({ error: 'Failed to create draft' });
+
+      if (orderItemsList.length > 0) {
+        await db.insert(orderItems).values(orderItemsList.map(item => ({ ...item, orderId: draftOrder.id })));
+      }
+
+      res.json({ id: draftOrder.id, status: 'draft' });
+    } catch (error) {
+      console.error('Error creating draft order:', error);
+      res.status(500).json({ error: 'Failed to save draft' });
+    }
+  });
+
+  // PATCH /api/orders/:id/draft — update a draft's fields and items
+  app.patch('/api/orders/:id/draft', requireAuth, requireNotViewer, requireMemberPermission('orders'), async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) return res.status(400).json({ error: 'Invalid order ID' });
+      const wholesalerId = resolveWholesalerId(req);
+
+      const order = await storage.getOrder(id);
+      if (!order) return res.status(404).json({ error: 'Draft not found' });
+      if (order.status !== 'draft') return res.status(400).json({ error: 'Order is not a draft' });
+      if (order.wholesalerId !== wholesalerId) return res.status(403).json({ error: 'Not authorized' });
+
+      const { items, fulfillmentType, deliveryCharge, deliveryAddress, paymentMethod, businessProfileId, collectionAddressId, depositPercentage, balanceDueDays, notes } = req.body;
+
+      let subtotal = parseFloat(order.subtotal || '0');
+      if (items && items.length > 0) {
+        subtotal = 0;
+        const newItems: any[] = [];
+        for (const item of items) {
+          const product = await storage.getProduct(item.productId);
+          if (!product || product.wholesalerId !== wholesalerId) continue;
+          const unitPrice = typeof item.customPrice === 'number' ? item.customPrice : parseFloat(product.price);
+          const itemTotal = unitPrice * item.quantity;
+          subtotal += itemTotal;
+          newItems.push({ orderId: id, productId: item.productId, quantity: item.quantity, unitPrice: unitPrice.toFixed(2), total: itemTotal.toFixed(2), sellingType: item.sellingType || 'units', appliedOfferLabel: null, freeItems: 0 });
+        }
+        await db.delete(orderItems).where(eq(orderItems.orderId, id));
+        if (newItems.length > 0) await db.insert(orderItems).values(newItems);
+      }
+
+      const deliveryCostNum = deliveryCharge !== undefined ? (parseFloat(String(deliveryCharge)) || 0) : parseFloat(order.deliveryCost || '0');
+
+      await db.update(orders).set({
+        subtotal: subtotal.toFixed(2),
+        total: (subtotal + deliveryCostNum).toFixed(2),
+        amountOutstanding: (subtotal + deliveryCostNum).toFixed(2),
+        ...(fulfillmentType !== undefined ? { fulfillmentType } : {}),
+        ...(deliveryCharge !== undefined ? { deliveryCost: deliveryCostNum.toFixed(2), shippingTotal: deliveryCostNum.toFixed(2) } : {}),
+        ...(deliveryAddress !== undefined ? { deliveryAddress } : {}),
+        ...(paymentMethod !== undefined ? { paymentMethod } : {}),
+        ...(businessProfileId !== undefined ? { businessProfileId: businessProfileId ? parseInt(String(businessProfileId)) : null } : {}),
+        ...(collectionAddressId !== undefined ? { collectionAddressId: collectionAddressId ? parseInt(String(collectionAddressId)) : null } : {}),
+        ...(depositPercentage !== undefined ? { depositPercentage } : {}),
+        ...(balanceDueDays !== undefined ? { balanceDueDays } : {}),
+        ...(notes !== undefined ? { notes } : {}),
+        updatedAt: new Date(),
+      } as any).where(eq(orders.id, id));
+
+      const updatedOrder = await storage.getOrder(id);
+      res.json(updatedOrder);
+    } catch (error) {
+      console.error('Error updating draft:', error);
+      res.status(500).json({ error: 'Failed to update draft' });
+    }
+  });
+
+  // DELETE /api/orders/:id/draft — hard-delete a draft order
+  app.delete('/api/orders/:id/draft', requireAuth, requireNotViewer, requireMemberPermission('orders'), async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) return res.status(400).json({ error: 'Invalid order ID' });
+      const wholesalerId = resolveWholesalerId(req);
+
+      const order = await storage.getOrder(id);
+      if (!order) return res.status(404).json({ error: 'Draft not found' });
+      if (order.status !== 'draft') return res.status(400).json({ error: 'Order is not a draft' });
+      if (order.wholesalerId !== wholesalerId) return res.status(403).json({ error: 'Not authorized' });
+
+      await db.delete(orderItems).where(eq(orderItems.orderId, id));
+      await db.delete(orders).where(eq(orders.id, id));
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error deleting draft:', error);
+      res.status(500).json({ error: 'Failed to delete draft' });
+    }
+  });
+
+  // POST /api/orders/:id/approve — approve a draft: deduct stock, assign order number, send email
+  app.post('/api/orders/:id/approve', requireAuth, requireNotViewer, requireMemberPermission('orders'), async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) return res.status(400).json({ error: 'Invalid order ID' });
+      const wholesalerId = resolveWholesalerId(req);
+
+      const order = await storage.getOrder(id);
+      if (!order) return res.status(404).json({ error: 'Draft not found' });
+      if (order.status !== 'draft') return res.status(400).json({ error: 'Order is not a draft' });
+      if (order.wholesalerId !== wholesalerId) return res.status(403).json({ error: 'Not authorized' });
+
+      const items = await storage.getOrderItems(id);
+      if (!items || items.length === 0) return res.status(400).json({ error: 'Draft has no items' });
+
+      const today = new Date().toISOString().split('T')[0];
+
+      // PRE-VALIDATE stock for all unit items
+      for (const item of items) {
+        const sellingType = (item.sellingType || 'units') as 'units' | 'pallets';
+        if (sellingType !== 'units') continue;
+        const [product] = await db.select().from(products).where(eq(products.id, item.productId!));
+        if (!product) return res.status(400).json({ error: `Product ${item.productId} not found` });
+        const [batchRow] = await db.select({ total: sum(productBatches.quantity) }).from(productBatches)
+          .where(and(eq(productBatches.productId, item.productId!), eq(productBatches.status, 'active'), or(isNull(productBatches.expiryDate), sql`${productBatches.expiryDate} >= ${today}`)));
+        const available = batchRow?.total != null ? Number(batchRow.total) : (product.stock ?? 0);
+        if (available < item.quantity) {
+          return res.status(400).json({ error: `Insufficient stock for "${product.name}": ${available} available, ${item.quantity} requested`, errorType: 'OUT_OF_STOCK', productName: product.name, available, requested: item.quantity });
+        }
+      }
+
+      // Run approval in a transaction
+      const approvedOrder = await db.transaction(async (trx) => {
+        const orderNumber = await generateOrderNumber(wholesalerId, trx);
+
+        await trx.update(orders).set({ status: 'confirmed', orderNumber, restockStatus: null, updatedAt: new Date() } as any).where(eq(orders.id, id));
+
+        for (const item of items) {
+          const [currentProduct] = await trx.select().from(products).where(eq(products.id, item.productId!));
+          if (!currentProduct) continue;
+
+          const sellingType = (item.sellingType || 'units') as 'units' | 'pallets';
+          const unitsPerPallet = currentProduct.unitsPerPallet ?? 1;
+          const quantityInPack = currentProduct.quantityInPack ?? 1;
+          const baseUnitsNeeded = sellingType === 'pallets' ? item.quantity * unitsPerPallet * quantityInPack : item.quantity;
+
+          const activeBatches = await trx.select().from(productBatches).where(
+            and(eq(productBatches.productId, item.productId!), eq(productBatches.status, 'active'), or(isNull(productBatches.expiryDate), sql`${productBatches.expiryDate} >= ${today}`))
+          ).orderBy(sql`CASE WHEN expiry_date IS NULL THEN 1 ELSE 0 END`, asc(productBatches.expiryDate), asc(productBatches.createdAt));
+
+          if (activeBatches.length === 0) continue;
+
+          const productTotalBefore = activeBatches.reduce((acc: number, b: any) => acc + b.quantity, 0);
+          let remaining = baseUnitsNeeded;
+          let primaryBatchId: number | null = null;
+          const batchLabels: string[] = [];
+
+          for (const batch of activeBatches) {
+            if (remaining <= 0) break;
+            const deduct = Math.min(remaining, batch.quantity);
+            const newQty = batch.quantity - deduct;
+            const newStatus = newQty === 0 ? 'depleted' : 'active';
+            await trx.update(productBatches).set({ quantity: newQty, status: newStatus, updatedAt: new Date() }).where(eq(productBatches.id, batch.id));
+            batchLabels.push(`batch #${batch.batchNumber || batch.id}: ${deduct} units`);
+            if (primaryBatchId === null) primaryBatchId = batch.id;
+            remaining -= deduct;
+          }
+
+          await trx.update(orderItems).set({ batchId: primaryBatchId } as any).where(and(eq(orderItems.orderId, id), eq(orderItems.productId, item.productId!)));
+
+          const [batchSumRow] = await trx.select({ total: sum(productBatches.quantity) }).from(productBatches)
+            .where(and(eq(productBatches.productId, item.productId!), eq(productBatches.status, 'active'), or(isNull(productBatches.expiryDate), sql`${productBatches.expiryDate} >= ${today}`)));
+          const newUnitStock = parseInt(String(batchSumRow?.total ?? 0), 10);
+          const newPalletStock = (quantityInPack > 0 && unitsPerPallet > 0) ? Math.floor(Math.floor(newUnitStock / quantityInPack) / unitsPerPallet) : 0;
+          await trx.update(products).set({ stock: newUnitStock, palletStock: newPalletStock, updatedAt: new Date() }).where(eq(products.id, item.productId!));
+
+          await trx.insert(stockMovements).values({
+            productId: item.productId,
+            wholesalerId: order.wholesalerId,
+            movementType: 'purchase',
+            quantity: -baseUnitsNeeded,
+            unitType: 'units',
+            stockBefore: productTotalBefore,
+            stockAfter: newUnitStock,
+            reason: batchLabels.length === 1
+              ? `Draft invoice approved (${batchLabels[0]})`
+              : `Draft invoice approved — ${batchLabels.join(', ')}`,
+            orderId: id,
+            customerName: order.customerName ?? null,
+            businessProfileId: order.businessProfileId ?? null,
+            batchId: primaryBatchId,
+          } as any);
+        }
+
+        const [updated] = await trx.select().from(orders).where(eq(orders.id, id));
+        return updated;
+      });
+
+      // Send email notification (best-effort)
+      try {
+        const customer = await storage.getUser(order.retailerId);
+        const wholesaler = await storage.getUser(order.wholesalerId);
+        if (customer && wholesaler && customer.email) {
+          const enrichedItems = await Promise.all(items.map(async (item: any) => {
+            const product = await storage.getProduct(item.productId);
+            return { ...item, productName: product?.name || 'Product', packDescriptor: formatPackDescriptor(product?.packQuantity || product?.quantityInPack, product?.sizePerUnit || product?.unitSize, product?.unitOfMeasure), product };
+          }));
+          await sendCustomerInvoiceEmail(customer, approvedOrder, enrichedItems, wholesaler);
+        }
+      } catch (emailErr) {
+        console.warn(`[approve-draft] email failed for order ${id}:`, emailErr instanceof Error ? emailErr.message : emailErr);
+      }
+
+      res.json(approvedOrder);
+    } catch (error) {
+      console.error('Error approving draft:', error);
+      res.status(500).json({ error: 'Failed to approve draft' });
+    }
+  });
+
+  // ── End Draft Invoice Endpoints ──────────────────────────────────────────────
+
   // PUT /api/orders/:orderId/change-delivery-address
   app.put('/api/orders/:orderId/change-delivery-address', async (req, res) => {
     try {
