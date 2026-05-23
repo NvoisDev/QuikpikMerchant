@@ -80,7 +80,8 @@ import { ProductStorage } from './products';
 export class OrderStorage extends ProductStorage {
   async getOrders(wholesalerId?: string, retailerId?: string, searchTerm?: string, options?: { unpaginated?: boolean; limit?: number }): Promise<(Order & { items: (OrderItem & { product: Product })[]; retailer: User; wholesaler: User })[]> {
     // Apply basic filters - CRITICAL FIX: Include orders where user is EITHER wholesaler OR retailer
-    const conditions = [];
+    // Always exclude drafts — they have their own dedicated endpoint
+    const conditions: any[] = [sql`${orders.status} != 'draft'`];
     if (wholesalerId) {
       // Show orders where this user is either the wholesaler OR the retailer (covers both order systems)
       conditions.push(

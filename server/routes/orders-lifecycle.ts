@@ -353,17 +353,24 @@ export function registerOrderLifecycleRoutes(app: Express): void {
 
       const today = new Date().toISOString().split('T')[0];
 
-      // PRE-VALIDATE stock for all unit items
+      // PRE-VALIDATE stock for all items (units and pallets)
       for (const item of items) {
         const sellingType = (item.sellingType || 'units') as 'units' | 'pallets';
-        if (sellingType !== 'units') continue;
         const [product] = await db.select().from(products).where(eq(products.id, item.productId!));
         if (!product) return res.status(400).json({ error: `Product ${item.productId} not found` });
+        const unitsPerPallet = product.unitsPerPallet ?? 1;
+        const quantityInPack = product.quantityInPack ?? 1;
+        const baseUnitsNeeded = sellingType === 'pallets'
+          ? item.quantity * unitsPerPallet * quantityInPack
+          : item.quantity;
         const [batchRow] = await db.select({ total: sum(productBatches.quantity) }).from(productBatches)
           .where(and(eq(productBatches.productId, item.productId!), eq(productBatches.status, 'active'), or(isNull(productBatches.expiryDate), sql`${productBatches.expiryDate} >= ${today}`)));
         const available = batchRow?.total != null ? Number(batchRow.total) : (product.stock ?? 0);
-        if (available < item.quantity) {
-          return res.status(400).json({ error: `Insufficient stock for "${product.name}": ${available} available, ${item.quantity} requested`, errorType: 'OUT_OF_STOCK', productName: product.name, available, requested: item.quantity });
+        if (available === 0) {
+          return res.status(400).json({ error: `No active batch stock for "${product.name}". Please add a new batch before approving.`, errorType: 'OUT_OF_STOCK', productName: product.name, available: 0, requested: baseUnitsNeeded });
+        }
+        if (available < baseUnitsNeeded) {
+          return res.status(400).json({ error: `Insufficient stock for "${product.name}": ${available} available, ${baseUnitsNeeded} needed`, errorType: 'OUT_OF_STOCK', productName: product.name, available, requested: baseUnitsNeeded });
         }
       }
 
@@ -399,9 +406,16 @@ export function registerOrderLifecycleRoutes(app: Express): void {
             and(eq(productBatches.productId, item.productId!), eq(productBatches.status, 'active'), or(isNull(productBatches.expiryDate), sql`${productBatches.expiryDate} >= ${today}`))
           ).orderBy(sql`CASE WHEN expiry_date IS NULL THEN 1 ELSE 0 END`, asc(productBatches.expiryDate), asc(productBatches.createdAt));
 
-          if (activeBatches.length === 0) continue;
+          if (activeBatches.length === 0) {
+            throw new Error(`Product ${currentProduct.name} has no active batch stock. Please add a new batch before approving.`);
+          }
 
           const productTotalBefore = activeBatches.reduce((acc: number, b: any) => acc + b.quantity, 0);
+
+          if (productTotalBefore < baseUnitsNeeded) {
+            throw new Error(`Insufficient stock for "${currentProduct.name}": ${productTotalBefore} available, ${baseUnitsNeeded} needed`);
+          }
+
           let remaining = baseUnitsNeeded;
           let primaryBatchId: number | null = null;
           const batchLabels: string[] = [];
@@ -415,6 +429,10 @@ export function registerOrderLifecycleRoutes(app: Express): void {
             batchLabels.push(`batch #${batch.batchNumber || batch.id}: ${deduct} units`);
             if (primaryBatchId === null) primaryBatchId = batch.id;
             remaining -= deduct;
+          }
+
+          if (remaining > 0) {
+            throw new Error(`Stock deduction incomplete for "${currentProduct.name}": ${remaining} units could not be fulfilled`);
           }
 
           await trx.update(orderItems).set({ batchId: primaryBatchId } as any).where(and(eq(orderItems.orderId, id), eq(orderItems.productId, item.productId!)));
@@ -447,10 +465,11 @@ export function registerOrderLifecycleRoutes(app: Express): void {
         return updated;
       });
 
-      // Send email notification (best-effort)
+      // Send email + WhatsApp/SMS notifications (best-effort)
+      const customer = await storage.getUser(order.retailerId);
+      const wholesaler = await storage.getUser(order.wholesalerId);
+
       try {
-        const customer = await storage.getUser(order.retailerId);
-        const wholesaler = await storage.getUser(order.wholesalerId);
         if (customer && wholesaler && customer.email) {
           const enrichedItems = await Promise.all(items.map(async (item: any) => {
             const product = await storage.getProduct(item.productId);
@@ -460,6 +479,42 @@ export function registerOrderLifecycleRoutes(app: Express): void {
         }
       } catch (emailErr) {
         console.warn(`[approve-draft] email failed for order ${id}:`, emailErr instanceof Error ? emailErr.message : emailErr);
+      }
+
+      // WhatsApp/SMS notification (best-effort)
+      try {
+        if (customer && wholesaler && customer.phoneNumber) {
+          const businessName = wholesaler.businessName || `${wholesaler.firstName}'s Store`;
+          const storeLink = `https://quikpik.app/store/${wholesalerId}`;
+          const customerGreeting = customer.firstName || customer.businessName || 'there';
+          const totalDisplay = parseFloat(approvedOrder.total || '0').toFixed(2);
+
+          let itemsList = '';
+          try {
+            const itemsListParts: string[] = [];
+            for (const item of items) {
+              const [prod] = await db.select().from(products).where(eq(products.id, item.productId!));
+              const productName = prod?.name || `Product #${item.productId}`;
+              const sellingType = item.sellingType || 'units';
+              const unitPrice = parseFloat(String((item as any).customPrice ?? item.unitPrice ?? '0'));
+              const lineTotal = (unitPrice * item.quantity).toFixed(2);
+              itemsListParts.push(`• ${productName} - ${item.quantity} ${sellingType} × £${unitPrice.toFixed(2)} = £${lineTotal}`);
+            }
+            itemsList = itemsListParts.join('\n');
+          } catch {
+            itemsList = `${items.length} item(s)`;
+          }
+
+          const deliveryChargeText = parseFloat(approvedOrder.deliveryCost || '0') > 0
+            ? `\nDelivery: £${parseFloat(approvedOrder.deliveryCost!).toFixed(2)}`
+            : '';
+          const wholesalerContact = wholesaler.phoneNumber || wholesaler.email || '';
+          const message = `Hi ${customerGreeting}! ${businessName} has sent you an invoice.\n\nItems:\n${itemsList}${deliveryChargeText}\n\nTotal: £${totalDisplay}\nPayment: Pay Later\n\nPlease arrange payment directly with ${businessName}.${wholesalerContact ? `\n\nContact ${businessName}: ${wholesalerContact}` : ''}`;
+
+          await sendWhatsAppMessage({ to: customer.phoneNumber, message });
+        }
+      } catch (smsErr) {
+        console.warn(`[approve-draft] WhatsApp/SMS failed for order ${id}:`, smsErr instanceof Error ? smsErr.message : smsErr);
       }
 
       res.json({
