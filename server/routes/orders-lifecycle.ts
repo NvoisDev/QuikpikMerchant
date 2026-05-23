@@ -336,7 +336,9 @@ export function registerOrderLifecycleRoutes(app: Express): void {
       // Calculate proper fees & VAT (same logic as POST /api/quotes)
       const OFFLINE_METHODS_APPROVE = ['cash', 'bank_transfer', 'cheque', 'pay_later', 'other'];
       const orderPaymentMethod = order.paymentMethod || 'bank_transfer';
-      const isOfflineApproval = OFFLINE_METHODS_APPROVE.includes(orderPaymentMethod);
+      // depositPercentage === 0 means pay-later regardless of stored payment method — matches direct quote flow
+      const isPayLaterByDeposit = (order.depositPercentage ?? 100) === 0;
+      const isOfflineApproval = OFFLINE_METHODS_APPROVE.includes(orderPaymentMethod) || isPayLaterByDeposit;
 
       const subtotal = parseFloat(order.subtotal || '0');
       const deliveryCostNum = parseFloat(order.deliveryCost || '0');
@@ -588,7 +590,7 @@ export function registerOrderLifecycleRoutes(app: Express): void {
             }
 
             approvePaymentLinkUrl = session.url || '';
-            const expiryDays = (isDeposit && (order.balanceDueDays || 0) > 0) ? Math.min((order.balanceDueDays || 0) + 3, 30) : 1;
+            const expiryDays = (validDepositPercentage < 100 || (order.balanceDueDays || 0) > 0) ? Math.min((order.balanceDueDays || 0) + 3, 30) : 1;
             await db.update(orders).set({
               stripePaymentLinkId: session.id,
               stripePaymentLinkUrl: approvePaymentLinkUrl,
