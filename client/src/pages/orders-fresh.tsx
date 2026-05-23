@@ -1010,19 +1010,6 @@ export default function OrdersFresh() {
           </span>
         </button>
         <button
-          onClick={() => { setArchiveTab('archived'); deliveryTypeRef.current = ''; paymentStatusRef.current = ''; statusFilterRef.current = ''; setStatusFilter(''); setPaymentStatusFilter(''); setDeliveryTypeFilter(''); setDateRangeFilter(''); setPickingStatusFilter(''); loadOrders(1, searchQuery, 'archived'); if (!customerIdFilter) loadOrderStats('archived'); }}
-          className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
-            archiveTab === 'archived'
-              ? 'border-emerald-600 text-emerald-600'
-              : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
-          }`}
-        >
-          Archived
-          <span className="ml-2 px-2 py-0.5 text-xs rounded-full bg-slate-100 text-slate-600">
-            {orderStats?.archivedCount ?? '...'}
-          </span>
-        </button>
-        <button
           onClick={() => setArchiveTab('drafts')}
           className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
             archiveTab === 'drafts'
@@ -1036,6 +1023,19 @@ export default function OrdersFresh() {
               {draftOrders.length}
             </span>
           )}
+        </button>
+        <button
+          onClick={() => { setArchiveTab('archived'); deliveryTypeRef.current = ''; paymentStatusRef.current = ''; statusFilterRef.current = ''; setStatusFilter(''); setPaymentStatusFilter(''); setDeliveryTypeFilter(''); setDateRangeFilter(''); setPickingStatusFilter(''); loadOrders(1, searchQuery, 'archived'); if (!customerIdFilter) loadOrderStats('archived'); }}
+          className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+            archiveTab === 'archived'
+              ? 'border-emerald-600 text-emerald-600'
+              : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+          }`}
+        >
+          Archived
+          <span className="ml-2 px-2 py-0.5 text-xs rounded-full bg-slate-100 text-slate-600">
+            {orderStats?.archivedCount ?? '...'}
+          </span>
         </button>
       </div>
 
@@ -1168,7 +1168,7 @@ export default function OrdersFresh() {
                 <div key={draft.id} className="bg-white border border-amber-100 rounded-lg p-4 flex flex-col sm:flex-row sm:items-center gap-3 shadow-sm">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">Draft</span>
+                      <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">Draft · Not Sent</span>
                       <span className="font-semibold text-slate-800 truncate">{draft.customerName || 'Unknown Customer'}</span>
                     </div>
                     <div className="flex items-center gap-3 mt-1 flex-wrap">

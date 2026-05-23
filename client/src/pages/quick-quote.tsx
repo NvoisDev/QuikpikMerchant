@@ -2079,7 +2079,7 @@ export default function QuickQuote() {
           ) : (
             <>
               <Send className="h-4 w-4 mr-2" />
-              Create Invoice
+              {editingDraftId ? 'Approve & Send' : 'Create Invoice'}
             </>
           )}
         </Button>

@@ -372,7 +372,7 @@ export function registerOrderLifecycleRoutes(app: Express): void {
         const orderNumber = await generateOrderNumber(wholesalerId, trx);
 
         await trx.update(orders).set({
-          status: 'confirmed',
+          status: 'pending',
           orderNumber,
           restockStatus: null,
           updatedAt: new Date(),

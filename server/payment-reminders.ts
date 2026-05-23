@@ -47,7 +47,8 @@ export async function checkAndSendPaymentReminders() {
       and(
         gt(orders.amountOutstanding, '0'),
         isNotNull(orders.balanceDueDays),
-        gt(orders.balanceDueDays, 0)
+        gt(orders.balanceDueDays, 0),
+        sql`${orders.status} != 'draft'`
       )
     );
     
