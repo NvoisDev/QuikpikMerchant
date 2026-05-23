@@ -15,7 +15,7 @@ import { getStripeClient } from "../stripeConfig";
 import { ReliableSMSService } from "../sms-service";
 import { resolveWholesalerId } from "../utils/resolveWholesalerId";
 import { businessProfiles } from "@shared/schema";
-import { logQuoteActivity } from "../utils/quote-activity";
+import { logQuoteActivity, fmtGBP } from "../utils/quote-activity";
 import { isConnectAccountReady } from "../utils/stripe-connect-ready";
 import { resolveInvoiceWholesaler } from "./orders-read";
 
@@ -871,7 +871,7 @@ export function registerQuoteRoutes(app: Express): void {
           paymentMethod: quoteOrder.paymentMethod,
           sendVia,
         },
-        description: `Invoice ${orderNumber} created for ${quoteOrder.customerName} — £${total.toFixed(2)}${validDepositPercentage < 100 ? ` (${validDepositPercentage}% deposit)` : ''}`,
+        description: `Invoice ${orderNumber} created for ${quoteOrder.customerName} — £${fmtGBP(total)}${validDepositPercentage < 100 ? ` (${validDepositPercentage}% deposit)` : ''}`,
         performedBy: req.user.id,
       });
 
@@ -1168,15 +1168,15 @@ export function registerQuoteRoutes(app: Express): void {
         const sellingTypeNew = newItem.sellingType || 'units';
         const inOld = existingItems.find((oi) => oi.productId === newItem.productId && (oi.sellingType || 'units') === sellingTypeNew);
         if (!inOld) {
-          changeList.push(`Added ${auditPName(newItem.productId)}: ${newItem.quantity} ${sellingTypeNew} @ £${newItem.customPrice.toFixed(2)}`);
+          changeList.push(`Added ${auditPName(newItem.productId)}: ${newItem.quantity} ${sellingTypeNew} @ £${fmtGBP(newItem.customPrice)}`);
         } else {
           const parts: string[] = [];
           if (inOld.quantity !== newItem.quantity) parts.push(`qty ${inOld.quantity}→${newItem.quantity}`);
-          if (Math.abs(parseFloat(inOld.unitPrice || '0') - newItem.customPrice) > 0.001) parts.push(`price £${parseFloat(inOld.unitPrice || '0').toFixed(2)}→£${newItem.customPrice.toFixed(2)}`);
+          if (Math.abs(parseFloat(inOld.unitPrice || '0') - newItem.customPrice) > 0.001) parts.push(`price £${fmtGBP(parseFloat(inOld.unitPrice || '0'))}→£${fmtGBP(newItem.customPrice)}`);
           if (parts.length > 0) changeList.push(`${auditPName(newItem.productId)}: ${parts.join(', ')}`);
         }
       }
-      const auditEntry = `[Invoice edited ${timestamp} by ${editorName}] ${changeList.length > 0 ? changeList.join('; ') : 'No line item changes'}. New total: £${total.toFixed(2)}.`;
+      const auditEntry = `[Invoice edited ${timestamp} by ${editorName}] ${changeList.length > 0 ? changeList.join('; ') : 'No line item changes'}. New total: £${fmtGBP(total)}.`;
       const updatedNotes = existingOrder.notes ? `${existingOrder.notes}\n${auditEntry}` : auditEntry;
 
       // ── Step 7: Atomic DB transaction — stock restore → item swap → allocate ─
@@ -1410,7 +1410,7 @@ export function registerQuoteRoutes(app: Express): void {
               entityType: 'quote',
               oldValue: { total: existingOrder.total, subtotal: existingOrder.subtotal },
               newValue: { total: total.toFixed(2), subtotal: productSubtotal.toFixed(2) },
-              description: `Invoice edited — total updated from £${oldTotal.toFixed(2)} to £${total.toFixed(2)}`,
+              description: `Invoice edited — total updated from £${fmtGBP(oldTotal)} to £${fmtGBP(total)}`,
               performedBy: req.user.id,
             });
             logQuoteActivity({
@@ -1449,7 +1449,7 @@ export function registerQuoteRoutes(app: Express): void {
                 entityType: 'product',
                 entityId: String(newItem.productId),
                 newValue: { quantity: newItem.quantity, unitPrice: newItem.customPrice, sellingType: sellingTypeNew },
-                description: `${pName(newItem.productId)} added — ${newItem.quantity} ${sellingTypeNew} @ £${newItem.customPrice.toFixed(2)}`,
+                description: `${pName(newItem.productId)} added — ${newItem.quantity} ${sellingTypeNew} @ £${fmtGBP(newItem.customPrice)}`,
                 performedBy: req.user.id,
               });
             } else {
@@ -1473,7 +1473,7 @@ export function registerQuoteRoutes(app: Express): void {
                   entityId: String(newItem.productId),
                   oldValue: { unitPrice: inOld.unitPrice },
                   newValue: { unitPrice: newItem.customPrice },
-                  description: `${pName(newItem.productId)} price changed: £${parseFloat(inOld.unitPrice || '0').toFixed(2)} → £${newItem.customPrice.toFixed(2)}`,
+                  description: `${pName(newItem.productId)} price changed: £${fmtGBP(parseFloat(inOld.unitPrice || '0'))} → £${fmtGBP(newItem.customPrice)}`,
                   performedBy: req.user.id,
                 });
               }

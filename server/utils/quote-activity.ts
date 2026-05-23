@@ -2,6 +2,10 @@ import { db } from "../db";
 import { quoteActivityLogs } from "@shared/schema";
 import { and, eq, gte } from "drizzle-orm";
 
+export function fmtGBP(value: number): string {
+  return value.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
 export interface QuoteActivityEntry {
   quoteId: number;
   actionType: string;
