@@ -223,7 +223,14 @@ export default function OrdersFresh() {
   });
   const [isDeletingDraft, setIsDeletingDraft] = useState<number | null>(null);
   const [isApprovingDraft, setIsApprovingDraft] = useState<number | null>(null);
+  const [reminderDismissed, setReminderDismissed] = useState(false);
   const { toast } = useToast();
+
+  useEffect(() => {
+    if (!user?.id) return;
+    const stored = localStorage.getItem(`quikpik_unfulfilled_reminder_${user.id}`);
+    if (stored && Date.now() < parseInt(stored)) setReminderDismissed(true);
+  }, [user?.id]);
   
   // Persist picking status filter to localStorage
   useEffect(() => {
@@ -860,7 +867,24 @@ export default function OrdersFresh() {
   // Stats reflect the current tab's orders - with null safety
   const paidOrders = filteredByPicking.filter(o => (o.paymentStatus || '') === 'paid').length;
   const unfulfilledOrders = filteredByPicking.filter(o => UNFULFILLED_STATUSES.includes((o.status || '').toLowerCase())).length;
-  
+
+  const fifteenDaysAgo = Date.now() - 15 * 24 * 60 * 60 * 1000;
+  const staleUnfulfilledCount = useMemo(() =>
+    (archiveTab === 'active' || archiveTab === 'all')
+      ? orders.filter(o =>
+          UNFULFILLED_STATUSES.includes((o.status || '').toLowerCase()) &&
+          new Date(o.createdAt).getTime() < fifteenDaysAgo
+        ).length
+      : 0,
+  [orders, archiveTab]);
+
+  const dismissReminder = () => {
+    if (user?.id) localStorage.setItem(`quikpik_unfulfilled_reminder_${user.id}`, String(Date.now() + 7 * 24 * 60 * 60 * 1000));
+    setReminderDismissed(true);
+  };
+
+  const showUnfulfilledReminder = staleUnfulfilledCount > 0 && !reminderDismissed;
+
   // Tab badge counts come from server stats (accurate across all pages)
   const activeCount = orderStats?.activeCount ?? 0;
   const archivedCount = orderStats?.archivedCount ?? 0;
@@ -1056,6 +1080,25 @@ export default function OrdersFresh() {
           </span>
         </button>
       </div>
+
+      {showUnfulfilledReminder && (
+        <div className="mx-4 md:mx-6 mt-3 flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm">
+          <Clock className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="font-medium text-amber-800">
+              {staleUnfulfilledCount === 1
+                ? 'You have 1 order over 15 days old that hasn\'t been marked as fulfilled.'
+                : `You have ${staleUnfulfilledCount} orders over 15 days old that haven't been marked as fulfilled.`}
+            </p>
+            <p className="text-amber-700 mt-0.5">
+              Open any order's <span className="font-medium">⋮ menu</span> and tap <span className="font-medium">Mark Fulfilled</span> once it's been dispatched or collected.
+            </p>
+          </div>
+          <button onClick={dismissReminder} className="shrink-0 text-amber-500 hover:text-amber-700 transition-colors" aria-label="Dismiss">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
 
       {archiveTab !== 'drafts' && (
       <div className="sticky top-14 lg:top-0 z-10 bg-white border-b border-slate-100 py-2 -mx-4 md:-mx-6 px-4 md:px-6 mb-2">
