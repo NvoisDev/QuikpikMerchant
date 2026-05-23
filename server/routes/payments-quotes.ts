@@ -10,6 +10,7 @@ import {
   inArray, isNull, ne, or, orderItems, orders, productBatches, products,
   requireAuth, requireNotViewer, sendEmail, sendWhatsAppMessage, sendCustomerInvoiceEmail,
   sql, stockMovements, storage, sum, wrapCustomerEmail, desc, quoteActivityLogs,
+  teamMembers, users,
 } from "./shared";
 import { getStripeClient } from "../stripeConfig";
 import { ReliableSMSService } from "../sms-service";
@@ -1606,7 +1607,40 @@ export function registerQuoteRoutes(app: Express): void {
         .limit(limit)
         .offset((page - 1) * limit);
 
-      res.json({ logs, page, hasMore: logs.length === limit });
+      // Resolve performedBy user IDs to display names
+      const actorIds = [...new Set(
+        logs.map(l => l.performedBy).filter((p): p is string => !!p && p !== 'system' && p !== 'checkout')
+      )];
+      const nameMap = new Map<string, string>();
+      if (actorIds.length > 0) {
+        const [memberRows, userRows] = await Promise.all([
+          db.select({ id: teamMembers.id, firstName: teamMembers.firstName, lastName: teamMembers.lastName })
+            .from(teamMembers)
+            .where(inArray(teamMembers.id, actorIds.map(Number).filter(n => !isNaN(n)))),
+          db.select({ id: users.id, firstName: users.firstName, lastName: users.lastName })
+            .from(users)
+            .where(inArray(users.id, actorIds)),
+        ]);
+        for (const m of memberRows) {
+          const name = [m.firstName, m.lastName].filter(Boolean).join(' ').trim();
+          if (name) nameMap.set(String(m.id), name);
+        }
+        for (const u of userRows) {
+          if (!nameMap.has(u.id)) {
+            const name = [u.firstName, u.lastName].filter(Boolean).join(' ').trim();
+            if (name) nameMap.set(u.id, name);
+          }
+        }
+      }
+
+      const enrichedLogs = logs.map(l => ({
+        ...l,
+        actorName: (l.performedBy && l.performedBy !== 'system' && l.performedBy !== 'checkout')
+          ? (nameMap.get(l.performedBy) ?? null)
+          : null,
+      }));
+
+      res.json({ logs: enrichedLogs, page, hasMore: logs.length === limit });
     } catch (error) {
       console.error('❌ Error fetching quote activity:', error);
       res.status(500).json({ error: 'Failed to fetch invoice activity' });

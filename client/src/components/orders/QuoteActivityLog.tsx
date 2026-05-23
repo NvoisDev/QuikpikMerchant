@@ -14,6 +14,7 @@ interface ActivityLog {
   newValue: Record<string, unknown> | null;
   description: string;
   performedBy: string | null;
+  actorName: string | null;
   createdAt: string;
 }
 
@@ -67,12 +68,12 @@ function getActionColors(actionType: string): { bg: string; icon: string } {
   }
 }
 
-function formatActor(performedBy: string | null, userId: string | undefined): string {
+function formatActor(performedBy: string | null, userId: string | undefined, actorName?: string | null): string {
   if (!performedBy || performedBy === 'system') return 'System';
   // 'checkout' is set by the Stripe webhook — the customer triggered this action
   if (performedBy === 'checkout') return 'Customer';
   if (userId && performedBy === userId) return 'You';
-  return 'Team member';
+  return actorName || 'Team member';
 }
 
 function formatTime(dateStr: string): string {
@@ -187,7 +188,7 @@ export function QuoteActivityLog({ orderId }: QuoteActivityLogProps) {
                           <div className="flex-1 min-w-0 pt-0.5">
                             <div className="flex items-center justify-between gap-2 flex-wrap">
                               <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                                {formatActor(log.performedBy, user?.id)}
+                                {formatActor(log.performedBy, user?.id, log.actorName)}
                               </span>
                               <span className="text-[11px] text-gray-400 tabular-nums flex-shrink-0">
                                 {formatTime(log.createdAt)}
