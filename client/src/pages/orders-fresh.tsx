@@ -1179,10 +1179,18 @@ export default function OrdersFresh() {
           ) : (
             <div className="space-y-2">
               {draftOrders.map((draft: any) => (
-                <div key={draft.id} className="bg-white border border-amber-100 rounded-lg p-4 flex flex-col sm:flex-row sm:items-center gap-3 shadow-sm">
+                <div key={draft.id} className={`bg-white border rounded-lg p-4 flex flex-col sm:flex-row sm:items-center gap-3 shadow-sm ${draft.hasStockIssue ? 'border-yellow-300' : 'border-amber-100'}`}>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">Draft · Not Sent</span>
+                      {draft.hasStockIssue && (
+                        <span
+                          className="text-xs font-medium px-2 py-0.5 rounded-full bg-yellow-50 text-yellow-700 border border-yellow-300 flex items-center gap-1"
+                          title={draft.stockIssues?.map((i: any) => `${i.productName}: ${i.available} available, ${i.requested} needed`).join('\n')}
+                        >
+                          ⚠ Stock issue
+                        </span>
+                      )}
                       <span className="font-semibold text-slate-800 truncate">{draft.customerName || 'Unknown Customer'}</span>
                     </div>
                     <div className="flex items-center gap-3 mt-1 flex-wrap">
@@ -1193,6 +1201,15 @@ export default function OrdersFresh() {
                       <span className="text-xs text-slate-500">{draft.fulfillmentType === 'pickup' ? 'Collection' : 'Delivery'}</span>
                       <span className="text-xs text-slate-400">{new Date(draft.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
                     </div>
+                    {draft.hasStockIssue && draft.stockIssues?.length > 0 && (
+                      <div className="mt-1.5 space-y-0.5">
+                        {draft.stockIssues.map((issue: any, idx: number) => (
+                          <p key={idx} className="text-xs text-yellow-700">
+                            <span className="font-medium">{issue.productName}</span>: {issue.available} available, {issue.requested} needed
+                          </p>
+                        ))}
+                      </div>
+                    )}
                   </div>
                   <div className="flex gap-2 shrink-0">
                     <Button

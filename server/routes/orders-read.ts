@@ -2,8 +2,8 @@ import type { Express } from "express";
 import { resolveWholesalerId } from "../utils/resolveWholesalerId";
 import {
   storage, db, requireAuth, requireNotViewer, requireMemberPermission,
-  orders, orderCancellationRequests,
-  sql, eq, and, desc, inArray, or, count,
+  orders, orderCancellationRequests, products, productBatches,
+  sql, eq, and, desc, inArray, or, count, sum, isNull,
   buildInvoicePdf, getStripeClient, isLiveMode,
 } from "./shared";
 import { businessProfiles } from "@shared/schema";
@@ -29,9 +29,34 @@ export function registerOrderReadRoutes(app: Express): void {
       const drafts = await db.select().from(orders)
         .where(and(eq(orders.wholesalerId, wholesalerId), sql`${orders.status} = 'draft'`))
         .orderBy(desc(orders.createdAt));
+      const today = new Date().toISOString().split('T')[0];
       const draftsWithItems = await Promise.all(drafts.map(async (draft) => {
         const items = await storage.getOrderItems(draft.id);
-        return { ...draft, items };
+        // Check stock for each item to surface warnings on the draft list
+        const stockIssues: { productName: string; available: number; requested: number }[] = [];
+        for (const item of items) {
+          if (!item.productId) continue;
+          const [product] = await db.select().from(products).where(eq(products.id, item.productId));
+          if (!product) continue;
+          const sellingType = (item.sellingType || 'units') as 'units' | 'pallets';
+          const unitsPerPallet = product.unitsPerPallet ?? 1;
+          const quantityInPack = product.quantityInPack ?? 1;
+          const baseUnitsNeeded = sellingType === 'pallets'
+            ? item.quantity * unitsPerPallet * quantityInPack
+            : item.quantity;
+          const [batchRow] = await db.select({ total: sum(productBatches.quantity) })
+            .from(productBatches)
+            .where(and(
+              eq(productBatches.productId, item.productId),
+              eq(productBatches.status, 'active'),
+              or(isNull(productBatches.expiryDate), sql`${productBatches.expiryDate} >= ${today}`)
+            ));
+          const available = batchRow?.total != null ? Number(batchRow.total) : (product.stock ?? 0);
+          if (available < baseUnitsNeeded) {
+            stockIssues.push({ productName: product.name, available, requested: baseUnitsNeeded });
+          }
+        }
+        return { ...draft, items, hasStockIssue: stockIssues.length > 0, stockIssues };
       }));
       res.json(draftsWithItems);
     } catch (error) {
