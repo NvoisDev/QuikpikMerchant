@@ -975,6 +975,7 @@ export default function CustomerDetail() {
                 order.status === "paid" ? CheckCircle :
                 order.status === "fulfilled" ? Package :
                 order.status === "cancelled" ? XCircle : Clock;
+              const isCancelled = order.status === "cancelled";
               const paymentColor =
                 order.paymentStatus === "paid" ? "bg-green-100 text-green-800" :
                 order.paymentStatus === "part_paid" ? "bg-amber-100 text-amber-800" :
@@ -994,10 +995,12 @@ export default function CustomerDetail() {
                     </div>
                   </div>
                   <div className="text-right flex flex-col items-end gap-1">
-                    <p className="text-sm font-semibold">{formatMoney(parseFloat(order.total))}</p>
-                    <Badge className={`text-[10px] px-1.5 py-0 border-0 ${paymentColor}`}>
-                      {paymentLabel}
-                    </Badge>
+                    <p className={`text-sm font-semibold ${isCancelled ? 'line-through text-gray-400' : ''}`}>{formatMoney(parseFloat(order.total))}</p>
+                    {!isCancelled && (
+                      <Badge className={`text-[10px] px-1.5 py-0 border-0 ${paymentColor}`}>
+                        {paymentLabel}
+                      </Badge>
+                    )}
                   </div>
                 </div>
               );
