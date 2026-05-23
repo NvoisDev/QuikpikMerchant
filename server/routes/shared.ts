@@ -959,13 +959,32 @@ export async function sendCustomerInvoiceEmail(customer: any, order: any, items:
                 return `<div style="background:#f0fdf4;border:1px solid #bbf7d0;padding:15px;border-radius:5px;margin:20px 0"><table style="width:100%;border-collapse:collapse">${subtotalRow}${deliveryRow}${feeRow}<tr style="border-top:1px solid #bbf7d0"><td style="padding:8px 0 4px;font-weight:bold;">Amount Paid:</td><td style="padding:8px 0 4px;text-align:right;font-weight:bold;color:#15803d;">${currencySymbol}${amountPaid.toFixed(2)}</td></tr></table></div>`;
               })()
             : '');
+    const paymentMethodLabels: Record<string, string> = {
+      bank_transfer: 'Bank Transfer',
+      cash: 'Cash',
+      cheque: 'Cheque',
+      pay_later: 'Pay Later',
+      other: 'Other',
+    };
+    const orderPaymentMethod = order.paymentMethod as string | undefined;
+    const isOfflinePayment = orderPaymentMethod && paymentMethodLabels[orderPaymentMethod] !== undefined;
+    const paymentLabel = orderPaymentMethod ? (paymentMethodLabels[orderPaymentMethod] || orderPaymentMethod) : null;
+    const businessNameForPayment = wholesaler.businessName || 'Wholesale Store';
+    const arrangementSentence = isOfflinePayment
+      ? (orderPaymentMethod === 'pay_later'
+          ? `Please arrange payment with ${businessNameForPayment} directly.`
+          : `Please arrange payment via ${(paymentLabel || '').toLowerCase()} directly with ${businessNameForPayment}.`)
+      : null;
+    const paymentMethodSectionHtml = (isOfflinePayment && paymentLabel && arrangementSentence && !isDeposit && !isBalancePayment)
+      ? `<div style="background:#fffbeb;border:1px solid #fde68a;padding:15px;border-radius:5px;margin:20px 0"><h4 style="margin:0 0 8px;color:#92400e;">Payment Method: ${paymentLabel}</h4><p style="margin:0;color:#78350f;font-size:14px;">${arrangementSentence}</p></div>`
+      : '';
     const emailTitle = isDeposit ? 'Deposit Received' : isBalancePayment ? 'Balance Paid \u2014 Order Confirmed' : 'Order Confirmation';
     const emailIntro = isDeposit
       ? `Thank you \u2014 your deposit payment has been received. We'll be in touch once the remaining balance is settled.`
       : isBalancePayment
         ? `Great news \u2014 your balance payment has been received and your order is now fully paid. We'll be in touch shortly with dispatch details.`
         : `Thank you for your order!`;
-    const emailHtml = `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto"><h2 style="color:#22c55e;">${emailTitle}</h2><p>Dear ${customerName},</p><p>${emailIntro}</p><div style="background:#f9f9f9;padding:20px;border-radius:5px;margin:20px 0"><h3>Order Details</h3><table style="width:100%;border-collapse:collapse"><thead><tr><th style="text-align:left;padding:8px;border-bottom:2px solid #ddd;">Product</th><th style="text-align:center;padding:8px;border-bottom:2px solid #ddd;">Qty</th><th style="text-align:right;padding:8px;border-bottom:2px solid #ddd;">Unit Price</th><th style="text-align:right;padding:8px;border-bottom:2px solid #ddd;">Total</th></tr></thead><tbody>${itemsHtml}</tbody></table></div>${paymentSummaryHtml}${deliverySection}<div style="background:#f0f9ff;padding:15px;border-radius:5px;margin:20px 0"><h4>Store Contact</h4><p><strong>${wholesaler.businessName || 'Wholesale Store'}</strong></p>${wholesaler.businessPhone ? `<p>📞 ${wholesaler.businessPhone}</p>` : ''}${wholesaler.email ? `<p>📧 ${wholesaler.email}</p>` : ''}${legalDetailsHtml}</div></div>`;
+    const emailHtml = `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto"><h2 style="color:#22c55e;">${emailTitle}</h2><p>Dear ${customerName},</p><p>${emailIntro}</p><div style="background:#f9f9f9;padding:20px;border-radius:5px;margin:20px 0"><h3>Order Details</h3><table style="width:100%;border-collapse:collapse"><thead><tr><th style="text-align:left;padding:8px;border-bottom:2px solid #ddd;">Product</th><th style="text-align:center;padding:8px;border-bottom:2px solid #ddd;">Qty</th><th style="text-align:right;padding:8px;border-bottom:2px solid #ddd;">Unit Price</th><th style="text-align:right;padding:8px;border-bottom:2px solid #ddd;">Total</th></tr></thead><tbody>${itemsHtml}</tbody></table></div>${paymentSummaryHtml}${paymentMethodSectionHtml}${deliverySection}<div style="background:#f0f9ff;padding:15px;border-radius:5px;margin:20px 0"><h4>Store Contact</h4><p><strong>${wholesaler.businessName || 'Wholesale Store'}</strong></p>${wholesaler.businessPhone ? `<p>📞 ${wholesaler.businessPhone}</p>` : ''}${wholesaler.email ? `<p>📧 ${wholesaler.email}</p>` : ''}${legalDetailsHtml}</div></div>`;
     if (!process.env.SENDGRID_API_KEY) {
       return;
     }
