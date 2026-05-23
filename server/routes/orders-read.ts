@@ -5,6 +5,7 @@ import {
   orders, orderCancellationRequests, products, productBatches,
   sql, eq, and, desc, inArray, or, count, sum, isNull,
   buildInvoicePdf, getStripeClient, isLiveMode,
+  users, wholesalerCustomerRelationships,
 } from "./shared";
 import { businessProfiles } from "@shared/schema";
 import { getOrderStats } from "../services/analyticsService";
@@ -368,12 +369,47 @@ export function registerOrderReadRoutes(app: Express): void {
         pickingRows.forEach(p => { pickingStatusMap[p.orderId] = p.pickingStatus; });
       }
 
-      // Attach cancellation request, business profile name, and picking status to each order
+      // Batch-fetch live retailer (customer) records for all orders on this page
+      const retailerIds = Array.from(new Set(ordersResult.map(o => o.retailerId).filter(Boolean)));
+      let retailerMap: Record<string, { firstName: string | null; lastName: string | null; businessName: string | null; phoneNumber: string | null }> = {};
+      if (retailerIds.length > 0) {
+        const [retailerRows, displayNameRows] = await Promise.all([
+          db.select({
+            id: users.id,
+            firstName: users.firstName,
+            lastName: users.lastName,
+            businessName: users.businessName,
+            phoneNumber: users.phoneNumber,
+          }).from(users).where(inArray(users.id, retailerIds)),
+          db.select({
+            retailerId: wholesalerCustomerRelationships.retailerId,
+            displayName: wholesalerCustomerRelationships.displayName,
+          }).from(wholesalerCustomerRelationships).where(
+            and(
+              eq(wholesalerCustomerRelationships.wholesalerId, wholesalerId),
+              inArray(wholesalerCustomerRelationships.retailerId, retailerIds)
+            )
+          ),
+        ]);
+        const displayNameByRetailer: Record<string, string | null> = {};
+        displayNameRows.forEach(r => { displayNameByRetailer[r.retailerId] = r.displayName ?? null; });
+        retailerRows.forEach(r => {
+          retailerMap[r.id] = {
+            firstName: displayNameByRetailer[r.id] ?? r.firstName,
+            lastName: displayNameByRetailer[r.id] ? null : r.lastName,
+            businessName: r.businessName,
+            phoneNumber: r.phoneNumber,
+          };
+        });
+      }
+
+      // Attach cancellation request, business profile name, picking status, and live retailer to each order
       const ordersWithRequests = ordersResult.map(order => ({
         ...order,
         cancellationRequest: cancellationRequestsMap[order.id] || null,
         businessProfileName: order.businessProfileId ? (profileNameMap[order.businessProfileId] ?? null) : null,
         pickingStatus: pickingStatusMap[order.id] ?? 'not_started',
+        retailer: order.retailerId ? (retailerMap[order.retailerId] ?? null) : null,
       }));
       
       res.json({
