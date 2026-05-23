@@ -324,16 +324,29 @@ export default function OrdersFresh() {
   const handleApproveDraft = async (draftId: number) => {
     setIsApprovingDraft(draftId);
     try {
-      await apiRequest('POST', `/api/orders/${draftId}/approve`);
+      const resp = await apiRequest('POST', `/api/orders/${draftId}/approve`);
+      if (!resp.ok) {
+        const body = await resp.json().catch(() => ({} as any));
+        if (body.errorType === 'OUT_OF_STOCK') {
+          toast({
+            title: 'Stock Unavailable',
+            description: body.available != null && body.requested != null
+              ? `Only ${body.available} units of "${body.productName || 'this product'}" are in stock — you requested ${body.requested}. Please edit the draft to reduce the quantity.`
+              : body.error || 'Insufficient stock to approve this draft.',
+            variant: 'destructive',
+          } as any);
+        } else {
+          toast({ title: 'Failed to approve', description: body.error || 'Failed to approve draft', variant: 'destructive' } as any);
+        }
+        return;
+      }
       refetchDrafts();
       queryClient.invalidateQueries({ queryKey: ['/api/orders-paginated'] });
       setArchiveTab('active');
       loadOrders(1, '', 'active');
       toast({ title: 'Invoice approved!', description: 'Order is now active and customer notified.' });
-    } catch (err: any) {
-      let msg = 'Failed to approve draft';
-      try { const d = await err?.response?.json?.(); msg = d?.error || msg; } catch {}
-      toast({ title: 'Failed to approve', description: msg, variant: 'destructive' } as any);
+    } catch {
+      toast({ title: 'Failed to approve', description: 'Failed to approve draft', variant: 'destructive' } as any);
     } finally {
       setIsApprovingDraft(null);
     }
