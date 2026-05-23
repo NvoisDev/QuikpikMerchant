@@ -313,6 +313,8 @@ export default function OrdersFresh() {
     try {
       await apiRequest('DELETE', `/api/orders/${draftId}/draft`);
       refetchDrafts();
+      if (user?.id) localStorage.removeItem(`quikpik_qq_draft_${user.id}`);
+      setMobileDraft(null);
       toast({ title: 'Draft deleted' });
     } catch {
       toast({ title: 'Failed to delete draft', variant: 'destructive' } as any);
@@ -326,6 +328,8 @@ export default function OrdersFresh() {
     try {
       await apiRequest('POST', `/api/orders/${draftId}/approve`);
       refetchDrafts();
+      if (user?.id) localStorage.removeItem(`quikpik_qq_draft_${user.id}`);
+      setMobileDraft(null);
       queryClient.invalidateQueries({ queryKey: ['/api/orders-paginated'] });
       setArchiveTab('active');
       loadOrders(1, '', 'active');
