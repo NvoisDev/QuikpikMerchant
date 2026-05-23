@@ -1588,7 +1588,7 @@ export default function OrdersFresh() {
                             </TableCell>
                           </TableRow>
                         )}
-                    <TableRow className={`cursor-pointer hover:bg-slate-50 transition-colors ${selectedOrderIds.has(order.id) ? 'bg-emerald-50/50' : ''}`} onClick={() => loadOrderDetails(order)}>
+                    <TableRow className={`cursor-pointer transition-colors ${order.status === 'cancelled' ? 'bg-gray-50 hover:bg-gray-100 opacity-70' : `hover:bg-slate-50 ${selectedOrderIds.has(order.id) ? 'bg-emerald-50/50' : ''}`}`} onClick={() => loadOrderDetails(order)}>
                       {!isViewer && (
                         <TableCell className="w-8 pr-0" onClick={(e) => e.stopPropagation()}>
                           <input
@@ -1621,7 +1621,7 @@ export default function OrdersFresh() {
                       </TableCell>
                       <TableCell className="font-medium text-xs">
                         <div>
-                          <div>{formatMoney(calculateNetAmount(order))}</div>
+                          <div className={order.status === 'cancelled' ? 'line-through text-gray-400' : ''}>{formatMoney(calculateNetAmount(order))}</div>
                           <div className="text-xs text-gray-500">{parseFloat(order.platformFee || '0') > 0 && !isOfflineOrderLocal(order) ? 'After platform fee' : 'No platform fee'}</div>
                         </div>
                       </TableCell>
@@ -1768,7 +1768,7 @@ export default function OrdersFresh() {
                           <span className="text-xs font-semibold text-gray-500">{currentLabel}</span>
                         </div>
                       )}
-                  <Card className={`cursor-pointer hover:shadow-md transition-shadow ${selectedOrderIds.has(order.id) ? 'ring-2 ring-emerald-400' : ''}`} onClick={() => loadOrderDetails(order)}>
+                  <Card className={`cursor-pointer transition-shadow ${order.status === 'cancelled' ? 'bg-gray-50 border-gray-200 opacity-70 hover:shadow-sm' : `hover:shadow-md ${selectedOrderIds.has(order.id) ? 'ring-2 ring-emerald-400' : ''}`}`} onClick={() => loadOrderDetails(order)}>
                     <CardContent className="p-4">
                       <div className="flex justify-between items-start mb-3">
                         <div className="flex items-start gap-2">
@@ -1799,7 +1799,7 @@ export default function OrdersFresh() {
                         </div>
                         <div className="text-right flex items-center gap-2">
                           <div>
-                            <div className="font-semibold">{formatMoney(calculateNetAmount(order))}</div>
+                            <div className={`font-semibold ${order.status === 'cancelled' ? 'line-through text-gray-400' : ''}`}>{formatMoney(calculateNetAmount(order))}</div>
                             <div className="text-xs text-gray-500">{isStripePayment(order) ? 'After fee' : 'No fee'}</div>
                           </div>
                           <Eye className="h-4 w-4 text-gray-400" />
