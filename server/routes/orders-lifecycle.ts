@@ -8,6 +8,7 @@ import { parseCustomerCookie } from "../utils/customer-auth-cookie";
 import { formatDateTime } from "../../shared/utils/date";
 import { calculateOfflinePaymentUpdate } from "./order-payment-calculations";
 import { isImpersonating } from "../utils/isImpersonating";
+import { isConnectAccountReady } from "../utils/stripe-connect-ready";
 import { productBatches } from "@shared/schema";
 import { logQuoteActivity } from "../utils/quote-activity";
 import { sendCancellationNotification } from "../services/orderCancellationNotificationService";
@@ -15,7 +16,7 @@ import {
   storage, db,
   requireAuth, requireNotViewer, requireMemberPermission,
   orders, orderItems, orderCancellationRequests, stockMovements, products, campaignOrders,
-  sql, eq, and, or, inArray, lt, isNull, sum, asc,
+  sql, eq, and, or, inArray, lt, isNull, sum, asc, ne,
   getStripeClient, refundAcrossPaymentIntents,
   sendWhatsAppMessage, sendEmail,
   wrapCustomerEmail, emailCard, emailButton, emailHeading, emailBadge, getEmailLogoUrl,
@@ -333,16 +334,27 @@ export function registerOrderLifecycleRoutes(app: Express): void {
       if (!items || items.length === 0) return res.status(400).json({ error: 'Draft has no items' });
 
       // Calculate proper fees & VAT (same logic as POST /api/quotes)
-      const feeConfig = await getCurrentFeeConfig();
-      const feeRate = await getWholesalerFeeRate(wholesalerId);
+      const OFFLINE_METHODS_APPROVE = ['cash', 'bank_transfer', 'cheque', 'pay_later', 'other'];
+      const orderPaymentMethod = order.paymentMethod || 'bank_transfer';
+      const isOfflineApproval = OFFLINE_METHODS_APPROVE.includes(orderPaymentMethod);
+
       const subtotal = parseFloat(order.subtotal || '0');
       const deliveryCostNum = parseFloat(order.deliveryCost || '0');
-      const {
-        customerTransactionFee,
-        platformFee,
-        feePercentageUsed,
-        fixedFeeUsed,
-      } = calculateOrderPricing({ subtotal, deliveryCost: 0, feeConfig, platformFeeRate: feeRate });
+
+      let customerTransactionFee = 0;
+      let platformFee = 0;
+      let feePercentageUsed = '0.0000';
+      let fixedFeeUsed = '0.00';
+
+      if (!isOfflineApproval) {
+        const feeConfig = await getCurrentFeeConfig();
+        const feeRate = await getWholesalerFeeRate(wholesalerId);
+        const pricing = calculateOrderPricing({ subtotal, deliveryCost: 0, feeConfig, platformFeeRate: feeRate });
+        customerTransactionFee = pricing.customerTransactionFee;
+        platformFee = pricing.platformFee;
+        feePercentageUsed = pricing.feePercentageUsed;
+        fixedFeeUsed = pricing.fixedFeeUsed;
+      }
 
       const wholesalerInfo = await storage.getUser(wholesalerId);
       const vatEnabled = wholesalerInfo?.vatEnabled ?? false;
@@ -465,6 +477,129 @@ export function registerOrderLifecycleRoutes(app: Express): void {
         return updated;
       });
 
+      // ── Stripe payment link (for payment_link orders, same as direct quote creation) ──
+      let approvePaymentLinkUrl = '';
+      if (!isOfflineApproval && orderPaymentMethod === 'payment_link') {
+        try {
+          const stripe = getStripeClient(Boolean(wholesalerInfo?.isTestAccount));
+          const validDepositPercentage = order.depositPercentage ?? 100;
+          const wholesalerConnectReady = await isConnectAccountReady(wholesalerInfo?.stripeAccountId, Boolean(wholesalerInfo?.isTestAccount));
+
+          if (wholesalerConnectReady && validDepositPercentage > 0) {
+            const total = parseFloat(approvedOrder.total || '0');
+            const depositAmount = (validDepositPercentage / 100) * total;
+            const outstandingAmount = total - depositAmount;
+            const isDeposit = validDepositPercentage < 100;
+
+            // Build pack descriptions for Stripe line item
+            const packDescLines: string[] = [];
+            for (const item of items) {
+              const [prod] = await db.select().from(products).where(eq(products.id, item.productId!));
+              if (prod) {
+                const packDescriptor = formatPackDescriptor(prod.packQuantity ?? prod.quantityInPack, prod.sizePerUnit ?? prod.unitSize, prod.unitOfMeasure);
+                packDescLines.push(packDescriptor ? `${prod.name} (${packDescriptor})` : prod.name);
+              }
+            }
+            const packSummary = packDescLines.length > 0 ? packDescLines.join(', ') : '';
+
+            const stripeLineItems = isDeposit
+              ? [{
+                  price_data: {
+                    currency: 'gbp',
+                    product_data: {
+                      name: `Deposit (${validDepositPercentage}%) - Order ${approvedOrder.orderNumber}`,
+                      description: `Deposit payment for invoice. Full order: £${total.toFixed(2)}. Remaining: £${outstandingAmount.toFixed(2)}${packSummary ? ` | ${packSummary}` : ''}`,
+                    },
+                    unit_amount: Math.round(depositAmount * 100),
+                  },
+                  quantity: 1,
+                }]
+              : [{
+                  price_data: {
+                    currency: 'gbp',
+                    product_data: {
+                      name: `Order ${approvedOrder.orderNumber}`,
+                      description: `Full payment including service fee${packSummary ? ` | ${packSummary}` : ''}`,
+                    },
+                    unit_amount: Math.round(total * 100),
+                  },
+                  quantity: 1,
+                }];
+
+            const baseUrl = process.env.NODE_ENV === 'production'
+              ? 'https://quikpik.app'
+              : (process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : 'http://localhost:5000');
+
+            const previousOrders = await db.select({ id: orders.id }).from(orders)
+              .where(and(eq(orders.retailerId, order.retailerId), eq(orders.wholesalerId, wholesalerId), ne(orders.id, approvedOrder.id)))
+              .limit(1);
+            const isReturning = previousOrders.length > 0;
+
+            const sessionMetadata = {
+              orderId: approvedOrder.id.toString(),
+              orderNumber: approvedOrder.orderNumber,
+              wholesalerId,
+              customerId: order.retailerId,
+              isQuote: 'true',
+              depositPercentage: validDepositPercentage.toString(),
+              depositAmount: depositAmount.toFixed(2),
+              totalAmount: total.toFixed(2),
+            };
+
+            const wholesalerTotal = subtotal - platformFee;
+            const wholesalerDepositAmount = Math.round(depositAmount * (wholesalerTotal / total) * 100);
+
+            let useConnect = false;
+            if (wholesalerInfo?.stripeAccountId) {
+              try {
+                const connectAccount = await stripe.accounts.retrieve(wholesalerInfo.stripeAccountId);
+                if (connectAccount.charges_enabled && connectAccount.details_submitted) useConnect = true;
+              } catch { /* fallback to platform account */ }
+            }
+
+            const baseSessionParams: any = {
+              payment_method_types: ['card'],
+              line_items: stripeLineItems,
+              mode: 'payment',
+              success_url: `${baseUrl}/customer/payment-success?order=${approvedOrder.orderNumber}&wholesaler=${wholesalerId}${isReturning ? '&returning=true' : ''}`,
+              cancel_url: `${baseUrl}/store/${wholesalerId}`,
+              metadata: sessionMetadata,
+              payment_intent_data: { metadata: sessionMetadata },
+              customer_email: (await storage.getUser(order.retailerId))?.email || undefined,
+              expires_at: Math.floor(Date.now() / 1000) + (24 * 60 * 60),
+            };
+
+            let session: any = null;
+            if (useConnect && wholesalerDepositAmount > 0) {
+              try {
+                session = await stripe.checkout.sessions.create({
+                  ...baseSessionParams,
+                  payment_intent_data: {
+                    metadata: sessionMetadata,
+                    transfer_data: { destination: wholesalerInfo!.stripeAccountId!, amount: wholesalerDepositAmount },
+                  },
+                });
+              } catch (connectErr: any) {
+                console.error(`❌ [approve-draft] Stripe Connect session failed: ${connectErr.message}`);
+              }
+            }
+            if (!session) {
+              session = await stripe.checkout.sessions.create(baseSessionParams);
+            }
+
+            approvePaymentLinkUrl = session.url || '';
+            const expiryDays = (isDeposit && (order.balanceDueDays || 0) > 0) ? Math.min((order.balanceDueDays || 0) + 3, 30) : 1;
+            await db.update(orders).set({
+              stripePaymentLinkId: session.id,
+              stripePaymentLinkUrl: approvePaymentLinkUrl,
+              quoteExpiresAt: new Date(Date.now() + expiryDays * 24 * 60 * 60 * 1000),
+            }).where(eq(orders.id, approvedOrder.id));
+          }
+        } catch (stripeErr: any) {
+          console.error(`❌ [approve-draft] Stripe session creation failed: ${stripeErr.message}`);
+        }
+      }
+
       // Send email + WhatsApp/SMS notifications (best-effort)
       const customer = await storage.getUser(order.retailerId);
       const wholesaler = await storage.getUser(order.wholesalerId);
@@ -485,9 +620,9 @@ export function registerOrderLifecycleRoutes(app: Express): void {
       try {
         if (customer && wholesaler && customer.phoneNumber) {
           const businessName = wholesaler.businessName || `${wholesaler.firstName}'s Store`;
-          const storeLink = `https://quikpik.app/store/${wholesalerId}`;
           const customerGreeting = customer.firstName || customer.businessName || 'there';
-          const totalDisplay = parseFloat(approvedOrder.total || '0').toFixed(2);
+          const total = parseFloat(approvedOrder.total || '0');
+          const totalDisplay = total.toFixed(2);
 
           let itemsList = '';
           try {
@@ -509,19 +644,54 @@ export function registerOrderLifecycleRoutes(app: Express): void {
             ? `\nDelivery: £${parseFloat(approvedOrder.deliveryCost!).toFixed(2)}`
             : '';
           const wholesalerContact = wholesaler.phoneNumber || wholesaler.email || '';
-          const paymentMethodLabels: Record<string, string> = {
-            bank_transfer: 'Bank Transfer',
-            cash: 'Cash',
-            cheque: 'Cheque',
-            pay_later: 'Pay Later',
-            other: 'Other',
-          };
-          const orderPaymentMethod = approvedOrder.paymentMethod || 'bank_transfer';
-          const paymentLabel = paymentMethodLabels[orderPaymentMethod] || orderPaymentMethod;
-          const arrangementSentence = orderPaymentMethod === 'pay_later'
-            ? `Please arrange payment with ${businessName} directly.`
-            : `Please arrange payment via ${paymentLabel.toLowerCase()} directly with ${businessName}.`;
-          const message = `Hi ${customerGreeting}! ${businessName} has sent you an invoice.\n\nItems:\n${itemsList}${deliveryChargeText}\n\nTotal: £${totalDisplay}\nPayment: ${paymentLabel}\n\n${arrangementSentence}${wholesalerContact ? `\n\nContact ${businessName}: ${wholesalerContact}` : ''}`;
+          const approvedPaymentMethod = approvedOrder.paymentMethod || 'bank_transfer';
+
+          let message: string;
+          if (approvePaymentLinkUrl) {
+            // Payment link flow — same format as direct quote creation
+            const validDepositPct = order.depositPercentage ?? 100;
+            const isDeposit = validDepositPct < 100;
+            const depositAmt = (validDepositPct / 100) * total;
+            const outstandingAmt = total - depositAmt;
+            const balanceDays = order.balanceDueDays ?? 0;
+            if (isDeposit) {
+              let balanceDueText = '';
+              if (balanceDays > 0) {
+                const dueDate = new Date();
+                dueDate.setDate(dueDate.getDate() + balanceDays);
+                balanceDueText = `\nBalance due by: ${dueDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`;
+              } else {
+                balanceDueText = '\nBalance due: Immediately';
+              }
+              message = `Hi ${customerGreeting}! ${businessName} has sent you an invoice.\n\nItems:\n${itemsList}${deliveryChargeText}\n\nOrder Total: £${totalDisplay}\nDeposit (${validDepositPct}%): £${depositAmt.toFixed(2)}\nRemaining: £${outstandingAmt.toFixed(2)}${balanceDueText}\n\nPay deposit: ${approvePaymentLinkUrl}\n\nLink expires in 24 hours.${wholesalerContact ? `\n\nContact ${businessName}: ${wholesalerContact}` : ''}`;
+            } else if (balanceDays > 0) {
+              const dueDate = new Date();
+              dueDate.setDate(dueDate.getDate() + balanceDays);
+              message = `Hi ${customerGreeting}! ${businessName} has sent you an invoice.\n\nItems:\n${itemsList}${deliveryChargeText}\n\nTotal: £${totalDisplay} due by ${dueDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}\n\nPay here: ${approvePaymentLinkUrl}${wholesalerContact ? `\n\nContact ${businessName}: ${wholesalerContact}` : ''}`;
+            } else {
+              message = `Hi ${customerGreeting}! ${businessName} has sent you an invoice.\n\nItems:\n${itemsList}${deliveryChargeText}\n\nTotal: £${totalDisplay}\n\nPay here: ${approvePaymentLinkUrl}\n\nLink expires in 24 hours.${wholesalerContact ? `\n\nContact ${businessName}: ${wholesalerContact}` : ''}`;
+            }
+          } else {
+            // Offline payment method
+            const offlineMethodDisplayName: Record<string, string> = {
+              bank_transfer: 'bank transfer',
+              cash: 'cash',
+              cheque: 'cheque',
+              other: '',
+            };
+            const isPayLater = approvedPaymentMethod === 'pay_later';
+            const offlineMethodName = !isPayLater ? (offlineMethodDisplayName[approvedPaymentMethod] ?? '') : '';
+            const arrangementSentence = isPayLater
+              ? `Please arrange payment with ${businessName} directly.`
+              : offlineMethodName
+              ? `Please arrange payment via ${offlineMethodName} directly with ${businessName}.`
+              : `Please arrange payment directly with ${businessName}.`;
+            const paymentMethodLabels: Record<string, string> = {
+              bank_transfer: 'Bank Transfer', cash: 'Cash', cheque: 'Cheque', pay_later: 'Pay Later', other: 'Other',
+            };
+            const paymentLabel = paymentMethodLabels[approvedPaymentMethod] || approvedPaymentMethod;
+            message = `Hi ${customerGreeting}! ${businessName} has sent you an invoice.\n\nItems:\n${itemsList}${deliveryChargeText}\n\nTotal: £${totalDisplay}\nPayment: ${paymentLabel}\n\n${arrangementSentence}${wholesalerContact ? `\n\nContact ${businessName}: ${wholesalerContact}` : ''}`;
+          }
 
           await sendWhatsAppMessage({ to: customer.phoneNumber, message });
         }
@@ -532,7 +702,7 @@ export function registerOrderLifecycleRoutes(app: Express): void {
       res.json({
         orderId: approvedOrder.id,
         orderNumber: approvedOrder.orderNumber,
-        paymentLink: null,
+        paymentLink: approvePaymentLinkUrl || null,
       });
     } catch (error) {
       console.error('Error approving draft:', error);
