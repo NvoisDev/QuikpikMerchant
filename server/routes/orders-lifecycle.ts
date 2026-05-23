@@ -332,6 +332,25 @@ export function registerOrderLifecycleRoutes(app: Express): void {
       const items = await storage.getOrderItems(id);
       if (!items || items.length === 0) return res.status(400).json({ error: 'Draft has no items' });
 
+      // Calculate proper fees & VAT (same logic as POST /api/quotes)
+      const feeConfig = await getCurrentFeeConfig();
+      const feeRate = await getWholesalerFeeRate(wholesalerId);
+      const subtotal = parseFloat(order.subtotal || '0');
+      const deliveryCostNum = parseFloat(order.deliveryCost || '0');
+      const {
+        customerTransactionFee,
+        platformFee,
+        feePercentageUsed,
+        fixedFeeUsed,
+      } = calculateOrderPricing({ subtotal, deliveryCost: 0, feeConfig, platformFeeRate: feeRate });
+
+      const wholesalerInfo = await storage.getUser(wholesalerId);
+      const vatEnabled = wholesalerInfo?.vatEnabled ?? false;
+      const vatRate = parseFloat(wholesalerInfo?.vatRate ?? '0');
+      const vatAmount = vatEnabled ? subtotal * vatRate : 0;
+      const vatRateApplied = vatEnabled ? vatRate : null;
+      const total = subtotal + vatAmount + deliveryCostNum + customerTransactionFee;
+
       const today = new Date().toISOString().split('T')[0];
 
       // PRE-VALIDATE stock for all unit items
@@ -352,7 +371,20 @@ export function registerOrderLifecycleRoutes(app: Express): void {
       const approvedOrder = await db.transaction(async (trx) => {
         const orderNumber = await generateOrderNumber(wholesalerId, trx);
 
-        await trx.update(orders).set({ status: 'confirmed', orderNumber, restockStatus: null, updatedAt: new Date() } as any).where(eq(orders.id, id));
+        await trx.update(orders).set({
+          status: 'confirmed',
+          orderNumber,
+          restockStatus: null,
+          updatedAt: new Date(),
+          platformFee: platformFee.toFixed(2),
+          customerTransactionFee: customerTransactionFee.toFixed(2),
+          feePercentageUsed: String(feePercentageUsed),
+          fixedFeeUsed: fixedFeeUsed,
+          vatAmount: vatAmount.toFixed(2),
+          ...(vatRateApplied !== null ? { vatRateApplied: vatRateApplied.toFixed(4) } : {}),
+          total: total.toFixed(2),
+          amountOutstanding: total.toFixed(2),
+        } as any).where(eq(orders.id, id));
 
         for (const item of items) {
           const [currentProduct] = await trx.select().from(products).where(eq(products.id, item.productId!));
@@ -430,7 +462,11 @@ export function registerOrderLifecycleRoutes(app: Express): void {
         console.warn(`[approve-draft] email failed for order ${id}:`, emailErr instanceof Error ? emailErr.message : emailErr);
       }
 
-      res.json(approvedOrder);
+      res.json({
+        orderId: approvedOrder.id,
+        orderNumber: approvedOrder.orderNumber,
+        paymentLink: null,
+      });
     } catch (error) {
       console.error('Error approving draft:', error);
       res.status(500).json({ error: 'Failed to approve draft' });
@@ -578,7 +614,7 @@ export function registerOrderLifecycleRoutes(app: Express): void {
             }
           }
           const emailData = generateReadyForCollectionEmail({
-            orderNumber: updated.orderNumber,
+            orderNumber: updated.orderNumber ?? '',
             customerName: `${customer.firstName || ''} ${customer.lastName || ''}`.trim() || customer.businessName || 'Customer',
             wholesalerName: wholesaler.businessName || `${wholesaler.firstName || ''} ${wholesaler.lastName || ''}`.trim(),
             businessPhone: (wholesaler.businessPhone || wholesaler.phoneNumber) ?? undefined,
@@ -1318,7 +1354,7 @@ export function registerOrderLifecycleRoutes(app: Express): void {
         const customer = await storage.getUser(order.retailerId);
         const wholesaler = await storage.getUser(order.wholesalerId);
         await sendCancellationNotification({
-          order, orderItems: orderItemsList, customer, wholesaler,
+          order: { ...order, orderNumber: order.orderNumber ?? '' }, orderItems: orderItemsList, customer, wholesaler,
           isFullCancellation, returnedItems, refundDelivery,
           stripeRefundTotalPounds, refundAmount,
         });
@@ -1606,7 +1642,7 @@ export function registerOrderLifecycleRoutes(app: Express): void {
               email: order.customerEmail,
             };
             await sendCancellationNotification({
-              order,
+              order: { ...order, orderNumber: order.orderNumber ?? '' },
               orderItems: orderItemsList,
               customer,
               wholesaler,

@@ -373,6 +373,8 @@ async function runStartupMigrations() {
     `CREATE UNIQUE INDEX IF NOT EXISTS order_item_picks_order_item_id_uniq ON order_item_picks(order_item_id)`,
     // Task #1091: Per-team-member notification preferences for stock alerts
     `ALTER TABLE team_members ADD COLUMN IF NOT EXISTS notification_preferences jsonb DEFAULT '{}'`,
+    // Task #1098: Draft Invoices — allow order_number to be NULL for draft orders
+    `ALTER TABLE orders ALTER COLUMN order_number DROP NOT NULL`,
   ];
   for (const stmt of migrations) {
     await db.execute(sql.raw(stmt));

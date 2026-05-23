@@ -652,7 +652,7 @@ export type BusinessProfile = typeof businessProfiles.$inferSelect;
 
 export const orders = pgTable("orders", {
   id: serial("id").primaryKey(),
-  orderNumber: varchar("order_number").notNull(), // Unique order number per wholesaler (e.g., "QP-001", "QP-002")
+  orderNumber: varchar("order_number"), // Unique order number per wholesaler (e.g., "QP-001", "QP-002") — null for drafts
   sequenceNumber: integer("sequence_number"), // Numeric part of the order number (e.g., 1 for "QP-001") — auto-populated by DB trigger
   prefixUsed: varchar("prefix_used"), // Prefix active when the order was created (e.g., "QP") — auto-populated by DB trigger
   wholesalerId: varchar("wholesaler_id").notNull().references(() => users.id),

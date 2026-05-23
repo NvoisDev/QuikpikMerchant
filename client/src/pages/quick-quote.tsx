@@ -515,6 +515,46 @@ export default function QuickQuote() {
       paymentMethod?: string;
       businessProfileId?: number | null;
     }) => {
+      // When editing a draft, sync current state to the draft then approve it in-place.
+      // This avoids the duplicate-order risk of creating a new order and then deleting the draft.
+      if (editingDraftId) {
+        const draftBody = {
+          customerId: data.customerId,
+          items: data.items.map(item => ({
+            productId: item.productId,
+            quantity: item.quantity,
+            customPrice: item.customPrice,
+            sellingType: item.sellingType,
+          })),
+          fulfillmentType: data.fulfillmentType,
+          deliveryCharge: data.deliveryCharge ?? 0,
+          ...(data.deliveryAddress ? { deliveryAddress: data.deliveryAddress } : {}),
+          paymentMethod: data.paymentMethod,
+          depositPercentage: data.depositPercentage,
+          balanceDueDays: data.balanceDueDays,
+          ...(data.businessProfileId ? { businessProfileId: data.businessProfileId } : {}),
+        };
+        const patchResp = await apiRequest('PATCH', `/api/orders/${editingDraftId}/draft`, draftBody);
+        if (!patchResp.ok) {
+          const err = await patchResp.json().catch(() => ({ error: 'Failed to update draft' }));
+          throw new Error(err.error || 'Failed to update draft before approval');
+        }
+        const approveResp = await apiRequest('POST', `/api/orders/${editingDraftId}/approve`, {});
+        if (!approveResp.ok) {
+          const err = await approveResp.json().catch(() => ({ error: 'Failed to approve draft' }));
+          type StockError = Error & { errorType?: string; productName?: string; available?: number; requested?: number };
+          const thrownError = new Error(err.error || 'Failed to approve draft') as StockError;
+          if (err.errorType) {
+            thrownError.errorType = err.errorType;
+            thrownError.productName = err.productName;
+            thrownError.available = err.available;
+            thrownError.requested = err.requested;
+          }
+          throw thrownError;
+        }
+        return approveResp.json();
+      }
+
       const response = await apiRequest('POST', '/api/quotes', data);
       if (!response.ok) {
         const err = await response.json().catch(() => ({ error: 'Failed to create invoice' }));
@@ -537,13 +577,7 @@ export default function QuickQuote() {
         paymentLink: data.paymentLink
       });
       if (draftKey) localStorage.removeItem(draftKey);
-      // If we were editing a draft, delete it now that the invoice has been created
-      if (editingDraftId) {
-        try {
-          await apiRequest('DELETE', `/api/orders/${editingDraftId}/draft`);
-          queryClient.invalidateQueries({ queryKey: ['/api/orders/drafts'] });
-        } catch {}
-      }
+      queryClient.invalidateQueries({ queryKey: ['/api/orders/drafts'] });
       queryClient.invalidateQueries({ queryKey: ['/api/orders'] });
       queryClient.invalidateQueries({ queryKey: ['/api/products'] });
       toast({

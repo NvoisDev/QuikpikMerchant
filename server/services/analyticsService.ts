@@ -51,7 +51,7 @@ export async function getOrderStats(
     allPaidCount:    sql<string>`COUNT(*) FILTER (WHERE ${orders.status} IN ('paid', 'completed', 'processing', 'shipped'))`,
     allPendingCount: sql<string>`COUNT(*) FILTER (WHERE ${orders.status} = 'pending')`,
     allRevenue:      sql<string>`COALESCE(SUM(${net}) FILTER (WHERE ${isRevenue}), 0)`,
-  }).from(orders).where(eq(orders.wholesalerId, wholesalerId));
+  }).from(orders).where(and(eq(orders.wholesalerId, wholesalerId), sql`${orders.status} != 'draft'`));
 
   if (!row) {
     return { ordersCount: 0, totalRevenue: 0, paidOrdersCount: 0, pendingOrdersCount: 0, avgOrderValue: 0, activeCount: 0, archivedCount: 0 };
