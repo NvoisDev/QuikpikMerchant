@@ -375,6 +375,26 @@ async function runStartupMigrations() {
     `ALTER TABLE team_members ADD COLUMN IF NOT EXISTS notification_preferences jsonb DEFAULT '{}'`,
     // Task #1098: Draft Invoices — allow order_number to be NULL for draft orders
     `ALTER TABLE orders ALTER COLUMN order_number DROP NOT NULL`,
+    // Task #1103: Clean up legacy platform fee data on offline orders.
+    // Orders created before the fee fix (Task #1099) may have a non-zero platform_fee
+    // even though they used offline payment methods (bank_transfer, cash, cheque, pay_later, other).
+    // Zero the fee and subtract it from total / amount_outstanding so financial reports
+    // are accurate without any frontend workaround.
+    // All SET expressions are evaluated from the old row values in PostgreSQL, so the
+    // amount_outstanding calculation correctly uses the original total and amount_paid.
+    // Fully idempotent — the WHERE clause filters only rows where platform_fee > 0.
+    `UPDATE orders
+     SET
+       total              = total - COALESCE(platform_fee, 0),
+       amount_outstanding = GREATEST(
+                              total
+                                - COALESCE(platform_fee, 0)
+                                - COALESCE(amount_paid, 0),
+                              0
+                            ),
+       platform_fee       = 0
+     WHERE payment_method IN ('cash', 'bank_transfer', 'cheque', 'pay_later', 'other')
+       AND COALESCE(platform_fee, 0) > 0`,
   ];
   for (const stmt of migrations) {
     await db.execute(sql.raw(stmt));
