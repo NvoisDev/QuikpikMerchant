@@ -67,7 +67,12 @@ export function FinancialsSection({ wholesalers, isAdmin }: { wholesalers: Whole
   });
 
   const { data: payoutStatus } = useQuery<PayoutStatusData>({
-    queryKey: ["/api/admin/payout-status"],
+    queryKey: ["/api/admin/payout-status", revenueParams],
+    queryFn: async () => {
+      const url = `/api/admin/payout-status${revenueParams ? `?${revenueParams}` : ""}`;
+      const r = await fetch(url, { credentials: "include" });
+      return r.json() as Promise<PayoutStatusData>;
+    },
     enabled: isAdmin,
     staleTime: 5 * 60 * 1000,
   });
@@ -171,13 +176,32 @@ export function FinancialsSection({ wholesalers, isAdmin }: { wholesalers: Whole
               <p className="text-xl font-bold text-gray-700">{payoutStatus ? fmt(payoutStatus.pending) : "—"}</p>
             </div>
             <div>
-              <p className="text-xs text-gray-500 mb-0.5">Last Payout</p>
-              {payoutStatus?.lastPayout ? (
-                <div>
-                  <p className="text-sm font-bold text-gray-700">{fmt(payoutStatus.lastPayout.amount)}</p>
-                  <p className="text-xs text-gray-400 capitalize">{payoutStatus.lastPayout.status} · {new Date(payoutStatus.lastPayout.arrivalDate).toLocaleDateString("en-GB")}</p>
-                </div>
-              ) : <p className="text-sm text-gray-400">No payouts yet</p>}
+              {payoutStatus?.hasPeriodFilter ? (
+                <>
+                  <p className="text-xs text-gray-500 mb-0.5">Payouts in period</p>
+                  {payoutStatus.periodPayoutCount > 0 ? (
+                    <div>
+                      <p className="text-xl font-bold text-gray-900">{fmt(payoutStatus.periodPayoutTotal)}</p>
+                      <p className="text-xs text-gray-400">{payoutStatus.periodPayoutCount} payout{payoutStatus.periodPayoutCount !== 1 ? "s" : ""} in period</p>
+                    </div>
+                  ) : (
+                    <div>
+                      <p className="text-xl font-bold text-gray-400">—</p>
+                      <p className="text-xs text-gray-400">No payouts in period</p>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  <p className="text-xs text-gray-500 mb-0.5">Last Payout</p>
+                  {payoutStatus?.lastPayout ? (
+                    <div>
+                      <p className="text-sm font-bold text-gray-700">{fmt(payoutStatus.lastPayout.amount)}</p>
+                      <p className="text-xs text-gray-400 capitalize">{payoutStatus.lastPayout.status} · {new Date(payoutStatus.lastPayout.arrivalDate).toLocaleDateString("en-GB")}</p>
+                    </div>
+                  ) : <p className="text-sm text-gray-400">No payouts yet</p>}
+                </>
+              )}
             </div>
           </div>
         </CardContent>

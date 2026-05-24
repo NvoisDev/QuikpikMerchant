@@ -63,6 +63,10 @@ export interface RevenueData { orders: RevenueOrder[]; totals: RevenueTotals; su
 export interface PayoutStatusData {
   available: number; pending: number; currency: string;
   lastPayout: { amount: number; status: string; arrivalDate: string } | null;
+  hasPeriodFilter: boolean;
+  periodPayoutTotal: number;
+  periodPayoutCount: number;
+  periodPayouts: Array<{ amount: number; status: string; arrivalDate: string }>;
 }
 
 export interface StripeModeData { mode: 'live' | 'test'; keyPrefix: string; }

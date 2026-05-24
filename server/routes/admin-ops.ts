@@ -248,20 +248,48 @@ export function registerAdminOpsRoutes(app: Express): void {
   app.get('/api/admin/payout-status', requireAuth, async (req: any, res) => {
     try {
       if (!ADMIN_EMAILS.includes(getAdminEmail(req) || "")) return res.status(403).json({ error: 'Forbidden' });
+      const { from, to } = req.query as Record<string, string>;
+      const toDate = to ? new Date(to) : null;
+      if (toDate) toDate.setHours(23, 59, 59, 999);
+      const hasPeriodFilter = !!(from || to);
+
       const platformStripe = getStripeClient();
-      const [balance, payouts] = await Promise.all([
+
+      const payoutListParams: Record<string, any> = { limit: hasPeriodFilter ? 100 : 1 };
+      if (hasPeriodFilter) {
+        payoutListParams.created = {};
+        if (from) payoutListParams.created.gte = Math.floor(new Date(from).getTime() / 1000);
+        if (toDate) payoutListParams.created.lte = Math.floor(toDate.getTime() / 1000);
+      }
+
+      const [balance, payouts, lastPayoutList] = await Promise.all([
         platformStripe.balance.retrieve(),
+        hasPeriodFilter ? platformStripe.payouts.list(payoutListParams) : Promise.resolve(null),
         platformStripe.payouts.list({ limit: 1 }),
       ]);
+
       const gbpAvailable = balance.available.find((b: any) => b.currency === 'gbp');
       const gbpPending   = balance.pending.find((b: any)   => b.currency === 'gbp');
+
+      const periodPayouts = (payouts?.data ?? []).map((p: any) => ({
+        amount: p.amount / 100,
+        status: p.status,
+        arrivalDate: new Date(p.arrival_date * 1000).toISOString(),
+      }));
+      const periodPayoutTotal = periodPayouts.reduce((s: number, p: any) => s + p.amount, 0);
+      const periodPayoutCount = periodPayouts.length;
+
       res.json({
         available: (gbpAvailable?.amount ?? 0) / 100,
         pending:   (gbpPending?.amount   ?? 0) / 100,
         currency:  'gbp',
-        lastPayout: payouts.data[0]
-          ? { amount: payouts.data[0].amount / 100, status: payouts.data[0].status, arrivalDate: new Date(payouts.data[0].arrival_date * 1000).toISOString() }
+        lastPayout: lastPayoutList.data[0]
+          ? { amount: lastPayoutList.data[0].amount / 100, status: lastPayoutList.data[0].status, arrivalDate: new Date(lastPayoutList.data[0].arrival_date * 1000).toISOString() }
           : null,
+        hasPeriodFilter,
+        periodPayoutTotal,
+        periodPayoutCount,
+        periodPayouts: periodPayouts.slice(0, 10),
       });
     } catch (error) {
       console.error('Admin payout-status error:', error);
