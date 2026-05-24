@@ -175,14 +175,25 @@ export function FinancialsSection({ wholesalers, isAdmin }: { wholesalers: Whole
               <p className="text-xs text-gray-500 mb-0.5">Pending</p>
               <p className="text-xl font-bold text-gray-700">{payoutStatus ? fmt(payoutStatus.pending) : "—"}</p>
             </div>
-            <div>
+            <div className="col-span-2 sm:col-span-1">
               {payoutStatus?.hasPeriodFilter ? (
                 <>
-                  <p className="text-xs text-gray-500 mb-0.5">Payouts in period</p>
+                  <p className="text-xs text-gray-500 mb-1">Payouts in period</p>
                   {payoutStatus.periodPayoutCount > 0 ? (
-                    <div>
-                      <p className="text-xl font-bold text-gray-900">{fmt(payoutStatus.periodPayoutTotal)}</p>
-                      <p className="text-xs text-gray-400">{payoutStatus.periodPayoutCount} payout{payoutStatus.periodPayoutCount !== 1 ? "s" : ""} in period</p>
+                    <div className="space-y-1">
+                      <div>
+                        <p className="text-xl font-bold text-gray-900">{fmt(payoutStatus.periodPayoutTotal)}</p>
+                        <p className="text-xs text-gray-400">{payoutStatus.periodPayoutCount} payout{payoutStatus.periodPayoutCount !== 1 ? "s" : ""} in period</p>
+                      </div>
+                      <div className="mt-2 space-y-1">
+                        {payoutStatus.periodPayouts.map((p, i) => (
+                          <div key={i} className="flex items-center justify-between text-xs text-gray-600 bg-gray-50 rounded px-2 py-1">
+                            <span className="font-medium">{fmt(p.amount)}</span>
+                            <span className={`capitalize px-1.5 py-0.5 rounded text-[10px] font-medium ${p.status === "paid" ? "bg-green-100 text-green-700" : p.status === "in_transit" ? "bg-blue-100 text-blue-700" : "bg-red-100 text-red-600"}`}>{p.status.replace(/_/g, " ")}</span>
+                            <span className="text-gray-400">{new Date(p.arrivalDate).toLocaleDateString("en-GB")}</span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   ) : (
                     <div>

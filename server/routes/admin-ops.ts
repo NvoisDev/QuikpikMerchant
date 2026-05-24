@@ -276,7 +276,9 @@ export function registerAdminOpsRoutes(app: Express): void {
         status: p.status,
         arrivalDate: new Date(p.arrival_date * 1000).toISOString(),
       }));
-      const periodPayoutTotal = periodPayouts.reduce((s: number, p: any) => s + p.amount, 0);
+      const periodPayoutTotal = periodPayouts
+        .filter((p: any) => p.status === 'paid' || p.status === 'in_transit')
+        .reduce((s: number, p: any) => s + p.amount, 0);
       const periodPayoutCount = periodPayouts.length;
 
       res.json({
