@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { Calendar, TrendingUp, DollarSign, CreditCard } from "lucide-react";
+import { Calendar, TrendingUp, DollarSign, CreditCard, Users } from "lucide-react";
 import { format } from "date-fns";
 import { formatNumber } from "@shared/utils/currency";
 import {
@@ -14,7 +14,7 @@ import {
 import type { Preset } from "./shared";
 import type {
   RevenueData, RevenueOrder, RevenueTotals, WholesalerRow,
-  WholesalerRevenueSummary, PayoutStatusData,
+  WholesalerRevenueSummary, PayoutStatusData, PlatformStats,
 } from "./types";
 
 export function FinancialsSection({ wholesalers, isAdmin }: { wholesalers: WholesalerRow[]; isAdmin: boolean }) {
@@ -54,12 +54,26 @@ export function FinancialsSection({ wholesalers, isAdmin }: { wholesalers: Whole
     staleTime: 5 * 60 * 1000,
   });
 
+  const { data: platformStats } = useQuery<PlatformStats>({
+    queryKey: ["/api/admin/platform-stats"],
+    enabled: isAdmin,
+    staleTime: 5 * 60 * 1000,
+  });
+
   const revenueOrders: RevenueOrder[] = revenueData?.orders ?? [];
   const revenueTotals: RevenueTotals = revenueData?.totals ?? { totalCustomerFees: 0, totalPlatformFees: 0, totalGrossRevenue: 0, totalGMV: 0, totalStripeProcessingFees: 0, totalGrossProfit: 0, grossMarginPct: 0 };
 
   const orderCount = revenueOrders.length;
   const avgBuyerFee = orderCount > 0 ? revenueTotals.totalCustomerFees / orderCount : null;
   const avgMerchantFee = orderCount > 0 ? revenueTotals.totalPlatformFees / orderCount : null;
+
+  const subMRR = platformStats?.subscriptionRevenueMRR ?? 0;
+  const subBreakdown = platformStats?.subscriptionBreakdown;
+  const stdCount = subBreakdown?.standard?.count ?? 0;
+  const premCount = subBreakdown?.premium?.count ?? 0;
+  const subSub = (stdCount + premCount) === 0
+    ? "No active subscribers"
+    : [stdCount > 0 ? `${stdCount} Standard` : null, premCount > 0 ? `${premCount} Premium` : null].filter(Boolean).join(" · ");
 
   const wholesalerRevenueSummary = useMemo(() => {
     const map: Record<string, WholesalerRevenueSummary> = {};
@@ -141,11 +155,12 @@ export function FinancialsSection({ wholesalers, isAdmin }: { wholesalers: Whole
       </Card>
 
       {/* Totals */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <StatCard label="Buyer Fees"    value={isLoading ? "…" : fmt(revenueTotals.totalCustomerFees)}  sub={avgBuyerFee != null ? `Avg. ${fmt(avgBuyerFee)} per order` : "—"} icon={<TrendingUp className="h-4 w-4" />} color={BLUE} />
-        <StatCard label="Merchant Fees" value={isLoading ? "…" : fmt(revenueTotals.totalPlatformFees)}  sub={avgMerchantFee != null ? `Avg. ${fmt(avgMerchantFee)} per order` : "—"} icon={<TrendingUp className="h-4 w-4" />} color={AMBER} />
-        <StatCard label="Order Revenue" value={isLoading ? "…" : fmt(revenueTotals.totalGrossRevenue)}  sub="Buyer + merchant fees"  icon={<TrendingUp className="h-4 w-4" />} color={GREEN} />
-        <StatCard label="Period GMV"    value={isLoading ? "…" : fmt(revenueTotals.totalGMV)}           sub="Gross merchandise value" icon={<DollarSign className="h-4 w-4" />} color={PURPLE} />
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+        <StatCard label="Buyer Fees"        value={isLoading ? "…" : fmt(revenueTotals.totalCustomerFees)}  sub={avgBuyerFee != null ? `Avg. ${fmt(avgBuyerFee)} per order` : "—"} icon={<TrendingUp className="h-4 w-4" />} color={BLUE} />
+        <StatCard label="Merchant Fees"     value={isLoading ? "…" : fmt(revenueTotals.totalPlatformFees)}  sub={avgMerchantFee != null ? `Avg. ${fmt(avgMerchantFee)} per order` : "—"} icon={<TrendingUp className="h-4 w-4" />} color={AMBER} />
+        <StatCard label="Order Revenue"     value={isLoading ? "…" : fmt(revenueTotals.totalGrossRevenue)}  sub="Buyer + merchant fees"  icon={<TrendingUp className="h-4 w-4" />} color={GREEN} />
+        <StatCard label="Period GMV"        value={isLoading ? "…" : fmt(revenueTotals.totalGMV)}           sub="Gross merchandise value" icon={<DollarSign className="h-4 w-4" />} color={PURPLE} />
+        <StatCard label="Subscriptions MRR" value={fmt(subMRR)}                                             sub={subSub}                  icon={<Users className="h-4 w-4" />}    color="#4f46e5" />
       </div>
 
       {/* Gross profit cards */}
