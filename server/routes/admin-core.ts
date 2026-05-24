@@ -955,4 +955,156 @@ export function registerAdminCoreRoutes(app: Express): void {
       res.status(500).json({ error: 'Failed to run stock reconciliation report' });
     }
   });
+
+  // POST /api/admin/subscriptions/backfill-stripe
+  // One-time (idempotent) backfill: imports all historical Stripe invoice.payment_succeeded
+  // events into subscriptionAuditLogs so past revenue appears in the dashboard.
+  app.post('/api/admin/subscriptions/backfill-stripe', requireAuth, async (req: any, res) => {
+    try {
+      if (!ADMIN_EMAILS.includes(getAdminEmail(req) || "")) return res.status(403).json({ error: 'Forbidden' });
+
+      // Only subscription_create and subscription_cycle represent real recurring revenue
+      const VALID_BILLING_REASONS = new Set(['subscription_create', 'subscription_cycle']);
+
+      let inserted = 0;
+      let skipped = 0;
+      let failed = 0;
+
+      // Live Stripe only — test-account payments must not appear in revenue dashboards
+      let stripe: ReturnType<typeof getStripeClient>;
+      try {
+        stripe = getStripeClient(false);
+      } catch {
+        return res.status(500).json({ error: 'Live Stripe key not configured' });
+      }
+
+      // Page through all invoice.payment_succeeded events
+      let hasMore = true;
+      let startingAfter: string | undefined;
+
+      while (hasMore) {
+        const params: Record<string, any> = { type: 'invoice.payment_succeeded', limit: 100 };
+        if (startingAfter) params.starting_after = startingAfter;
+
+        let events: Stripe.ApiList<Stripe.Event>;
+        try {
+          events = await stripe.events.list(params);
+        } catch (err) {
+          console.error('❌ Backfill: failed to list events:', err);
+          break;
+        }
+
+        for (const event of events.data) {
+          try {
+            const invoice = event.data.object as Stripe.Invoice;
+
+            // Only process subscription renewal / creation payments
+            const billingReason = invoice.billing_reason as string | null;
+            if (!billingReason || !VALID_BILLING_REASONS.has(billingReason)) {
+              skipped++;
+              continue;
+            }
+
+            const amountPaid = (invoice.amount_paid ?? 0) / 100;
+            if (amountPaid <= 0) { skipped++; continue; }
+
+            const custId = typeof invoice.customer === 'string'
+              ? invoice.customer
+              : typeof invoice.customer === 'object' && invoice.customer !== null
+                ? (invoice.customer as Stripe.Customer).id
+                : null;
+            const subId = typeof invoice.subscription === 'string'
+              ? invoice.subscription
+              : typeof invoice.subscription === 'object' && invoice.subscription !== null
+                ? (invoice.subscription as Stripe.Subscription).id
+                : null;
+
+            if (!custId || !subId) { skipped++; continue; }
+
+            // Resolve the live (non-test) user
+            const [bfUser] = await db.select({ id: users.id, isTestAccount: users.isTestAccount })
+              .from(users).where(and(eq(users.stripeCustomerId, custId), eq(users.isTestAccount, false)));
+            if (!bfUser) { skipped++; continue; }
+
+            // Idempotency: check by stripeInvoiceId (new rows) OR by reason LIKE %invoiceId%
+            // (pre-existing rows written before this column existed). Invoice IDs are globally
+            // unique in Stripe, so either check is collision-free.
+            const invoiceId = invoice.id;
+            const eventTimestamp = new Date(event.created * 1000);
+            const [existing] = await db.select({ id: subscriptionAuditLogs.id })
+              .from(subscriptionAuditLogs)
+              .where(
+                or(
+                  eq(subscriptionAuditLogs.stripeInvoiceId, invoiceId),
+                  and(
+                    eq(subscriptionAuditLogs.stripeSubscriptionId, subId),
+                    sql`${subscriptionAuditLogs.reason} LIKE ${`%${invoiceId}%`}`,
+                  ),
+                )
+              )
+              .limit(1);
+
+            if (existing) { skipped++; continue; }
+
+            // Resolve plan tier from subscription
+            let planId: string | undefined;
+            try {
+              const bfSub = await stripe.subscriptions.retrieve(subId);
+              const priceId = bfSub.items?.data?.[0]?.price?.id;
+              if (priceId) {
+                const [planRow] = await db.select().from(subscriptionPlans)
+                  .where(eq(subscriptionPlans.stripePriceId, priceId));
+                planId = planRow?.planId && planRow.planId !== 'free' ? planRow.planId : undefined;
+                if (!planId) {
+                  const unitAmount = bfSub.items?.data?.[0]?.price?.unit_amount ?? 0;
+                  if (unitAmount >= 4999) planId = 'premium';
+                  else if (unitAmount >= 1999) planId = 'standard';
+                }
+              }
+            } catch {
+              // Subscription may be deleted; fall back to invoice line items
+              const lineItem = invoice.lines?.data?.[0];
+              const unitAmount = lineItem?.price?.unit_amount ?? 0;
+              if (unitAmount >= 4999) planId = 'premium';
+              else if (unitAmount >= 1999) planId = 'standard';
+            }
+
+            if (!planId || planId === 'free') { skipped++; continue; }
+
+            const currency = (invoice.currency ?? 'gbp').toUpperCase();
+
+            await db.insert(subscriptionAuditLogs).values({
+              userId: bfUser.id,
+              eventType: 'payment_success',
+              toTier: planId,
+              amount: amountPaid.toFixed(2),
+              currency,
+              stripeSubscriptionId: subId,
+              stripeInvoiceId: invoiceId,
+              stripeCustomerId: custId,
+              reason: `Stripe invoice ${invoiceId} — ${billingReason} [backfilled]`,
+              timestamp: eventTimestamp,
+            });
+
+            inserted++;
+          } catch (rowErr) {
+            console.error('❌ Backfill: error processing event:', event.id, rowErr);
+            failed++;
+          }
+        }
+
+        // Update pagination state outside the inner event loop
+        hasMore = events.has_more && events.data.length > 0;
+        if (events.data.length > 0) {
+          startingAfter = events.data[events.data.length - 1].id;
+        }
+      }
+
+      console.log(`✅ Backfill complete: ${inserted} inserted, ${skipped} skipped, ${failed} failed`);
+      return res.json({ success: true, inserted, skipped, failed });
+    } catch (error) {
+      console.error('❌ Admin backfill-stripe error:', error);
+      res.status(500).json({ error: 'Failed to run Stripe backfill' });
+    }
+  });
 }

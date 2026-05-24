@@ -929,6 +929,7 @@ export function registerPaymentConnectRoutes(app: Express): void {
             amount: invAmountPaid.toFixed(2),
             currency: invCurrency,
             stripeSubscriptionId: invSubId,
+            stripeInvoiceId: invoice.id,
             reason: `Stripe invoice ${invoice.id} — ${billingReason}`,
           }).catch(err => console.error('Failed to log payment_success:', err));
         }

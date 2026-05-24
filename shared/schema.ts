@@ -1100,6 +1100,7 @@ export const subscriptionAuditLogs = pgTable("subscription_audit_logs", {
   amount: decimal("amount", { precision: 10, scale: 2 }), // Payment amount
   currency: varchar("currency", { length: 3 }).default("GBP"), // Currency code
   stripeSubscriptionId: varchar("stripe_subscription_id"), // Stripe subscription ID
+  stripeInvoiceId: varchar("stripe_invoice_id"), // Stripe invoice ID — used as idempotency key
   stripeCustomerId: varchar("stripe_customer_id"), // Stripe customer ID
   reason: text("reason"), // Reason for the change
   metadata: text("metadata"), // Additional data as JSON string

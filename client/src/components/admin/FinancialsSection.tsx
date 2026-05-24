@@ -1,11 +1,13 @@
 import { useState, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { Calendar, TrendingUp, DollarSign, CreditCard, Users } from "lucide-react";
+import { Calendar, TrendingUp, DollarSign, CreditCard, Users, RefreshCw } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { format } from "date-fns";
 import { formatNumber } from "@shared/utils/currency";
 import {
@@ -24,6 +26,22 @@ export function FinancialsSection({ wholesalers, isAdmin }: { wholesalers: Whole
   const [wholesalerFilter, setWholesalerFilter] = useState("");
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 25;
+  const { toast } = useToast();
+
+  const backfillMutation = useMutation({
+    mutationFn: () => apiRequest("POST", "/api/admin/subscriptions/backfill-stripe"),
+    onSuccess: async (res: any) => {
+      const data = await res.json();
+      toast({
+        title: "Backfill complete",
+        description: `${data.inserted} new payment${data.inserted !== 1 ? "s" : ""} inserted, ${data.skipped} already existed.`,
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/revenue"] });
+    },
+    onError: () => {
+      toast({ title: "Backfill failed", description: "Could not fetch historical payments from Stripe.", variant: "destructive" });
+    },
+  });
 
   const dateRange = useMemo(() => {
     if (customFrom || customTo) return { from: customFrom || undefined, to: customTo || undefined };
@@ -97,9 +115,21 @@ export function FinancialsSection({ wholesalers, isAdmin }: { wholesalers: Whole
 
   return (
     <div className="space-y-4">
-      <div>
-        <h2 className="text-lg font-bold text-gray-900">Financials</h2>
-        <p className="text-xs text-gray-400">Revenue breakdown across all wholesalers</p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-bold text-gray-900">Financials</h2>
+          <p className="text-xs text-gray-400">Revenue breakdown across all wholesalers</p>
+        </div>
+        <Button
+          size="sm"
+          variant="outline"
+          className="h-7 text-xs border-gray-200 flex items-center gap-1.5 flex-shrink-0"
+          disabled={backfillMutation.isPending}
+          onClick={() => backfillMutation.mutate()}
+        >
+          <RefreshCw className={`h-3 w-3 ${backfillMutation.isPending ? "animate-spin" : ""}`} />
+          {backfillMutation.isPending ? "Backfilling…" : "Backfill Stripe payments"}
+        </Button>
       </div>
 
       {/* Filter bar */}
