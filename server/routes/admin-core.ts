@@ -957,8 +957,9 @@ export function registerAdminCoreRoutes(app: Express): void {
   });
 
   // POST /api/admin/subscriptions/backfill-stripe
-  // One-time (idempotent) backfill: imports all historical Stripe invoice.payment_succeeded
-  // events into subscriptionAuditLogs so past revenue appears in the dashboard.
+  // One-time (idempotent) backfill: imports all historical paid Stripe invoices
+  // into subscriptionAuditLogs so past revenue appears in the dashboard.
+  // Uses the Invoices API (no retention limit) instead of the Events API (30-day limit).
   app.post('/api/admin/subscriptions/backfill-stripe', requireAuth, async (req: any, res) => {
     try {
       if (!ADMIN_EMAILS.includes(getAdminEmail(req) || "")) return res.status(403).json({ error: 'Forbidden' });
@@ -978,26 +979,24 @@ export function registerAdminCoreRoutes(app: Express): void {
         return res.status(500).json({ error: 'Live Stripe key not configured' });
       }
 
-      // Page through all invoice.payment_succeeded events
+      // Page through all paid invoices — invoices persist permanently (no 30-day limit)
       let hasMore = true;
       let startingAfter: string | undefined;
 
       while (hasMore) {
-        const params: Record<string, any> = { type: 'invoice.payment_succeeded', limit: 100 };
+        const params: Stripe.InvoiceListParams = { status: 'paid', limit: 100 };
         if (startingAfter) params.starting_after = startingAfter;
 
-        let events: Stripe.ApiList<Stripe.Event>;
+        let invoices: Stripe.ApiList<Stripe.Invoice>;
         try {
-          events = await stripe.events.list(params);
+          invoices = await stripe.invoices.list(params);
         } catch (err) {
-          console.error('❌ Backfill: failed to list events:', err);
+          console.error('❌ Backfill: failed to list invoices:', err);
           break;
         }
 
-        for (const event of events.data) {
+        for (const invoice of invoices.data) {
           try {
-            const invoice = event.data.object as Stripe.Invoice;
-
             // Only process subscription renewal / creation payments
             const billingReason = invoice.billing_reason as string | null;
             if (!billingReason || !VALID_BILLING_REASONS.has(billingReason)) {
@@ -1030,7 +1029,9 @@ export function registerAdminCoreRoutes(app: Express): void {
             // (pre-existing rows written before this column existed). Invoice IDs are globally
             // unique in Stripe, so either check is collision-free.
             const invoiceId = invoice.id;
-            const eventTimestamp = new Date(event.created * 1000);
+            // Use paid_at for accuracy; fall back to invoice.created
+            const paidAt = (invoice.status_transitions as any)?.paid_at ?? null;
+            const invoiceTimestamp = new Date((paidAt ?? invoice.created) * 1000);
             const [existing] = await db.select({ id: subscriptionAuditLogs.id })
               .from(subscriptionAuditLogs)
               .where(
@@ -1083,20 +1084,20 @@ export function registerAdminCoreRoutes(app: Express): void {
               stripeInvoiceId: invoiceId,
               stripeCustomerId: custId,
               reason: `Stripe invoice ${invoiceId} — ${billingReason} [backfilled]`,
-              timestamp: eventTimestamp,
+              timestamp: invoiceTimestamp,
             });
 
             inserted++;
           } catch (rowErr) {
-            console.error('❌ Backfill: error processing event:', event.id, rowErr);
+            console.error('❌ Backfill: error processing invoice:', invoice.id, rowErr);
             failed++;
           }
         }
 
-        // Update pagination state outside the inner event loop
-        hasMore = events.has_more && events.data.length > 0;
-        if (events.data.length > 0) {
-          startingAfter = events.data[events.data.length - 1].id;
+        // Update pagination state outside the inner invoice loop
+        hasMore = invoices.has_more && invoices.data.length > 0;
+        if (invoices.data.length > 0) {
+          startingAfter = invoices.data[invoices.data.length - 1].id;
         }
       }
 
