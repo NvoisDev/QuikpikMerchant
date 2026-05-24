@@ -4,7 +4,7 @@ import Stripe from "stripe";
 import {
   ADMIN_EMAILS, db, enforceNewPlanLimits, eq, or, sql, ne, inArray,
   orders, requireAuth, requireOwner, sendEmail, sendStripeVerifiedEmail,
-  sendCustomerInvoiceEmail, storage, subscriptionPlans,
+  sendCustomerInvoiceEmail, storage, subscriptionAuditLogs, subscriptionPlans,
   unlockForUpgrade, userSubscriptions, users, generateDowngradeEffectiveEmail,
   formatPackDescriptor, systemErrorLogs,
 } from "./shared";
@@ -917,6 +917,20 @@ export function registerPaymentConnectRoutes(app: Express): void {
 
         if (!invPlanId || invPlanId === 'free') {
           return res.json({ received: true, type: event.type });
+        }
+
+        const invAmountPaid = (invoice.amount_paid ?? 0) / 100;
+        const invCurrency = (invoice.currency ?? 'gbp').toUpperCase();
+        if (invAmountPaid > 0) {
+          db.insert(subscriptionAuditLogs).values({
+            userId: invUser.id,
+            eventType: 'payment_success',
+            toTier: invPlanId,
+            amount: invAmountPaid.toFixed(2),
+            currency: invCurrency,
+            stripeSubscriptionId: invSubId,
+            reason: `Stripe invoice ${invoice.id} — ${billingReason}`,
+          }).catch(err => console.error('Failed to log payment_success:', err));
         }
 
         if (invUser.currentPlan === invPlanId && invUser.subscriptionStatus === 'active') {
