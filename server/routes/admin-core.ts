@@ -295,13 +295,21 @@ export function registerAdminCoreRoutes(app: Express): void {
         ...(filterWholesalerId ? [eq(subscriptionAuditLogs.userId, filterWholesalerId)] : []),
       ];
       const subPayments = await db
-        .select({ amount: subscriptionAuditLogs.amount })
+        .select({ amount: subscriptionAuditLogs.amount, userId: subscriptionAuditLogs.userId })
         .from(subscriptionAuditLogs)
         .where(and(...subPaymentConditions));
       const totalSubscriptionRevenue = parseFloat(
         subPayments.reduce((s, p) => s + parseFloat(p.amount ?? '0'), 0).toFixed(2)
       );
       const subscriptionPaymentCount = subPayments.length;
+
+      const subRevenueByWholesaler: Record<string, number> = {};
+      for (const p of subPayments) {
+        if (!p.userId) continue;
+        subRevenueByWholesaler[p.userId] = parseFloat(
+          ((subRevenueByWholesaler[p.userId] ?? 0) + parseFloat(p.amount ?? '0')).toFixed(2)
+        );
+      }
 
       res.json({
         orders: processedOrders,
@@ -311,6 +319,7 @@ export function registerAdminCoreRoutes(app: Express): void {
           totalGrossProfit, grossMarginPct,
           totalSubscriptionRevenue, subscriptionPaymentCount,
         },
+        subRevenueByWholesaler,
       });
     } catch (error) {
       console.error('Admin revenue error:', error);

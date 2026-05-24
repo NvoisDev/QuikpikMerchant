@@ -67,12 +67,14 @@ export function FinancialsSection({ wholesalers, isAdmin }: { wholesalers: Whole
     ? `${subPayCount} payment${subPayCount !== 1 ? 's' : ''} in period`
     : "No payments in period";
 
+  const subRevenueByWholesaler = revenueData?.subRevenueByWholesaler ?? {};
+
   const wholesalerRevenueSummary = useMemo(() => {
     const map: Record<string, WholesalerRevenueSummary> = {};
     for (const o of revenueOrders) {
       if (o.status === "cancelled") continue;
       const key = o.wholesalerId ?? "unknown";
-      if (!map[key]) map[key] = { name: o.wholesalerName ?? "Unknown", tier: "", orders: 0, gmv: 0, buyerFees: 0, merchantFees: 0, total: 0, stripeFees: 0, grossProfit: 0 };
+      if (!map[key]) map[key] = { name: o.wholesalerName ?? "Unknown", tier: "", orders: 0, gmv: 0, buyerFees: 0, merchantFees: 0, total: 0, stripeFees: 0, grossProfit: 0, subRevenue: 0 };
       map[key].orders++;
       map[key].gmv += Number(o.subtotal || 0);
       map[key].buyerFees += Number(o.customerTransactionFee || 0);
@@ -81,9 +83,14 @@ export function FinancialsSection({ wholesalers, isAdmin }: { wholesalers: Whole
       map[key].stripeFees += Number(o.stripeProcessingFee || 0);
       map[key].grossProfit += Number(o.grossProfit || 0);
     }
-    for (const w of wholesalers) { if (map[w.id]) map[w.id].tier = w.subscriptionTier || "free"; }
+    for (const w of wholesalers) {
+      if (map[w.id]) {
+        map[w.id].tier = w.subscriptionTier || "free";
+        map[w.id].subRevenue = subRevenueByWholesaler[w.id] ?? 0;
+      }
+    }
     return Object.values(map).sort((a, b) => b.total - a.total);
-  }, [revenueOrders, wholesalers]);
+  }, [revenueOrders, wholesalers, subRevenueByWholesaler]);
 
   const paged = revenueOrders.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   const totalPages = Math.ceil(revenueOrders.length / PAGE_SIZE);
@@ -181,7 +188,7 @@ export function FinancialsSection({ wholesalers, isAdmin }: { wholesalers: Whole
             <Table>
               <TableHeader>
                 <TableRow className="hover:bg-transparent bg-blue-50">
-                  {["Wholesaler","Plan","Orders","GMV","Buyer Fees","Merchant Fees","Total Earned","Stripe Fees","Gross Profit","Take Rate"].map((h, i) => (
+                  {["Wholesaler","Plan","Orders","GMV","Buyer Fees","Merchant Fees","Total Earned","Sub Revenue","Stripe Fees","Gross Profit","Take Rate"].map((h, i) => (
                     <TableHead key={i} className="text-xs font-semibold text-blue-700">{h}</TableHead>
                   ))}
                 </TableRow>
@@ -196,6 +203,7 @@ export function FinancialsSection({ wholesalers, isAdmin }: { wholesalers: Whole
                     <TableCell className="text-xs text-right font-medium" style={{ color: BLUE }}>{fmt(w.buyerFees)}</TableCell>
                     <TableCell className="text-xs text-right font-medium" style={{ color: AMBER }}>{fmt(w.merchantFees)}</TableCell>
                     <TableCell className="text-xs text-right font-semibold text-gray-900">{fmt(w.total)}</TableCell>
+                    <TableCell className="text-xs text-right font-medium" style={{ color: "#4f46e5" }}>{w.subRevenue > 0 ? fmt(w.subRevenue) : "—"}</TableCell>
                     <TableCell className="text-xs text-right font-medium" style={{ color: RED }}>-{fmt(w.stripeFees)}</TableCell>
                     <TableCell className="text-xs text-right font-semibold" style={{ color: GREEN }}>{fmt(w.grossProfit)}</TableCell>
                     <TableCell className="text-xs text-right font-medium text-indigo-600">{pct(w.total, w.gmv)}</TableCell>

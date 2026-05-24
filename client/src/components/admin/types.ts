@@ -58,7 +58,7 @@ export interface RevenueOrder {
   status: string; paymentStatus: string | null; createdAt: string;
 }
 
-export interface RevenueData { orders: RevenueOrder[]; totals: RevenueTotals; }
+export interface RevenueData { orders: RevenueOrder[]; totals: RevenueTotals; subRevenueByWholesaler?: Record<string, number>; }
 
 export interface PayoutStatusData {
   available: number; pending: number; currency: string;
@@ -86,7 +86,7 @@ export interface ProductRow {
 export interface WholesalerRevenueSummary {
   name: string; tier: string; orders: number; gmv: number;
   buyerFees: number; merchantFees: number; total: number;
-  stripeFees: number; grossProfit: number;
+  stripeFees: number; grossProfit: number; subRevenue: number;
 }
 
 export interface WholesalerOrderRow {
