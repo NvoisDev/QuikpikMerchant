@@ -57,6 +57,10 @@ export function FinancialsSection({ wholesalers, isAdmin }: { wholesalers: Whole
   const revenueOrders: RevenueOrder[] = revenueData?.orders ?? [];
   const revenueTotals: RevenueTotals = revenueData?.totals ?? { totalCustomerFees: 0, totalPlatformFees: 0, totalGrossRevenue: 0, totalGMV: 0, totalStripeProcessingFees: 0, totalGrossProfit: 0, grossMarginPct: 0 };
 
+  const orderCount = revenueOrders.length;
+  const avgBuyerFee = orderCount > 0 ? revenueTotals.totalCustomerFees / orderCount : null;
+  const avgMerchantFee = orderCount > 0 ? revenueTotals.totalPlatformFees / orderCount : null;
+
   const wholesalerRevenueSummary = useMemo(() => {
     const map: Record<string, WholesalerRevenueSummary> = {};
     for (const o of revenueOrders) {
@@ -138,8 +142,8 @@ export function FinancialsSection({ wholesalers, isAdmin }: { wholesalers: Whole
 
       {/* Totals */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <StatCard label="Buyer Fees"    value={isLoading ? "…" : fmt(revenueTotals.totalCustomerFees)}  sub="5.5% + £0.50 per order" icon={<TrendingUp className="h-4 w-4" />} color={BLUE} />
-        <StatCard label="Merchant Fees" value={isLoading ? "…" : fmt(revenueTotals.totalPlatformFees)}  sub="per order"              icon={<TrendingUp className="h-4 w-4" />} color={AMBER} />
+        <StatCard label="Buyer Fees"    value={isLoading ? "…" : fmt(revenueTotals.totalCustomerFees)}  sub={avgBuyerFee != null ? `Avg. ${fmt(avgBuyerFee)} per order` : "—"} icon={<TrendingUp className="h-4 w-4" />} color={BLUE} />
+        <StatCard label="Merchant Fees" value={isLoading ? "…" : fmt(revenueTotals.totalPlatformFees)}  sub={avgMerchantFee != null ? `Avg. ${fmt(avgMerchantFee)} per order` : "—"} icon={<TrendingUp className="h-4 w-4" />} color={AMBER} />
         <StatCard label="Order Revenue" value={isLoading ? "…" : fmt(revenueTotals.totalGrossRevenue)}  sub="Buyer + merchant fees"  icon={<TrendingUp className="h-4 w-4" />} color={GREEN} />
         <StatCard label="Period GMV"    value={isLoading ? "…" : fmt(revenueTotals.totalGMV)}           sub="Gross merchandise value" icon={<DollarSign className="h-4 w-4" />} color={PURPLE} />
       </div>
