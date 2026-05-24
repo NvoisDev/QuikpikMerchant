@@ -47,6 +47,7 @@ export interface WholesalerRow {
 export interface RevenueTotals {
   totalCustomerFees: number; totalPlatformFees: number; totalGrossRevenue: number; totalGMV: number;
   totalStripeProcessingFees: number; totalGrossProfit: number; grossMarginPct: number;
+  totalSubscriptionRevenue: number; subscriptionPaymentCount: number;
 }
 
 export interface RevenueOrder {

@@ -14,7 +14,7 @@ import {
 import type { Preset } from "./shared";
 import type {
   RevenueData, RevenueOrder, RevenueTotals, WholesalerRow,
-  WholesalerRevenueSummary, PayoutStatusData, PlatformStats,
+  WholesalerRevenueSummary, PayoutStatusData,
 } from "./types";
 
 export function FinancialsSection({ wholesalers, isAdmin }: { wholesalers: WholesalerRow[]; isAdmin: boolean }) {
@@ -54,26 +54,18 @@ export function FinancialsSection({ wholesalers, isAdmin }: { wholesalers: Whole
     staleTime: 5 * 60 * 1000,
   });
 
-  const { data: platformStats } = useQuery<PlatformStats>({
-    queryKey: ["/api/admin/platform-stats"],
-    enabled: isAdmin,
-    staleTime: 5 * 60 * 1000,
-  });
-
   const revenueOrders: RevenueOrder[] = revenueData?.orders ?? [];
-  const revenueTotals: RevenueTotals = revenueData?.totals ?? { totalCustomerFees: 0, totalPlatformFees: 0, totalGrossRevenue: 0, totalGMV: 0, totalStripeProcessingFees: 0, totalGrossProfit: 0, grossMarginPct: 0 };
+  const revenueTotals: RevenueTotals = revenueData?.totals ?? { totalCustomerFees: 0, totalPlatformFees: 0, totalGrossRevenue: 0, totalGMV: 0, totalStripeProcessingFees: 0, totalGrossProfit: 0, grossMarginPct: 0, totalSubscriptionRevenue: 0, subscriptionPaymentCount: 0 };
 
   const orderCount = revenueOrders.length;
   const avgBuyerFee = orderCount > 0 ? revenueTotals.totalCustomerFees / orderCount : null;
   const avgMerchantFee = orderCount > 0 ? revenueTotals.totalPlatformFees / orderCount : null;
 
-  const subMRR = platformStats?.subscriptionRevenueMRR ?? 0;
-  const subBreakdown = platformStats?.subscriptionBreakdown;
-  const stdCount = subBreakdown?.standard?.count ?? 0;
-  const premCount = subBreakdown?.premium?.count ?? 0;
-  const subSub = (stdCount + premCount) === 0
-    ? "No active subscribers"
-    : [stdCount > 0 ? `${stdCount} Standard` : null, premCount > 0 ? `${premCount} Premium` : null].filter(Boolean).join(" · ");
+  const totalSubRevenue = revenueTotals.totalSubscriptionRevenue ?? 0;
+  const subPayCount = revenueTotals.subscriptionPaymentCount ?? 0;
+  const subSub = subPayCount > 0
+    ? `${subPayCount} payment${subPayCount !== 1 ? 's' : ''} in period`
+    : "No payments in period";
 
   const wholesalerRevenueSummary = useMemo(() => {
     const map: Record<string, WholesalerRevenueSummary> = {};
@@ -160,7 +152,7 @@ export function FinancialsSection({ wholesalers, isAdmin }: { wholesalers: Whole
         <StatCard label="Merchant Fees"     value={isLoading ? "…" : fmt(revenueTotals.totalPlatformFees)}  sub={avgMerchantFee != null ? `Avg. ${fmt(avgMerchantFee)} per order` : "—"} icon={<TrendingUp className="h-4 w-4" />} color={AMBER} />
         <StatCard label="Order Revenue"     value={isLoading ? "…" : fmt(revenueTotals.totalGrossRevenue)}  sub="Buyer + merchant fees"  icon={<TrendingUp className="h-4 w-4" />} color={GREEN} />
         <StatCard label="Period GMV"        value={isLoading ? "…" : fmt(revenueTotals.totalGMV)}           sub="Gross merchandise value" icon={<DollarSign className="h-4 w-4" />} color={PURPLE} />
-        <StatCard label="Subscriptions MRR" value={fmt(subMRR)}                                             sub={subSub}                  icon={<Users className="h-4 w-4" />}    color="#4f46e5" />
+        <StatCard label="Subscriptions"      value={isLoading ? "…" : fmt(totalSubRevenue)}               sub={subSub}                  icon={<Users className="h-4 w-4" />}    color="#4f46e5" />
       </div>
 
       {/* Gross profit cards */}

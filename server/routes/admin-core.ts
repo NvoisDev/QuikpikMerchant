@@ -4,7 +4,7 @@ import { ilike } from "drizzle-orm";
 import {
   ADMIN_EMAILS, and, asc, count, db, desc, eq, geocodePostcode, getPlanLimits, getStripeClient,
   gte, inArray, isNull, lte, or, orders, requireAuth, sql, storage,
-  subscriptionPlans, SubscriptionService, teamMembers, unlockForUpgrade, userSubscriptions, users,
+  subscriptionAuditLogs, subscriptionPlans, SubscriptionService, teamMembers, unlockForUpgrade, userSubscriptions, users,
 } from "./shared";
 import { getProductLimit } from "../utils/plan-tier";
 
@@ -288,12 +288,28 @@ export function registerAdminCoreRoutes(app: Express): void {
       const grossMarginPct = totalGrossRevenue > 0
         ? parseFloat(((totalGrossProfit / totalGrossRevenue) * 100).toFixed(1)) : 0;
 
+      const subPaymentConditions = [
+        eq(subscriptionAuditLogs.eventType, 'payment_success'),
+        ...(from ? [gte(subscriptionAuditLogs.timestamp, new Date(from))] : []),
+        ...(toDate ? [lte(subscriptionAuditLogs.timestamp, toDate)] : []),
+        ...(filterWholesalerId ? [eq(subscriptionAuditLogs.userId, filterWholesalerId)] : []),
+      ];
+      const subPayments = await db
+        .select({ amount: subscriptionAuditLogs.amount })
+        .from(subscriptionAuditLogs)
+        .where(and(...subPaymentConditions));
+      const totalSubscriptionRevenue = parseFloat(
+        subPayments.reduce((s, p) => s + parseFloat(p.amount ?? '0'), 0).toFixed(2)
+      );
+      const subscriptionPaymentCount = subPayments.length;
+
       res.json({
         orders: processedOrders,
         totals: {
           totalCustomerFees, totalPlatformFees, totalGrossRevenue, totalGMV,
           totalStripeProcessingFees: parseFloat(totalStripeProcessingFees.toFixed(2)),
           totalGrossProfit, grossMarginPct,
+          totalSubscriptionRevenue, subscriptionPaymentCount,
         },
       });
     } catch (error) {
