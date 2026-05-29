@@ -13,7 +13,7 @@ import { useAuth, type AuthUser } from "@/hooks/useAuth";
 import ProductCard from "@/components/product-card";
 import { ContextualHelpBubble } from "@/components/ContextualHelpBubble";
 import { helpContent } from "@/data/whatsapp-help-content";
-import { Plus, Search, Download, Grid, List, Package, Upload, FileText, AlertTriangle, Lock, LockOpen, Tag, PackagePlus, Pencil, Copy, Trash2 } from "lucide-react";
+import { Plus, Search, Download, Grid, List, Package, Upload, AlertTriangle, Lock, LockOpen, Tag, PackagePlus, Pencil, Copy, Trash2 } from "lucide-react";
 import type { Product, PromotionalOffer } from "@shared/schema";
 import { formatCurrency } from "@/lib/currencies";
 import { useCurrency } from "@/hooks/useCurrency";
@@ -25,7 +25,7 @@ import PageHeader from "@/components/PageHeader";
 import { SubscriptionUpgradeModal } from "@/components/subscription/SubscriptionUpgradeModal";
 import { useSidebarContext } from "@/contexts/sidebar-context";
 import { formatNumber } from "@shared/utils/currency";
-import BulkUploadDialog, { downloadProductCsvTemplate } from "@/components/product/BulkUploadDialog";
+import BulkUploadDialog from "@/components/product/BulkUploadDialog";
 import BatchBreakdownPanel from "@/components/product/BatchBreakdownPanel";
 import StockManagementDialog from "@/components/product/StockManagementDialog";
 import type { BulkUploadRow, ProductBatch, StockMovement } from "@/components/product/types";
@@ -728,14 +728,7 @@ export default function ProductManagement() {
               <Package className="h-4 w-4" />
               Preview Store
             </Button>
-            <Button
-              variant="outline" size="sm" className="gap-1.5"
-              onClick={downloadProductCsvTemplate}
-              title="Download CSV Template"
-            >
-              <FileText className="h-4 w-4" />
-              <span className="hidden sm:inline">CSV Template</span>
-            </Button>
+
             <Button
               variant="outline" size="sm" className="gap-1.5"
               onClick={() => setIsDownloadModalOpen(true)}
