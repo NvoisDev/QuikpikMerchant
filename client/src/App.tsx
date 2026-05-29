@@ -222,6 +222,9 @@ function AuthenticatedRoutes() {
       <Suspense fallback={<ContentLoader />}>
         <Switch>
           <Route path="/marketplace" component={MarketplaceSection} />
+          {/* Preview store is accessible to wholesalers, team members, and super-admins */}
+          <Route path="/preview-store" component={StorePreviewSection} />
+          <Route path="/preview-store/:id" component={StorePreviewSection} />
           {user && (user.role === 'wholesaler' || user.role === 'team_member') ? (
             <>
               <Route path="/" component={user?.role === 'team_member' ? OrdersSection : WholesalerDashboard} />
@@ -247,8 +250,6 @@ function AuthenticatedRoutes() {
               <Route path="/team-management" component={TeamManagementSection} />
               <Route path="/help" component={Help} />
               <Route path="/subscription-pricing" component={SubscriptionPricing} />
-              <Route path="/preview-store" component={StorePreviewSection} />
-              <Route path="/preview-store/:id" component={StorePreviewSection} />
               <Route path="/integrations" component={IntegrationsSection} />
             </>
           ) : (

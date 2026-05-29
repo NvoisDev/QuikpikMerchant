@@ -155,9 +155,10 @@ export function registerBrowsingRoutes(app: Express): void {
                  p.price_visible, p.pack_quantity, p.unit_of_measure,
                  p.unit_size, p.selling_format, p.delivery_excluded,
                  p.units_per_pallet, p.pallet_price, p.pallet_moq, p.pallet_stock, p.pallet_weight,
-                 'Surulere Foods Wholesale' as business_name,
+                 COALESCE(u.business_name, u.first_name || ' ' || u.last_name, u.email) as business_name,
                  b.nearest_expiry
           FROM products p
+          LEFT JOIN users u ON u.id = p.wholesaler_id
           LEFT JOIN (
             SELECT product_id, MIN(expiry_date) AS nearest_expiry
             FROM product_batches
