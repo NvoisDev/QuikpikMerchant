@@ -47,6 +47,12 @@ function ArticleCard({ post }: { post: typeof blogPosts[0] }) {
           <p className="text-gray-500 text-sm leading-relaxed mb-4 flex-1 line-clamp-3">
             {post.excerpt}
           </p>
+          <div className="flex items-center gap-2 mb-3 text-xs text-gray-500">
+            <div className="w-5 h-5 rounded-full bg-green-600 flex items-center justify-center text-white font-bold text-[10px] flex-shrink-0">
+              {post.author.charAt(0)}
+            </div>
+            <span>{post.author}</span>
+          </div>
           <div className="flex items-center justify-between mt-auto pt-4 border-t border-gray-50">
             <div className="flex items-center gap-3 text-xs text-gray-400">
               <span className="flex items-center gap-1">
@@ -101,6 +107,12 @@ function FeaturedArticle({ post }: { post: typeof blogPosts[0] }) {
               {post.excerpt}
             </p>
             <div className="flex items-center gap-4 text-sm text-gray-400 mb-6">
+              <span className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded-full bg-green-600 flex items-center justify-center text-white font-bold text-xs flex-shrink-0">
+                  {post.author.charAt(0)}
+                </div>
+                {post.author}
+              </span>
               <span className="flex items-center gap-1.5">
                 <Calendar className="w-4 h-4" />
                 {formatDate(post.publishDate)}
@@ -129,23 +141,58 @@ export default function BlogPage() {
   useEffect(() => {
     const prev = document.title;
     document.title = "Blog — Insights for Modern Wholesalers | Quikpik";
+
     const metaDesc = document.querySelector('meta[name="description"]');
     const prevDesc = metaDesc?.getAttribute("content") ?? "";
     if (metaDesc) {
-      metaDesc.setAttribute(
-        "content",
-        "Inventory management, invoicing, stock control, payments, and wholesale growth strategies. Expert insights for modern wholesale businesses."
-      );
+      metaDesc.setAttribute("content", "Inventory management, invoicing, stock control, payments, and wholesale growth strategies. Expert insights for modern wholesale businesses.");
     }
-    let ogTitle = document.querySelector('meta[property="og:title"]');
-    if (!ogTitle) { ogTitle = document.createElement("meta"); (ogTitle as HTMLMetaElement).setAttribute("property", "og:title"); document.head.appendChild(ogTitle); }
-    ogTitle.setAttribute("content", "Blog — Insights for Modern Wholesalers | Quikpik");
-    let ogDesc = document.querySelector('meta[property="og:description"]');
-    if (!ogDesc) { ogDesc = document.createElement("meta"); (ogDesc as HTMLMetaElement).setAttribute("property", "og:description"); document.head.appendChild(ogDesc); }
-    ogDesc.setAttribute("content", "Expert insights for modern wholesale businesses.");
+
+    const getOrCreate = (selector: string, attrKey: string, attrVal: string) => {
+      let el = document.querySelector(selector) as HTMLMetaElement | null;
+      const wasCreated = !el;
+      if (wasCreated) {
+        el = document.createElement("meta") as HTMLMetaElement;
+        el.setAttribute(attrKey, attrVal);
+        document.head.appendChild(el);
+      }
+      return { el: el!, prevContent: el!.getAttribute("content") ?? "", wasCreated };
+    };
+
+    const ogTitle = getOrCreate('meta[property="og:title"]', "property", "og:title");
+    ogTitle.el.setAttribute("content", "Blog — Insights for Modern Wholesalers | Quikpik");
+    const ogDesc = getOrCreate('meta[property="og:description"]', "property", "og:description");
+    ogDesc.el.setAttribute("content", "Expert insights for modern wholesale businesses.");
+    const ogType = getOrCreate('meta[property="og:type"]', "property", "og:type");
+    ogType.el.setAttribute("content", "website");
+    const ogImage = getOrCreate('meta[property="og:image"]', "property", "og:image");
+    ogImage.el.setAttribute("content", `${window.location.origin}/blog-hero-inventory.png`);
+
+    const schema = document.createElement("script");
+    schema.type = "application/ld+json";
+    schema.id = "blog-index-schema";
+    schema.textContent = JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "Blog",
+      name: "Quikpik Blog",
+      description: "Expert insights for modern wholesale businesses.",
+      url: `${window.location.origin}/blog`,
+      publisher: {
+        "@type": "Organization",
+        name: "Quikpik",
+        logo: { "@type": "ImageObject", url: `${window.location.origin}/quikpik-logo.png` },
+      },
+    });
+    document.head.appendChild(schema);
+
     return () => {
       document.title = prev;
       if (metaDesc) metaDesc.setAttribute("content", prevDesc);
+      if (ogTitle.wasCreated) ogTitle.el.remove(); else ogTitle.el.setAttribute("content", ogTitle.prevContent);
+      if (ogDesc.wasCreated) ogDesc.el.remove(); else ogDesc.el.setAttribute("content", ogDesc.prevContent);
+      if (ogType.wasCreated) ogType.el.remove(); else ogType.el.setAttribute("content", ogType.prevContent);
+      if (ogImage.wasCreated) ogImage.el.remove(); else ogImage.el.setAttribute("content", ogImage.prevContent);
+      document.getElementById("blog-index-schema")?.remove();
     };
   }, []);
 

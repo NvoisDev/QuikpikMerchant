@@ -164,23 +164,27 @@ export default function BlogPostPage() {
     const prev = document.title;
     document.title = `${post.title} | Quikpik Blog`;
 
-    const setMeta = (name: string, content: string, prop = false) => {
-      const selector = prop ? `meta[property="${name}"]` : `meta[name="${name}"]`;
+    const getOrCreate = (selector: string, attrKey: string, attrVal: string) => {
       let el = document.querySelector(selector) as HTMLMetaElement | null;
-      if (!el) {
-        el = document.createElement("meta");
-        if (prop) el.setAttribute("property", name);
-        else el.setAttribute("name", name);
+      const wasCreated = !el;
+      if (wasCreated) {
+        el = document.createElement("meta") as HTMLMetaElement;
+        el.setAttribute(attrKey, attrVal);
         document.head.appendChild(el);
       }
-      el.setAttribute("content", content);
+      return { el: el!, prevContent: el!.getAttribute("content") ?? "", wasCreated };
     };
 
-    setMeta("description", post.excerpt);
-    setMeta("og:title", `${post.title} | Quikpik Blog`, true);
-    setMeta("og:description", post.excerpt, true);
-    setMeta("og:type", "article", true);
-    if (post.heroImage) setMeta("og:image", `${window.location.origin}${post.heroImage}`, true);
+    const desc = getOrCreate('meta[name="description"]', "name", "description");
+    desc.el.setAttribute("content", post.excerpt);
+    const ogTitle = getOrCreate('meta[property="og:title"]', "property", "og:title");
+    ogTitle.el.setAttribute("content", `${post.title} | Quikpik Blog`);
+    const ogDesc = getOrCreate('meta[property="og:description"]', "property", "og:description");
+    ogDesc.el.setAttribute("content", post.excerpt);
+    const ogType = getOrCreate('meta[property="og:type"]', "property", "og:type");
+    ogType.el.setAttribute("content", "article");
+    const ogImage = getOrCreate('meta[property="og:image"]', "property", "og:image");
+    if (post.heroImage) ogImage.el.setAttribute("content", `${window.location.origin}${post.heroImage}`);
 
     const schema = document.createElement("script");
     schema.type = "application/ld+json";
@@ -205,6 +209,11 @@ export default function BlogPostPage() {
     return () => {
       document.title = prev;
       document.getElementById("blog-post-schema")?.remove();
+      if (desc.wasCreated) desc.el.remove(); else desc.el.setAttribute("content", desc.prevContent);
+      if (ogTitle.wasCreated) ogTitle.el.remove(); else ogTitle.el.setAttribute("content", ogTitle.prevContent);
+      if (ogDesc.wasCreated) ogDesc.el.remove(); else ogDesc.el.setAttribute("content", ogDesc.prevContent);
+      if (ogType.wasCreated) ogType.el.remove(); else ogType.el.setAttribute("content", ogType.prevContent);
+      if (ogImage.wasCreated) ogImage.el.remove(); else ogImage.el.setAttribute("content", ogImage.prevContent);
     };
   }, [post]);
 
