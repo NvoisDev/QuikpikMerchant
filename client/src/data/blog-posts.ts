@@ -1,4 +1,4 @@
-import heroInventoryImage from '@assets/C962E909-EAEB-4C64-B0A8-04D174B9B102_1780150226400.png';
+import heroInventoryImage from '@assets/blog-hero-no-logo.png';
 
 export type ContentBlock =
   | { type: 'p'; text: string }

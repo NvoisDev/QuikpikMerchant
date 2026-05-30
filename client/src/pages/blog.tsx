@@ -29,7 +29,7 @@ function ArticleCard({ post }: { post: typeof blogPosts[0] }) {
               src={post.heroImage}
               alt={post.title}
               loading="lazy"
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+              className="w-full h-full object-cover object-left group-hover:scale-105 transition-transform duration-500"
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-green-50 to-emerald-100">
@@ -85,7 +85,7 @@ function FeaturedArticle({ post }: { post: typeof blogPosts[0] }) {
                 src={post.heroImage}
                 alt={post.title}
                 loading="eager"
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 min-h-[280px]"
+                className="w-full h-full object-cover object-left group-hover:scale-105 transition-transform duration-500 min-h-[280px]"
               />
             ) : (
               <div className="w-full h-full min-h-[280px] flex items-center justify-center bg-gradient-to-br from-green-50 to-emerald-100">

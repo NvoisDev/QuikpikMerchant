@@ -288,7 +288,7 @@ export default function BlogPostPage() {
             <img
               src={post.heroImage}
               alt={post.title}
-              className="w-full h-full object-cover opacity-40"
+              className="w-full h-full object-cover object-left opacity-40"
             />
           ) : (
             <div className="w-full h-full bg-gradient-to-br from-green-900 to-gray-900" />
@@ -378,7 +378,7 @@ export default function BlogPostPage() {
                           src={related.heroImage}
                           alt={related.title}
                           loading="lazy"
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                          className="w-full h-full object-cover object-left group-hover:scale-105 transition-transform duration-500"
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-green-50 to-emerald-100">
