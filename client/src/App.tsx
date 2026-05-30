@@ -57,6 +57,8 @@ const Integrations = lazy(() => import("@/pages/integrations"));
 const OrderDetail = lazy(() => import("@/pages/order-detail"));
 const ProductDetail = lazy(() => import("@/pages/product-detail"));
 const WelcomePage = lazy(() => import("@/pages/WelcomePage"));
+const Blog = lazy(() => import("@/pages/blog"));
+const BlogPost = lazy(() => import("@/pages/blog-post"));
 
 import AppLayout from "@/components/layout/app-layout";
 
@@ -144,6 +146,12 @@ const PublicProductSection = () => (
 const WelcomeSection = () => (
   <SectionErrorBoundary sectionName="Store"><WelcomePage /></SectionErrorBoundary>
 );
+const BlogSection = () => (
+  <SectionErrorBoundary sectionName="Blog"><Blog /></SectionErrorBoundary>
+);
+const BlogPostSection = () => (
+  <SectionErrorBoundary sectionName="Blog post"><BlogPost /></SectionErrorBoundary>
+);
 
 // ---------------------------------------------------------------------------
 
@@ -187,6 +195,8 @@ function PublicRoutes() {
         <Route path="/auth-success" component={AuthSuccess} />
         <Route path="/select-wholesaler" component={WholesalerSelection} />
         <Route path="/accept-invitation/:token" component={({params}) => <AcceptInvitation token={params.token} />} />
+        <Route path="/blog/:slug" component={BlogPostSection} />
+        <Route path="/blog" component={BlogSection} />
         <Route path="/terms" component={TermsOfService} />
         <Route path="/privacy" component={PrivacyPolicy} />
         <Route path="/admin" component={() => { useEffect(() => setLocation("/super-admin"), []); return null; }} />
@@ -287,6 +297,10 @@ function Router() {
     location.startsWith('/customer/') || 
     location.startsWith('/store/') ||
     location.startsWith('/welcome/') ||
+    location.startsWith('/blog') ||
+    location.startsWith('/product/') ||
+    location.startsWith('/accept-invitation/') ||
+    location.startsWith('/select-wholesaler') ||
     publicRoutes.includes(location);
 
   if (location === '/landing') {
