@@ -165,8 +165,6 @@ export default function BlogPage() {
     ogDesc.el.setAttribute("content", "Expert insights for modern wholesale businesses.");
     const ogType = getOrCreate('meta[property="og:type"]', "property", "og:type");
     ogType.el.setAttribute("content", "website");
-    const ogImage = getOrCreate('meta[property="og:image"]', "property", "og:image");
-    ogImage.el.setAttribute("content", `${window.location.origin}/blog-hero-inventory.png`);
 
     const schema = document.createElement("script");
     schema.type = "application/ld+json";

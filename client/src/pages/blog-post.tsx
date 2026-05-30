@@ -210,7 +210,6 @@ export default function BlogPostPage() {
       if (ogTitle.wasCreated) ogTitle.el.remove(); else ogTitle.el.setAttribute("content", ogTitle.prevContent);
       if (ogDesc.wasCreated) ogDesc.el.remove(); else ogDesc.el.setAttribute("content", ogDesc.prevContent);
       if (ogType.wasCreated) ogType.el.remove(); else ogType.el.setAttribute("content", ogType.prevContent);
-      if (ogImage.wasCreated) ogImage.el.remove(); else ogImage.el.setAttribute("content", ogImage.prevContent);
     };
   }, [post]);
 
