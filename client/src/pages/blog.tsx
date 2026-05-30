@@ -305,7 +305,7 @@ export default function BlogPage() {
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {(searchTerm || activeCategory !== "All" ? filtered : gridPosts).map(post => (
+                {gridPosts.map(post => (
                   <ArticleCard key={post.id} post={post} />
                 ))}
               </div>
