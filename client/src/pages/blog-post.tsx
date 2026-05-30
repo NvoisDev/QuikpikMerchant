@@ -284,7 +284,15 @@ export default function BlogPostPage() {
       {/* Hero */}
       <div className="relative bg-gray-900 overflow-hidden">
         <div className="absolute inset-0">
-          <div className="w-full h-full bg-gradient-to-br from-green-900 to-gray-900" />
+          {post.heroImage ? (
+            <img
+              src={post.heroImage}
+              alt={post.title}
+              className="w-full h-full object-cover opacity-40"
+            />
+          ) : (
+            <div className="w-full h-full bg-gradient-to-br from-green-900 to-gray-900" />
+          )}
           <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/60 to-transparent" />
         </div>
         <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 py-20 sm:py-28">
@@ -365,9 +373,18 @@ export default function BlogPostPage() {
                 <Link key={related.id} href={`/blog/${related.slug}`}>
                   <article className="group bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 cursor-pointer">
                     <div className="aspect-[16/9] overflow-hidden bg-gray-100">
-                      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-green-50 to-emerald-100">
-                        <BookOpen className="w-8 h-8 text-green-300" />
-                      </div>
+                      {related.heroImage ? (
+                        <img
+                          src={related.heroImage}
+                          alt={related.title}
+                          loading="lazy"
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-green-50 to-emerald-100">
+                          <BookOpen className="w-8 h-8 text-green-300" />
+                        </div>
+                      )}
                     </div>
                     <div className="p-5">
                       <span className="text-xs font-semibold text-green-600 mb-2 block">{related.category}</span>

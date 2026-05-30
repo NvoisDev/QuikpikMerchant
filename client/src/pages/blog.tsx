@@ -24,9 +24,18 @@ function ArticleCard({ post }: { post: typeof blogPosts[0] }) {
     <Link href={`/blog/${post.slug}`}>
       <article className="group bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 cursor-pointer h-full flex flex-col">
         <div className="aspect-[16/9] overflow-hidden bg-gray-100 flex-shrink-0">
-          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-green-50 to-emerald-100">
-            <BookOpen className="w-12 h-12 text-green-300" />
-          </div>
+          {post.heroImage ? (
+            <img
+              src={post.heroImage}
+              alt={post.title}
+              loading="lazy"
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-green-50 to-emerald-100">
+              <BookOpen className="w-12 h-12 text-green-300" />
+            </div>
+          )}
         </div>
         <div className="p-6 flex flex-col flex-1">
           <div className="flex items-center gap-3 mb-3">
@@ -71,9 +80,18 @@ function FeaturedArticle({ post }: { post: typeof blogPosts[0] }) {
       <article className="group bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer">
         <div className="grid lg:grid-cols-2">
           <div className="aspect-[4/3] lg:aspect-auto overflow-hidden bg-gray-100">
-            <div className="w-full h-full min-h-[280px] flex items-center justify-center bg-gradient-to-br from-green-50 to-emerald-100">
-              <BookOpen className="w-20 h-20 text-green-300" />
-            </div>
+            {post.heroImage ? (
+              <img
+                src={post.heroImage}
+                alt={post.title}
+                loading="eager"
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 min-h-[280px]"
+              />
+            ) : (
+              <div className="w-full h-full min-h-[280px] flex items-center justify-center bg-gradient-to-br from-green-50 to-emerald-100">
+                <BookOpen className="w-20 h-20 text-green-300" />
+              </div>
+            )}
           </div>
           <div className="p-8 lg:p-12 flex flex-col justify-center">
             <div className="flex items-center gap-3 mb-4">

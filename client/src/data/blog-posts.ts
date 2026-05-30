@@ -1,3 +1,5 @@
+import heroInventoryImage from '@assets/C962E909-EAEB-4C64-B0A8-04D174B9B102_1780150226400.png';
+
 export type ContentBlock =
   | { type: 'p'; text: string }
   | { type: 'h2'; text: string; id: string }
@@ -18,6 +20,7 @@ export interface BlogPost {
   publishDate: string;
   author: string;
   authorTitle: string;
+  heroImage?: string;
   featured: boolean;
 }
 
@@ -45,6 +48,7 @@ export const blogPosts: BlogPost[] = [
     publishDate: '2026-01-15',
     author: 'Quikpik Team',
     authorTitle: 'Wholesale Operations',
+    heroImage: heroInventoryImage,
     featured: true,
     content: [
       {
