@@ -1,0 +1,164 @@
+Inventory Management for Wholesalers: How Batch Tracking and Expiry Control Can Save Thousands
+
+For many wholesalers, inventory is their single biggest investment. Yet it’s often one of the least understood areas of the business.
+
+Products are purchased, stored, sold, returned, written off, and replenished every day. Without proper controls, stock discrepancies, expired products, and waste can quietly eat into profits without anyone noticing until it’s too late.
+
+The difference between a well-run wholesale operation and a struggling one often comes down to one thing: visibility.
+
+The Real Cost of Poor Inventory Management
+
+Many wholesalers focus heavily on sales but overlook the impact of poor stock control.
+
+Common issues include:
+
+* Running out of stock unexpectedly
+* Overstocking slow-moving products
+* Selling products close to expiry
+* Losing track of inventory across batches
+* Manual spreadsheet errors
+* Unexplained stock adjustments
+* Wasted products that can no longer be sold
+
+Even small discrepancies add up. If a business loses just £50 worth of stock each week through errors, damage, or expiry, that’s over £2,600 per year gone straight from the bottom line.
+
+Why Batch Tracking Matters
+
+Not all stock arrives at the same time.
+
+You may receive:
+
+* 100 units in January
+* Another 200 units in March
+* A further 150 units in April
+
+Each delivery may have:
+
+* Different purchase costs
+* Different expiry dates
+* Different suppliers
+* Different profit margins
+
+Without batch tracking, it becomes almost impossible to know which stock should be sold first.
+
+Batch management allows wholesalers to trace inventory from the moment it arrives until the moment it leaves the warehouse.
+
+Benefits include:
+
+* Better stock accuracy
+* Easier recalls if needed
+* Improved profitability reporting
+* Reduced waste
+* Better stock rotation
+
+Expiry Dates Should Never Be a Surprise
+
+For food wholesalers, beverage distributors, beauty suppliers, and many FMCG businesses, expiry dates are critical.
+
+Yet many businesses only discover products are nearing expiry when it’s already too late.
+
+By actively monitoring expiry dates, wholesalers can:
+
+* Prioritise older stock
+* Create promotions before products expire
+* Reduce waste
+* Protect customer trust
+* Improve cash flow
+
+A product sitting on a shelf beyond its expiry date is effectively money locked away that can no longer be recovered.
+
+Understanding Stock Waste
+
+Waste isn’t just products thrown away.
+
+Waste can include:
+
+* Expired stock
+* Damaged products
+* Lost inventory
+* Administrative errors
+* Incorrect stock counts
+* Duplicate stock adjustments
+
+Tracking waste helps identify operational problems before they become expensive habits.
+
+The most profitable wholesalers don’t just track sales; they track every stock movement.
+
+Why Spreadsheets Eventually Fail
+
+Spreadsheets are often where inventory management begins.
+
+They’re familiar, inexpensive, and easy to set up.
+
+However, as a business grows, spreadsheets become increasingly difficult to maintain.
+
+Challenges include:
+
+* Human error
+* Multiple versions of the same file
+* Lack of real-time updates
+* No audit trail
+* No batch visibility
+* Limited reporting
+
+As order volumes increase, manual stock management becomes a risk rather than a solution.
+
+Best Practices for Modern Wholesalers
+
+Successful wholesalers typically follow these principles:
+
+1. Track Every Stock Movement
+
+Every stock-in, sale, return, adjustment, and write-off should be recorded.
+
+2. Manage Inventory by Batch
+
+Know exactly where stock came from and when it arrived.
+
+3. Monitor Expiry Dates
+
+Identify products nearing expiry before they become unsellable.
+
+4. Review Slow-Moving Products
+
+Understand which products are tying up cash unnecessarily.
+
+5. Use Real-Time Inventory Systems
+
+Avoid relying solely on spreadsheets and manual calculations.
+
+How Quikpik Helps Wholesalers Stay in Control
+
+Quikpik was built specifically to help wholesalers manage inventory with confidence.
+
+With Quikpik, you can:
+
+✅ Track stock levels in real time
+
+✅ Manage products by batch
+
+✅ Monitor expiry dates
+
+✅ View complete stock history
+
+✅ Record stock adjustments and returns
+
+✅ Reduce inventory waste
+
+✅ Raise invoices directly from available stock
+
+✅ See exactly what has been sold, allocated, returned, and remains in stock
+
+Instead of relying on spreadsheets and manual reconciliations, Quikpik provides a complete picture of your inventory from purchase to sale.
+
+Final Thoughts
+
+Inventory management isn’t just about counting products.
+
+It’s about protecting cash flow, reducing waste, improving customer service, and increasing profitability.
+
+Wholesalers that understand their inventory outperform those that don’t.
+
+The better your visibility, the better your decisions.
+
+And that’s exactly what Quikpik was designed to deliver.
