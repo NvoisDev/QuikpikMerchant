@@ -162,7 +162,7 @@ export default function BlogPostPage() {
     if (!post) return;
 
     const prev = document.title;
-    document.title = `${post.title} | Quikpik Blog`;
+    document.title = `${post.title} | QuikTips & Insights`;
 
     const getOrCreate = (selector: string, attrKey: string, attrVal: string) => {
       let el = document.querySelector(selector) as HTMLMetaElement | null;
@@ -178,7 +178,7 @@ export default function BlogPostPage() {
     const desc = getOrCreate('meta[name="description"]', "name", "description");
     desc.el.setAttribute("content", post.excerpt);
     const ogTitle = getOrCreate('meta[property="og:title"]', "property", "og:title");
-    ogTitle.el.setAttribute("content", `${post.title} | Quikpik Blog`);
+    ogTitle.el.setAttribute("content", `${post.title} | QuikTips & Insights`);
     const ogDesc = getOrCreate('meta[property="og:description"]', "property", "og:description");
     ogDesc.el.setAttribute("content", post.excerpt);
     const ogType = getOrCreate('meta[property="og:type"]', "property", "og:type");
@@ -245,7 +245,7 @@ export default function BlogPostPage() {
           <p className="text-gray-500 mb-6">This article doesn't exist or has been moved.</p>
           <Link href="/blog">
             <button className="inline-flex items-center gap-2 text-green-600 font-semibold hover:underline">
-              <ArrowLeft className="w-4 h-4" /> Back to Blog
+              <ArrowLeft className="w-4 h-4" /> Back to QuikTips & Insights
             </button>
           </Link>
         </div>
@@ -262,7 +262,7 @@ export default function BlogPostPage() {
             <Link href="/blog">
               <button className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 transition-colors font-medium">
                 <ArrowLeft className="w-4 h-4" />
-                <span className="hidden sm:inline">Back to Blog</span>
+                <span className="hidden sm:inline">Back to QuikTips & Insights</span>
               </button>
             </Link>
             <span className="hidden sm:block text-gray-300">·</span>
@@ -413,7 +413,7 @@ export default function BlogPostPage() {
           </div>
           <div className="flex items-center gap-4 text-sm text-gray-400">
             <a href="/" className="hover:text-gray-700 transition-colors">Home</a>
-            <Link href="/blog"><span className="hover:text-gray-700 transition-colors cursor-pointer">Blog</span></Link>
+            <Link href="/blog"><span className="hover:text-gray-700 transition-colors cursor-pointer">QuikTips & Insights</span></Link>
             <a href="/signup" className="hover:text-gray-700 transition-colors">Get Started</a>
           </div>
         </div>

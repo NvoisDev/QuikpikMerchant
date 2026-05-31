@@ -140,7 +140,7 @@ export default function BlogPage() {
 
   useEffect(() => {
     const prev = document.title;
-    document.title = "Blog — Insights for Modern Wholesalers | Quikpik";
+    document.title = "QuikTips & Insights | Quikpik";
 
     const metaDesc = document.querySelector('meta[name="description"]');
     const prevDesc = metaDesc?.getAttribute("content") ?? "";
@@ -160,7 +160,7 @@ export default function BlogPage() {
     };
 
     const ogTitle = getOrCreate('meta[property="og:title"]', "property", "og:title");
-    ogTitle.el.setAttribute("content", "Blog — Insights for Modern Wholesalers | Quikpik");
+    ogTitle.el.setAttribute("content", "QuikTips & Insights | Quikpik");
     const ogDesc = getOrCreate('meta[property="og:description"]', "property", "og:description");
     ogDesc.el.setAttribute("content", "Expert insights for modern wholesale businesses.");
     const ogType = getOrCreate('meta[property="og:type"]', "property", "og:type");
@@ -172,7 +172,7 @@ export default function BlogPage() {
     schema.textContent = JSON.stringify({
       "@context": "https://schema.org",
       "@type": "Blog",
-      name: "Quikpik Blog",
+      name: "QuikTips & Insights by Quikpik",
       description: "Expert insights for modern wholesale businesses.",
       url: `${window.location.origin}/blog`,
       publisher: {
@@ -223,7 +223,7 @@ export default function BlogPage() {
               <span className="font-bold text-gray-900">Quikpik</span>
             </a>
             <span className="hidden sm:block text-gray-300">/</span>
-            <span className="hidden sm:block text-gray-600 font-medium text-sm">Blog</span>
+            <span className="hidden sm:block text-gray-600 font-medium text-sm">QuikTips & Insights</span>
           </div>
           <a
             href="/signup"
@@ -356,7 +356,7 @@ export default function BlogPage() {
           </div>
           <div className="flex items-center gap-4 text-sm text-gray-400">
             <a href="/" className="hover:text-gray-700 transition-colors">Home</a>
-            <a href="/blog" className="hover:text-gray-700 transition-colors text-green-600 font-medium">Blog</a>
+            <a href="/blog" className="hover:text-gray-700 transition-colors text-green-600 font-medium">QuikTips & Insights</a>
             <a href="/signup" className="hover:text-gray-700 transition-colors">Get Started</a>
           </div>
         </div>

@@ -142,7 +142,7 @@ export default function LandingPage() {
           <div className="flex items-center gap-2">
             {/* Desktop nav links */}
             <a href="/blog" className="hidden sm:inline-flex text-sm text-gray-600 hover:text-gray-900 font-medium px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors">
-              Blog
+              QuikTips & Insights
             </a>
             <Button variant="ghost" onClick={handleCustomerLogin} className="hidden sm:inline-flex text-sm text-gray-600">
               Customer Login
@@ -167,7 +167,7 @@ export default function LandingPage() {
         {mobileMenuOpen && (
           <div className="sm:hidden border-t border-gray-100 bg-white px-4 py-3 flex flex-col gap-2">
             <a href="/blog" onClick={() => setMobileMenuOpen(false)} className="flex items-center text-sm text-gray-700 font-medium px-3 py-2 rounded-lg hover:bg-gray-100 w-full">
-              Blog
+              QuikTips & Insights
             </a>
             <Button variant="ghost" onClick={() => { setMobileMenuOpen(false); handleCustomerLogin(); }} className="justify-start text-sm text-gray-700 w-full">
               Customer Login
@@ -522,7 +522,7 @@ export default function LandingPage() {
           </div>
           <p>© {new Date().getFullYear()} Quikpik. All rights reserved.</p>
           <div className="flex gap-4">
-            <a href="/blog" className="hover:text-white transition-colors">Blog</a>
+            <a href="/blog" className="hover:text-white transition-colors">QuikTips & Insights</a>
             <button onClick={handleCustomerLogin} className="hover:text-white transition-colors">Customer Login</button>
             <button onClick={handleLogin} className="hover:text-white transition-colors">Wholesaler Login</button>
             <button onClick={handleGetStarted} className="hover:text-white transition-colors">Sign Up Free</button>
