@@ -1102,6 +1102,10 @@ export default function OrderDetail() {
                     sellingType: (item.sellingType as 'units' | 'pallets') || 'units',
                     imageUrl: item.product?.imageUrl,
                     quantityInPack: item.product?.quantityInPack,
+                    sellingFormat: item.product?.sellingFormat,
+                    palletPrice: item.product?.palletPrice ? parseFloat(String(item.product.palletPrice)) : undefined,
+                    unitPrice: item.product?.price ? parseFloat(String(item.product.price)) : undefined,
+                    palletMoq: item.product?.palletMoq,
                   }));
                   setEditItems(items);
                   const defaultMethod = order.paymentMethod || (stripeReady ? 'payment_link' : 'bank_transfer');

@@ -876,6 +876,18 @@ export default function QuickQuote() {
       return;
     }
 
+    const moqViolation = quoteItems.find(item =>
+      item.sellingType === 'pallets' && item.palletMoq && item.palletMoq > 1 && item.quantity < item.palletMoq
+    );
+    if (moqViolation) {
+      toast({
+        title: "Minimum Pallet Order",
+        description: `"${moqViolation.productName}" requires a minimum of ${moqViolation.palletMoq} pallets`,
+        variant: "destructive",
+      });
+      return;
+    }
+
     const isUsingCustomAddress = useCustomAddress || customerAddresses.length === 0;
 
     if (fulfillmentType === 'delivery' && !deliveryAddressId && !isUsingCustomAddress) {
@@ -2225,7 +2237,7 @@ export default function QuickQuote() {
         <Button
           className="bg-green-600 hover:bg-green-700"
           size="lg"
-          disabled={!selectedCustomer || quoteItems.length === 0 || quoteItems.some(item => item.customPrice <= 0 || item.quantity < 1) || createQuoteMutation.isPending}
+          disabled={!selectedCustomer || quoteItems.length === 0 || quoteItems.some(item => item.customPrice <= 0 || item.quantity < 1 || (item.sellingType === 'pallets' && !!item.palletMoq && item.palletMoq > 1 && item.quantity < item.palletMoq)) || createQuoteMutation.isPending}
           onClick={handleCreateQuote}
         >
           {createQuoteMutation.isPending ? (

@@ -69,7 +69,7 @@ export function QuoteItemCard({
     item.sellingType === 'pallets' ? 'pallets' : isPacks ? 'packs' : 'units';
 
   const showUnits = item.sellingFormat !== 'pallets' && !!item.unitPrice;
-  const showPacks = qip > 1 && item.sellingFormat !== 'pallets';
+  const showPacks = qip > 1 && item.sellingFormat !== 'pallets' && item.sellingFormat !== 'units';
   const showPallets = !!item.palletPrice && item.sellingFormat !== 'units';
   const showModeSelector = (showPacks || showPallets) && (showUnits || showPacks || showPallets);
 

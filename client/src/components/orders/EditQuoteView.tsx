@@ -14,6 +14,10 @@ interface EditItem {
   stock?: number;
   palletStock?: number;
   quantityInPack?: number;
+  sellingFormat?: string;
+  palletPrice?: number;
+  unitPrice?: number;
+  palletMoq?: number;
 }
 
 interface SimpleProduct {
@@ -26,6 +30,7 @@ interface SimpleProduct {
   imageUrl?: string;
   sellingFormat?: string;
   quantityInPack?: number;
+  palletMoq?: number;
 }
 
 interface OrderForEdit {
@@ -76,7 +81,10 @@ export function EditQuoteView({
   const filteredEditProducts = editProducts.filter(p =>
     p.name.toLowerCase().includes(editProductSearch.toLowerCase())
   );
-  const hasInvalidItems = editItems.some(item => item.customPrice <= 0 || item.quantity < 1);
+  const hasInvalidItems = editItems.some(item =>
+    item.customPrice <= 0 || item.quantity < 1 ||
+    (item.sellingType === 'pallets' && !!item.palletMoq && item.palletMoq > 1 && item.quantity < item.palletMoq)
+  );
 
   const getItemKey = (item: EditItem) => `${item.productId}-${item.sellingType}`;
 
@@ -116,7 +124,43 @@ export function EditQuoteView({
     setPackInputs(prev => ({ ...prev, [key]: displayVal.toString() }));
   };
 
+  const switchEditItemMode = (index: number, mode: 'units' | 'packs' | 'pallets') => {
+    const item = editItems[index];
+    const qip = item.quantityInPack ?? 1;
+    if (mode === 'pallets') {
+      if (!item.palletPrice || item.sellingType === 'pallets') return;
+      const palletQty = Math.max(1, item.palletMoq ?? 1);
+      const updated = [...editItems];
+      updated[index] = { ...updated[index], sellingType: 'pallets', customPrice: item.palletPrice, quantity: palletQty };
+      setEditItems(updated);
+      const newKey = `${item.productId}-pallets`;
+      setPackInputs(prev => ({ ...prev, [newKey]: palletQty.toString() }));
+      setPackMode(prev => ({ ...prev, [newKey]: false }));
+    } else if (mode === 'units') {
+      if (item.sellingType === 'units' && !packMode[getItemKey(item)]) return;
+      if (!item.unitPrice) return;
+      const updated = [...editItems];
+      updated[index] = { ...updated[index], sellingType: 'units', customPrice: item.unitPrice, quantity: 1 };
+      setEditItems(updated);
+      const newKey = `${item.productId}-units`;
+      setPackInputs(prev => ({ ...prev, [newKey]: '1' }));
+      setPackMode(prev => ({ ...prev, [newKey]: false }));
+    } else if (mode === 'packs') {
+      if (item.sellingType === 'pallets' || qip <= 1) return;
+      togglePackMode(index);
+    }
+  };
+
   const handleSaveQuote = async () => {
+    const moqViolation = editItems.find(item =>
+      item.sellingType === 'pallets' && item.palletMoq && item.palletMoq > 1 && item.quantity < item.palletMoq
+    );
+    if (moqViolation) {
+      const msg = `"${moqViolation.productName}" requires a minimum of ${moqViolation.palletMoq} pallets`;
+      setEditSaveError(msg);
+      toast({ title: 'Minimum Pallet Order', description: msg, variant: 'destructive' });
+      return;
+    }
     setIsSavingQuote(true);
     setEditSaveError(null);
     try {
@@ -183,11 +227,17 @@ export function EditQuoteView({
                   const key = getItemKey(item);
                   const qip = item.quantityInPack ?? 1;
                   const isPacks = (packMode[key] ?? false) && qip > 1 && item.sellingType !== 'pallets';
-                  const showPackToggle = qip > 1 && item.sellingType !== 'pallets';
+                  const activeMode = item.sellingType === 'pallets' ? 'pallets' : isPacks ? 'packs' : 'units';
+                  const showUnits = item.sellingFormat !== 'pallets' && !!item.unitPrice;
+                  const showPacks = qip > 1 && item.sellingFormat !== 'pallets' && item.sellingFormat !== 'units';
+                  const showPallets = !!item.palletPrice && item.sellingFormat !== 'units';
+                  const showModeSelector = (showPacks || showPallets) && (showUnits || showPacks || showPallets);
                   const displayedQty = isPacks
                     ? (packInputs[key] ?? Math.max(1, Math.round(item.quantity / qip)).toString())
                     : (packInputs[key] ?? item.quantity.toString());
                   const basePreview = isPacks ? (parseInt(displayedQty) || 1) * qip : undefined;
+                  const unitLabel = item.sellingType === 'pallets' ? 'pallet' : isPacks ? 'pack' : 'unit';
+                  const palletMoqViolation = item.sellingType === 'pallets' && item.palletMoq && item.palletMoq > 1 && item.quantity < item.palletMoq;
 
                   return (
                   <div key={key} className="bg-gray-50 rounded-lg p-3">
@@ -200,22 +250,34 @@ export function EditQuoteView({
                         <X className="h-4 w-4" />
                       </button>
                     </div>
+                    {/* Mode selector */}
+                    {showModeSelector && (
+                      <div className="flex rounded overflow-hidden border border-gray-200 text-xs mb-2 w-fit">
+                        {showUnits && (
+                          <button type="button" onClick={() => switchEditItemMode(index, 'units')}
+                            className={`px-2.5 py-1 transition-colors ${activeMode === 'units' ? 'bg-gray-700 text-white font-medium' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>
+                            Units
+                          </button>
+                        )}
+                        {showPacks && (
+                          <button type="button" onClick={() => switchEditItemMode(index, 'packs')}
+                            className={`px-2.5 py-1 border-l transition-colors ${activeMode === 'packs' ? 'bg-blue-600 text-white font-medium' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>
+                            Packs
+                          </button>
+                        )}
+                        {showPallets && (
+                          <button type="button" onClick={() => switchEditItemMode(index, 'pallets')}
+                            className={`px-2.5 py-1 border-l transition-colors ${activeMode === 'pallets' ? 'bg-blue-700 text-white font-medium' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>
+                            Pallets
+                          </button>
+                        )}
+                      </div>
+                    )}
                     <div className="flex items-center gap-3 flex-wrap">
                       <div className="flex flex-col gap-0.5">
-                        <div className="flex items-center gap-1">
-                          <span className="text-xs text-gray-500">
-                            {item.sellingType === 'pallets' ? 'Pallets' : isPacks ? 'Packs' : 'Units'}
-                          </span>
-                          {showPackToggle && (
-                            <button
-                              type="button"
-                              onClick={() => togglePackMode(index)}
-                              className="text-[10px] px-1 py-0 rounded border border-blue-200 bg-blue-50 text-blue-600 hover:bg-blue-100 leading-tight"
-                            >
-                              {isPacks ? '÷ packs' : '× packs'}
-                            </button>
-                          )}
-                        </div>
+                        <span className="text-xs text-gray-500">
+                          Qty ({item.sellingType === 'pallets' ? 'pallets' : isPacks ? 'packs' : 'units'})
+                        </span>
                         <div className="flex items-center gap-1">
                           <Button
                             variant="outline" size="sm" className="h-7 w-7 p-0"
@@ -241,7 +303,7 @@ export function EditQuoteView({
                             }}
                             onBlur={(e) => commitQty(index, e.target.value)}
                             onFocus={(e) => e.target.select()}
-                            className="w-14 text-center text-sm font-medium border border-gray-300 rounded px-1 py-0.5 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                            className={`w-14 text-center text-sm font-medium border rounded px-1 py-0.5 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent ${palletMoqViolation ? 'border-red-400 bg-red-50' : 'border-gray-300'}`}
                           />
                           <Button
                             variant="outline" size="sm" className="h-7 w-7 p-0"
@@ -264,6 +326,9 @@ export function EditQuoteView({
                         {item.quantity < 1 && (
                           <p className="text-xs text-red-600">Quantity must be at least 1</p>
                         )}
+                        {palletMoqViolation && (
+                          <p className="text-xs text-red-600">Min {item.palletMoq} pallets</p>
+                        )}
                       </div>
                       <div className="flex flex-col gap-0.5">
                         <div className="flex items-center gap-1">
@@ -280,7 +345,7 @@ export function EditQuoteView({
                             }}
                             className={`w-20 p-1 border rounded text-sm text-right ${item.customPrice <= 0 ? 'border-red-400 bg-red-50' : ''}`}
                           />
-                          <span className="text-xs text-gray-500">/{item.sellingType === 'pallets' ? 'pallet' : 'unit'}</span>
+                          <span className="text-xs text-gray-500">/{unitLabel}</span>
                         </div>
                         {item.customPrice <= 0 && (
                           <p className="text-xs text-red-600">Price must be greater than £0</p>
@@ -408,6 +473,10 @@ export function EditQuoteView({
                                 imageUrl: product.imageUrl,
                                 stock: product.stock,
                                 quantityInPack: (product.quantityInPack ?? 1) > 1 ? product.quantityInPack : undefined,
+                                sellingFormat: product.sellingFormat,
+                                palletPrice: product.palletPrice ? parseFloat(product.palletPrice) : undefined,
+                                unitPrice: parseFloat(product.price),
+                                palletMoq: product.palletMoq,
                               }]);
                             }
                             setEditProductDialogOpen(false);
@@ -427,14 +496,19 @@ export function EditQuoteView({
                               updated[existing] = { ...updated[existing], quantity: updated[existing].quantity + 1 };
                               setEditItems(updated);
                             } else {
+                              const initPalletQty = Math.max(1, product.palletMoq ?? 1);
                               setEditItems(prev => [...prev, {
                                 productId: product.id,
                                 productName: `${product.name} (Pallet)`,
-                                quantity: 1,
+                                quantity: initPalletQty,
                                 customPrice: parseFloat(product.palletPrice!),
                                 sellingType: 'pallets',
                                 imageUrl: product.imageUrl,
                                 palletStock: product.palletStock,
+                                sellingFormat: product.sellingFormat,
+                                palletPrice: parseFloat(product.palletPrice!),
+                                unitPrice: parseFloat(product.price),
+                                palletMoq: product.palletMoq,
                               }]);
                             }
                             setEditProductDialogOpen(false);
