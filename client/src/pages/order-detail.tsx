@@ -1103,6 +1103,7 @@ export default function OrderDetail() {
                     imageUrl: item.product?.imageUrl,
                     quantityInPack: item.product?.quantityInPack,
                     sellingFormat: item.product?.sellingFormat,
+                    unitsPerPallet: item.product?.unitsPerPallet,
                     palletPrice: item.product?.palletPrice ? parseFloat(String(item.product.palletPrice)) : undefined,
                     unitPrice: item.product?.price ? parseFloat(String(item.product.price)) : undefined,
                     palletMoq: item.product?.palletMoq,

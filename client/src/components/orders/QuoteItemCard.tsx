@@ -3,6 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Trash2, Percent, AlertTriangle } from "lucide-react";
+import { computeBaseUnits } from "@shared/quote-units";
 
 interface QuoteItem {
   stableId: string;
@@ -76,7 +77,7 @@ export function QuoteItemCard({
   const liveDisplayQty = parseInt(inputValues[sk]?.qty ?? '') || (
     isPacks ? Math.max(1, Math.round(item.quantity / qip)) : item.quantity
   );
-  const liveBaseQty = isPacks ? liveDisplayQty * qip : liveDisplayQty;
+  const liveBaseQty = computeBaseUnits(liveDisplayQty, isPacks ? 'packs' : 'units', qip);
 
   const unitLabel = item.sellingType === 'pallets' ? 'pallet' : isPacks ? 'pack' : 'unit';
   const stockUnitLabel = item.sellingType === 'pallets' ? 'pallet' : 'unit';
@@ -248,11 +249,11 @@ export function QuoteItemCard({
               const val = parseInt(e.target.value);
               if (!isNaN(val) && val >= 1) {
                 // Packs mode: convert to base units before storing
-                const baseUnits = isPacks ? val * qip : val;
+                const baseUnits = computeBaseUnits(val, isPacks ? 'packs' : 'units', qip);
                 updateItemQuantity(index, baseUnits);
                 setInputValues(prev => ({ ...prev, [sk]: { ...prev[sk], qty: val.toString() } }));
               } else {
-                const defaultBase = isPacks ? qip : 1;
+                const defaultBase = computeBaseUnits(1, isPacks ? 'packs' : 'units', qip);
                 updateItemQuantity(index, defaultBase);
                 setInputValues(prev => ({ ...prev, [sk]: { ...prev[sk], qty: '1' } }));
               }
@@ -265,9 +266,9 @@ export function QuoteItemCard({
           {isPacks && (
             <p className="text-xs text-blue-600 mt-0.5">= {liveBaseQty} units</p>
           )}
-          {item.sellingType === 'pallets' && item.unitsPerPallet && item.quantityInPack && (
+          {item.sellingType === 'pallets' && item.unitsPerPallet && (
             <p className="text-xs text-blue-600 mt-0.5">
-              = {liveDisplayQty * item.unitsPerPallet * item.quantityInPack} units
+              = {computeBaseUnits(liveDisplayQty, 'pallets', item.quantityInPack ?? 1, item.unitsPerPallet)} units
             </p>
           )}
           {palletMoqViolation && (

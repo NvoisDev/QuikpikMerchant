@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Loader2, ChevronLeft, X, Plus, Minus, Search } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { computeBaseUnits } from "@shared/quote-units";
 
 interface EditItem {
   productId: number;
@@ -14,6 +15,7 @@ interface EditItem {
   stock?: number;
   palletStock?: number;
   quantityInPack?: number;
+  unitsPerPallet?: number;
   sellingFormat?: string;
   palletPrice?: number;
   unitPrice?: number;
@@ -30,6 +32,7 @@ interface SimpleProduct {
   imageUrl?: string;
   sellingFormat?: string;
   quantityInPack?: number;
+  unitsPerPallet?: number;
   palletMoq?: number;
 }
 
@@ -235,7 +238,10 @@ export function EditQuoteView({
                   const displayedQty = isPacks
                     ? (packInputs[key] ?? Math.max(1, Math.round(item.quantity / qip)).toString())
                     : (packInputs[key] ?? item.quantity.toString());
-                  const basePreview = isPacks ? (parseInt(displayedQty) || 1) * qip : undefined;
+                  const packsPreview = isPacks ? computeBaseUnits(parseInt(displayedQty) || 1, 'packs', qip) : undefined;
+                  const palletPreview = item.sellingType === 'pallets' && item.unitsPerPallet
+                    ? computeBaseUnits(parseInt(displayedQty) || 1, 'pallets', item.quantityInPack ?? 1, item.unitsPerPallet)
+                    : undefined;
                   const unitLabel = item.sellingType === 'pallets' ? 'pallet' : isPacks ? 'pack' : 'unit';
                   const palletMoqViolation = item.sellingType === 'pallets' && item.palletMoq && item.palletMoq > 1 && item.quantity < item.palletMoq;
 
@@ -320,8 +326,11 @@ export function EditQuoteView({
                             <Plus className="h-3 w-3" />
                           </Button>
                         </div>
-                        {isPacks && basePreview !== undefined && (
-                          <p className="text-xs text-blue-600 mt-0.5">= {basePreview} units</p>
+                        {isPacks && packsPreview !== undefined && (
+                          <p className="text-xs text-blue-600 mt-0.5">= {packsPreview} units</p>
+                        )}
+                        {item.sellingType === 'pallets' && palletPreview !== undefined && (
+                          <p className="text-xs text-blue-600 mt-0.5">= {palletPreview} units</p>
                         )}
                         {item.quantity < 1 && (
                           <p className="text-xs text-red-600">Quantity must be at least 1</p>
@@ -473,6 +482,7 @@ export function EditQuoteView({
                                 imageUrl: product.imageUrl,
                                 stock: product.stock,
                                 quantityInPack: (product.quantityInPack ?? 1) > 1 ? product.quantityInPack : undefined,
+                                unitsPerPallet: product.unitsPerPallet,
                                 sellingFormat: product.sellingFormat,
                                 palletPrice: product.palletPrice ? parseFloat(product.palletPrice) : undefined,
                                 unitPrice: parseFloat(product.price),
@@ -505,6 +515,7 @@ export function EditQuoteView({
                                 sellingType: 'pallets',
                                 imageUrl: product.imageUrl,
                                 palletStock: product.palletStock,
+                                unitsPerPallet: product.unitsPerPallet,
                                 sellingFormat: product.sellingFormat,
                                 palletPrice: parseFloat(product.palletPrice!),
                                 unitPrice: parseFloat(product.price),
