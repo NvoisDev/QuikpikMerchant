@@ -21,6 +21,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { InventoryCalculator } from "@shared/inventory-calculator";
 
 interface Product {
   id: number;
@@ -40,6 +41,7 @@ interface Product {
   createdAt?: string | Date | null;
   lowStockThreshold?: number | null;
   packQuantity?: number | null;
+  quantityInPack?: number | null;
   unitSize?: string | null;
   unitOfMeasure?: string | null;
   sellingFormat?: "units" | "pallets" | "both" | string | null;
@@ -320,7 +322,15 @@ function ProductCard({
               <div className="flex justify-between items-center">
                 <span className="text-gray-500">Remaining</span>
                 <span className={`font-medium ${stockStatus.color}`}>
-                  {formatNumber(product.stock ?? 0)} {product.sellingFormat === 'pallets' ? 'pallets' : 'units'}
+                  {(() => {
+                    const breakdown = InventoryCalculator.formatStockBreakdown(
+                      product.stock ?? 0,
+                      product.quantityInPack,
+                      product.sellingFormat === 'pallets' ? null : product.unitsPerPallet
+                    );
+                    if (breakdown) return breakdown.label;
+                    return `${formatNumber(product.stock ?? 0)} ${product.sellingFormat === 'pallets' ? 'pallets' : 'units'}`;
+                  })()}
                 </span>
               </div>
               {expiryInfo && (

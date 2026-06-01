@@ -162,6 +162,44 @@ export class InventoryCalculator {
   }
   
   /**
+   * Format stock as a human-readable breakdown of pallets, packs, and remaining units.
+   * Returns null when no conversion factors are configured (quantityInPack must be > 0).
+   * Gracefully degrades: if only quantityInPack is set (no pallet info), shows packs + units only.
+   */
+  static formatStockBreakdown(
+    baseUnitStock: number,
+    quantityInPack: number | null | undefined,
+    unitsPerPallet: number | null | undefined
+  ): { pallets: number; packs: number; remainingUnits: number; label: string } | null {
+    const qip = quantityInPack && quantityInPack > 0 ? quantityInPack : null;
+    const upp = unitsPerPallet && unitsPerPallet > 0 ? unitsPerPallet : null;
+
+    if (!qip) return null;
+
+    const totalPacks = Math.floor(baseUnitStock / qip);
+    const remainingUnits = baseUnitStock % qip;
+
+    if (!upp) {
+      const parts: string[] = [];
+      if (totalPacks > 0) parts.push(`${formatNumber(totalPacks)} pack${totalPacks !== 1 ? 's' : ''}`);
+      if (remainingUnits > 0 || totalPacks === 0) parts.push(`${formatNumber(remainingUnits)} unit${remainingUnits !== 1 ? 's' : ''}`);
+      return { pallets: 0, packs: totalPacks, remainingUnits, label: parts.join(' · ') };
+    }
+
+    const pallets = Math.floor(totalPacks / upp);
+    const remainingPacks = totalPacks % upp;
+
+    const parts: string[] = [];
+    if (pallets > 0) parts.push(`${formatNumber(pallets)} pallet${pallets !== 1 ? 's' : ''}`);
+    if (remainingPacks > 0) parts.push(`${formatNumber(remainingPacks)} pack${remainingPacks !== 1 ? 's' : ''}`);
+    if (remainingUnits > 0 || (pallets === 0 && remainingPacks === 0)) {
+      parts.push(`${formatNumber(remainingUnits)} unit${remainingUnits !== 1 ? 's' : ''}`);
+    }
+
+    return { pallets, packs: remainingPacks, remainingUnits, label: parts.join(' · ') };
+  }
+
+  /**
    * Helper to format inventory display for UI
    */
   static formatInventoryDisplay(data: ProductInventoryData): {

@@ -25,6 +25,7 @@ import PageHeader from "@/components/PageHeader";
 import { SubscriptionUpgradeModal } from "@/components/subscription/SubscriptionUpgradeModal";
 import { useSidebarContext } from "@/contexts/sidebar-context";
 import { formatNumber } from "@shared/utils/currency";
+import { InventoryCalculator } from "@shared/inventory-calculator";
 import BulkUploadDialog from "@/components/product/BulkUploadDialog";
 import BatchBreakdownPanel from "@/components/product/BatchBreakdownPanel";
 import StockManagementDialog from "@/components/product/StockManagementDialog";
@@ -979,6 +980,15 @@ export default function ProductManagement() {
                             <div className={`font-semibold ${product.stock > 10 ? 'text-green-600' : product.stock > 0 ? 'text-yellow-600' : 'text-red-600'}`}>
                               {formatNumber(product.stock)} units
                             </div>
+                            {(() => {
+                              const breakdown = InventoryCalculator.formatStockBreakdown(
+                                product.stock ?? 0,
+                                product.quantityInPack,
+                                product.unitsPerPallet
+                              );
+                              if (!breakdown) return null;
+                              return <div className="text-xs text-gray-400 mt-0.5">{breakdown.label}</div>;
+                            })()}
                             {(product.batchCount ?? 0) > 0 && (
                               <div className="text-xs text-gray-400 mt-0.5">
                                 {product.batchCount} batch{(product.batchCount ?? 0) !== 1 ? 'es' : ''}

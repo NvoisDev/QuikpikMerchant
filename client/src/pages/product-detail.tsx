@@ -27,6 +27,7 @@ import type { PromotionalOffer } from "@shared/schema";
 import { formatNumber } from "@/lib/utils";
 import { formatWeight } from "@shared/utils/currency";
 import { computePackWeightKg } from "@shared/utils/product";
+import { InventoryCalculator } from "@shared/inventory-calculator";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -50,6 +51,7 @@ interface ProductDetail {
   palletStock: number | null;
   palletWeight: string | null;
   unitsPerPallet: number | null;
+  quantityInPack: number | null;
   totalPackageWeight: string | null;
   packQuantity: number | null;
   unitOfMeasure: string | null;
@@ -574,6 +576,15 @@ export default function ProductDetail() {
                 <div className="bg-gray-50 rounded-lg p-3">
                   <p className="text-2xl font-bold text-gray-900">{formatNumber(totalStock)}</p>
                   <p className="text-xs text-gray-500 mt-0.5">Remaining stock</p>
+                  {(() => {
+                    const breakdown = InventoryCalculator.formatStockBreakdown(
+                      totalStock ?? 0,
+                      product.quantityInPack,
+                      product.unitsPerPallet
+                    );
+                    if (!breakdown) return null;
+                    return <p className="text-xs text-gray-400 mt-1 leading-snug">{breakdown.label}</p>;
+                  })()}
                 </div>
                 <div className="bg-gray-50 rounded-lg p-3">
                   <p className="text-2xl font-bold text-gray-900">{batchCountDisplay}</p>

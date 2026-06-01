@@ -7,6 +7,7 @@ import { PackagePlus, ArrowUpCircle, ArrowDownCircle, Clock, Download } from "lu
 import ExcelJS from "exceljs";
 import { formatCurrency } from "@/lib/currencies";
 import { formatNumber } from "@shared/utils/currency";
+import { InventoryCalculator } from "@shared/inventory-calculator";
 import type { Product } from "@shared/schema";
 import type { ProductBatch, StockMovement } from "./types";
 
@@ -155,9 +156,20 @@ export default function StockManagementDialog({
           <div className="space-y-4">
             <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
               <span className="text-sm text-gray-600">Current Stock</span>
-              <span className={`text-lg font-bold ${stockProduct.stock > 10 ? 'text-green-600' : stockProduct.stock > 0 ? 'text-yellow-600' : 'text-red-600'}`}>
-                {formatNumber(stockProduct.stock)} units
-              </span>
+              <div className="text-right">
+                <span className={`text-lg font-bold ${stockProduct.stock > 10 ? 'text-green-600' : stockProduct.stock > 0 ? 'text-yellow-600' : 'text-red-600'}`}>
+                  {formatNumber(stockProduct.stock)} units
+                </span>
+                {(() => {
+                  const breakdown = InventoryCalculator.formatStockBreakdown(
+                    stockProduct.stock,
+                    stockProduct.quantityInPack,
+                    stockProduct.unitsPerPallet
+                  );
+                  if (!breakdown) return null;
+                  return <p className="text-xs text-gray-500 mt-0.5">{breakdown.label}</p>;
+                })()}
+              </div>
             </div>
 
             <div className="flex gap-2">
