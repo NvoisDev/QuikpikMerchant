@@ -472,7 +472,11 @@ export function EditQuoteView({
                             const existing = editItems.findIndex(i => i.productId === product.id && i.sellingType === 'units');
                             if (existing >= 0) {
                               const updated = [...editItems];
-                              updated[existing] = { ...updated[existing], quantity: updated[existing].quantity + 1 };
+                              const existingItem = updated[existing];
+                              // If item is in pack display mode, add a full pack worth of base units
+                              const itemKey = getItemKey(existingItem);
+                              const increment = packMode[itemKey] ? (existingItem.quantityInPack ?? 1) : 1;
+                              updated[existing] = { ...existingItem, quantity: existingItem.quantity + increment };
                               setEditItems(updated);
                             } else {
                               setEditItems(prev => [...prev, {

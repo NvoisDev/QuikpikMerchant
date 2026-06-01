@@ -679,7 +679,12 @@ export default function QuickQuote() {
 
     if (existingIndex >= 0) {
       const updated = [...quoteItems];
-      updated[existingIndex].quantity += 1;
+      const existing = updated[existingIndex];
+      // In packs display mode each "add" should add a full pack worth of base units
+      const increment = existing.displayUnit === 'packs'
+        ? (existing.quantityInPack ?? 1)
+        : 1;
+      updated[existingIndex] = { ...existing, quantity: existing.quantity + increment };
       setQuoteItems(updated);
     } else {
       const newStableId = `${product.id}-${sellingType}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
