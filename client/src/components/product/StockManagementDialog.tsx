@@ -575,6 +575,11 @@ export default function StockManagementDialog({
                       : movement.movementType === 'manual_decrease' ? 'Removed'
                       : movement.movementType === 'initial' ? 'Initial Stock'
                       : 'Updated';
+                    const qip = stockProduct?.quantityInPack;
+                    const upp = stockProduct?.unitsPerPallet;
+                    const qtyBreakdown = InventoryCalculator.formatStockBreakdown(Math.abs(movement.quantity), qip, upp);
+                    const beforeBreakdown = InventoryCalculator.formatStockBreakdown(movement.stockBefore, qip, upp);
+                    const afterBreakdown = InventoryCalculator.formatStockBreakdown(movement.stockAfter, qip, upp);
                     return (
                       <div key={movement.id} className={`p-2.5 rounded-lg text-xs border-l-3 ${isIncrease ? 'bg-green-50 border-l-green-500' : 'bg-red-50 border-l-red-500'}`}>
                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-0.5 sm:gap-0">
@@ -586,6 +591,7 @@ export default function StockManagementDialog({
                             )}
                             <span className={`font-bold ${isIncrease ? 'text-green-700' : 'text-red-700'}`}>
                               {isIncrease ? '+' : ''}{movement.quantity} units
+                              {qtyBreakdown && <span className="font-normal text-gray-500 ml-1">({qtyBreakdown.label})</span>}
                             </span>
                             <span className="text-gray-500 font-medium">· {typeLabel}</span>
                             {movement.orderNumber && movement.orderId && (
@@ -612,9 +618,16 @@ export default function StockManagementDialog({
                               <span className="ml-1 text-blue-600 font-medium">· {movement.businessProfileName}</span>
                             )}
                           </span>
-                          <span className="sm:flex-shrink-0 sm:ml-2 font-medium">
-                            {movement.stockBefore} → {movement.stockAfter}
-                          </span>
+                          <div className="sm:flex-shrink-0 sm:ml-2 font-medium text-right">
+                            <div>{movement.stockBefore} → {movement.stockAfter}</div>
+                            {(beforeBreakdown || afterBreakdown) && (
+                              <div className="font-normal text-gray-400">
+                                {beforeBreakdown ? beforeBreakdown.label : `${movement.stockBefore} units`}
+                                {' → '}
+                                {afterBreakdown ? afterBreakdown.label : `${movement.stockAfter} units`}
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
                     );

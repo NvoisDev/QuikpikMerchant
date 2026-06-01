@@ -170,7 +170,7 @@ export class InventoryCalculator {
     baseUnitStock: number,
     quantityInPack: number | null | undefined,
     unitsPerPallet: number | null | undefined
-  ): { pallets: number; packs: number; remainingUnits: number; label: string } | null {
+  ): { pallets: number; packs: number; units: number; label: string } | null {
     const qip = quantityInPack && quantityInPack > 0 ? quantityInPack : null;
     const upp = unitsPerPallet && unitsPerPallet > 0 ? unitsPerPallet : null;
 
@@ -183,7 +183,7 @@ export class InventoryCalculator {
       const parts: string[] = [];
       if (totalPacks > 0) parts.push(`${formatNumber(totalPacks)} pack${totalPacks !== 1 ? 's' : ''}`);
       if (remainingUnits > 0 || totalPacks === 0) parts.push(`${formatNumber(remainingUnits)} unit${remainingUnits !== 1 ? 's' : ''}`);
-      return { pallets: 0, packs: totalPacks, remainingUnits, label: parts.join(' · ') };
+      return { pallets: 0, packs: totalPacks, units: remainingUnits, label: parts.join(' · ') };
     }
 
     const pallets = Math.floor(totalPacks / upp);
@@ -196,7 +196,7 @@ export class InventoryCalculator {
       parts.push(`${formatNumber(remainingUnits)} unit${remainingUnits !== 1 ? 's' : ''}`);
     }
 
-    return { pallets, packs: remainingPacks, remainingUnits, label: parts.join(' · ') };
+    return { pallets, packs: remainingPacks, units: remainingUnits, label: parts.join(' · ') };
   }
 
   /**
