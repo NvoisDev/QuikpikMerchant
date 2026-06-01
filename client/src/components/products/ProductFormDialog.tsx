@@ -55,7 +55,6 @@ export const productFormSchema = z.object({
   unitsPerPallet: z.union([z.string(), z.number(), z.null()]).optional().transform((val) => val ? val.toString() : ""),
   palletPrice: z.union([z.string(), z.number(), z.null()]).optional().transform((val) => val ? val.toString() : ""),
   palletMoq: z.union([z.string(), z.number(), z.null()]).optional().transform((val) => val ? val.toString() : ""),
-  palletStock: z.union([z.string(), z.number(), z.null()]).optional().transform((val) => val ? val.toString() : ""),
   palletWeight: z.union([z.string(), z.number(), z.null()]).optional().transform((val) => val ? val.toString() : ""),
   unitWeight: z.union([z.string(), z.number(), z.null()]).optional().transform((val) => val ? val.toString() : ""),
   lowStockThreshold: z.string().optional(),
@@ -161,7 +160,6 @@ export default function ProductFormDialog({
       unitsPerPallet: "",
       palletPrice: "",
       palletMoq: "",
-      palletStock: "",
       palletWeight: "",
       unitWeight: "",
       lowStockThreshold: String(defaultLowStockThreshold),
@@ -217,7 +215,6 @@ export default function ProductFormDialog({
             unitsPerPallet: String(editingProduct.unitsPerPallet || ""),
             palletPrice: String(editingProduct.palletPrice || ""),
             palletMoq: String(editingProduct.palletMoq || ""),
-            palletStock: String(editingProduct.palletStock || ""),
             palletWeight: String(editingProduct.palletWeight || ""),
             unitWeight: String(editingProduct.unitWeight || ""),
             lowStockThreshold: String(editingProduct.lowStockThreshold || ""),
@@ -433,7 +430,6 @@ export default function ProductFormDialog({
         unitsPerPallet: data.unitsPerPallet && data.unitsPerPallet !== "" ? parseInt(data.unitsPerPallet) : null,
         palletPrice: data.palletPrice && data.palletPrice !== "" ? parseFloat(data.palletPrice) : null,
         palletMoq: data.palletMoq && data.palletMoq !== "" ? parseInt(data.palletMoq) : null,
-        palletStock: data.palletStock && data.palletStock !== "" ? parseInt(data.palletStock) : null,
         palletWeight: data.palletWeight && data.palletWeight !== "" ? parseFloat(data.palletWeight) : null,
         unitWeight: data.unitWeight && data.unitWeight !== "" ? parseFloat(data.unitWeight) : null,
         lowStockThreshold: data.lowStockThreshold ? parseInt(data.lowStockThreshold) : defaultLowStockThreshold,
@@ -476,7 +472,6 @@ export default function ProductFormDialog({
         unitsPerPallet: productData.unitsPerPallet && productData.unitsPerPallet !== "" ? parseInt(productData.unitsPerPallet) : null,
         palletPrice: productData.palletPrice && productData.palletPrice !== "" ? parseFloat(productData.palletPrice) : null,
         palletMoq: productData.palletMoq && productData.palletMoq !== "" ? parseInt(productData.palletMoq) : null,
-        palletStock: productData.palletStock && productData.palletStock !== "" ? parseInt(productData.palletStock) : null,
         palletWeight: productData.palletWeight && productData.palletWeight !== "" ? parseFloat(productData.palletWeight) : null,
         unitWeight: productData.unitWeight && productData.unitWeight !== "" ? parseFloat(productData.unitWeight) : null,
         lowStockThreshold: productData.lowStockThreshold ? parseInt(productData.lowStockThreshold) : defaultLowStockThreshold,
@@ -1051,20 +1046,32 @@ export default function ProductFormDialog({
                 />
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="palletStock"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Pallet Stock</FormLabel>
-                      <FormControl>
-                        <Input type="number" placeholder="e.g., 12" {...field} onChange={(e) => field.onChange(e.target.value)} />
-                      </FormControl>
-                      <FormMessage />
-                      <div className="text-xs text-muted-foreground">Available pallets in stock</div>
-                    </FormItem>
-                  )}
-                />
+                {(() => {
+                  const stockVal = parseInt(form.watch("stock") || "0") || 0;
+                  const qip = parseInt(form.watch("quantityInPack") || "1") || 1;
+                  const upp = parseInt(form.watch("unitsPerPallet") || "0") || 0;
+                  const derived = upp > 0 ? Math.floor(Math.floor(stockVal / qip) / upp) : null;
+                  return (
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium">Pallet Stock</p>
+                      <div className="rounded-md border border-gray-200 bg-gray-50 px-3 py-2 min-h-[38px] flex items-center">
+                        {derived !== null ? (
+                          <span className="text-sm font-semibold text-green-700">{derived} pallets</span>
+                        ) : (
+                          <span className="text-sm text-gray-400">—</span>
+                        )}
+                      </div>
+                      {derived !== null ? (
+                        <p className="text-xs text-muted-foreground">
+                          {stockVal} units ÷ {upp} per pallet = <strong>{derived} pallets</strong>
+                        </p>
+                      ) : (
+                        <p className="text-xs text-muted-foreground">Set Units Per Pallet above to see available pallets</p>
+                      )}
+                      <p className="text-xs text-gray-400">Calculated automatically — update Opening Stock to change this</p>
+                    </div>
+                  );
+                })()}
                 <FormField
                   control={form.control}
                   name="palletWeight"

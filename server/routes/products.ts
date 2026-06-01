@@ -97,6 +97,14 @@ export function registerProductRoutes(app: Express): void {
         wholesalerId: targetUserId,
         lowStockThreshold: req.body.lowStockThreshold ?? defaultThreshold,
       });
+      // Derive palletStock from base units — never accept it from the form.
+      // Formula: floor(floor(stock / quantityInPack) / unitsPerPallet)
+      const _createStock = productData.stock ?? 0;
+      const _createQip = productData.quantityInPack ?? 1;
+      const _createUpp = productData.unitsPerPallet ?? 0;
+      (productData as any).palletStock = (_createUpp > 0 && _createQip > 0)
+        ? Math.floor(Math.floor(_createStock / _createQip) / _createUpp)
+        : 0;
       // Create product + initial batch atomically so a batch-insert failure
       // never leaves a product without batch coverage.
       const product = await db.transaction(async (tx) => {
@@ -193,6 +201,23 @@ export function registerProductRoutes(app: Express): void {
         if (!Number.isFinite(requestedStock) || requestedStock < 0) {
           return res.status(400).json({ message: "Stock must be a non-negative number" });
         }
+      }
+
+      // ── Derive palletStock from base units — never accept from the form ──────
+      // Use submitted values where present, else fall back to what's on the existing product.
+      {
+        const _updStock = (productData as any).stock !== undefined
+          ? Number((productData as any).stock)
+          : (existingProduct.stock ?? 0);
+        const _updQip = (productData as any).quantityInPack !== undefined
+          ? Number((productData as any).quantityInPack)
+          : (existingProduct.quantityInPack ?? 1);
+        const _updUpp = (productData as any).unitsPerPallet !== undefined
+          ? Number((productData as any).unitsPerPallet)
+          : (existingProduct.unitsPerPallet ?? 0);
+        (productData as any).palletStock = (_updUpp > 0 && _updQip > 0)
+          ? Math.floor(Math.floor(_updStock / _updQip) / _updUpp)
+          : 0;
       }
 
       // ── Atomic product update + batch reconciliation ────────────────────────
