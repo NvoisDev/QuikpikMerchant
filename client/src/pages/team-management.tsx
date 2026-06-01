@@ -115,9 +115,6 @@ export default function TeamManagement() {
     }
   }, [user, permissionsLoading, checkTabAccess, toast, setLocation]);
 
-  // Subscription system removed
-  // Subscription system removed - defaulting to premium tier
-  let simpleTier: 'free' | 'basic' | 'premium' = 'premium';
   const simpleIsActive = true;
   const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
@@ -156,7 +153,7 @@ export default function TeamManagement() {
     refetchInterval: 60 * 1000,
   });
 
-  // Fetch plan limits for downgrade warning banner
+  // Fetch plan limits to drive simpleTier
   const { data: planLimits } = useQuery<{
     plan: string;
     limits: { products: number; broadcasts: number; teamMembers: number };
@@ -167,6 +164,11 @@ export default function TeamManagement() {
     queryKey: ['/api/subscriptions/plan-limits'],
     staleTime: 5 * 60 * 1000,
   });
+
+  const simpleTier: 'free' | 'basic' | 'premium' =
+    planLimits?.plan === 'premium' ? 'premium' :
+    planLimits?.plan === 'standard' ? 'basic' :
+    'free';
 
   const inviteMemberMutation = useMutation({
     mutationFn: async (data: TeamMemberFormData) => {
