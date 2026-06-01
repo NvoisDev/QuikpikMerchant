@@ -203,7 +203,7 @@ export function QuoteItemCard({
       )}
 
       {/* Price, Qty, Total row */}
-      <div className="flex items-end gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-end gap-2 sm:gap-3">
         <div className="flex-1">
           <Label className="text-xs text-gray-500">Price / {priceLabel}</Label>
           <Input
@@ -232,55 +232,54 @@ export function QuoteItemCard({
             <p className="text-xs text-red-500 mt-0.5">Price must be &gt; £0</p>
           )}
         </div>
-        <div className="w-28">
-          <Label className="text-xs text-gray-500">
-            Qty ({item.sellingType === 'pallets' ? 'pallets' : isPacks ? 'packs' : 'units'})
-          </Label>
-          <Input
-            type="text"
-            inputMode="numeric"
-            pattern="[0-9]*"
-            value={inputValues[sk]?.qty ?? (isPacks ? Math.max(1, Math.round(item.quantity / qip)).toString() : item.quantity.toString())}
-            onChange={(e) => {
-              const val = e.target.value;
-              if (val === '' || /^\d*$/.test(val)) {
-                setInputValues(prev => ({ ...prev, [sk]: { ...prev[sk], qty: val } }));
-              }
-            }}
-            onBlur={(e) => {
-              const val = parseInt(e.target.value);
-              if (!isNaN(val) && val >= 1) {
-                // Packs mode: convert to base units before storing
-                const baseUnits = computeBaseUnits(val, isPacks ? 'packs' : 'units', qip);
-                updateItemQuantity(index, baseUnits);
-                setInputValues(prev => ({ ...prev, [sk]: { ...prev[sk], qty: val.toString() } }));
-              } else {
-                const defaultBase = computeBaseUnits(1, isPacks ? 'packs' : 'units', qip);
-                updateItemQuantity(index, defaultBase);
-                setInputValues(prev => ({ ...prev, [sk]: { ...prev[sk], qty: '1' } }));
-              }
-            }}
-            className={`h-8 ${item.quantity < 1 || palletMoqViolation ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
-          />
-          {item.quantity < 1 && (
-            <p className="text-xs text-red-500 mt-0.5">Min qty 1</p>
-          )}
-          {isPacks && (
-            <p className="text-xs text-blue-600 mt-0.5">= {liveBaseQty} units</p>
-          )}
-          {item.sellingType === 'pallets' && item.unitsPerPallet && (
-            <p className="text-xs text-blue-600 mt-0.5">
-              = {computeBaseUnits(liveDisplayQty, 'pallets', item.quantityInPack ?? 1, item.unitsPerPallet)} units
-            </p>
-          )}
-          {palletMoqViolation && (
-            <p className="text-xs text-red-500 mt-0.5">Min {item.palletMoq} pallets</p>
-          )}
-        </div>
-        <div className="w-20 text-right">
-          <Label className="text-xs text-gray-500">Total</Label>
-          <div className="font-semibold">
-            {formatCurrency(item.customPrice * item.quantity)}
+        <div className="flex items-end gap-2 sm:gap-3">
+          <div className="flex-1 sm:w-28 sm:flex-none">
+            <Label className="text-xs text-gray-500 flex items-baseline gap-1 flex-wrap">
+              <span>Qty ({item.sellingType === 'pallets' ? 'pallets' : isPacks ? 'packs' : 'units'})</span>
+              {isPacks && liveBaseQty > 0 && (
+                <span className="text-blue-500 font-normal">= {liveBaseQty} units</span>
+              )}
+              {item.sellingType === 'pallets' && item.unitsPerPallet && (
+                <span className="text-blue-500 font-normal">= {computeBaseUnits(liveDisplayQty, 'pallets', item.quantityInPack ?? 1, item.unitsPerPallet)} units</span>
+              )}
+            </Label>
+            <Input
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              value={inputValues[sk]?.qty ?? (isPacks ? Math.max(1, Math.round(item.quantity / qip)).toString() : item.quantity.toString())}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (val === '' || /^\d*$/.test(val)) {
+                  setInputValues(prev => ({ ...prev, [sk]: { ...prev[sk], qty: val } }));
+                }
+              }}
+              onBlur={(e) => {
+                const val = parseInt(e.target.value);
+                if (!isNaN(val) && val >= 1) {
+                  const baseUnits = computeBaseUnits(val, isPacks ? 'packs' : 'units', qip);
+                  updateItemQuantity(index, baseUnits);
+                  setInputValues(prev => ({ ...prev, [sk]: { ...prev[sk], qty: val.toString() } }));
+                } else {
+                  const defaultBase = computeBaseUnits(1, isPacks ? 'packs' : 'units', qip);
+                  updateItemQuantity(index, defaultBase);
+                  setInputValues(prev => ({ ...prev, [sk]: { ...prev[sk], qty: '1' } }));
+                }
+              }}
+              className={`h-8 ${item.quantity < 1 || palletMoqViolation ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
+            />
+            {item.quantity < 1 && (
+              <p className="text-xs text-red-500 mt-0.5">Min qty 1</p>
+            )}
+            {palletMoqViolation && (
+              <p className="text-xs text-red-500 mt-0.5">Min {item.palletMoq} pallets</p>
+            )}
+          </div>
+          <div className="w-20 text-right">
+            <Label className="text-xs text-gray-500">Total</Label>
+            <div className="font-semibold">
+              {formatCurrency(item.customPrice * item.quantity)}
+            </div>
           </div>
         </div>
       </div>

@@ -286,8 +286,14 @@ export function EditQuoteView({
                     )}
                     <div className="flex items-center gap-3 flex-wrap">
                       <div className="flex flex-col gap-0.5">
-                        <span className="text-xs text-gray-500">
-                          Qty ({item.sellingType === 'pallets' ? 'pallets' : isPacks ? 'packs' : 'units'})
+                        <span className="text-xs text-gray-500 flex items-baseline gap-1 flex-wrap">
+                          <span>Qty ({item.sellingType === 'pallets' ? 'pallets' : isPacks ? 'packs' : 'units'})</span>
+                          {isPacks && packsPreview !== undefined && (
+                            <span className="text-blue-500 font-normal">= {packsPreview} units</span>
+                          )}
+                          {item.sellingType === 'pallets' && palletPreview !== undefined && (
+                            <span className="text-blue-500 font-normal">= {palletPreview} units</span>
+                          )}
                         </span>
                         <div className="flex items-center gap-1">
                           <Button
@@ -331,12 +337,6 @@ export function EditQuoteView({
                             <Plus className="h-3 w-3" />
                           </Button>
                         </div>
-                        {isPacks && packsPreview !== undefined && (
-                          <p className="text-xs text-blue-600 mt-0.5">= {packsPreview} units</p>
-                        )}
-                        {item.sellingType === 'pallets' && palletPreview !== undefined && (
-                          <p className="text-xs text-blue-600 mt-0.5">= {palletPreview} units</p>
-                        )}
                         {item.quantity < 1 && (
                           <p className="text-xs text-red-600">Quantity must be at least 1</p>
                         )}
