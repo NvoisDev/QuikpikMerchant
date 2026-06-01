@@ -13,6 +13,7 @@ interface EditItem {
   imageUrl?: string;
   stock?: number;
   palletStock?: number;
+  quantityInPack?: number;
 }
 
 interface SimpleProduct {
@@ -24,6 +25,7 @@ interface SimpleProduct {
   palletStock?: number;
   imageUrl?: string;
   sellingFormat?: string;
+  quantityInPack?: number;
 }
 
 interface OrderForEdit {
@@ -66,6 +68,8 @@ export function EditQuoteView({
   const { toast } = useToast();
   const [isSavingQuote, setIsSavingQuote] = useState(false);
   const [editSaveError, setEditSaveError] = useState<string | null>(null);
+  const [packMode, setPackMode] = useState<Record<string, boolean>>({});
+  const [packInputs, setPackInputs] = useState<Record<string, string>>({});
 
   const editSubtotal = editItems.reduce((sum, item) => sum + item.customPrice * item.quantity, 0);
   const deliveryCostVal = parseFloat(order.deliveryCost || '0');
@@ -73,6 +77,37 @@ export function EditQuoteView({
     p.name.toLowerCase().includes(editProductSearch.toLowerCase())
   );
   const hasInvalidItems = editItems.some(item => item.customPrice <= 0 || item.quantity < 1);
+
+  const getItemKey = (item: EditItem) => `${item.productId}-${item.sellingType}`;
+
+  const togglePackMode = (index: number) => {
+    const item = editItems[index];
+    const qip = item.quantityInPack ?? 1;
+    if (qip <= 1 || item.sellingType === 'pallets') return;
+    const key = getItemKey(item);
+    const nowPacks = !packMode[key];
+    if (nowPacks) {
+      const packCount = Math.max(1, Math.round(item.quantity / qip));
+      setPackInputs(prev => ({ ...prev, [key]: packCount.toString() }));
+    } else {
+      setPackInputs(prev => ({ ...prev, [key]: item.quantity.toString() }));
+    }
+    setPackMode(prev => ({ ...prev, [key]: nowPacks }));
+  };
+
+  const commitQty = (index: number, raw: string) => {
+    const item = editItems[index];
+    const qip = item.quantityInPack ?? 1;
+    const key = getItemKey(item);
+    const isPacks = packMode[key];
+    const val = parseInt(raw, 10);
+    const displayVal = !isNaN(val) && val >= 1 ? val : 1;
+    const baseUnits = isPacks ? displayVal * qip : displayVal;
+    const updated = [...editItems];
+    updated[index] = { ...updated[index], quantity: Math.max(1, baseUnits) };
+    setEditItems(updated);
+    setPackInputs(prev => ({ ...prev, [key]: displayVal.toString() }));
+  };
 
   const handleSaveQuote = async () => {
     setIsSavingQuote(true);
@@ -137,8 +172,18 @@ export function EditQuoteView({
               </div>
             ) : (
               <div className="space-y-3">
-                {editItems.map((item, index) => (
-                  <div key={`${item.productId}-${item.sellingType}`} className="bg-gray-50 rounded-lg p-3">
+                {editItems.map((item, index) => {
+                  const key = getItemKey(item);
+                  const qip = item.quantityInPack ?? 1;
+                  const isPacks = (packMode[key] ?? false) && qip > 1 && item.sellingType !== 'pallets';
+                  const showPackToggle = qip > 1 && item.sellingType !== 'pallets';
+                  const displayedQty = isPacks
+                    ? (packInputs[key] ?? Math.max(1, Math.round(item.quantity / qip)).toString())
+                    : (packInputs[key] ?? item.quantity.toString());
+                  const basePreview = isPacks ? (parseInt(displayedQty) || 1) * qip : undefined;
+
+                  return (
+                  <div key={key} className="bg-gray-50 rounded-lg p-3">
                     <div className="flex items-start justify-between gap-2 mb-2">
                       <span className="font-medium text-sm">{item.productName}</span>
                       <button
@@ -151,13 +196,31 @@ export function EditQuoteView({
                     <div className="flex items-center gap-3 flex-wrap">
                       <div className="flex flex-col gap-0.5">
                         <div className="flex items-center gap-1">
+                          <span className="text-xs text-gray-500">
+                            {item.sellingType === 'pallets' ? 'Pallets' : isPacks ? 'Packs' : 'Units'}
+                          </span>
+                          {showPackToggle && (
+                            <button
+                              type="button"
+                              onClick={() => togglePackMode(index)}
+                              className="text-[10px] px-1 py-0 rounded border border-blue-200 bg-blue-50 text-blue-600 hover:bg-blue-100 leading-tight"
+                            >
+                              {isPacks ? '÷ packs' : '× packs'}
+                            </button>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1">
                           <Button
                             variant="outline" size="sm" className="h-7 w-7 p-0"
                             onClick={() => {
-                              if (item.quantity <= 1) return;
+                              const current = parseInt(displayedQty) || 1;
+                              if (current <= 1) return;
+                              const newDisplay = current - 1;
+                              const newBase = isPacks ? newDisplay * qip : newDisplay;
                               const updated = [...editItems];
-                              updated[index] = { ...updated[index], quantity: updated[index].quantity - 1 };
+                              updated[index] = { ...updated[index], quantity: Math.max(1, newBase) };
                               setEditItems(updated);
+                              setPackInputs(prev => ({ ...prev, [key]: newDisplay.toString() }));
                             }}
                           >
                             <Minus className="h-3 w-3" />
@@ -165,27 +228,32 @@ export function EditQuoteView({
                           <input
                             type="number"
                             min="1"
-                            value={item.quantity}
+                            value={displayedQty}
                             onChange={(e) => {
-                              const val = parseInt(e.target.value, 10);
-                              const updated = [...editItems];
-                              updated[index] = { ...updated[index], quantity: isNaN(val) ? 1 : Math.max(1, val) };
-                              setEditItems(updated);
+                              setPackInputs(prev => ({ ...prev, [key]: e.target.value }));
                             }}
+                            onBlur={(e) => commitQty(index, e.target.value)}
                             onFocus={(e) => e.target.select()}
                             className="w-14 text-center text-sm font-medium border border-gray-300 rounded px-1 py-0.5 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                           />
                           <Button
                             variant="outline" size="sm" className="h-7 w-7 p-0"
                             onClick={() => {
+                              const current = parseInt(displayedQty) || 1;
+                              const newDisplay = current + 1;
+                              const newBase = isPacks ? newDisplay * qip : newDisplay;
                               const updated = [...editItems];
-                              updated[index] = { ...updated[index], quantity: updated[index].quantity + 1 };
+                              updated[index] = { ...updated[index], quantity: newBase };
                               setEditItems(updated);
+                              setPackInputs(prev => ({ ...prev, [key]: newDisplay.toString() }));
                             }}
                           >
                             <Plus className="h-3 w-3" />
                           </Button>
                         </div>
+                        {isPacks && basePreview !== undefined && (
+                          <p className="text-xs text-blue-600 mt-0.5">= {basePreview} units</p>
+                        )}
                         {item.quantity < 1 && (
                           <p className="text-xs text-red-600">Quantity must be at least 1</p>
                         )}
@@ -216,7 +284,8 @@ export function EditQuoteView({
                       </span>
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
@@ -237,56 +306,49 @@ export function EditQuoteView({
               <option value="cash">Cash</option>
               <option value="cheque">Cheque</option>
               <option value="payment_link">Payment Link</option>
-              <option value="card">Card Payment</option>
               <option value="pay_later">Pay Later</option>
-              <option value="other">Other</option>
             </select>
           </div>
 
-          <div className="bg-gray-50 rounded-lg p-3 space-y-1">
-            <div className="flex justify-between text-sm">
-              <span>Products subtotal:</span>
-              <span className="font-medium">{formatMoney(editSubtotal)}</span>
+          <div className="border-t pt-3 space-y-1">
+            <div className="flex justify-between text-gray-600">
+              <span>Products</span>
+              <span>{formatMoney(editSubtotal)}</span>
             </div>
             {deliveryCostVal > 0 && (
-              <div className="flex justify-between text-sm text-gray-600">
-                <span>Delivery (unchanged):</span>
+              <div className="flex justify-between text-gray-600">
+                <span>Delivery</span>
                 <span>{formatMoney(deliveryCostVal)}</span>
               </div>
             )}
-            <div className="border-t pt-2 mt-1 flex justify-between font-semibold">
-              <span>Estimated subtotal:</span>
-              <span className="text-green-700">{formatMoney(editSubtotal + deliveryCostVal)}</span>
+            <div className="flex justify-between font-semibold text-base">
+              <span>Total</span>
+              <span>{formatMoney(editSubtotal + deliveryCostVal)}</span>
             </div>
-            <p className="text-xs text-gray-400 mt-1">Final total recalculated on save (fees may apply).</p>
           </div>
 
-          {hasInvalidItems && (
-            <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 flex items-start gap-2">
-              <X className="h-4 w-4 text-amber-500 mt-0.5 flex-shrink-0" />
-              <p className="text-sm text-amber-700">
-                All items must have a price greater than £0 and a quantity of at least 1 before saving.
-              </p>
-            </div>
-          )}
-
           {editSaveError && (
-            <div className="bg-red-50 border border-red-200 rounded-lg px-3 py-2 flex items-start gap-2">
-              <X className="h-4 w-4 text-red-500 mt-0.5 flex-shrink-0" />
-              <p className="text-sm text-red-700">{editSaveError}</p>
+            <div className="rounded-md bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-700">
+              {editSaveError}
             </div>
           )}
 
-          <div className="flex flex-col gap-2 pt-2 border-t">
-            <Button
-              className="w-full bg-green-600 hover:bg-green-700 text-white"
-              onClick={handleSaveQuote}
-              disabled={isSavingQuote || editItems.length === 0 || hasInvalidItems}
-            >
-              {isSavingQuote ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Saving...</> : 'Save Changes'}
+          {hasInvalidItems && (
+            <p className="text-xs text-red-600 text-center">
+              All items must have a price greater than £0 and a quantity of at least 1 before saving.
+            </p>
+          )}
+
+          <div className="flex gap-3 pt-2">
+            <Button variant="outline" className="flex-1" onClick={onCancel} disabled={isSavingQuote}>
+              Cancel
             </Button>
-            <Button variant="ghost" className="w-full text-gray-500" onClick={onCancel}>
-              ← Cancel
+            <Button
+              className="flex-1 bg-green-600 hover:bg-green-700"
+              onClick={handleSaveQuote}
+              disabled={isSavingQuote || hasInvalidItems || editItems.length === 0}
+            >
+              {isSavingQuote ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Saving…</> : 'Save Changes'}
             </Button>
           </div>
         </div>
@@ -336,6 +398,7 @@ export function EditQuoteView({
                                 sellingType: 'units',
                                 imageUrl: product.imageUrl,
                                 stock: product.stock,
+                                quantityInPack: (product.quantityInPack ?? 1) > 1 ? product.quantityInPack : undefined,
                               }]);
                             }
                             setEditProductDialogOpen(false);

@@ -19,6 +19,8 @@ interface QuoteItem {
   unitSize?: string;
   unitOfMeasure?: string;
   stockCount?: number;
+  quantityInPack?: number;
+  displayUnit?: 'units' | 'packs';
 }
 
 interface QuoteItemCardProps {
@@ -34,6 +36,7 @@ interface QuoteItemCardProps {
   removeItem: (index: number) => void;
   formatCurrency: (n: number) => string;
   formatWeight: (n: number | string) => string;
+  onToggleDisplayUnit?: () => void;
 }
 
 export function QuoteItemCard({
@@ -49,8 +52,17 @@ export function QuoteItemCard({
   removeItem,
   formatCurrency,
   formatWeight,
+  onToggleDisplayUnit,
 }: QuoteItemCardProps) {
   const sk = `${item.productId}-${item.sellingType}`;
+  const qip = item.quantityInPack ?? 1;
+  const isPacks = item.displayUnit === 'packs' && qip > 1 && item.sellingType !== 'pallets';
+  const showPackToggle = qip > 1 && item.sellingType !== 'pallets';
+
+  const liveDisplayQty = parseInt(inputValues[sk]?.qty ?? '') || (
+    isPacks ? Math.max(1, Math.round(item.quantity / qip)) : item.quantity
+  );
+  const liveBaseQty = isPacks ? liveDisplayQty * qip : liveDisplayQty;
 
   return (
     <div className="p-3 bg-gray-50 rounded-lg">
@@ -164,13 +176,27 @@ export function QuoteItemCard({
             <p className="text-xs text-red-500 mt-0.5">Price must be &gt; £0</p>
           )}
         </div>
-        <div className="w-16">
-          <Label className="text-xs text-gray-500">Qty</Label>
+        <div className="w-24">
+          <div className="flex items-center gap-1 mb-0.5">
+            <Label className="text-xs text-gray-500">
+              {item.sellingType === 'pallets' ? 'Qty (pallets)' : isPacks ? 'Qty (packs)' : 'Qty (units)'}
+            </Label>
+            {showPackToggle && onToggleDisplayUnit && (
+              <button
+                type="button"
+                onClick={onToggleDisplayUnit}
+                className="text-[10px] px-1 py-0 rounded border border-blue-200 bg-blue-50 text-blue-600 hover:bg-blue-100 leading-tight"
+                title={isPacks ? 'Switch to units' : 'Switch to packs'}
+              >
+                {isPacks ? '÷ packs' : '× packs'}
+              </button>
+            )}
+          </div>
           <Input
             type="text"
             inputMode="numeric"
             pattern="[0-9]*"
-            value={inputValues[sk]?.qty ?? item.quantity.toString()}
+            value={inputValues[sk]?.qty ?? (isPacks ? Math.max(1, Math.round(item.quantity / qip)).toString() : item.quantity.toString())}
             onChange={(e) => {
               const val = e.target.value;
               if (val === '' || /^\d*$/.test(val)) {
@@ -180,10 +206,12 @@ export function QuoteItemCard({
             onBlur={(e) => {
               const val = parseInt(e.target.value);
               if (!isNaN(val) && val >= 1) {
-                updateItemQuantity(index, val);
+                const baseUnits = isPacks ? val * qip : val;
+                updateItemQuantity(index, baseUnits);
                 setInputValues(prev => ({ ...prev, [sk]: { ...prev[sk], qty: val.toString() } }));
               } else {
-                updateItemQuantity(index, 1);
+                const defaultBase = isPacks ? qip : 1;
+                updateItemQuantity(index, defaultBase);
                 setInputValues(prev => ({ ...prev, [sk]: { ...prev[sk], qty: '1' } }));
               }
             }}
@@ -191,6 +219,14 @@ export function QuoteItemCard({
           />
           {item.quantity < 1 && (
             <p className="text-xs text-red-500 mt-0.5">Min qty 1</p>
+          )}
+          {isPacks && (
+            <p className="text-xs text-blue-600 mt-0.5">= {liveBaseQty} units</p>
+          )}
+          {item.sellingType === 'pallets' && item.unitsPerPallet && item.quantityInPack && (
+            <p className="text-xs text-blue-600 mt-0.5">
+              = {liveDisplayQty * item.unitsPerPallet * item.quantityInPack} units
+            </p>
           )}
         </div>
         <div className="w-20 text-right">
@@ -203,12 +239,11 @@ export function QuoteItemCard({
 
       {/* Stock warning */}
       {item.stockCount !== undefined && (() => {
-        const liveQty = parseInt(inputValues[sk]?.qty ?? '') || item.quantity;
-        if (liveQty <= item.stockCount) return null;
+        if (liveBaseQty <= item.stockCount) return null;
         return (
           <div className="mt-2 flex items-center gap-1.5 rounded-md bg-yellow-50 border border-yellow-200 px-3 py-2 text-sm text-yellow-800">
             <AlertTriangle className="h-4 w-4 shrink-0 text-yellow-600" />
-            <span>Only {item.stockCount} available — you have {liveQty}</span>
+            <span>Only {item.stockCount} units available — you have {liveBaseQty}</span>
           </div>
         );
       })()}

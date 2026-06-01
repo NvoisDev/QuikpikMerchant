@@ -80,6 +80,8 @@ interface QuoteItem {
   unitSize?: string;
   unitOfMeasure?: string;
   stockCount?: number;
+  quantityInPack?: number;
+  displayUnit?: 'units' | 'packs';
 }
 
 interface Customer {
@@ -672,6 +674,8 @@ export default function QuickQuote() {
         unitSize: (product.sizePerUnit || product.unitSize) ?? undefined,
         unitOfMeasure: product.unitOfMeasure ?? undefined,
         stockCount: availableStock,
+        quantityInPack: (product.quantityInPack ?? 1) > 1 ? product.quantityInPack : undefined,
+        displayUnit: 'units',
       } as QuoteItem]);
       setInputValues(prev => ({
         ...prev,
@@ -706,6 +710,26 @@ export default function QuickQuote() {
 
   const removeItem = (index: number) => {
     setQuoteItems(quoteItems.filter((_, i) => i !== index));
+  };
+
+  const toggleDisplayUnit = (index: number) => {
+    const item = quoteItems[index];
+    const qip = item.quantityInPack ?? 1;
+    if (qip <= 1 || item.sellingType === 'pallets') return;
+    const sk = `${item.productId}-${item.sellingType}`;
+    const currentDisplayUnit = item.displayUnit ?? 'units';
+    if (currentDisplayUnit === 'units') {
+      const packCount = Math.max(1, Math.round(item.quantity / qip));
+      setInputValues(prev => ({ ...prev, [sk]: { ...prev[sk], qty: packCount.toString() } }));
+      const updated = [...quoteItems];
+      updated[index] = { ...updated[index], displayUnit: 'packs' };
+      setQuoteItems(updated);
+    } else {
+      setInputValues(prev => ({ ...prev, [sk]: { ...prev[sk], qty: item.quantity.toString() } }));
+      const updated = [...quoteItems];
+      updated[index] = { ...updated[index], displayUnit: 'units' };
+      setQuoteItems(updated);
+    }
   };
 
   const calculateProductSubtotal = () => {
@@ -1647,6 +1671,7 @@ export default function QuickQuote() {
                       removeItem={removeItem}
                       formatCurrency={formatCurrency}
                       formatWeight={formatWeight}
+                      onToggleDisplayUnit={() => toggleDisplayUnit(index)}
                     />
                   ))}
                 </div>
