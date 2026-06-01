@@ -658,7 +658,7 @@ export default function ProductFormDialog({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Currency</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select currency" />
@@ -767,7 +767,7 @@ export default function ProductFormDialog({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Status</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select status" />
@@ -896,7 +896,7 @@ export default function ProductFormDialog({
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Unit of Measure</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="Select unit" />
@@ -1118,7 +1118,7 @@ export default function ProductFormDialog({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Selling Format</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select selling format" />
@@ -1179,7 +1179,7 @@ export default function ProductFormDialog({
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Temperature Requirement</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Select requirement" />
@@ -1202,7 +1202,7 @@ export default function ProductFormDialog({
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Content Category</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Select category" />
