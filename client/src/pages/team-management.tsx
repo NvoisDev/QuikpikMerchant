@@ -165,16 +165,15 @@ export default function TeamManagement() {
     staleTime: 5 * 60 * 1000,
   });
 
-  // Default to 'premium' while loading so we never briefly block premium users;
-  // once data arrives we resolve to the real tier.
-  const simpleTier: 'free' | 'basic' | 'premium' = planLimitsLoading
-    ? 'premium'
+  // Derive real tier from API data; default to 'free' (most restrictive) while loading.
+  const simpleTier: 'free' | 'standard' | 'premium' = planLimitsLoading
+    ? 'free'
     : planLimits?.plan === 'premium' ? 'premium'
-    : planLimits?.plan === 'standard' ? 'basic'
+    : planLimits?.plan === 'standard' ? 'standard'
     : 'free';
 
   // Human-readable plan label for display
-  const planDisplayLabel = simpleTier === 'premium' ? 'Premium' : simpleTier === 'basic' ? 'Standard' : 'Free';
+  const planDisplayLabel = simpleTier === 'premium' ? 'Premium' : simpleTier === 'standard' ? 'Standard' : 'Free';
 
   const inviteMemberMutation = useMutation({
     mutationFn: async (data: TeamMemberFormData) => {
