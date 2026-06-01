@@ -718,15 +718,18 @@ export default function QuickQuote() {
     if (qip <= 1 || item.sellingType === 'pallets') return;
     const sk = `${item.productId}-${item.sellingType}`;
     const currentDisplayUnit = item.displayUnit ?? 'units';
+    const updated = [...quoteItems];
     if (currentDisplayUnit === 'units') {
+      // Round current base-unit qty to nearest whole pack, then immediately commit
+      // the pack-aligned base-unit count so the payload is always correct on save.
       const packCount = Math.max(1, Math.round(item.quantity / qip));
+      const alignedBaseUnits = packCount * qip;
       setInputValues(prev => ({ ...prev, [sk]: { ...prev[sk], qty: packCount.toString() } }));
-      const updated = [...quoteItems];
-      updated[index] = { ...updated[index], displayUnit: 'packs' };
+      updated[index] = { ...updated[index], displayUnit: 'packs', quantity: alignedBaseUnits };
       setQuoteItems(updated);
     } else {
+      // Back to units — quantity is already in base units; just update display label.
       setInputValues(prev => ({ ...prev, [sk]: { ...prev[sk], qty: item.quantity.toString() } }));
-      const updated = [...quoteItems];
       updated[index] = { ...updated[index], displayUnit: 'units' };
       setQuoteItems(updated);
     }

@@ -87,9 +87,16 @@ export function EditQuoteView({
     const key = getItemKey(item);
     const nowPacks = !packMode[key];
     if (nowPacks) {
+      // Round to nearest pack and immediately commit aligned base units so save is
+      // always correct even if the user doesn't interact with the qty field again.
       const packCount = Math.max(1, Math.round(item.quantity / qip));
+      const alignedBaseUnits = packCount * qip;
+      const updated = [...editItems];
+      updated[index] = { ...updated[index], quantity: alignedBaseUnits };
+      setEditItems(updated);
       setPackInputs(prev => ({ ...prev, [key]: packCount.toString() }));
     } else {
+      // Back to units — quantity already in base units, just update display input.
       setPackInputs(prev => ({ ...prev, [key]: item.quantity.toString() }));
     }
     setPackMode(prev => ({ ...prev, [key]: nowPacks }));
