@@ -772,16 +772,19 @@ export default function QuickQuote() {
     } else if (mode === 'units') {
       if (item.sellingType === 'units' && (item.displayUnit ?? 'units') === 'units') return;
       if (!item.unitPrice) return;
+      // Packs → Units: item.quantity is already in base units, preserve it.
+      // Pallets → Units: different price context, reset to 1.
+      const preservedQty = item.sellingType === 'pallets' ? 1 : item.quantity;
       updated[index] = {
         ...updated[index],
         sellingType: 'units',
         customPrice: item.unitPrice,
         originalPrice: item.unitPrice,
-        quantity: 1,
+        quantity: preservedQty,
         stockCount: item.unitStockCount ?? 0,
         displayUnit: 'units',
       };
-      setInputValues(prev => ({ ...prev, [sk]: { price: item.unitPrice!.toString(), qty: '1' } }));
+      setInputValues(prev => ({ ...prev, [sk]: { price: item.unitPrice!.toString(), qty: preservedQty.toString() } }));
       setQuoteItems(updated);
     } else if (mode === 'packs') {
       if (item.sellingType === 'pallets' || qip <= 1 || (item.displayUnit ?? 'units') === 'packs') return;

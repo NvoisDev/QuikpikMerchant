@@ -142,11 +142,14 @@ export function EditQuoteView({
     } else if (mode === 'units') {
       if (item.sellingType === 'units' && !packMode[getItemKey(item)]) return;
       if (!item.unitPrice) return;
+      // Packs → Units: item.quantity is already in base units, preserve it.
+      // Pallets → Units: different price context, reset to 1.
+      const preservedQty = item.sellingType === 'pallets' ? 1 : item.quantity;
       const updated = [...editItems];
-      updated[index] = { ...updated[index], sellingType: 'units', customPrice: item.unitPrice, quantity: 1 };
+      updated[index] = { ...updated[index], sellingType: 'units', customPrice: item.unitPrice, quantity: preservedQty };
       setEditItems(updated);
       const newKey = `${item.productId}-units`;
-      setPackInputs(prev => ({ ...prev, [newKey]: '1' }));
+      setPackInputs(prev => ({ ...prev, [newKey]: preservedQty.toString() }));
       setPackMode(prev => ({ ...prev, [newKey]: false }));
     } else if (mode === 'packs') {
       if (item.sellingType === 'pallets' || qip <= 1) return;
