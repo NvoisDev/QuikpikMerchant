@@ -154,7 +154,7 @@ export default function TeamManagement() {
   });
 
   // Fetch plan limits to drive simpleTier
-  const { data: planLimits } = useQuery<{
+  const { data: planLimits, isLoading: planLimitsLoading } = useQuery<{
     plan: string;
     limits: { products: number; broadcasts: number; teamMembers: number };
     usage: { products: number; broadcasts: number; teamMembers: number };
@@ -165,10 +165,16 @@ export default function TeamManagement() {
     staleTime: 5 * 60 * 1000,
   });
 
-  const simpleTier: 'free' | 'basic' | 'premium' =
-    planLimits?.plan === 'premium' ? 'premium' :
-    planLimits?.plan === 'standard' ? 'basic' :
-    'free';
+  // Default to 'premium' while loading so we never briefly block premium users;
+  // once data arrives we resolve to the real tier.
+  const simpleTier: 'free' | 'basic' | 'premium' = planLimitsLoading
+    ? 'premium'
+    : planLimits?.plan === 'premium' ? 'premium'
+    : planLimits?.plan === 'standard' ? 'basic'
+    : 'free';
+
+  // Human-readable plan label for display
+  const planDisplayLabel = simpleTier === 'premium' ? 'Premium' : simpleTier === 'basic' ? 'Standard' : 'Free';
 
   const inviteMemberMutation = useMutation({
     mutationFn: async (data: TeamMemberFormData) => {
@@ -383,52 +389,6 @@ export default function TeamManagement() {
     }
   };
 
-  // Premium access check - redirect non-premium users
-  if (simpleTier !== 'premium') {
-    return (
-      <div className="max-w-4xl mx-auto p-6">
-        <Card className="text-center py-12">
-          <CardHeader>
-            <div className="flex justify-center mb-4">
-              <div className="p-3 bg-yellow-100 rounded-full">
-                <Crown className="h-8 w-8 text-yellow-600" />
-              </div>
-            </div>
-            <CardTitle className="text-2xl mb-2">Premium Feature Required</CardTitle>
-            <p className="text-gray-600 mb-6">
-              Team Management is a premium feature that allows you to invite and manage team members with custom permissions.
-            </p>
-          </CardHeader>
-          <CardContent>
-            <div className="bg-yellow-50 p-4 rounded-lg mb-6">
-              <h3 className="font-semibold text-yellow-800 mb-2">Premium Plan includes:</h3>
-              <ul className="text-sm text-yellow-700 space-y-1">
-                <li>• Unlimited team members</li>
-                <li>• Custom role permissions</li>
-                <li>• Team invitation management</li>
-                <li>• Advanced access controls</li>
-              </ul>
-            </div>
-            <Button 
-              onClick={() => setShowUpgradeModal(true)}
-              className="bg-emerald-600 hover:bg-emerald-700"
-            >
-              <Crown className="h-4 w-4 mr-2" />
-              Upgrade to Premium
-            </Button>
-          </CardContent>
-        </Card>
-        
-        {/* Upgrade Modal */}
-        <SubscriptionUpgradeModal
-          open={showUpgradeModal}
-          onOpenChange={setShowUpgradeModal}
-          currentPlan={simpleTier}
-          reason="team_member_limit"
-        />
-      </div>
-    );
-  }
 
   if (isLoading) {
     return (
@@ -666,7 +626,7 @@ export default function TeamManagement() {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
             <div>
               <p className="text-sm text-gray-600">
-                Current Plan: <span className="font-semibold capitalize">{simpleTier}</span>
+                Current Plan: <span className="font-semibold">{planDisplayLabel}</span>
               </p>
               <p className="text-sm text-gray-600">
                 Team Members: {currentTeamCount} / {teamLimit === -1 ? "unlimited" : teamLimit}
