@@ -399,50 +399,59 @@ export function registerQuoteRoutes(app: Express): void {
             }
 
           } else if (sellingType === 'pallets') {
-            let orderResult: ReturnType<typeof InventoryCalculator.processOrder>;
-            try {
-              orderResult = InventoryCalculator.processOrder(quantity, 'pallets', {
-                stock: product.stock ?? 0,
-                palletStock: product.palletStock ?? 0,
-                quantityInPack: product.quantityInPack ?? 1,
-                unitsPerPallet: product.unitsPerPallet ?? 1,
-              });
-            } catch (stockErr: unknown) {
-              const e = stockErr as Error & { productName?: string; available?: number; requested?: number };
-              e.productName = product.name;
-              e.available = product.palletStock ?? 0;
-              e.requested = quantity;
-              throw e;
+            const qipP = product.quantityInPack ?? 1;
+            const uppP = product.unitsPerPallet ?? 1;
+            const baseUnitsNeededP = quantity * uppP * qipP;
+            const activeBatchesP = await trx.select().from(productBatches)
+              .where(and(eq(productBatches.productId, item.productId), eq(productBatches.status, 'active'),
+                or(isNull(productBatches.expiryDate), sql`${productBatches.expiryDate} >= ${today}`)))
+              .orderBy(sql`CASE WHEN expiry_date IS NULL THEN 1 ELSE 0 END`, asc(productBatches.expiryDate), asc(productBatches.createdAt));
+            let primaryBatchIdP: number | null = null;
+            if (activeBatchesP.length > 0) {
+              const totalAvailP = activeBatchesP.reduce((acc, b) => acc + b.quantity, 0);
+              if (totalAvailP < baseUnitsNeededP) {
+                const avail = (qipP > 0 && uppP > 0) ? Math.floor(Math.floor(totalAvailP / qipP) / uppP) : 0;
+                const e = new Error(`Insufficient stock for "${product.name}". ${avail} pallets available, ${quantity} requested.`) as Error & { code?: string; productName?: string; available?: number; requested?: number };
+                e.code = 'OUT_OF_STOCK'; e.productName = product.name; e.available = avail; e.requested = quantity;
+                throw e;
+              }
+              let remainingP = baseUnitsNeededP;
+              for (const batch of activeBatchesP) {
+                if (remainingP <= 0) break;
+                const deduct = Math.min(remainingP, batch.quantity);
+                const newQty = batch.quantity - deduct;
+                await trx.update(productBatches).set({ quantity: newQty, status: newQty === 0 ? 'depleted' : 'active', updatedAt: new Date() }).where(eq(productBatches.id, batch.id));
+                if (primaryBatchIdP === null) primaryBatchIdP = batch.id;
+                remainingP -= deduct;
+              }
+            } else {
+              if ((product.stock ?? 0) < baseUnitsNeededP) {
+                const avail = (qipP > 0 && uppP > 0) ? Math.floor(Math.floor((product.stock ?? 0) / qipP) / uppP) : 0;
+                const e = new Error(`Insufficient stock for "${product.name}". ${avail} pallets available, ${quantity} requested.`) as Error & { code?: string; productName?: string; available?: number; requested?: number };
+                e.code = 'OUT_OF_STOCK'; e.productName = product.name; e.available = avail; e.requested = quantity;
+                throw e;
+              }
             }
-
-            const { newUnitStock, newPalletStock } = orderResult;
-
-            await trx.insert(orderItems).values({
-              orderId: quoteOrderRow.id,
-              productId: item.productId,
-              quantity: item.quantity,
-              unitPrice: item.customPrice.toFixed(2),
-              total: (item.customPrice * item.quantity).toFixed(2),
-              sellingType,
-            });
-
-            await trx.update(products)
-              .set({ stock: newUnitStock, palletStock: newPalletStock, updatedAt: new Date() })
-              .where(eq(products.id, item.productId));
-
-            const cskey3 = `${item.productId}_pallets`;
+            const [batchSumRowP] = await trx.select({ total: sum(productBatches.quantity) }).from(productBatches)
+              .where(and(eq(productBatches.productId, item.productId), eq(productBatches.status, 'active'),
+                or(isNull(productBatches.expiryDate), sql`${productBatches.expiryDate} >= ${today}`)));
+            const newUnitStockP = parseInt(String(batchSumRowP?.total ?? 0), 10);
+            const newPalletStockP = (qipP > 0 && uppP > 0) ? Math.floor(Math.floor(newUnitStockP / qipP) / uppP) : 0;
+            await trx.insert(orderItems).values({ orderId: quoteOrderRow.id, productId: item.productId, quantity: item.quantity, unitPrice: item.customPrice.toFixed(2), total: (item.customPrice * item.quantity).toFixed(2), sellingType, batchId: primaryBatchIdP });
+            await trx.update(products).set({ stock: newUnitStockP, palletStock: newPalletStockP, updatedAt: new Date() }).where(eq(products.id, item.productId));
+            const cskey3 = `${item.productId}_units`;
             const csum3 = createPurchaseSummary.get(cskey3);
-            if (csum3) { csum3.qty += quantity; }
-            else createPurchaseSummary.set(cskey3, { productId: item.productId, sellingType: 'pallets', qty: quantity, primaryBatchId: null });
+            if (csum3) { csum3.qty += baseUnitsNeededP; if (csum3.primaryBatchId === null) csum3.primaryBatchId = primaryBatchIdP; }
+            else createPurchaseSummary.set(cskey3, { productId: item.productId, sellingType: 'units', qty: baseUnitsNeededP, primaryBatchId: primaryBatchIdP });
           }
         }
-        // Write exactly one consolidated purchase movement per (product, sellingType)
+        // Write exactly one consolidated purchase movement per product — always in base units
         for (const psum of Array.from(createPurchaseSummary.values())) {
-          const { productId: psProductId, sellingType: psSt, qty: psQty, primaryBatchId: psBid } = psum;
-          const stockBefore = psSt === 'pallets' ? (stockBeforeCreate.get(psProductId)?.pallets ?? 0) : (stockBeforeCreate.get(psProductId)?.units ?? 0);
-          const [productNow] = await trx.select({ stock: products.stock, palletStock: products.palletStock }).from(products).where(eq(products.id, psProductId)).limit(1);
-          const stockAfter = psSt === 'pallets' ? (productNow?.palletStock ?? 0) : (productNow?.stock ?? 0);
-          await trx.insert(stockMovements).values({ productId: psProductId, wholesalerId, movementType: 'purchase', quantity: -psQty, unitType: psSt === 'pallets' ? 'pallets' : 'units', stockBefore, stockAfter, reason: `Invoice order sale — ${psQty} ${psSt}`, orderId: quoteOrderRow.id, customerName: quoteOrderRow.customerName ?? null, businessProfileId: quoteOrderRow.businessProfileId ?? null, batchId: psBid });
+          const { productId: psProductId, qty: psQty, primaryBatchId: psBid } = psum;
+          const stockBefore = stockBeforeCreate.get(psProductId)?.units ?? 0;
+          const [productNow] = await trx.select({ stock: products.stock }).from(products).where(eq(products.id, psProductId)).limit(1);
+          const stockAfter = productNow?.stock ?? 0;
+          await trx.insert(stockMovements).values({ productId: psProductId, wholesalerId, movementType: 'purchase', quantity: -psQty, unitType: 'units', stockBefore, stockAfter, reason: `Invoice order sale — ${psQty} units`, orderId: quoteOrderRow.id, customerName: quoteOrderRow.customerName ?? null, businessProfileId: quoteOrderRow.businessProfileId ?? null, batchId: psBid });
         }
         return quoteOrderRow;
       });
@@ -1188,10 +1197,10 @@ export function registerQuoteRoutes(app: Express): void {
           ...existingItems.filter(i => i.productId !== null).map(i => i.productId as number),
           ...items.map(i => i.productId),
         ]));
-        const stockBeforeEdit7a = new Map<number, { units: number; pallets: number }>();
+        const stockBeforeEdit7a = new Map<number, { units: number; pallets: number; qip: number; upp: number }>();
         for (const pid of allAffectedProductIds) {
-          const [pre] = await trx.select({ stock: products.stock, palletStock: products.palletStock }).from(products).where(eq(products.id, pid)).limit(1);
-          if (pre) stockBeforeEdit7a.set(pid, { units: pre.stock ?? 0, pallets: pre.palletStock ?? 0 });
+          const [pre] = await trx.select({ stock: products.stock, palletStock: products.palletStock, quantityInPack: products.quantityInPack, unitsPerPallet: products.unitsPerPallet }).from(products).where(eq(products.id, pid)).limit(1);
+          if (pre) stockBeforeEdit7a.set(pid, { units: pre.stock ?? 0, pallets: pre.palletStock ?? 0, qip: pre.quantityInPack ?? 1, upp: pre.unitsPerPallet ?? 1 });
         }
 
         // 7a. Restore stock from old items — aggregate by product for exactly one movement per product
@@ -1214,12 +1223,16 @@ export function registerQuoteRoutes(app: Express): void {
             continue;
           }
           if (group.sellingType === 'pallets') {
-            const palletStockBefore = product.palletStock || 0;
-            const newPalletStock = palletStockBefore + group.qty;
             const qip = product.quantityInPack ?? 1;
             const upp = product.unitsPerPallet ?? 1;
-            const newUnitStock = (product.stock ?? 0) + group.qty * qip * upp;
-            await trx.update(products).set({ palletStock: newPalletStock, stock: newUnitStock, updatedAt: new Date() }).where(eq(products.id, productId));
+            const baseUnitsToRestore = group.qty * qip * upp;
+            await trx.insert(productBatches).values({ productId, batchNumber: `RETURN-${existingOrder.orderNumber}`, quantity: baseUnitsToRestore, status: 'active', notes: `Return restock from invoice edit of order ${existingOrder.orderNumber}` });
+            const [batchSumRowR] = await trx.select({ total: sum(productBatches.quantity) }).from(productBatches)
+              .where(and(eq(productBatches.productId, productId), eq(productBatches.status, 'active'),
+                or(isNull(productBatches.expiryDate), sql`${productBatches.expiryDate} >= ${editRestoreToday}`)));
+            const newUnitStock = parseInt(String(batchSumRowR?.total ?? 0), 10);
+            const newPalletStock = (qip > 0 && upp > 0) ? Math.floor(Math.floor(newUnitStock / qip) / upp) : 0;
+            await trx.update(products).set({ stock: newUnitStock, palletStock: newPalletStock, updatedAt: new Date() }).where(eq(products.id, productId));
           } else {
             const unitStockBefore = product.stock || 0;
             // Restore each batch individually; fall back to a return batch if original is missing
@@ -1260,19 +1273,51 @@ export function registerQuoteRoutes(app: Express): void {
           if (!product) continue;
 
           if (sellingType === 'pallets') {
-            if ((product.palletStock || 0) < item.quantity) {
-              const e = new Error(`Insufficient pallet stock for "${product.name}" after concurrent update. ${product.palletStock || 0} available, ${item.quantity} requested.`) as Error & { code?: string; productName?: string; available?: number; requested?: number };
-              e.code = 'OUT_OF_STOCK'; e.productName = product.name; e.available = product.palletStock || 0; e.requested = item.quantity;
-              throw e;
+            const qipE = product.quantityInPack ?? 1;
+            const uppE = product.unitsPerPallet ?? 1;
+            const baseUnitsNeededE = item.quantity * uppE * qipE;
+            const editAllocToday = new Date().toISOString().split('T')[0];
+            const activeBatchesE = await trx.select().from(productBatches)
+              .where(and(eq(productBatches.productId, item.productId), eq(productBatches.status, 'active'),
+                or(isNull(productBatches.expiryDate), sql`${productBatches.expiryDate} >= ${editAllocToday}`)))
+              .orderBy(sql`CASE WHEN expiry_date IS NULL THEN 1 ELSE 0 END`, asc(productBatches.expiryDate), asc(productBatches.createdAt));
+            let primaryBatchIdE: number | null = null;
+            if (activeBatchesE.length > 0) {
+              const totalAvailE = activeBatchesE.reduce((acc, b) => acc + b.quantity, 0);
+              if (totalAvailE < baseUnitsNeededE) {
+                const availPallets = (qipE > 0 && uppE > 0) ? Math.floor(Math.floor(totalAvailE / qipE) / uppE) : 0;
+                const e = new Error(`Insufficient stock for "${product.name}" after concurrent update. ${availPallets} pallets available, ${item.quantity} requested.`) as Error & { code?: string; productName?: string; available?: number; requested?: number };
+                e.code = 'OUT_OF_STOCK'; e.productName = product.name; e.available = availPallets; e.requested = item.quantity;
+                throw e;
+              }
+              let remainingE = baseUnitsNeededE;
+              for (const batch of activeBatchesE) {
+                if (remainingE <= 0) break;
+                const deduct = Math.min(remainingE, batch.quantity);
+                const newQty = batch.quantity - deduct;
+                await trx.update(productBatches).set({ quantity: newQty, status: newQty === 0 ? 'depleted' : 'active', updatedAt: new Date() }).where(eq(productBatches.id, batch.id));
+                if (primaryBatchIdE === null) primaryBatchIdE = batch.id;
+                remainingE -= deduct;
+              }
+            } else {
+              if ((product.stock ?? 0) < baseUnitsNeededE) {
+                const availPallets = (qipE > 0 && uppE > 0) ? Math.floor(Math.floor((product.stock ?? 0) / qipE) / uppE) : 0;
+                const e = new Error(`Insufficient stock for "${product.name}" after concurrent update. ${availPallets} pallets available, ${item.quantity} requested.`) as Error & { code?: string; productName?: string; available?: number; requested?: number };
+                e.code = 'OUT_OF_STOCK'; e.productName = product.name; e.available = availPallets; e.requested = item.quantity;
+                throw e;
+              }
             }
-            const orderResult = InventoryCalculator.processOrder(item.quantity, 'pallets', { stock: product.stock ?? 0, palletStock: product.palletStock ?? 0, quantityInPack: product.quantityInPack, unitsPerPallet: product.unitsPerPallet });
-            const { newUnitStock, newPalletStock } = orderResult;
-            await trx.insert(orderItems).values({ orderId: quoteId, productId: item.productId, quantity: item.quantity, unitPrice: item.customPrice.toFixed(2), total: (item.customPrice * item.quantity).toFixed(2), sellingType });
-            await trx.update(products).set({ stock: newUnitStock, palletStock: newPalletStock, updatedAt: new Date() }).where(eq(products.id, item.productId));
-            const epkey1 = `${item.productId}_pallets`;
+            const [batchSumRowE] = await trx.select({ total: sum(productBatches.quantity) }).from(productBatches)
+              .where(and(eq(productBatches.productId, item.productId), eq(productBatches.status, 'active'),
+                or(isNull(productBatches.expiryDate), sql`${productBatches.expiryDate} >= ${editAllocToday}`)));
+            const newUnitStockE = parseInt(String(batchSumRowE?.total ?? 0), 10);
+            const newPalletStockE = (qipE > 0 && uppE > 0) ? Math.floor(Math.floor(newUnitStockE / qipE) / uppE) : 0;
+            await trx.insert(orderItems).values({ orderId: quoteId, productId: item.productId, quantity: item.quantity, unitPrice: item.customPrice.toFixed(2), total: (item.customPrice * item.quantity).toFixed(2), sellingType, batchId: primaryBatchIdE });
+            await trx.update(products).set({ stock: newUnitStockE, palletStock: newPalletStockE, updatedAt: new Date() }).where(eq(products.id, item.productId));
+            const epkey1 = `${item.productId}_units`;
             const epsum1 = editPurchaseSummary.get(epkey1);
-            if (epsum1) { epsum1.qty += item.quantity; }
-            else editPurchaseSummary.set(epkey1, { productId: item.productId, sellingType: 'pallets', qty: item.quantity, primaryBatchId: null });
+            if (epsum1) { epsum1.qty += baseUnitsNeededE; if (epsum1.primaryBatchId === null) epsum1.primaryBatchId = primaryBatchIdE; }
+            else editPurchaseSummary.set(epkey1, { productId: item.productId, sellingType: 'units', qty: baseUnitsNeededE, primaryBatchId: primaryBatchIdE });
           } else {
             // Units: prefer FEFO batch deduction
             const today = new Date().toISOString().split('T')[0];
@@ -1332,36 +1377,39 @@ export function registerQuoteRoutes(app: Express): void {
             }
           }
         }
-        // Write NET movements only — one per (product, sellingType) if quantity actually changed.
+        // Write NET movements only — one per product in base units if quantity actually changed.
         // No movement if the quantity is identical (e.g. price-only edit), avoiding restore+reallocate noise.
-        const netMoveMap = new Map<string, { productId: number; sellingType: string; oldQty: number; newQty: number; primaryBatchId: number | null }>();
+        // All quantities are tracked in base units regardless of selling type.
+        const netMoveMap = new Map<string, { productId: number; oldQty: number; newQty: number; primaryBatchId: number | null }>();
         for (const oldItem of existingItems) {
           if (oldItem.productId === null) continue;
           const st = oldItem.sellingType || 'units';
-          const key = `${oldItem.productId}_${st}`;
-          const entry = netMoveMap.get(key) ?? { productId: oldItem.productId, sellingType: st, oldQty: 0, newQty: 0, primaryBatchId: null };
-          entry.oldQty += oldItem.quantity;
+          const key = `${oldItem.productId}_units`;
+          const pre = stockBeforeEdit7a.get(oldItem.productId);
+          const qipOld = pre?.qip ?? 1;
+          const uppOld = pre?.upp ?? 1;
+          const baseOldQty = st === 'pallets' ? oldItem.quantity * qipOld * uppOld : oldItem.quantity;
+          const entry = netMoveMap.get(key) ?? { productId: oldItem.productId, oldQty: 0, newQty: 0, primaryBatchId: null };
+          entry.oldQty += baseOldQty;
           netMoveMap.set(key, entry);
         }
         for (const [key, epsum] of Array.from(editPurchaseSummary.entries())) {
-          const entry = netMoveMap.get(key) ?? { productId: epsum.productId, sellingType: epsum.sellingType, oldQty: 0, newQty: 0, primaryBatchId: null };
+          const entry = netMoveMap.get(key) ?? { productId: epsum.productId, oldQty: 0, newQty: 0, primaryBatchId: null };
           entry.newQty += epsum.qty;
           if (entry.primaryBatchId === null) entry.primaryBatchId = epsum.primaryBatchId;
           netMoveMap.set(key, entry);
         }
-        for (const { productId: nmPid, sellingType: nmSt, oldQty, newQty, primaryBatchId: nmBid } of Array.from(netMoveMap.values())) {
+        for (const { productId: nmPid, oldQty, newQty, primaryBatchId: nmBid } of Array.from(netMoveMap.values())) {
           const net = newQty - oldQty; // positive = more allocated; negative = units returned
           if (net === 0) continue;
-          const stockBefore7a = nmSt === 'pallets' ? (stockBeforeEdit7a.get(nmPid)?.pallets ?? 0) : (stockBeforeEdit7a.get(nmPid)?.units ?? 0);
-          const [productNowNet] = await trx.select({ stock: products.stock, palletStock: products.palletStock }).from(products).where(eq(products.id, nmPid)).limit(1);
-          const stockAfterNet = nmSt === 'pallets' ? (productNowNet?.palletStock ?? 0) : (productNowNet?.stock ?? 0);
+          const stockBefore7a = stockBeforeEdit7a.get(nmPid)?.units ?? 0;
+          const [productNowNet] = await trx.select({ stock: products.stock }).from(products).where(eq(products.id, nmPid)).limit(1);
+          const stockAfterNet = productNowNet?.stock ?? 0;
           if (net > 0) {
-            // More units allocated on this edit
-            await trx.insert(stockMovements).values({ productId: nmPid, wholesalerId, movementType: 'purchase', quantity: -net, unitType: nmSt === 'pallets' ? 'pallets' : 'units', stockBefore: stockBefore7a, stockAfter: stockAfterNet, reason: `Invoice edit — ${net} extra ${nmSt} allocated`, orderId: quoteId, customerName: existingOrder.customerName ?? null, businessProfileId: existingOrder.businessProfileId ?? null, batchId: nmBid });
+            await trx.insert(stockMovements).values({ productId: nmPid, wholesalerId, movementType: 'purchase', quantity: -net, unitType: 'units', stockBefore: stockBefore7a, stockAfter: stockAfterNet, reason: `Invoice edit — ${net} extra units allocated`, orderId: quoteId, customerName: existingOrder.customerName ?? null, businessProfileId: existingOrder.businessProfileId ?? null, batchId: nmBid });
           } else {
-            // Fewer units allocated — units returned to stock
             const absNet = Math.abs(net);
-            await trx.insert(stockMovements).values({ productId: nmPid, wholesalerId, movementType: 'return', quantity: absNet, unitType: nmSt === 'pallets' ? 'pallets' : 'units', stockBefore: stockBefore7a, stockAfter: stockAfterNet, reason: `Invoice edit — ${absNet} ${nmSt} returned`, orderId: quoteId, customerName: existingOrder.customerName ?? null, businessProfileId: existingOrder.businessProfileId ?? null });
+            await trx.insert(stockMovements).values({ productId: nmPid, wholesalerId, movementType: 'return', quantity: absNet, unitType: 'units', stockBefore: stockBefore7a, stockAfter: stockAfterNet, reason: `Invoice edit — ${absNet} units returned`, orderId: quoteId, customerName: existingOrder.customerName ?? null, businessProfileId: existingOrder.businessProfileId ?? null });
           }
         }
 
