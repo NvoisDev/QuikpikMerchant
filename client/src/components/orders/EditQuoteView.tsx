@@ -243,6 +243,8 @@ export function EditQuoteView({
                     ? computeBaseUnits(parseInt(displayedQty) || 1, 'pallets', item.quantityInPack ?? 1, item.unitsPerPallet)
                     : undefined;
                   const unitLabel = item.sellingType === 'pallets' ? 'pallet' : isPacks ? 'pack' : 'unit';
+                  // Price is per base-unit except for pallet items (which use palletPrice)
+                  const priceLabel = item.sellingType === 'pallets' ? 'pallet' : 'unit';
                   const palletMoqViolation = item.sellingType === 'pallets' && item.palletMoq && item.palletMoq > 1 && item.quantity < item.palletMoq;
 
                   return (
@@ -354,7 +356,7 @@ export function EditQuoteView({
                             }}
                             className={`w-20 p-1 border rounded text-sm text-right ${item.customPrice <= 0 ? 'border-red-400 bg-red-50' : ''}`}
                           />
-                          <span className="text-xs text-gray-500">/{unitLabel}</span>
+                          <span className="text-xs text-gray-500">/{priceLabel}</span>
                         </div>
                         {item.customPrice <= 0 && (
                           <p className="text-xs text-red-600">Price must be greater than £0</p>

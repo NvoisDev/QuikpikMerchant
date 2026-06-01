@@ -80,6 +80,8 @@ export function QuoteItemCard({
   const liveBaseQty = computeBaseUnits(liveDisplayQty, isPacks ? 'packs' : 'units', qip);
 
   const unitLabel = item.sellingType === 'pallets' ? 'pallet' : isPacks ? 'pack' : 'unit';
+  // Price is always per base-unit except for pallet items (which use palletPrice)
+  const priceLabel = item.sellingType === 'pallets' ? 'pallet' : 'unit';
   const stockUnitLabel = item.sellingType === 'pallets' ? 'pallet' : 'unit';
 
   const palletMoqViolation =
@@ -99,7 +101,7 @@ export function QuoteItemCard({
             )}
           </div>
           <div className="text-sm text-gray-500">
-            Original: {formatCurrency(item.originalPrice)}/{unitLabel}
+            Original: {formatCurrency(item.originalPrice)}/{priceLabel}
             {item.customPrice < item.originalPrice && (
               <Badge variant="secondary" className="ml-2 text-green-600">
                 <Percent className="h-3 w-3 mr-1" />
@@ -203,7 +205,7 @@ export function QuoteItemCard({
       {/* Price, Qty, Total row */}
       <div className="flex items-end gap-3">
         <div className="flex-1">
-          <Label className="text-xs text-gray-500">Price / {unitLabel}</Label>
+          <Label className="text-xs text-gray-500">Price / {priceLabel}</Label>
           <Input
             type="text"
             inputMode="decimal"
@@ -329,7 +331,7 @@ export function QuoteItemCard({
               />
             </div>
             <div className="flex-1 text-xs">
-              <Label className="text-xs text-gray-400">Margin / {unitLabel}</Label>
+              <Label className="text-xs text-gray-400">Margin / {priceLabel}</Label>
               <div className={`font-medium mt-1.5 ${isNegative ? 'text-red-600' : 'text-green-700'}`}>
                 {formatCurrency(marginAmt)} ({marginPct.toFixed(1)}%)
               </div>
