@@ -319,19 +319,22 @@ function ProductCard({
                   {formatNumber(product.moq ?? 0)} {product.sellingFormat === 'pallets' ? 'pallets' : 'units'}
                 </span>
               </div>
-              <div className="flex justify-between items-center">
+              <div className="flex justify-between items-start">
                 <span className="text-gray-500">Remaining</span>
-                <span className={`font-medium ${stockStatus.color}`}>
+                <div className={`font-medium text-right ${stockStatus.color}`}>
+                  <div>
+                    {formatNumber(product.stock ?? 0)} {product.sellingFormat === 'pallets' ? 'pallets' : 'units'}
+                  </div>
                   {(() => {
                     const breakdown = InventoryCalculator.formatStockBreakdown(
                       product.stock ?? 0,
                       product.quantityInPack,
-                      product.sellingFormat === 'pallets' ? null : product.unitsPerPallet
+                      product.unitsPerPallet
                     );
-                    if (breakdown) return breakdown.label;
-                    return `${formatNumber(product.stock ?? 0)} ${product.sellingFormat === 'pallets' ? 'pallets' : 'units'}`;
+                    if (!breakdown) return null;
+                    return <div className="text-xs font-normal text-gray-500 mt-0.5">{breakdown.label}</div>;
                   })()}
-                </span>
+                </div>
               </div>
               {expiryInfo && (
                 <div className="flex justify-between items-center">
