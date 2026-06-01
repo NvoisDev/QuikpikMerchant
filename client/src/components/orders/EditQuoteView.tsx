@@ -311,9 +311,11 @@ export function EditQuoteView({
             >
               <option value="bank_transfer">Bank Transfer</option>
               <option value="cash">Cash</option>
+              <option value="card">Card Payment</option>
               <option value="cheque">Cheque</option>
               <option value="payment_link">Payment Link</option>
               <option value="pay_later">Pay Later</option>
+              <option value="other">Other</option>
             </select>
           </div>
 

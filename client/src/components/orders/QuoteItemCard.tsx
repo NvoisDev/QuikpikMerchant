@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Trash2, Percent, AlertTriangle } from "lucide-react";
 
 interface QuoteItem {
+  stableId: string;
   productId: number;
   productName: string;
   originalPrice: number;
@@ -21,6 +22,12 @@ interface QuoteItem {
   stockCount?: number;
   quantityInPack?: number;
   displayUnit?: 'units' | 'packs';
+  sellingFormat?: string;
+  palletPrice?: number;
+  unitPrice?: number;
+  palletMoq?: number;
+  unitStockCount?: number;
+  palletStockCount?: number;
 }
 
 interface QuoteItemCardProps {
@@ -36,7 +43,7 @@ interface QuoteItemCardProps {
   removeItem: (index: number) => void;
   formatCurrency: (n: number) => string;
   formatWeight: (n: number | string) => string;
-  onToggleDisplayUnit?: () => void;
+  onSwitchMode?: (mode: 'units' | 'packs' | 'pallets') => void;
 }
 
 export function QuoteItemCard({
@@ -52,33 +59,46 @@ export function QuoteItemCard({
   removeItem,
   formatCurrency,
   formatWeight,
-  onToggleDisplayUnit,
+  onSwitchMode,
 }: QuoteItemCardProps) {
-  const sk = `${item.productId}-${item.sellingType}`;
+  const sk = item.stableId;
   const qip = item.quantityInPack ?? 1;
   const isPacks = item.displayUnit === 'packs' && qip > 1 && item.sellingType !== 'pallets';
-  const showPackToggle = qip > 1 && item.sellingType !== 'pallets';
+
+  const activeMode: 'units' | 'packs' | 'pallets' =
+    item.sellingType === 'pallets' ? 'pallets' : isPacks ? 'packs' : 'units';
+
+  const showUnits = item.sellingFormat !== 'pallets' && !!item.unitPrice;
+  const showPacks = qip > 1 && item.sellingFormat !== 'pallets';
+  const showPallets = !!item.palletPrice && item.sellingFormat !== 'units';
+  const showModeSelector = (showPacks || showPallets) && (showUnits || showPacks || showPallets);
 
   const liveDisplayQty = parseInt(inputValues[sk]?.qty ?? '') || (
     isPacks ? Math.max(1, Math.round(item.quantity / qip)) : item.quantity
   );
   const liveBaseQty = isPacks ? liveDisplayQty * qip : liveDisplayQty;
 
+  const unitLabel = item.sellingType === 'pallets' ? 'pallet' : isPacks ? 'pack' : 'unit';
+  const stockUnitLabel = item.sellingType === 'pallets' ? 'pallet' : 'unit';
+
+  const palletMoqViolation =
+    item.sellingType === 'pallets' && item.palletMoq && item.palletMoq > 1 && liveDisplayQty < item.palletMoq;
+
   return (
     <div className="p-3 bg-gray-50 rounded-lg">
       {/* Product name and original price */}
-      <div className="flex items-start justify-between mb-3">
+      <div className="flex items-start justify-between mb-2">
         <div className="flex-1 min-w-0">
           <div className="font-medium truncate flex items-center gap-2">
             {item.productName}
-            {item.sellingType === 'pallets' && (
+            {item.sellingType === 'pallets' && !showModeSelector && (
               <Badge variant="secondary" className="bg-blue-100 text-blue-700 text-xs">
                 Pallet
               </Badge>
             )}
           </div>
           <div className="text-sm text-gray-500">
-            Original: {formatCurrency(item.originalPrice)}{item.sellingType === 'pallets' ? '/pallet' : '/unit'}
+            Original: {formatCurrency(item.originalPrice)}/{unitLabel}
             {item.customPrice < item.originalPrice && (
               <Badge variant="secondary" className="ml-2 text-green-600">
                 <Percent className="h-3 w-3 mr-1" />
@@ -98,7 +118,7 @@ export function QuoteItemCard({
           )}
           {item.stockCount !== undefined && (
             <Badge variant="secondary" className="text-xs text-gray-500 bg-gray-100">
-              {item.stockCount} {item.sellingType === 'pallets' ? 'pallet' : 'unit'}{item.stockCount !== 1 ? 's' : ''} in stock
+              {item.stockCount} {stockUnitLabel}{item.stockCount !== 1 ? 's' : ''} in stock
             </Badge>
           )}
           {item.promotionalOffers && item.promotionalOffers.length > 0 && item.sellingType !== 'pallets' && (() => {
@@ -146,10 +166,43 @@ export function QuoteItemCard({
         </Button>
       </div>
 
+      {/* Unit mode selector */}
+      {showModeSelector && onSwitchMode && (
+        <div className="flex rounded overflow-hidden border border-gray-200 text-xs mb-3 w-fit">
+          {showUnits && (
+            <button
+              type="button"
+              onClick={() => onSwitchMode('units')}
+              className={`px-2.5 py-1 transition-colors ${activeMode === 'units' ? 'bg-gray-700 text-white font-medium' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+            >
+              Units
+            </button>
+          )}
+          {showPacks && (
+            <button
+              type="button"
+              onClick={() => onSwitchMode('packs')}
+              className={`px-2.5 py-1 border-l transition-colors ${activeMode === 'packs' ? 'bg-blue-600 text-white font-medium' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+            >
+              Packs
+            </button>
+          )}
+          {showPallets && (
+            <button
+              type="button"
+              onClick={() => onSwitchMode('pallets')}
+              className={`px-2.5 py-1 border-l transition-colors ${activeMode === 'pallets' ? 'bg-blue-700 text-white font-medium' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+            >
+              Pallets
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Price, Qty, Total row */}
       <div className="flex items-end gap-3">
         <div className="flex-1">
-          <Label className="text-xs text-gray-500">Price</Label>
+          <Label className="text-xs text-gray-500">Price / {unitLabel}</Label>
           <Input
             type="text"
             inputMode="decimal"
@@ -176,22 +229,10 @@ export function QuoteItemCard({
             <p className="text-xs text-red-500 mt-0.5">Price must be &gt; £0</p>
           )}
         </div>
-        <div className="w-24">
-          <div className="flex items-center gap-1 mb-0.5">
-            <Label className="text-xs text-gray-500">
-              {item.sellingType === 'pallets' ? 'Qty (pallets)' : isPacks ? 'Qty (packs)' : 'Qty (units)'}
-            </Label>
-            {showPackToggle && onToggleDisplayUnit && (
-              <button
-                type="button"
-                onClick={onToggleDisplayUnit}
-                className="text-[10px] px-1 py-0 rounded border border-blue-200 bg-blue-50 text-blue-600 hover:bg-blue-100 leading-tight"
-                title={isPacks ? 'Switch to units' : 'Switch to packs'}
-              >
-                {isPacks ? '÷ packs' : '× packs'}
-              </button>
-            )}
-          </div>
+        <div className="w-28">
+          <Label className="text-xs text-gray-500">
+            Qty ({item.sellingType === 'pallets' ? 'pallets' : isPacks ? 'packs' : 'units'})
+          </Label>
           <Input
             type="text"
             inputMode="numeric"
@@ -206,6 +247,7 @@ export function QuoteItemCard({
             onBlur={(e) => {
               const val = parseInt(e.target.value);
               if (!isNaN(val) && val >= 1) {
+                // Packs mode: convert to base units before storing
                 const baseUnits = isPacks ? val * qip : val;
                 updateItemQuantity(index, baseUnits);
                 setInputValues(prev => ({ ...prev, [sk]: { ...prev[sk], qty: val.toString() } }));
@@ -215,7 +257,7 @@ export function QuoteItemCard({
                 setInputValues(prev => ({ ...prev, [sk]: { ...prev[sk], qty: '1' } }));
               }
             }}
-            className={`h-8 ${item.quantity < 1 ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
+            className={`h-8 ${item.quantity < 1 || palletMoqViolation ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
           />
           {item.quantity < 1 && (
             <p className="text-xs text-red-500 mt-0.5">Min qty 1</p>
@@ -228,6 +270,9 @@ export function QuoteItemCard({
               = {liveDisplayQty * item.unitsPerPallet * item.quantityInPack} units
             </p>
           )}
+          {palletMoqViolation && (
+            <p className="text-xs text-red-500 mt-0.5">Min {item.palletMoq} pallets</p>
+          )}
         </div>
         <div className="w-20 text-right">
           <Label className="text-xs text-gray-500">Total</Label>
@@ -239,11 +284,12 @@ export function QuoteItemCard({
 
       {/* Stock warning */}
       {item.stockCount !== undefined && (() => {
-        if (liveBaseQty <= item.stockCount) return null;
+        const compareQty = item.sellingType === 'pallets' ? liveDisplayQty : liveBaseQty;
+        if (compareQty <= item.stockCount) return null;
         return (
           <div className="mt-2 flex items-center gap-1.5 rounded-md bg-yellow-50 border border-yellow-200 px-3 py-2 text-sm text-yellow-800">
             <AlertTriangle className="h-4 w-4 shrink-0 text-yellow-600" />
-            <span>Only {item.stockCount} units available — you have {liveBaseQty}</span>
+            <span>Only {item.stockCount} {stockUnitLabel}{item.stockCount !== 1 ? 's' : ''} available — you have {compareQty}</span>
           </div>
         );
       })()}
@@ -282,7 +328,7 @@ export function QuoteItemCard({
               />
             </div>
             <div className="flex-1 text-xs">
-              <Label className="text-xs text-gray-400">Margin / unit</Label>
+              <Label className="text-xs text-gray-400">Margin / {unitLabel}</Label>
               <div className={`font-medium mt-1.5 ${isNegative ? 'text-red-600' : 'text-green-700'}`}>
                 {formatCurrency(marginAmt)} ({marginPct.toFixed(1)}%)
               </div>

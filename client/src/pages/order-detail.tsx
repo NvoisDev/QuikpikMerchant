@@ -1101,6 +1101,7 @@ export default function OrderDetail() {
                     customPrice: parseFloat(item.unitPrice || '0'),
                     sellingType: (item.sellingType as 'units' | 'pallets') || 'units',
                     imageUrl: item.product?.imageUrl,
+                    quantityInPack: item.product?.quantityInPack,
                   }));
                   setEditItems(items);
                   const defaultMethod = order.paymentMethod || (stripeReady ? 'payment_link' : 'bank_transfer');

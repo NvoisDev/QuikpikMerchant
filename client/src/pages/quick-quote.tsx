@@ -66,6 +66,7 @@ import { DialogDescription } from "@/components/ui/dialog";
 import { QuoteItemCard } from "@/components/orders/QuoteItemCard";
 
 interface QuoteItem {
+  stableId: string;
   productId: number;
   productName: string;
   originalPrice: number;
@@ -82,6 +83,12 @@ interface QuoteItem {
   stockCount?: number;
   quantityInPack?: number;
   displayUnit?: 'units' | 'packs';
+  sellingFormat?: string;
+  palletPrice?: number;
+  unitPrice?: number;
+  palletMoq?: number;
+  unitStockCount?: number;
+  palletStockCount?: number;
 }
 
 interface Customer {
@@ -125,6 +132,8 @@ interface Product {
   totalBatchStock?: number | null;
   nearestExpiry?: string | null;
   batchCount?: number;
+  sellingFormat?: string;
+  palletMoq?: number;
 }
 
 interface CollectionAddress {
@@ -268,7 +277,10 @@ export default function QuickQuote() {
         const product = products.find((p: any) => p.id === item.productId);
         if (!product) return null;
         const price = parseFloat(item.unitPrice);
+        const palletPriceNum = product.palletPrice ? parseFloat(product.palletPrice) : undefined;
+        const sid = `${item.productId}-${item.sellingType || 'units'}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
         return {
+          stableId: sid,
           productId: item.productId,
           productName: product.name,
           originalPrice: price,
@@ -283,13 +295,21 @@ export default function QuickQuote() {
           unitSize: product.sizePerUnit ?? undefined,
           unitOfMeasure: product.unitOfMeasure ?? undefined,
           stockCount: product.stock ?? 0,
+          quantityInPack: (product.quantityInPack ?? 1) > 1 ? product.quantityInPack : undefined,
+          displayUnit: 'units',
+          sellingFormat: product.sellingFormat,
+          palletPrice: palletPriceNum,
+          unitPrice: parseFloat(product.price),
+          palletMoq: product.palletMoq,
+          unitStockCount: product.stock ?? 0,
+          palletStockCount: product.palletStock ?? 0,
         } as QuoteItem;
       }).filter(Boolean) as QuoteItem[];
       if (prefilled.length > 0) {
         setQuoteItems(prefilled);
         const restored: Record<string, { price: string; qty: string }> = {};
         prefilled.forEach(item => {
-          restored[String(item.productId)] = { price: String(item.customPrice), qty: String(item.quantity) };
+          restored[item.stableId] = { price: String(item.customPrice), qty: String(item.quantity) };
         });
         setInputValues(restored);
       }
@@ -370,10 +390,14 @@ export default function QuickQuote() {
     if (!savedDraft) return;
     if (savedDraft.selectedCustomer) setSelectedCustomer(savedDraft.selectedCustomer);
     if (savedDraft.quoteItems?.length > 0) {
-      setQuoteItems(savedDraft.quoteItems);
+      const itemsWithIds = savedDraft.quoteItems.map((item: QuoteItem) => ({
+        ...item,
+        stableId: item.stableId || `${item.productId}-${item.sellingType}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      }));
+      setQuoteItems(itemsWithIds);
       const restored: Record<string, { price: string; qty: string }> = {};
-      savedDraft.quoteItems.forEach((item: QuoteItem) => {
-        restored[String(item.productId)] = { price: String(item.customPrice), qty: String(item.quantity) };
+      itemsWithIds.forEach((item: QuoteItem) => {
+        restored[item.stableId] = { price: String(item.customPrice), qty: String(item.quantity) };
       });
       setInputValues(restored);
     }
@@ -627,9 +651,9 @@ export default function QuickQuote() {
       return;
     }
 
-    const price = sellingType === 'pallets' && product.palletPrice 
-      ? parseFloat(product.palletPrice) 
-      : parseFloat(product.price);
+    const unitPriceNum = parseFloat(product.price);
+    const palletPriceNum = product.palletPrice ? parseFloat(product.palletPrice) : undefined;
+    const price = sellingType === 'pallets' && palletPriceNum ? palletPriceNum : unitPriceNum;
 
     const unitCost = product.costPrice ? parseFloat(product.costPrice) : 0;
     // For pallet lines, cost must be per-pallet (unit cost × units-per-pallet) so it matches the per-pallet selling price
@@ -647,24 +671,26 @@ export default function QuickQuote() {
           const pq = product.packQuantity || product.quantityInPack || 1;
           return uw * pq;
         })();
-    
-    // Check if already added with same product AND selling type
+
+    // Check if already added with same product AND selling type — just increment qty
     const existingIndex = quoteItems.findIndex(
       item => item.productId === product.id && item.sellingType === sellingType
     );
-    
-    const stableKey = `${product.id}-${sellingType}`;
+
     if (existingIndex >= 0) {
       const updated = [...quoteItems];
       updated[existingIndex].quantity += 1;
       setQuoteItems(updated);
     } else {
+      const newStableId = `${product.id}-${sellingType}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+      const initQty = sellingType === 'pallets' ? Math.max(1, product.palletMoq ?? 1) : 1;
       setQuoteItems(prev => [...prev, {
+        stableId: newStableId,
         productId: product.id,
         productName: product.name + (sellingType === 'pallets' ? ' (Pallet)' : ''),
         originalPrice: price,
         customPrice: price,
-        quantity: 1,
+        quantity: initQty,
         sellingType,
         unitsPerPallet: product.unitsPerPallet ?? undefined,
         promotionalOffers: product.promotionalOffers || [],
@@ -676,14 +702,20 @@ export default function QuickQuote() {
         stockCount: availableStock,
         quantityInPack: (product.quantityInPack ?? 1) > 1 ? product.quantityInPack : undefined,
         displayUnit: 'units',
+        sellingFormat: product.sellingFormat,
+        palletPrice: palletPriceNum,
+        unitPrice: unitPriceNum,
+        palletMoq: product.palletMoq,
+        unitStockCount: sellingType === 'units' ? availableStock : (product.stock ?? 0),
+        palletStockCount: sellingType === 'pallets' ? availableStock : (product.palletStock ?? 0),
       } as QuoteItem]);
       setInputValues(prev => ({
         ...prev,
-        [stableKey]: { price: price.toString(), qty: '1' }
+        [newStableId]: { price: price.toString(), qty: initQty.toString() }
       }));
       setCostValues(prev => ({
         ...prev,
-        [stableKey]: baseCost.toString()
+        [newStableId]: baseCost.toString()
       }));
     }
     setProductDialogOpen(false);
@@ -712,25 +744,47 @@ export default function QuickQuote() {
     setQuoteItems(quoteItems.filter((_, i) => i !== index));
   };
 
-  const toggleDisplayUnit = (index: number) => {
+  const switchItemMode = (index: number, mode: 'units' | 'packs' | 'pallets') => {
     const item = quoteItems[index];
     const qip = item.quantityInPack ?? 1;
-    if (qip <= 1 || item.sellingType === 'pallets') return;
-    const sk = `${item.productId}-${item.sellingType}`;
-    const currentDisplayUnit = item.displayUnit ?? 'units';
+    const sk = item.stableId;
     const updated = [...quoteItems];
-    if (currentDisplayUnit === 'units') {
-      // Round current base-unit qty to nearest whole pack, then immediately commit
-      // the pack-aligned base-unit count so the payload is always correct on save.
+
+    if (mode === 'pallets') {
+      if (!item.palletPrice || item.sellingType === 'pallets') return;
+      const palletQty = Math.max(1, item.palletMoq ?? 1);
+      updated[index] = {
+        ...updated[index],
+        sellingType: 'pallets',
+        customPrice: item.palletPrice,
+        originalPrice: item.palletPrice,
+        quantity: palletQty,
+        stockCount: item.palletStockCount ?? 0,
+        displayUnit: 'units',
+      };
+      setInputValues(prev => ({ ...prev, [sk]: { price: item.palletPrice!.toString(), qty: palletQty.toString() } }));
+      setQuoteItems(updated);
+    } else if (mode === 'units') {
+      if (item.sellingType === 'units' && (item.displayUnit ?? 'units') === 'units') return;
+      if (!item.unitPrice) return;
+      updated[index] = {
+        ...updated[index],
+        sellingType: 'units',
+        customPrice: item.unitPrice,
+        originalPrice: item.unitPrice,
+        quantity: 1,
+        stockCount: item.unitStockCount ?? 0,
+        displayUnit: 'units',
+      };
+      setInputValues(prev => ({ ...prev, [sk]: { price: item.unitPrice!.toString(), qty: '1' } }));
+      setQuoteItems(updated);
+    } else if (mode === 'packs') {
+      if (item.sellingType === 'pallets' || qip <= 1 || (item.displayUnit ?? 'units') === 'packs') return;
+      // Immediately commit pack-aligned base units so saves are always correct
       const packCount = Math.max(1, Math.round(item.quantity / qip));
       const alignedBaseUnits = packCount * qip;
       setInputValues(prev => ({ ...prev, [sk]: { ...prev[sk], qty: packCount.toString() } }));
       updated[index] = { ...updated[index], displayUnit: 'packs', quantity: alignedBaseUnits };
-      setQuoteItems(updated);
-    } else {
-      // Back to units — quantity is already in base units; just update display label.
-      setInputValues(prev => ({ ...prev, [sk]: { ...prev[sk], qty: item.quantity.toString() } }));
-      updated[index] = { ...updated[index], displayUnit: 'units' };
       setQuoteItems(updated);
     }
   };
@@ -1661,7 +1715,7 @@ export default function QuickQuote() {
                 <div className="space-y-4">
                   {quoteItems.map((item, index) => (
                     <QuoteItemCard
-                      key={`${item.productId}-${item.sellingType}`}
+                      key={item.stableId}
                       item={item}
                       index={index}
                       inputValues={inputValues}
@@ -1674,7 +1728,7 @@ export default function QuickQuote() {
                       removeItem={removeItem}
                       formatCurrency={formatCurrency}
                       formatWeight={formatWeight}
-                      onToggleDisplayUnit={() => toggleDisplayUnit(index)}
+                      onSwitchMode={(mode) => switchItemMode(index, mode)}
                     />
                   ))}
                 </div>
