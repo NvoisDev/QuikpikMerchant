@@ -1,0 +1,424 @@
+How should pallets and units be managed in a stock inventory system?
+
+This is actually one of the biggest things that separates a basic inventory app from a serious wholesale inventory system.
+
+The key principle is:
+
+You should store inventory in ONE base unit internally, then allow multiple selling/handling units on top.
+
+For Quikpik, the cleanest approach is:
+
+Base unit = individual units/items
+Optional packaging hierarchy:
+Case
+Box
+Tray
+Pallet
+
+Everything ultimately converts back to units.
+
+Recommended Structure
+Example Product
+
+Coca-Cola 330ml
+
+Packaging Type	Quantity
+1 Case	24 cans
+1 Tray	6 cans
+1 Pallet	100 cases
+1 Unit	1 can
+
+Internally, the system stores:
+
+1 pallet = 2,400 units
+
+NOT:
+
+100 pallets
+
+The source of truth should always be units.
+
+Why This Matters
+
+If you store mixed inventory types directly:
+
+5 pallets
+3 cases
+2 units
+
+…stock calculations become messy VERY quickly.
+
+Especially when:
+
+invoices are edited
+stock is returned
+batches expire
+partial pallets are sold
+cancellations happen
+
+That’s likely part of the stock-history confusion you were seeing earlier.
+
+Best Practice Architecture
+1. Store Inventory in Base Units
+
+Database should always track:
+
+availableUnits
+allocatedUnits
+soldUnits
+damagedUnits
+
+Everything else is presentation logic.
+
+2. Add Packaging Definitions
+
+Each product can define packaging conversions.
+
+Example:
+
+Type	Units
+Tray	6
+Case	24
+Pallet	2400
+3. Invoice Flexibility
+
+User can sell:
+
+2 pallets
+3 cases
+4 units
+
+System converts automatically:
+
+(2 × 2400)
++ (3 × 24)
++ 4
+= 4,876 units
+
+Inventory reduces by:
+
+4876 units
+4. Stock Display
+
+Frontend can show BOTH:
+
+Warehouse View
+5 pallets
+12 cases
+8 units
+System View
+12,296 units remaining
+
+This is how mature WMS systems work.
+
+5. Batch Tracking
+
+Batches become VERY important here.
+
+Example:
+
+Batch	Units
+Batch A	2,400
+Batch B	1,200
+
+If selling:
+
+1 pallet
+
+System should:
+
+allocate oldest batch first (FIFO)
+deduct 2,400 units from oldest stock
+
+NOT:
+
+remove 1 pallet object
+6. FIFO (Very Important)
+
+Wholesale systems should usually use:
+
+FIFO
+
+First In, First Out
+
+Oldest stock sells first.
+
+Critical for:
+
+expiry dates
+food products
+waste reduction
+accounting accuracy
+7. Partial Pallet Handling
+
+Real wholesalers often:
+
+break pallets
+sell partial cases
+mix units
+
+Your system should support:
+
+full pallet sale
+partial pallet sale
+loose units
+
+WITHOUT changing inventory architecture.
+
+That’s why units should be the source of truth.
+
+What I’d Recommend for Quikpik
+Keep Internally:
+units
+Add:
+packaging hierarchy
+conversion multipliers
+display formatting
+optional pallet metadata
+Suggested Product Structure
+product = {
+  name: "Indomie Noodles",
+
+  baseUnit: "unit",
+
+  packaging: [
+    {
+      type: "carton",
+      units: 40
+    },
+    {
+      type: "pallet",
+      units: 4000
+    }
+  ]
+}
+UI Recommendation
+
+On product page:
+
+Inventory
+12,480 units available
+=
+3 pallets
+4 cartons
+80 units
+Biggest Mistake to Avoid
+
+Do NOT:
+
+store separate stock counts for pallets/cases/units
+manually sync them
+create independent inventory numbers
+
+That causes:
+
+mismatches
+reconciliation issues
+negative stock
+impossible edits
+
+Everything should derive from one unit-based inventory number.
+
+Future-Proof Features You Could Add
+
+Eventually:
+
+pallet IDs / barcode labels
+warehouse locations
+reserved stock
+pick lists
+pallet transfer history
+damaged pallet tracking
+warehouse bin locations
+
+But the foundation should always be:
+
+One inventory source of truth = units.
+
+need to ensure wheat we ahve doesnt break the system as I have live users now
+
+Absolutely — with live users, the goal now is stability over perfection.
+
+You do not want to redesign your inventory architecture in one go and accidentally:
+
+corrupt stock
+duplicate history
+break invoices
+affect live orders
+change existing calculations unexpectedly
+
+The safest approach is:
+
+Add packaging logic as a layer ON TOP of your existing stock system — not a replacement.
+
+Safest Strategy for Quikpik
+Keep Your Existing Core Inventory Logic
+
+If your system currently works with:
+
+stock quantity
+stock history
+invoice deductions
+returns
+cancellations
+batch stock
+
+DO NOT rewrite that foundation right now.
+
+Especially because:
+
+users already depend on it
+existing invoices reference it
+historical data already exists
+Instead: Add “Packaging Conversion Layer”
+
+This means:
+
+Internally:
+
+stock = 243
+
+Still remains:
+
+243 units
+
+Then simply allow users to DEFINE:
+
+1 case = 24 units
+1 pallet = 2400 units
+
+WITHOUT changing the underlying inventory engine.
+
+Example
+Current System
+Available stock = 243
+New Packaging Layer
+1 case = 12 units
+
+Frontend displays:
+
+20 cases + 3 units
+
+But database still stores:
+
+243
+
+That’s the safe route.
+
+Critical Rule
+
+Do NOT:
+
+create separate pallet stock
+create separate case stock
+create separate unit stock
+
+Only:
+
+display conversions
+
+This avoids:
+
+double deductions
+broken edits
+reconciliation nightmares
+Safest Rollout Plan
+Phase 1 — Display Only (Safest)
+
+Add:
+
+packaging definitions
+display conversions
+
+NO inventory logic changes.
+
+Risk level: VERY LOW ✅
+
+Phase 2 — Invoice Input Conversion
+
+Allow:
+
+2 cases
+
+System converts:
+
+2 × 24 = 48 units
+
+Then existing inventory system deducts:
+
+48
+
+Still safe ✅
+
+Phase 3 — Advanced Warehouse Logic
+
+ONLY later:
+
+pallet management
+warehouse bins
+reserved stock
+barcode picking
+FIFO automation
+
+Not now.
+
+Most Important Protection
+
+Tell your agent:
+
+Existing inventory calculation logic must remain untouched.
+
+The new packaging/pallet functionality must act purely as a conversion and display layer on top of the current unit-based stock system.
+
+The existing stock engine, history calculations, invoice deductions, returns, cancellations, and batch logic must continue functioning exactly as they do today.
+
+Additional Safety Measures
+
+Before ANY inventory update:
+
+1. Backup Production DB
+
+Mandatory.
+
+2. Add Feature Flag
+
+Example:
+
+ENABLE_PACKAGING_CONVERSIONS=false
+
+Then activate gradually.
+
+3. Test Cases
+
+Must test:
+
+invoice create
+invoice edit
+invoice cancel
+stock return
+batch stock-in
+stock history
+exports
+analytics
+low stock alerts
+My Honest Recommendation
+
+Right now, because you have:
+
+live users
+active invoices
+real stock movement
+
+I would:
+✅ stabilise current inventory first
+✅ improve stock consistency
+✅ improve history accuracy
+✅ then layer packaging on top carefully
+
+NOT attempt a deep inventory rewrite.
+
+You’re now at the stage where:
+
+reliability matters more than adding features quickly.
+
+That’s a good problem to have.

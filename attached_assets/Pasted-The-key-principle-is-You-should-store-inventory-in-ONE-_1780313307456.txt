@@ -1,0 +1,236 @@
+The key principle is:
+
+You should store inventory in ONE base unit internally, then allow multiple selling/handling units on top.
+
+For Quikpik, the cleanest approach is:
+
+Base unit = individual units/items
+Optional packaging hierarchy:
+Case
+Box
+Tray
+Pallet
+
+Everything ultimately converts back to units.
+
+Recommended Structure
+Example Product
+
+Coca-Cola 330ml
+
+Packaging Type	Quantity
+1 Case	24 cans
+1 Tray	6 cans
+1 Pallet	100 cases
+1 Unit	1 can
+
+Internally, the system stores:
+
+1 pallet = 2,400 units
+
+NOT:
+
+100 pallets
+
+The source of truth should always be units.
+
+Why This Matters
+
+If you store mixed inventory types directly:
+
+5 pallets
+3 cases
+2 units
+
+…stock calculations become messy VERY quickly.
+
+Especially when:
+
+invoices are edited
+stock is returned
+batches expire
+partial pallets are sold
+cancellations happen
+
+That’s likely part of the stock-history confusion you were seeing earlier.
+
+Best Practice Architecture
+1. Store Inventory in Base Units
+
+Database should always track:
+
+availableUnits
+allocatedUnits
+soldUnits
+damagedUnits
+
+Everything else is presentation logic.
+
+2. Add Packaging Definitions
+
+Each product can define packaging conversions.
+
+Example:
+
+Type	Units
+Tray	6
+Case	24
+Pallet	2400
+3. Invoice Flexibility
+
+User can sell:
+
+2 pallets
+3 cases
+4 units
+
+System converts automatically:
+
+(2 × 2400)
++ (3 × 24)
++ 4
+= 4,876 units
+
+Inventory reduces by:
+
+4876 units
+4. Stock Display
+
+Frontend can show BOTH:
+
+Warehouse View
+5 pallets
+12 cases
+8 units
+System View
+12,296 units remaining
+
+This is how mature WMS systems work.
+
+5. Batch Tracking
+
+Batches become VERY important here.
+
+Example:
+
+Batch	Units
+Batch A	2,400
+Batch B	1,200
+
+If selling:
+
+1 pallet
+
+System should:
+
+allocate oldest batch first (FIFO)
+deduct 2,400 units from oldest stock
+
+NOT:
+
+remove 1 pallet object
+6. FIFO (Very Important)
+
+Wholesale systems should usually use:
+
+FIFO
+
+First In, First Out
+
+Oldest stock sells first.
+
+Critical for:
+
+expiry dates
+food products
+waste reduction
+accounting accuracy
+7. Partial Pallet Handling
+
+Real wholesalers often:
+
+break pallets
+sell partial cases
+mix units
+
+Your system should support:
+
+full pallet sale
+partial pallet sale
+loose units
+
+WITHOUT changing inventory architecture.
+
+That’s why units should be the source of truth.
+
+What I’d Recommend for Quikpik
+Keep Internally:
+units
+Add:
+packaging hierarchy
+conversion multipliers
+display formatting
+optional pallet metadata
+Suggested Product Structure
+product = {
+  name: "Indomie Noodles",
+
+  baseUnit: "unit",
+
+  packaging: [
+    {
+      type: "carton",
+      units: 40
+    },
+    {
+      type: "pallet",
+      units: 4000
+    }
+  ]
+}
+UI Recommendation
+
+On product page:
+
+Inventory
+12,480 units available
+=
+3 pallets
+4 cartons
+80 units
+Biggest Mistake to Avoid
+
+Do NOT:
+
+store separate stock counts for pallets/cases/units
+manually sync them
+create independent inventory numbers
+
+That causes:
+
+mismatches
+reconciliation issues
+negative stock
+impossible edits
+
+Everything should derive from one unit-based inventory number.
+
+Future-Proof Features You Could Add
+
+Eventually:
+
+pallet IDs / barcode labels
+warehouse locations
+reserved stock
+pick lists
+pallet transfer history
+damaged pallet tracking
+warehouse bin locations
+
+But the foundation should always be:
+
+One inventory source of truth = units.
+
+Work better with Business
+Access our most advanced models for work in a secure business workspace.
+Try Business
