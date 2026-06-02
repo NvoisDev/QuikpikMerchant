@@ -396,6 +396,10 @@ async function runStartupMigrations() {
        platform_fee       = 0
      WHERE payment_method IN ('cash', 'bank_transfer', 'cheque', 'pay_later', 'other')
        AND COALESCE(platform_fee, 0) > 0`,
+    // Task #1171: Mark citexsoft@gmail.com as a test account so it is excluded from
+    // revenue analytics and clearly labelled in the admin panel. Idempotent — the WHERE
+    // clause is a no-op once is_test_account is already true.
+    `UPDATE users SET is_test_account = true WHERE email = 'citexsoft@gmail.com' AND role = 'wholesaler' AND is_test_account = false`,
   ];
   for (const stmt of migrations) {
     await db.execute(sql.raw(stmt));
