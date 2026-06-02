@@ -656,10 +656,14 @@ export function registerCustomerRoutes(app: Express): void {
       const formattedPhone = formatPhoneToInternational(phoneNumber);
       
       // Check for existing customer by phone number first
-      let customer = await storage.getUserByPhone(formattedPhone);
+      let existingByPhone = await storage.getUserByPhone(formattedPhone);
+
+      // Only reuse the found account if it is actually a customer — never merge
+      // into a wholesaler or team member account (that would overwrite their login details).
+      let customer = (existingByPhone && existingByPhone.role === 'customer') ? existingByPhone : null;
       
       if (customer) {
-        // FIXED: Unarchive and update existing customer info if needed
+        // Unarchive and update existing customer info if needed
         const updates: any = {};
         if (email && customer.email !== email) {
           updates.email = email;
@@ -672,7 +676,6 @@ export function registerCustomerRoutes(app: Express): void {
         
         if (Object.keys(updates).length > 0) {
           customer = await storage.updateCustomer(customer.id, updates);
-        } else {
         }
         
         // Ensure the wholesaler-customer relationship exists
