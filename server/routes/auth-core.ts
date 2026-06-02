@@ -969,9 +969,11 @@ export function registerAuthCoreRoutes(app: Express): void {
       const user = await storage.getUserByEmail(email);
 
       if (!user) {
+        console.log(`[forgot-password] No user found for email: ${email}`);
         return res.json({ success: true, message: "If an account with that email exists, we've sent a password reset link." });
       }
 
+      console.log(`[forgot-password] User found (${user.id}), generating reset token`);
       const { token, hashedToken } = generateResetToken();
       const expiresAt = createResetExpiration();
 
