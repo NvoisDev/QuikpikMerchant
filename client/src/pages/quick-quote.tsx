@@ -160,7 +160,7 @@ export default function QuickQuote() {
   const [productSearch, setProductSearch] = useState("");
   const [addCustomerDialogOpen, setAddCustomerDialogOpen] = useState(false);
   const [sendMethod, setSendMethod] = useState<'sms' | 'link'>('sms');
-  const [sendSmsNotification, setSendSmsNotification] = useState(false);
+  const [sendSmsNotification, setSendSmsNotification] = useState(true);
   const [copiedLink, setCopiedLink] = useState(false);
   const [savedDraft, setSavedDraft] = useState<any>(null);
   const [createdQuote, setCreatedQuote] = useState<{

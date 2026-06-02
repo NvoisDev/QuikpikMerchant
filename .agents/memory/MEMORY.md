@@ -1,0 +1,1 @@
+- [Stripe Live Webhook Setup](stripe-webhook-setup.md) — Snapshot payload required for subscription/checkout events; Thin payload is v2-only and incompatible.
