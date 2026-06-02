@@ -395,6 +395,24 @@ export function registerAdminCoreRoutes(app: Express): void {
     }
   });
 
+  // PATCH /api/admin/wholesalers/:id/toggle-test-account
+  app.patch('/api/admin/wholesalers/:id/toggle-test-account', requireAuth, async (req: any, res) => {
+    try {
+      if (!ADMIN_EMAILS.includes(getAdminEmail(req) || "")) return res.status(403).json({ error: 'Forbidden' });
+      const targetUser = await db.select().from(users).where(eq(users.id, req.params.id)).limit(1);
+      if (!targetUser.length || targetUser[0].role !== 'wholesaler') {
+        return res.status(404).json({ error: 'Wholesaler not found' });
+      }
+      const newValue = !targetUser[0].isTestAccount;
+      await db.update(users).set({ isTestAccount: newValue }).where(eq(users.id, req.params.id));
+      console.log(`[admin] isTestAccount toggled to ${newValue} for ${targetUser[0].email}`);
+      res.json({ id: req.params.id, isTestAccount: newValue, businessName: targetUser[0].businessName });
+    } catch (error) {
+      console.error('Admin toggle-test-account error:', error);
+      res.status(500).json({ error: 'Failed to toggle test account status' });
+    }
+  });
+
   // PATCH /api/admin/wholesalers/:id/custom-fee
   app.patch('/api/admin/wholesalers/:id/custom-fee', requireAuth, async (req: any, res) => {
     try {

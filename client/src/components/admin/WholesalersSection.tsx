@@ -128,6 +128,16 @@ export function WholesalersSection({ wholesalers, wholesalersLoading, isAdmin }:
     onError: () => toast({ title: "Failed to update status", variant: "destructive" }),
   });
 
+  const toggleTestAccount = useMutation({
+    mutationFn: (id: string) => apiRequest("PATCH", `/api/admin/wholesalers/${id}/toggle-test-account`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/wholesalers"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/platform-stats"] });
+      toast({ title: "Test account status updated" });
+    },
+    onError: () => toast({ title: "Failed to update test account status", variant: "destructive" }),
+  });
+
   const customerFeeOverrideMutation = useMutation({
     mutationFn: async ({ id, percentage, fixed }: { id: string; percentage: number | null; fixed: number | null }) => {
       const r = await apiRequest("PATCH", `/api/admin/wholesalers/${id}/customer-fee-override`, {
@@ -363,6 +373,9 @@ export function WholesalersSection({ wholesalers, wholesalersLoading, isAdmin }:
                         <div className="flex items-center gap-1.5">
                           <Button size="sm" variant="outline" className="h-7 text-xs border-gray-200" disabled={toggleStatus.isPending} onClick={() => toggleStatus.mutate(w.id)}>
                             {w.archived ? "Activate" : "Suspend"}
+                          </Button>
+                          <Button size="sm" variant="outline" className={`h-7 text-xs ${w.isTestAccount ? "border-yellow-300 text-yellow-700 bg-yellow-50 hover:bg-yellow-100" : "border-gray-200 text-gray-500 hover:bg-gray-50"}`} disabled={toggleTestAccount.isPending} onClick={() => toggleTestAccount.mutate(w.id)} title={w.isTestAccount ? "Remove test account flag" : "Mark as test account"}>
+                            {w.isTestAccount ? "Remove test" : "Test"}
                           </Button>
                           <Button size="sm" variant="ghost" className="h-7 text-xs text-gray-400" onClick={() => openDrawer(w)}>
                             <Eye className="h-3.5 w-3.5" />
@@ -698,6 +711,9 @@ export function WholesalersSection({ wholesalers, wholesalersLoading, isAdmin }:
               <div className="flex gap-2 pt-2">
                 <Button size="sm" variant="outline" className="text-xs flex-1" onClick={() => { toggleStatus.mutate(selectedWholesaler.id); setDrawerOpen(false); }}>
                   {selectedWholesaler.archived ? "Activate account" : "Suspend account"}
+                </Button>
+                <Button size="sm" variant="outline" className={`text-xs flex-1 ${selectedWholesaler.isTestAccount ? "border-yellow-300 text-yellow-700 bg-yellow-50 hover:bg-yellow-100" : "border-gray-200 text-gray-600 hover:bg-gray-50"}`} disabled={toggleTestAccount.isPending} onClick={() => { toggleTestAccount.mutate(selectedWholesaler.id); setDrawerOpen(false); }}>
+                  {selectedWholesaler.isTestAccount ? "Remove test flag" : "Mark as test"}
                 </Button>
                 <a href={`mailto:${selectedWholesaler.email}`} className="flex-1">
                   <Button size="sm" variant="outline" className="w-full text-xs gap-1.5">
