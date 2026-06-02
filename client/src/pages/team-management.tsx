@@ -323,8 +323,10 @@ export default function TeamManagement() {
     },
   });
 
-  // Using premium tier as default
-  const teamLimit = getTeamLimit(simpleTier);
+  // Use the API-provided limit when available; fall back to local lookup while loading.
+  const teamLimit = planLimitsLoading
+    ? getTeamLimit('free')
+    : (planLimits?.limits?.teamMembers ?? getTeamLimit(simpleTier));
   const currentTeamCount = Array.isArray(teamMembers) ? teamMembers.length : 0;
   const canAddMembers = teamLimit === -1 || currentTeamCount < teamLimit;
 
