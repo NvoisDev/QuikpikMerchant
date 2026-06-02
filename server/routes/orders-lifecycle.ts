@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import crypto from "crypto";
 
-import { getCurrentFeeConfig, getFeeConfigForWholesaler } from "../utils/fee-config";
+import { getCurrentFeeConfig, getFeeConfigForWholesaler, getWholesalerPlatformFeeRate } from "../utils/fee-config";
 import { resolveWholesalerId } from "../utils/resolveWholesalerId";
 import { calculateOrderPricing } from "../services/orderPricingService";
 import { parseCustomerCookie } from "../utils/customer-auth-cookie";
@@ -25,7 +25,6 @@ import {
   getCurrencySymbol, formatPackDescriptor,
   generateOrderNumber, insertOrderSchema,
   z,
-  getWholesalerFeeRate,
   sendCustomerInvoiceEmail,
   createStripeRefundReceipt,
   sendRefundReceipt,
@@ -350,7 +349,7 @@ export function registerOrderLifecycleRoutes(app: Express): void {
 
       if (!isOfflineApproval) {
         const feeConfig = await getCurrentFeeConfig();
-        const feeRate = await getWholesalerFeeRate(wholesalerId);
+        const feeRate = await getWholesalerPlatformFeeRate(wholesalerId);
         const pricing = calculateOrderPricing({ subtotal, deliveryCost: 0, feeConfig, platformFeeRate: feeRate });
         customerTransactionFee = pricing.customerTransactionFee;
         platformFee = pricing.platformFee;
@@ -1225,7 +1224,7 @@ export function registerOrderLifecycleRoutes(app: Express): void {
       }
 
       const feeConfig = await getCurrentFeeConfig();
-      const feeRate = await getWholesalerFeeRate(wholesalerId);
+      const feeRate = await getWholesalerPlatformFeeRate(wholesalerId);
       const {
         customerTransactionFee,
         platformFee,

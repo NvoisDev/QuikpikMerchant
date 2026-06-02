@@ -1,12 +1,12 @@
 import type { Express } from "express";
 import Stripe from "stripe";
 import { calculateCustomerFee } from "../../shared/utils/fees";
-import { getCurrentFeeConfig, getFeeConfigForWholesaler } from "../utils/fee-config";
+import { getCurrentFeeConfig, getFeeConfigForWholesaler, getWholesalerPlatformFeeRate } from "../utils/fee-config";
 import { calculateOrderPricing } from "../services/orderPricingService";
 import { formatDateTime } from "../../shared/utils/date";
 import {
   InventoryCalculator, and, asc, db, emailButton, emailCard, emailHeading, eq,
-  formatPackDescriptor, generateOrderNumber, getEmailLogoUrl, getWholesalerFeeRate,
+  formatPackDescriptor, generateOrderNumber, getEmailLogoUrl,
   inArray, isNull, ne, or, orderItems, orders, productBatches, products,
   requireAuth, requireNotViewer, sendEmail, sendWhatsAppMessage, sendCustomerInvoiceEmail,
   sql, stockMovements, storage, sum, wrapCustomerEmail, desc, quoteActivityLogs,
@@ -163,7 +163,7 @@ export function registerQuoteRoutes(app: Express): void {
       const isOfflineMethod = requestedPaymentMethod ? OFFLINE_METHODS.includes(requestedPaymentMethod) : false;
       const isOffline = isPayLater || isOfflineMethod;
       const feeConfig = await getFeeConfigForWholesaler(wholesalerId);
-      const feeRate = isOffline ? 0 : await getWholesalerFeeRate(wholesalerId);
+      const feeRate = isOffline ? 0 : await getWholesalerPlatformFeeRate(wholesalerId);
       const {
         customerTransactionFee,
         platformFee,
@@ -991,7 +991,7 @@ export function registerQuoteRoutes(app: Express): void {
       const isOfflineEdit = isPayLaterEdit || isOfflinePayment;
       const feeConfigEdit = await getFeeConfigForWholesaler(wholesalerId);
       const customerTransactionFee = isOfflineEdit ? 0 : calculateCustomerFee(subtotal, 0, feeConfigEdit);
-      const feeRate = isOfflineEdit ? 0 : await getWholesalerFeeRate(wholesalerId);
+      const feeRate = isOfflineEdit ? 0 : await getWholesalerPlatformFeeRate(wholesalerId);
       const platformFee = isOfflineEdit ? 0 : subtotal * feeRate;
 
       // VAT calculation — wholesaler already fetched above
