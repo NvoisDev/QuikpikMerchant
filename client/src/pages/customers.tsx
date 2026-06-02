@@ -751,9 +751,9 @@ export default function Customers() {
           <TabsContent value="address-book" className="space-y-4 sm:space-y-6">
 
             {stats && (
-              <div className={`grid gap-2 mb-2 ${user?.role !== 'team_member' ? 'grid-cols-4' : 'grid-cols-2'}`}>
+              <div className={`grid gap-2 mb-2 ${user?.role !== 'team_member' ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-2'}`}>
                 {user?.role !== 'team_member' && (
-                  <div className="rounded-lg bg-green-50 border border-green-100 px-3 py-2 flex items-center gap-2 min-w-0">
+                  <div className="rounded-lg bg-green-50 border border-green-100 px-3 py-2.5 flex items-center gap-2 min-w-0">
                     <DollarSign className="h-4 w-4 text-green-500 shrink-0" />
                     <div className="min-w-0">
                       <p className="text-[11px] text-green-700">Paid</p>
@@ -762,7 +762,7 @@ export default function Customers() {
                   </div>
                 )}
                 {user?.role !== 'team_member' && (
-                  <div className="rounded-lg bg-red-50 border border-red-100 px-3 py-2 flex items-center gap-2 min-w-0">
+                  <div className="rounded-lg bg-red-50 border border-red-100 px-3 py-2.5 flex items-center gap-2 min-w-0">
                     <Clock className="h-4 w-4 text-red-500 shrink-0" />
                     <div className="min-w-0">
                       <p className="text-[11px] text-red-700">Unpaid</p>
@@ -770,14 +770,14 @@ export default function Customers() {
                     </div>
                   </div>
                 )}
-                <div className="rounded-lg bg-blue-50 border border-blue-100 px-3 py-2 flex items-center gap-2 min-w-0">
+                <div className="rounded-lg bg-blue-50 border border-blue-100 px-3 py-2.5 flex items-center gap-2 min-w-0">
                   <Users className="h-4 w-4 text-blue-500 shrink-0" />
                   <div className="min-w-0">
                     <p className="text-[11px] text-blue-700">Customers</p>
                     <p className="text-sm font-bold text-blue-600">{stats.totalCustomers}</p>
                   </div>
                 </div>
-                <div className="rounded-lg bg-orange-50 border border-orange-100 px-3 py-2 flex items-center gap-2 min-w-0">
+                <div className="rounded-lg bg-orange-50 border border-orange-100 px-3 py-2.5 flex items-center gap-2 min-w-0">
                   <Activity className="h-4 w-4 text-orange-500 shrink-0" />
                   <div className="min-w-0">
                     <p className="text-[11px] text-orange-700">Active</p>
@@ -792,7 +792,7 @@ export default function Customers() {
                 <div className="relative flex-1">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                   <Input
-                    placeholder="Search customers by name, email, or phone..."
+                    placeholder="Search customers..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="pl-10 h-8 border-slate-200 rounded-lg focus:ring-emerald-500/30 focus:border-emerald-400"
