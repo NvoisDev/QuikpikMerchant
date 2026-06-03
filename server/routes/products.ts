@@ -959,7 +959,8 @@ export function registerProductRoutes(app: Express): void {
   app.post("/api/public/products/:slug/inquiry", async (req, res) => {
     try {
       const { slug } = req.params;
-      const { name, email, phone, message, companyName } = req.body;
+      const { name, email, phone, message, company, companyName, quantity } = req.body;
+      const resolvedCompany = company || companyName || null;
 
       if (!name || !email || !message) {
         return res.status(400).json({ message: "Name, email, and message are required" });
@@ -984,8 +985,9 @@ export function registerProductRoutes(app: Express): void {
 
       const wholesalerEmail = wholesaler.businessEmail || wholesaler.email;
       if (wholesalerEmail) {
-        const companyLine = companyName ? `<p><strong>Company:</strong> ${companyName}</p>` : '';
         const phoneLine = phone ? `<p><strong>Phone:</strong> ${phone}</p>` : '';
+        const companyLine = resolvedCompany ? `<p><strong>Company:</strong> ${resolvedCompany}</p>` : '';
+        const quantityLine = quantity ? `<p><strong>Quantity required:</strong> ${quantity}</p>` : '';
         await sendEmail({
           to: wholesalerEmail,
           from: 'hello@quikpik.co',
@@ -998,12 +1000,13 @@ export function registerProductRoutes(app: Express): void {
             <p><strong>Email:</strong> ${email}</p>
             ${phoneLine}
             ${companyLine}
+            ${quantityLine}
             <p><strong>Message:</strong></p>
             <p style="white-space:pre-wrap">${message}</p>
             <hr />
             <p style="color:#666;font-size:12px">Sent via Quikpik public product page</p>
           `,
-          text: `New inquiry about ${product.name}\n\nFrom: ${name}\nEmail: ${email}${phone ? `\nPhone: ${phone}` : ''}${companyName ? `\nCompany: ${companyName}` : ''}\n\nMessage:\n${message}`,
+          text: `New inquiry about ${product.name}\n\nFrom: ${name}\nEmail: ${email}${phone ? `\nPhone: ${phone}` : ''}${resolvedCompany ? `\nCompany: ${resolvedCompany}` : ''}${quantity ? `\nQuantity required: ${quantity}` : ''}\n\nMessage:\n${message}`,
         });
       }
 
