@@ -491,6 +491,14 @@ export function ProductsTab({
                         )}
                       </div>
 
+                      {/* Pack size row */}
+                      {product.packQuantity && product.unitSize && product.unitOfMeasure && (
+                        <div className="flex justify-between items-center text-xs">
+                          <span className="text-gray-500">Pack size</span>
+                          <span className="text-gray-700">{product.packQuantity} × {formatWeight(product.unitSize)}{product.unitOfMeasure}</span>
+                        </div>
+                      )}
+
                       {/* Pricing */}
                       <div className="flex items-end justify-between mt-2">
                         <div className="w-full">
@@ -850,6 +858,12 @@ export function ProductsTab({
                             ) : null;
                           })()}
                         </div>
+                        {product.packQuantity && product.unitSize && product.unitOfMeasure && (
+                          <div className="flex justify-between items-center text-xs mb-1.5">
+                            <span className="text-gray-500">Pack size</span>
+                            <span className="text-gray-700">{product.packQuantity} × {formatWeight(product.unitSize)}{product.unitOfMeasure}</span>
+                          </div>
+                        )}
                         <div className="mt-1.5">
                           <PriceDisplay
                             price={pricing.effectivePrice}
