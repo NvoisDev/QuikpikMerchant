@@ -63,8 +63,25 @@ export async function checkFeatureLimits(userId: string, feature: string, curren
   upgradeRequired: boolean;
 }> {
   try {
-    const { plan, currentPlan } = await SubscriptionService.getUserSubscription(userId);
-    const limits = (plan?.limits || getDefaultLimits()) as Record<string, number | undefined>;
+    const { plan, currentPlan, user } = await SubscriptionService.getUserSubscription(userId);
+    // When a user has no user_subscriptions row, plan is null and we must not fall back to
+    // free-tier defaults — instead derive limits from the user's actual subscriptionTier /
+    // currentPlan, exactly as getUserPlanLimits does. getPlanLimits falls back to free if
+    // the tier is unrecognised, so this is always safe.
+    const tierFromDb = user?.subscriptionTier || 'free';
+    const tierFromPlan = currentPlan || 'free';
+    const planHierarchy: Record<string, number> = { free: 0, standard: 1, premium: 2 };
+    const resolvedTier = (planHierarchy[tierFromPlan] ?? 0) < (planHierarchy[tierFromDb] ?? 0)
+      ? tierFromPlan : tierFromDb;
+    const planLimits = getPlanLimits(resolvedTier);
+    const fallbackLimits = {
+      products: planLimits.products,
+      broadcasts: planLimits.broadcasts,
+      teamMembers: planLimits.teamMembers,
+      customGroups: planLimits.groups,
+      priceLists: planLimits.priceLists,
+    };
+    const limits = (plan?.limits || fallbackLimits) as Record<string, number | undefined>;
     const limit = limits[feature] ?? -1; // -1 = unlimited
     
     const allowed = limit === -1 || currentCount < limit;
