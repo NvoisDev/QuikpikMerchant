@@ -1655,12 +1655,8 @@ export default function OrdersFresh() {
                           ) : (
                             <Badge className="bg-slate-100 text-slate-700 text-xs">Unfulfilled</Badge>
                           )}
-                          {order.isQuote ? (
+                          {(order.isQuote || order.orderSource === 'wholesaler') ? (
                             <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200" title="Invoice Order (created by you)">
-                              <UserPen className="w-3 h-3" />
-                            </Badge>
-                          ) : order.orderSource === 'wholesaler' ? (
-                            <Badge variant="outline" className="text-xs bg-gray-50 text-gray-600 border-gray-200" title="Order placed by you on behalf of customer">
                               <UserPen className="w-3 h-3" />
                             </Badge>
                           ) : (
@@ -1846,13 +1842,9 @@ export default function OrdersFresh() {
                         ) : (
                           <Badge className="bg-slate-100 text-slate-700 text-xs">Unfulfilled</Badge>
                         )}
-                        {order.isQuote ? (
+                        {(order.isQuote || order.orderSource === 'wholesaler') ? (
                           <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200">
                             <UserPen className="w-3 h-3 mr-1" />Invoice
-                          </Badge>
-                        ) : order.orderSource === 'wholesaler' ? (
-                          <Badge variant="outline" className="text-xs bg-gray-50 text-gray-600 border-gray-200">
-                            <UserPen className="w-3 h-3 mr-1" />Manual
                           </Badge>
                         ) : (
                           <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">

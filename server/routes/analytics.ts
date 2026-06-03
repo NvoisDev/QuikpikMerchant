@@ -320,7 +320,7 @@ export function registerAnalyticsRoutes(app: Express): void {
       const actualEndDate = endDate > now ? now : endDate;
 
       const ordersInRange = await db
-        .select({ id: orders.id, isQuote: orders.isQuote, status: orders.status })
+        .select({ id: orders.id, isQuote: orders.isQuote, orderSource: orders.orderSource, status: orders.status })
         .from(orders)
         .where(and(
           eq(orders.wholesalerId, targetUserId),
@@ -353,7 +353,7 @@ export function registerAnalyticsRoutes(app: Express): void {
         .leftJoin(products, eq(orderItems.productId, products.id))
         .where(inArray(orderItems.orderId, orderIds));
 
-      const orderQuoteMap = new Map(validOrders.map(o => [o.id, o.isQuote ?? false]));
+      const orderQuoteMap = new Map(validOrders.map(o => [o.id, (o.isQuote ?? false) || o.orderSource === 'wholesaler']));
 
       let quotesCoveredRevenue = 0, quotesCost = 0, quotesUncoveredRevenue = 0, quotesMissingCost = false;
       let onlineCoveredRevenue = 0, onlineCost = 0, onlineUncoveredRevenue = 0, onlineMissingCost = false;
