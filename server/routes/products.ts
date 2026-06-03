@@ -918,6 +918,9 @@ export function registerProductRoutes(app: Express): void {
         },
         availability: "In Stock - Available Now",
         minOrderQuantity: 50,
+        packQuantity: 40,
+        unitSize: "500",
+        unitOfMeasure: "g",
         views: 1247,
         lastUpdated: new Date().toISOString()
       };

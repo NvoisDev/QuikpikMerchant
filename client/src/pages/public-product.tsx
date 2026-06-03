@@ -46,6 +46,9 @@ interface PublicProduct {
   };
   availability: string;
   minOrderQuantity: number;
+  packQuantity?: number | null;
+  unitSize?: string | null;
+  unitOfMeasure?: string | null;
   views: number;
   lastUpdated: string;
 }
@@ -237,6 +240,14 @@ export default function PublicProductPage() {
                 <p className="text-blue-700">{product.minOrderQuantity} units</p>
               </div>
             </div>
+
+            {/* Pack size */}
+            {product.packQuantity && product.unitSize && product.unitOfMeasure && (
+              <div className="flex justify-between items-center py-2 border-t">
+                <span className="text-gray-500">Pack size</span>
+                <span className="text-gray-700 font-medium">{product.packQuantity} × {product.unitSize}{product.unitOfMeasure}</span>
+              </div>
+            )}
 
             {/* Supplier Information */}
             <Card>
