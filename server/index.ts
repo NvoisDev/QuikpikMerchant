@@ -406,6 +406,8 @@ async function runStartupMigrations() {
     `UPDATE orders SET order_source = 'wholesaler' WHERE order_source IS NULL AND payment_method IN ('cash', 'bank_transfer', 'cheque', 'other', 'pay_later') AND is_quote = false`,
     // Backfill: Stripe payment intent = customer paid online
     `UPDATE orders SET order_source = 'customer_portal' WHERE order_source IS NULL AND stripe_payment_intent_id IS NOT NULL AND is_quote = false`,
+    // Backfill: any remaining orders with no Stripe PI and no payment method are wholesaler-created
+    `UPDATE orders SET order_source = 'wholesaler' WHERE order_source IS NULL AND stripe_payment_intent_id IS NULL AND is_quote = false`,
   ];
   for (const stmt of migrations) {
     await db.execute(sql.raw(stmt));
