@@ -6,6 +6,7 @@ import {
 import { productBatches, stockMovements } from "@shared/schema";
 import { isImpersonating } from "../utils/isImpersonating";
 import { resolveWholesalerId } from "../utils/resolveWholesalerId";
+import { sendEmail } from "../sendgrid-service";
 
 export function registerProductRoutes(app: Express): void {
   // GET /api/products
@@ -898,7 +899,7 @@ export function registerProductRoutes(app: Express): void {
       }
 
       const product = await storage.getProduct(productId);
-      if (!product || product.status === 'inactive') {
+      if (!product || product.status !== 'active') {
         return res.status(404).json({ message: "Product not found" });
       }
 
@@ -958,15 +959,54 @@ export function registerProductRoutes(app: Express): void {
   app.post("/api/public/products/:slug/inquiry", async (req, res) => {
     try {
       const { slug } = req.params;
-      const inquiryData = req.body;
-      
-      // Mock lead creation - in real implementation would:
-      // 1. Validate the product exists
-      // 2. Create lead in database
-      // 3. Send notification to wholesaler
-      // 4. Send confirmation email to inquirer
-      
-      // Mock successful response
+      const { name, email, phone, message, companyName } = req.body;
+
+      if (!name || !email || !message) {
+        return res.status(400).json({ message: "Name, email, and message are required" });
+      }
+
+      // Resolve product from slug (last hyphen-separated segment is the ID)
+      const segments = slug.split('-');
+      const productId = parseInt(segments[segments.length - 1], 10);
+      if (isNaN(productId)) {
+        return res.status(404).json({ message: "Product not found" });
+      }
+
+      const product = await storage.getProduct(productId);
+      if (!product || product.status !== 'active') {
+        return res.status(404).json({ message: "Product not found" });
+      }
+
+      const wholesaler = await storage.getUser(product.wholesalerId);
+      if (!wholesaler) {
+        return res.status(404).json({ message: "Product not found" });
+      }
+
+      const wholesalerEmail = wholesaler.businessEmail || wholesaler.email;
+      if (wholesalerEmail) {
+        const companyLine = companyName ? `<p><strong>Company:</strong> ${companyName}</p>` : '';
+        const phoneLine = phone ? `<p><strong>Phone:</strong> ${phone}</p>` : '';
+        await sendEmail({
+          to: wholesalerEmail,
+          from: 'hello@quikpik.co',
+          subject: `New inquiry about ${product.name}`,
+          html: `
+            <h2>New product inquiry via Quikpik</h2>
+            <p><strong>Product:</strong> ${product.name}</p>
+            <hr />
+            <p><strong>From:</strong> ${name}</p>
+            <p><strong>Email:</strong> ${email}</p>
+            ${phoneLine}
+            ${companyLine}
+            <p><strong>Message:</strong></p>
+            <p style="white-space:pre-wrap">${message}</p>
+            <hr />
+            <p style="color:#666;font-size:12px">Sent via Quikpik public product page</p>
+          `,
+          text: `New inquiry about ${product.name}\n\nFrom: ${name}\nEmail: ${email}${phone ? `\nPhone: ${phone}` : ''}${companyName ? `\nCompany: ${companyName}` : ''}\n\nMessage:\n${message}`,
+        });
+      }
+
       res.json({
         success: true,
         message: "Your inquiry has been sent to the supplier. They will contact you within 24 hours.",

@@ -4,7 +4,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import {
   ArrowLeft, Edit, PackagePlus, ToggleLeft, ToggleRight, Tag, Copy,
   Trash2, MoreHorizontal, Package, AlertTriangle, ChevronDown, ChevronUp,
-  Thermometer, Layers, Clock, ShieldAlert, Loader2, CalendarDays, Pencil,
+  Thermometer, Layers, Clock, ShieldAlert, Loader2, CalendarDays, Pencil, Share2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -449,6 +449,16 @@ export default function ProductDetail() {
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => duplicateMutation.mutate()} disabled={isLocked || duplicateMutation.isPending}>
                   <Copy className="h-4 w-4 mr-2" /> Duplicate
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => {
+                  const url = `https://quikpik.app/product/${productId}`;
+                  navigator.clipboard.writeText(url).then(() => {
+                    toast({ title: "Link copied", description: "Public product link copied to clipboard." });
+                  }).catch(() => {
+                    toast({ title: "Copy failed", description: "Could not copy link automatically.", variant: "destructive" });
+                  });
+                }}>
+                  <Share2 className="h-4 w-4 mr-2" /> Copy public link
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem className="text-red-600 focus:text-red-600" onClick={() => setDeleteDialogOpen(true)}>
