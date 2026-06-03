@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import {
   and, count, customerGroups, generateCampaignSuggestions, generatePersonalizedTagline,
-  getBroadcastLimit, insertBroadcastSchema, insertMessageTemplateSchema,
+  insertBroadcastSchema, insertMessageTemplateSchema,
   insertTemplateProductSchema, like, optimizeMessageTiming, or, orderItems, orders, products,
   requireAuth, requireBroadcastLimits, requireNotViewer, storage, sum, twilio,
   whatsAppBusinessService
@@ -1096,40 +1096,16 @@ export function registerCampaignRoutes(app: Express): void {
   });
 
   // POST /api/campaigns/send
-  app.post('/api/campaigns/send', requireAuth, requireNotViewer, async (req: any, res) => {
+  app.post('/api/campaigns/send', requireAuth, requireNotViewer, requireBroadcastLimits(), async (req: any, res) => {
     try {
       const user = req.user;
       // Use parent company data for team members
       const targetUserId = resolveWholesalerId(req);
       const { campaignId, customerGroupId, customMessage } = req.body;
 
-      // Check broadcast limits based on subscription tier
       const userAccount = await storage.getUser(targetUserId);
       if (!userAccount) {
         return res.status(404).json({ message: "User not found" });
-      }
-
-      const subscriptionTier = userAccount.subscriptionTier || "free";
-      const broadcastLimit = getBroadcastLimit(subscriptionTier);
-      
-      // Only check limits if not unlimited (premium)
-      if (broadcastLimit !== -1) {
-        // Get broadcast count for current month
-        const now = new Date();
-        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-        const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-        
-        const monthlyBroadcastCount = await storage.getBroadcastCountForPeriod(targetUserId, monthStart, monthEnd);
-        
-        if (monthlyBroadcastCount >= broadcastLimit) {
-          return res.status(403).json({ 
-            message: `Monthly broadcast limit reached! You've sent ${monthlyBroadcastCount}/${broadcastLimit} broadcasts this month on the ${subscriptionTier} plan.`,
-            error: "broadcast_limit_exceeded",
-            currentCount: monthlyBroadcastCount,
-            limit: broadcastLimit,
-            subscriptionTier
-          });
-        }
       }
 
       const [type, id] = campaignId.split('_');

@@ -115,9 +115,14 @@ export function requireProductLimits() {
         return res.status(401).json({ error: 'Authentication required' });
       }
 
+      // Team members inherit their wholesaler's subscription plan
+      const userId = (req.user.role === 'team_member' && req.user.wholesalerId)
+        ? req.user.wholesalerId
+        : req.user.id;
+
       // Get current product count for this wholesaler
-      const currentCount = await getCurrentProductCount(req.user.id);
-      const limits = await checkFeatureLimits(req.user.id, 'products', currentCount);
+      const currentCount = await getCurrentProductCount(userId);
+      const limits = await checkFeatureLimits(userId, 'products', currentCount);
 
       if (!limits.allowed) {
         return res.status(403).json({
@@ -149,9 +154,14 @@ export function requireBroadcastLimits() {
         return res.status(401).json({ error: 'Authentication required' });
       }
 
+      // Team members inherit their wholesaler's subscription plan
+      const userId = (req.user.role === 'team_member' && req.user.wholesalerId)
+        ? req.user.wholesalerId
+        : req.user.id;
+
       // Get current broadcast count for this month
-      const currentCount = await getCurrentBroadcastCount(req.user.id);
-      const limits = await checkFeatureLimits(req.user.id, 'broadcasts', currentCount);
+      const currentCount = await getCurrentBroadcastCount(userId);
+      const limits = await checkFeatureLimits(userId, 'broadcasts', currentCount);
 
       if (!limits.allowed) {
         return res.status(403).json({
@@ -183,8 +193,13 @@ export function requireTeamMemberLimits() {
         return res.status(401).json({ error: 'Authentication required' });
       }
 
-      const currentCount = await getCurrentTeamMemberCount(req.user.id);
-      const limits = await checkFeatureLimits(req.user.id, 'teamMembers', currentCount);
+      // Team members inherit their wholesaler's subscription plan
+      const userId = (req.user.role === 'team_member' && req.user.wholesalerId)
+        ? req.user.wholesalerId
+        : req.user.id;
+
+      const currentCount = await getCurrentTeamMemberCount(userId);
+      const limits = await checkFeatureLimits(userId, 'teamMembers', currentCount);
 
       if (!limits.allowed) {
         return res.status(403).json({

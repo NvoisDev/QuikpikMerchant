@@ -1,8 +1,8 @@
 import type { Express } from "express";
 import {
   createResetExpiration, db, emailBadge, emailCard, emailHeading, eq,
-  generateResetToken, getEmailLogoUrl, getPlanLimits,
-  hashPassword, isInvitationExpired, requireAuth, requireOwner,
+  generateResetToken, getEmailLogoUrl,
+  hashPassword, isInvitationExpired, requireAuth, requireOwner, requireTeamMemberLimits,
   sendEmail, sendPasswordResetEmail, sendTeamInvitationEmail,
   sgMail, sql, storage, users, verifyPassword,
   wrapCustomerEmail,
@@ -128,21 +128,10 @@ export function registerAuthTeamRoutes(app: Express): void {
   });
 
   // POST /api/team-members
-  app.post('/api/team-members', requireAuth, requireOwner, async (req: any, res) => {
+  app.post('/api/team-members', requireAuth, requireOwner, requireTeamMemberLimits(), async (req: any, res) => {
     try {
       const userId = req.user.id;
       const { email, firstName, lastName, phoneNumber, role, permissions } = req.body;
-
-      const currentCount = await storage.getTeamMembersCount(userId);
-      const userSubscription = await storage.getUser(userId);
-      const tier = userSubscription?.subscriptionTier || 'free';
-      const limit = getPlanLimits(tier).teamMembers;
-
-      if (limit >= 0 && currentCount >= limit) {
-        return res.status(403).json({
-          message: `Your ${tier} plan allows up to ${limit} team member${limit === 1 ? '' : 's'}. Please upgrade to add more team members.`
-        });
-      }
 
       const teamMember = await storage.createTeamMember({
         wholesalerId: userId,
