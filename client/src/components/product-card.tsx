@@ -149,7 +149,7 @@ function ProductCard({
   const formatProductSize = () => {
     if (product.packQuantity && product.unitSize && product.unitOfMeasure) {
       const unitSize = formatWeight(product.unitSize);
-      return `${product.packQuantity} x ${unitSize}${product.unitOfMeasure}`;
+      return `${product.packQuantity} × ${unitSize}${product.unitOfMeasure}`;
     }
     return null;
   };
@@ -275,9 +275,6 @@ function ProductCard({
             {/* Product name + size */}
             <div className="mb-2">
               <h3 className="font-semibold text-gray-900 text-base line-clamp-1">{product.name}</h3>
-              {productSize && (
-                <p className="text-xs text-blue-600 font-medium mt-0.5">{productSize}</p>
-              )}
               {weightLabel && (
                 <span className="text-xs text-gray-400">{weightLabel}</span>
               )}
@@ -319,6 +316,12 @@ function ProductCard({
                   {formatNumber(product.moq ?? 0)} {product.sellingFormat === 'pallets' ? 'pallets' : 'units'}
                 </span>
               </div>
+              {productSize && (
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-500">Pack size</span>
+                  <span className="text-gray-700">{productSize}</span>
+                </div>
+              )}
               <div className="flex justify-between items-start">
                 <span className="text-gray-500">Remaining</span>
                 <div className={`font-medium text-right ${stockStatus.color}`}>
