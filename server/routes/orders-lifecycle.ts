@@ -203,6 +203,7 @@ export function registerOrderLifecycleRoutes(app: Express): void {
         customerPhone: customer.phoneNumber || null,
         orderNumber: null,
         status: 'draft',
+        orderSource: 'wholesaler',
         subtotal: subtotal.toFixed(2),
         total: (subtotal + deliveryCostNum).toFixed(2),
         platformFee: '0.00',

@@ -81,6 +81,7 @@ interface Order {
     refundType?: string;
   };
   pickingStatus?: string;
+  orderSource?: string;
 }
 
 interface OrderItem {
@@ -1658,6 +1659,10 @@ export default function OrdersFresh() {
                             <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200" title="Invoice Order (created by you)">
                               <UserPen className="w-3 h-3" />
                             </Badge>
+                          ) : order.orderSource === 'wholesaler' ? (
+                            <Badge variant="outline" className="text-xs bg-gray-50 text-gray-600 border-gray-200" title="Order placed by you on behalf of customer">
+                              <UserPen className="w-3 h-3" />
+                            </Badge>
                           ) : (
                             <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200" title="Online Order (placed by customer)">
                               <ShoppingCart className="w-3 h-3" />
@@ -1844,6 +1849,10 @@ export default function OrdersFresh() {
                         {order.isQuote ? (
                           <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200">
                             <UserPen className="w-3 h-3 mr-1" />Invoice
+                          </Badge>
+                        ) : order.orderSource === 'wholesaler' ? (
+                          <Badge variant="outline" className="text-xs bg-gray-50 text-gray-600 border-gray-200">
+                            <UserPen className="w-3 h-3 mr-1" />Manual
                           </Badge>
                         ) : (
                           <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">

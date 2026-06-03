@@ -883,51 +883,71 @@ export function registerProductRoutes(app: Express): void {
   });
 
   // GET /api/public/products/:slug
+  // Slug format: "{name-slugified}-{productId}" or just "{productId}"
   app.get("/api/public/products/:slug", async (req, res) => {
     try {
       const { slug } = req.params;
-      
-      // Mock SEO-optimized product data
-      const product = {
-        id: "prod_001",
-        name: "Premium Organic Apples",
-        description: "Fresh, organic apples sourced directly from local farms. Perfect for retail stores, restaurants, and cafes looking for high-quality produce.",
-        price: "2.50",
-        category: "Fresh Produce",
-        images: [
-          "https://images.unsplash.com/photo-1560806887-1e4cd0b6cbd6?w=800",
-          "https://images.unsplash.com/photo-1568702846914-96b305d2aaeb?w=400"
-        ],
-        wholesaler: {
-          id: "whole_001",
-          businessName: "Fresh Valley Farms",
-          location: "Kent, UK",
-          rating: 4.8,
-          totalReviews: 127,
-          profileImage: "https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=200",
-          phoneNumber: "+44 1234 567890",
-          email: "contact@freshvalley.com"
-        },
-        specifications: {
-          "Origin": "Kent, United Kingdom",
-          "Variety": "Gala, Braeburn, Cox's Orange Pippin",
-          "Organic Certified": "Yes - Soil Association",
-          "Shelf Life": "7-14 days when stored properly",
-          "Storage": "Cool, dry place or refrigerated",
-          "Packaging": "10kg boxes, 20kg crates available"
-        },
-        availability: "In Stock - Available Now",
-        minOrderQuantity: 50,
-        packQuantity: 40,
-        unitSize: "500",
-        unitOfMeasure: "g",
-        views: 1247,
-        lastUpdated: new Date().toISOString()
-      };
 
-      // Increment view count (in real implementation, would update database)
-      
-      res.json(product);
+      // Parse product ID — last hyphen-separated segment, or the whole slug if numeric
+      const segments = slug.split('-');
+      const lastSegment = segments[segments.length - 1];
+      const productId = parseInt(lastSegment, 10);
+
+      if (isNaN(productId)) {
+        return res.status(404).json({ message: "Product not found" });
+      }
+
+      const product = await storage.getProduct(productId);
+      if (!product || product.status === 'inactive') {
+        return res.status(404).json({ message: "Product not found" });
+      }
+
+      const wholesaler = await storage.getUser(product.wholesalerId);
+      if (!wholesaler) {
+        return res.status(404).json({ message: "Product not found" });
+      }
+
+      const images: string[] = [];
+      if (product.images && Array.isArray(product.images)) {
+        images.push(...(product.images as string[]));
+      } else if (product.imageUrl) {
+        images.push(product.imageUrl);
+      }
+
+      const availability =
+        (product.stock ?? 0) <= 0
+          ? "Out of Stock"
+          : (product.stock ?? 0) < 20
+          ? `Low Stock — ${product.stock} units left`
+          : "In Stock — Available Now";
+
+      const location = [wholesaler.city, wholesaler.country].filter(Boolean).join(', ') || 'United Kingdom';
+
+      res.json({
+        id: product.id.toString(),
+        name: product.name,
+        description: product.description || '',
+        price: product.price,
+        category: product.category || 'General',
+        images,
+        wholesaler: {
+          id: wholesaler.id,
+          businessName: wholesaler.businessName || `${wholesaler.firstName || ''} ${wholesaler.lastName || ''}`.trim() || 'Supplier',
+          location,
+          rating: 5.0,
+          totalReviews: 0,
+          phoneNumber: wholesaler.businessPhone || wholesaler.phoneNumber || undefined,
+          email: wholesaler.businessEmail || wholesaler.email || undefined,
+        },
+        specifications: {},
+        availability,
+        minOrderQuantity: product.moq ?? 1,
+        packQuantity: product.packQuantity ?? null,
+        unitSize: product.unitSize ?? (product as any).sizePerUnit ?? null,
+        unitOfMeasure: product.unitOfMeasure ?? null,
+        views: 0,
+        lastUpdated: product.updatedAt?.toISOString() ?? new Date().toISOString(),
+      });
     } catch (error) {
       console.error("Error fetching public product:", error);
       res.status(500).json({ message: "Product not found" });

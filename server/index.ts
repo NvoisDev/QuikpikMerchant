@@ -400,6 +400,12 @@ async function runStartupMigrations() {
     // revenue analytics and clearly labelled in the admin panel. Idempotent — the WHERE
     // clause is a no-op once is_test_account is already true.
     `UPDATE users SET is_test_account = true WHERE email = 'citexsoft@gmail.com' AND role = 'wholesaler' AND is_test_account = false`,
+    // Orders badge fix: distinguish wholesaler-placed vs customer-placed orders
+    `ALTER TABLE orders ADD COLUMN IF NOT EXISTS order_source VARCHAR`,
+    // Backfill: wholesalers use offline payment methods that customers never select
+    `UPDATE orders SET order_source = 'wholesaler' WHERE order_source IS NULL AND payment_method IN ('cash', 'bank_transfer', 'cheque', 'other', 'pay_later') AND is_quote = false`,
+    // Backfill: Stripe payment intent = customer paid online
+    `UPDATE orders SET order_source = 'customer_portal' WHERE order_source IS NULL AND stripe_payment_intent_id IS NOT NULL AND is_quote = false`,
   ];
   for (const stmt of migrations) {
     await db.execute(sql.raw(stmt));

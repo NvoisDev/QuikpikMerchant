@@ -293,6 +293,7 @@ export function registerOrderActionsRoutes(
         status: 'confirmed',
         notes: notes || `Order placed via marketplace for ${product.name}`,
         collectionAddressId: validatedCollectionAddressId,
+        orderSource: 'customer_portal',
       };
 
       const itemQty = parseInt(quantity);
@@ -482,6 +483,7 @@ Please contact the customer to confirm this order.
         deliveryAddress: customerAddress,
         notes: notes || '',
         collectionAddressId: validatedCollAddrId,
+        orderSource: 'customer_portal',
       };
 
       const orderItemsArr = items.map((item: any) => {

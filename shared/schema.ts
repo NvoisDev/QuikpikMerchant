@@ -729,6 +729,7 @@ export const orders = pgTable("orders", {
   stockRestoredCount: integer("stock_restored_count").default(0), // Number of units returned to inventory
   restockStatus: varchar("restock_status"), // Idempotency guard: null | 'completed'
   placedByName: varchar("placed_by_name"), // Name of team member who placed the order (null = wholesaler owner)
+  orderSource: varchar("order_source"), // 'wholesaler' | 'customer_portal' — who initiated the order
 
   // Multi-business profile: which profile was used for this order
   businessProfileId: integer("business_profile_id").references(() => businessProfiles.id, { onDelete: "set null" }),

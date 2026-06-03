@@ -337,7 +337,8 @@ export function registerOrderCheckoutRoutes(
               fulfillmentType: fulfillmentType,
               deliveryCarrier: fulfillmentType === 'delivery' ? 'Supplier Arranged' : null,
               deliveryCost: parseFloat(metadataShippingCost || '0').toFixed(2),
-              shippingTotal: parseFloat(metadataShippingCost || '0').toFixed(2)
+              shippingTotal: parseFloat(metadataShippingCost || '0').toFixed(2),
+              orderSource: 'customer_portal',
             };
 
             // Create order items with orderId for storage, including promo labels

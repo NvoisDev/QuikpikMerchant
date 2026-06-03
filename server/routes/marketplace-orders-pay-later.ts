@@ -302,6 +302,7 @@ export function registerOrderPayLaterRoutes(
         feePercentageUsed: payLaterFeeConfig.percentage.toFixed(4),
         fixedFeeUsed: payLaterFeeConfig.fixed.toFixed(2),
         paymentMethod: 'pay_later',
+        orderSource: 'customer_portal',
       };
 
       const order = await db.transaction(async (trx) => {
