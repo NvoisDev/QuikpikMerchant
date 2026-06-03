@@ -210,7 +210,21 @@ export default function ProductFormDialog({
             status: editingProduct.status || "active",
             packQuantity: String(editingProduct.packQuantity || ""),
             unitOfMeasure: editingProduct.unitOfMeasure || "",
-            unitSize: String(editingProduct.unitSize || ""),
+            unitSize: (() => {
+              const existing = String(editingProduct.unitSize || "");
+              if (existing) return existing;
+              // Derive from totalPackageWeight ÷ packQuantity when unitSize not stored
+              const totalWt = parseFloat(String(editingProduct.totalPackageWeight || ""));
+              const qty = parseFloat(String(editingProduct.packQuantity || ""));
+              const uom = editingProduct.unitOfMeasure;
+              const WEIGHT_TO_KG: Record<string, number> = { kg: 1, g: 0.001, lb: 0.453592, oz: 0.0283495 };
+              const factor = uom ? WEIGHT_TO_KG[uom] : undefined;
+              if (totalWt > 0 && qty > 0 && factor) {
+                const unitSizeInUom = (totalWt / qty) / factor;
+                return String(Math.round(unitSizeInUom * 1000) / 1000);
+              }
+              return "";
+            })(),
             totalPackageWeight: String(editingProduct.totalPackageWeight || ""),
             unitsPerPallet: String(editingProduct.unitsPerPallet || ""),
             palletPrice: String(editingProduct.palletPrice || ""),

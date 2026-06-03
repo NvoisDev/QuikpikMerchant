@@ -147,9 +147,18 @@ function ProductCard({
   const expiryInfo = getExpiryInfo(effectiveExpiry);
 
   const formatProductSize = () => {
-    if (product.packQuantity && product.unitSize && product.unitOfMeasure) {
-      const unitSize = formatWeight(product.unitSize);
-      return `${product.packQuantity} × ${unitSize}${product.unitOfMeasure}`;
+    const qty = product.packQuantity;
+    const uom = product.unitOfMeasure;
+    if (!qty || !uom) return null;
+    // Use explicit unitSize when stored
+    if (product.unitSize) {
+      return `${qty} × ${formatWeight(product.unitSize)}${uom}`;
+    }
+    // Derive from totalPackageWeight ÷ packQuantity (totalPackageWeight is in kg)
+    const totalWt = product.totalPackageWeight ? parseFloat(product.totalPackageWeight) : 0;
+    if (totalWt > 0) {
+      const unitWt = totalWt / qty;
+      return `${qty} × ${formatWeight(unitWt)}${uom}`;
     }
     return null;
   };
@@ -277,6 +286,9 @@ function ProductCard({
               <h3 className="font-semibold text-gray-900 text-base line-clamp-1">{product.name}</h3>
               {weightLabel && (
                 <span className="text-xs text-gray-400">{weightLabel}</span>
+              )}
+              {productSize && (
+                <span className="block text-xs text-gray-400">{productSize}</span>
               )}
               {product.category && (
                 <p className="text-xs text-gray-400 mt-0.5">{product.category}</p>
