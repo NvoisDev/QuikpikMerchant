@@ -408,6 +408,15 @@ async function runStartupMigrations() {
     `UPDATE orders SET order_source = 'customer_portal' WHERE order_source IS NULL AND stripe_payment_intent_id IS NOT NULL AND is_quote = false`,
     // Backfill: any remaining orders with no Stripe PI and no payment method are wholesaler-created
     `UPDATE orders SET order_source = 'wholesaler' WHERE order_source IS NULL AND stripe_payment_intent_id IS NULL AND is_quote = false`,
+    // Backfill: derive size_per_unit = total_package_weight / pack_quantity for products where
+    // size_per_unit is NULL but both source columns are present and pack_quantity > 0.
+    // Fully idempotent — WHERE clause is a no-op once the column is populated.
+    `UPDATE products
+     SET size_per_unit = ROUND((total_package_weight / pack_quantity)::numeric, 6)
+     WHERE size_per_unit IS NULL
+       AND total_package_weight IS NOT NULL
+       AND pack_quantity IS NOT NULL
+       AND pack_quantity > 0`,
   ];
   for (const stmt of migrations) {
     await db.execute(sql.raw(stmt));
