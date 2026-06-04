@@ -1,6 +1,6 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Input } from "@/components/ui/input";
-import { Search } from "lucide-react";
+import { Search, AlertCircle } from "lucide-react";
 
 declare const google: any;
 
@@ -18,24 +18,39 @@ interface BusinessSearchInputProps {
   className?: string;
 }
 
-let sdkState: 'idle' | 'loading' | 'ready' = 'idle';
-const pendingCallbacks: Array<() => void> = [];
+// Module-level SDK loader — loads once, reused across all instances
+let sdkPromise: Promise<boolean> | null = null;
 
-function loadGoogleMapsSdk(apiKey: string): Promise<void> {
-  return new Promise((resolve) => {
-    if (sdkState === 'ready') { resolve(); return; }
-    pendingCallbacks.push(resolve);
-    if (sdkState === 'loading') return;
-    sdkState = 'loading';
+function loadGoogleMapsSdk(apiKey: string): Promise<boolean> {
+  if (sdkPromise) return sdkPromise;
+
+  sdkPromise = new Promise((resolve) => {
+    // Already loaded from a previous session
+    if (typeof google !== 'undefined' && google?.maps?.places) {
+      resolve(true);
+      return;
+    }
+
+    // Catch Google auth failures (invalid key, billing disabled, etc.)
+    (window as any).gm_authFailure = () => {
+      console.error('[BusinessSearch] Google Maps auth failure — check API key, billing, and Places API is enabled.');
+      sdkPromise = null;
+      resolve(false);
+    };
+
     const script = document.createElement('script');
     script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;
     script.async = true;
-    script.onload = () => {
-      sdkState = 'ready';
-      pendingCallbacks.splice(0).forEach((cb) => cb());
+    script.onload = () => resolve(true);
+    script.onerror = (e) => {
+      console.error('[BusinessSearch] Failed to load Google Maps SDK:', e);
+      sdkPromise = null;
+      resolve(false);
     };
     document.head.appendChild(script);
   });
+
+  return sdkPromise;
 }
 
 function getComponent(components: any[], type: string, short = false): string {
@@ -50,6 +65,7 @@ export function BusinessSearchInput({
 }: BusinessSearchInputProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const onSelectRef = useRef(onSelect);
+  const [error, setError] = useState<string | null>(null);
   onSelectRef.current = onSelect;
 
   useEffect(() => {
@@ -61,8 +77,12 @@ export function BusinessSearchInput({
         const res = await fetch('/api/config/google-places-key', { credentials: 'include' });
         if (!res.ok || cancelled) return;
         const { apiKey } = await res.json();
-        await loadGoogleMapsSdk(apiKey);
-        if (cancelled || !inputRef.current) return;
+
+        const loaded = await loadGoogleMapsSdk(apiKey);
+        if (!loaded || cancelled || !inputRef.current) {
+          if (!loaded) setError('Google Places unavailable');
+          return;
+        }
 
         autocomplete = new google.maps.places.Autocomplete(inputRef.current, {
           types: ['establishment'],
@@ -93,8 +113,9 @@ export function BusinessSearchInput({
 
           if (inputRef.current) inputRef.current.value = '';
         });
-      } catch {
-        // API key not configured — silently does nothing
+      } catch (e) {
+        console.error('[BusinessSearch] Init error:', e);
+        setError('Search unavailable');
       }
     }
 
@@ -106,6 +127,15 @@ export function BusinessSearchInput({
       }
     };
   }, []);
+
+  if (error) {
+    return (
+      <div className={`flex items-center gap-2 text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-md px-3 py-2 ${className ?? ''}`}>
+        <AlertCircle className="h-3 w-3 shrink-0" />
+        <span>Google business search unavailable — fill in manually below</span>
+      </div>
+    );
+  }
 
   return (
     <div className={`space-y-1 ${className ?? ''}`}>
