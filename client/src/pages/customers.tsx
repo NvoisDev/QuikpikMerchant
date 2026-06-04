@@ -213,11 +213,12 @@ export default function Customers() {
   });
 
   const handleBusinessSearch = useCallback((result: BusinessPlaceResult) => {
-    if (result.businessName) addCustomerForm.setValue('businessName', result.businessName);
-    if (result.streetAddress) addCustomerForm.setValue('streetAddress', result.streetAddress);
-    if (result.city) addCustomerForm.setValue('city', result.city);
-    if (result.postalCode) addCustomerForm.setValue('postalCode', result.postalCode);
-    if (result.country) addCustomerForm.setValue('country', result.country);
+    const opts = { shouldDirty: true, shouldTouch: true };
+    if (result.businessName) addCustomerForm.setValue('businessName', result.businessName, opts);
+    if (result.streetAddress) addCustomerForm.setValue('streetAddress', result.streetAddress, opts);
+    if (result.city) addCustomerForm.setValue('city', result.city, opts);
+    if (result.postalCode) addCustomerForm.setValue('postalCode', result.postalCode, opts);
+    if (result.country) addCustomerForm.setValue('country', result.country, opts);
   }, [addCustomerForm]);
 
   // Plan limits — used by CustomerGroupsTab and PriceListManagementDialog
