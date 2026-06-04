@@ -489,7 +489,7 @@ export default function Customers() {
   const handleAddToGroup = (customer: Customer) => {
     setSelectedCustomer(customer);
     addToGroupForm.reset({ groupId: 0 });
-    setIsAddToGroupDialogOpen(true);
+    setTimeout(() => setIsAddToGroupDialogOpen(true), 0);
   };
 
   const handleAddCustomerToGroup = (data: AddToGroupFormData) => {
