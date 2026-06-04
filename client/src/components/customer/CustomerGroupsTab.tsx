@@ -608,7 +608,7 @@ export function CustomerGroupsTab({
                             <DropdownMenuItem
                               onClick={() => {
                                 setSelectedGroup(group);
-                                setIsAddMemberDialogOpen(true);
+                                setTimeout(() => setIsAddMemberDialogOpen(true), 0);
                               }}
                             >
                               <UserPlus className="mr-2 h-4 w-4" />
@@ -617,7 +617,7 @@ export function CustomerGroupsTab({
                             <DropdownMenuItem
                               onClick={() => {
                                 setSelectedGroup(group);
-                                setIsSearchAndAddDialogOpen(true);
+                                setTimeout(() => setIsSearchAndAddDialogOpen(true), 0);
                               }}
                             >
                               <Search className="mr-2 h-4 w-4" />
@@ -626,7 +626,7 @@ export function CustomerGroupsTab({
                             <DropdownMenuItem
                               onClick={() => {
                                 setSelectedGroup(group);
-                                setIsImportContactsDialogOpen(true);
+                                setTimeout(() => setIsImportContactsDialogOpen(true), 0);
                               }}
                             >
                               <Smartphone className="mr-2 h-4 w-4" />
