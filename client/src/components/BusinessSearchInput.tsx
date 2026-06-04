@@ -129,6 +129,17 @@ export function BusinessSearchInput({
     setQuery('');
     setSuggestions([]);
 
+    // Fire immediately with data we already have from the prediction —
+    // this guarantees business name is always filled even if getDetails fails.
+    onSelect({
+      businessName: suggestion.mainText,
+      streetAddress: '',
+      city: '',
+      postalCode: '',
+      country: '',
+    });
+
+    // Then try getDetails for structured address breakdown (best-effort).
     placesRef.current?.getDetails(
       { placeId: suggestion.placeId, fields: ['name', 'address_components'] },
       (place: any, status: string) => {
@@ -141,6 +152,7 @@ export function BusinessSearchInput({
           getComponent(comps, 'locality') ||
           getComponent(comps, 'postal_town') ||
           getComponent(comps, 'administrative_area_level_2');
+        // Update with the richer data if available
         onSelect({
           businessName: place.name || suggestion.mainText,
           streetAddress,
