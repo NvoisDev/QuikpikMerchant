@@ -468,7 +468,7 @@ export default function Customers() {
   const handleEditCustomer = (customer: Customer) => {
     setSelectedCustomer(customer);
     editCustomerForm.reset({
-      firstName: customer.firstName,
+      firstName: customer.firstName ?? '',
       lastName: customer.lastName || '',
       phoneNumber: customer.phoneNumber || '',
       email: customer.email || '',
@@ -479,7 +479,7 @@ export default function Customers() {
       postalCode: customer.postalCode || '',
       country: customer.country || '',
     });
-    setIsEditCustomerDialogOpen(true);
+    setTimeout(() => setIsEditCustomerDialogOpen(true), 0);
   };
 
   const handleUpdateCustomer = (data: EditCustomerFormData) => {
