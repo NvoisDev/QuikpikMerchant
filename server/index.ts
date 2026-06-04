@@ -417,6 +417,7 @@ async function runStartupMigrations() {
        AND total_package_weight IS NOT NULL
        AND pack_quantity IS NOT NULL
        AND pack_quantity > 0`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS is_inactive BOOLEAN NOT NULL DEFAULT FALSE`,
   ];
   for (const stmt of migrations) {
     await db.execute(sql.raw(stmt));

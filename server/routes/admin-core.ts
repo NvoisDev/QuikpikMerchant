@@ -24,7 +24,7 @@ export function registerAdminCoreRoutes(app: Express): void {
 
       const [allWholesalers, allOrdersData, newWholesalers, planRows] = await Promise.all([
         db.select({ subscriptionTier: users.subscriptionTier, archived: users.archived, subscriptionStatus: users.subscriptionStatus })
-          .from(users).where(and(eq(users.role, 'wholesaler'), eq(users.isTestAccount, false))),
+          .from(users).where(and(eq(users.role, 'wholesaler'), eq(users.isTestAccount, false), eq(users.isInactive, false))),
         db.select({
           subtotal: orders.subtotal,
           platformFee: orders.platformFee,
@@ -33,9 +33,9 @@ export function registerAdminCoreRoutes(app: Express): void {
           createdAt: orders.createdAt,
         }).from(orders)
           .innerJoin(users, eq(orders.wholesalerId, users.id))
-          .where(eq(users.isTestAccount, false)),
+          .where(and(eq(users.isTestAccount, false), eq(users.isInactive, false))),
         db.select({ count: count() }).from(users)
-          .where(and(eq(users.role, 'wholesaler'), gte(users.createdAt, monthStart), eq(users.isTestAccount, false))),
+          .where(and(eq(users.role, 'wholesaler'), gte(users.createdAt, monthStart), eq(users.isTestAccount, false), eq(users.isInactive, false))),
         db.select({ planId: subscriptionPlans.planId, monthlyPrice: subscriptionPlans.monthlyPrice })
           .from(subscriptionPlans),
       ]);
@@ -199,6 +199,7 @@ export function registerAdminCoreRoutes(app: Express): void {
           customerFixedFee: w.customerFixedFee !== null && w.customerFixedFee !== undefined
             ? parseFloat(w.customerFixedFee) : null,
           isTestAccount: w.isTestAccount ?? false,
+          isInactive: w.isInactive ?? false,
           lastLoginAt: (() => {
             const ownerLogin = w.lastLoginAt ? new Date(w.lastLoginAt) : null;
             const teamLogin = teamMemberLastLoginByWholesaler[w.id] ?? null;
@@ -218,6 +219,7 @@ export function registerAdminCoreRoutes(app: Express): void {
         };
       }).sort((a, b) => {
         if (a.isTestAccount !== b.isTestAccount) return a.isTestAccount ? 1 : -1;
+        if (a.isInactive !== b.isInactive) return a.isInactive ? 1 : -1;
         return b.totalFeesEarned - a.totalFeesEarned;
       });
 
@@ -251,6 +253,7 @@ export function registerAdminCoreRoutes(app: Express): void {
         .innerJoin(users, eq(orders.wholesalerId, users.id))
         .where(and(
           eq(users.isTestAccount, false),
+          eq(users.isInactive, false),
           from ? gte(orders.createdAt, new Date(from)) : undefined,
           toDate ? lte(orders.createdAt, toDate) : undefined,
           filterWholesalerId ? eq(orders.wholesalerId, filterWholesalerId) : undefined,
@@ -410,6 +413,24 @@ export function registerAdminCoreRoutes(app: Express): void {
     } catch (error) {
       console.error('Admin toggle-test-account error:', error);
       res.status(500).json({ error: 'Failed to toggle test account status' });
+    }
+  });
+
+  // PATCH /api/admin/wholesalers/:id/toggle-inactive
+  app.patch('/api/admin/wholesalers/:id/toggle-inactive', requireAuth, async (req: any, res) => {
+    try {
+      if (!ADMIN_EMAILS.includes(getAdminEmail(req) || "")) return res.status(403).json({ error: 'Forbidden' });
+      const targetUser = await db.select().from(users).where(eq(users.id, req.params.id)).limit(1);
+      if (!targetUser.length || targetUser[0].role !== 'wholesaler') {
+        return res.status(404).json({ error: 'Wholesaler not found' });
+      }
+      const newValue = !targetUser[0].isInactive;
+      await db.update(users).set({ isInactive: newValue }).where(eq(users.id, req.params.id));
+      console.log(`[admin] isInactive toggled to ${newValue} for ${targetUser[0].email}`);
+      res.json({ id: req.params.id, isInactive: newValue, businessName: targetUser[0].businessName });
+    } catch (error) {
+      console.error('Admin toggle-inactive error:', error);
+      res.status(500).json({ error: 'Failed to toggle inactive status' });
     }
   });
 

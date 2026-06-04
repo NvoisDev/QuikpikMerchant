@@ -273,6 +273,7 @@ export const users = pgTable("users", {
 
   isSuspicious: boolean("is_suspicious").default(false), // Admin-flagged suspicious customer
   isTestAccount: boolean("is_test_account").default(false), // Internal test accounts — hidden from wholesaler views and analytics
+  isInactive: boolean("is_inactive").default(false), // Churned/dormant wholesalers — excluded from stats; store shown as offline
 
   lastLoginAt: timestamp("last_login_at"), // Stamped on every successful Google OAuth login
   lastSeenAt: timestamp("last_seen_at"), // Updated by presence ping every 60 s

@@ -32,6 +32,7 @@ export interface WholesalerRow {
   customerFeePercentage: number | null;
   customerFixedFee: number | null;
   isTestAccount?: boolean;
+  isInactive?: boolean;
   lastLoginAt?: string | null;
   lastSeenAt?: string | null;
   lastRealUserActivityAt?: string | null;

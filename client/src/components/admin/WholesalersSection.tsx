@@ -138,6 +138,16 @@ export function WholesalersSection({ wholesalers, wholesalersLoading, isAdmin }:
     onError: () => toast({ title: "Failed to update test account status", variant: "destructive" }),
   });
 
+  const toggleInactive = useMutation({
+    mutationFn: (id: string) => apiRequest("PATCH", `/api/admin/wholesalers/${id}/toggle-inactive`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/wholesalers"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/platform-stats"] });
+      toast({ title: "Inactive status updated" });
+    },
+    onError: () => toast({ title: "Failed to update inactive status", variant: "destructive" }),
+  });
+
   const customerFeeOverrideMutation = useMutation({
     mutationFn: async ({ id, percentage, fixed }: { id: string; percentage: number | null; fixed: number | null }) => {
       const r = await apiRequest("PATCH", `/api/admin/wholesalers/${id}/customer-fee-override`, {
@@ -319,11 +329,12 @@ export function WholesalersSection({ wholesalers, wholesalersLoading, isAdmin }:
                 </TableHeader>
                 <TableBody>
                   {filtered.map(w => (
-                    <TableRow key={w.id} className={`hover:bg-green-50/30 cursor-pointer ${w.isTestAccount ? "opacity-60" : ""}`} onClick={() => openDrawer(w)}>
+                    <TableRow key={w.id} className={`hover:bg-green-50/30 cursor-pointer ${w.isTestAccount || w.isInactive ? "opacity-60" : ""}`} onClick={() => openDrawer(w)}>
                       <TableCell>
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <p className="text-xs font-medium text-gray-800">{w.businessName || `${w.firstName || ''} ${w.lastName || ''}`.trim()}</p>
                           {w.isTestAccount && <span className="text-xs bg-yellow-100 text-yellow-700 border border-yellow-200 px-1.5 py-0.5 rounded font-medium">Test</span>}
+                          {w.isInactive && <span className="text-xs bg-gray-100 text-gray-500 border border-gray-300 px-1.5 py-0.5 rounded font-medium">Inactive</span>}
                         </div>
                         <p className="text-xs text-gray-400">{w.email}</p>
                       </TableCell>
@@ -376,6 +387,9 @@ export function WholesalersSection({ wholesalers, wholesalersLoading, isAdmin }:
                           </Button>
                           <Button size="sm" variant="outline" className={`h-7 text-xs ${w.isTestAccount ? "border-yellow-300 text-yellow-700 bg-yellow-50 hover:bg-yellow-100" : "border-gray-200 text-gray-500 hover:bg-gray-50"}`} disabled={toggleTestAccount.isPending} onClick={() => toggleTestAccount.mutate(w.id)} title={w.isTestAccount ? "Remove test account flag" : "Mark as test account"}>
                             {w.isTestAccount ? "Remove test" : "Test"}
+                          </Button>
+                          <Button size="sm" variant="outline" className={`h-7 text-xs ${w.isInactive ? "border-gray-400 text-gray-600 bg-gray-100 hover:bg-gray-200" : "border-gray-200 text-gray-500 hover:bg-gray-50"}`} disabled={toggleInactive.isPending} onClick={() => toggleInactive.mutate(w.id)} title={w.isInactive ? "Remove inactive flag" : "Mark as inactive (excluded from stats)"}>
+                            {w.isInactive ? "Set active" : "Inactive"}
                           </Button>
                           <Button size="sm" variant="ghost" className="h-7 text-xs text-gray-400" onClick={() => openDrawer(w)}>
                             <Eye className="h-3.5 w-3.5" />
@@ -714,6 +728,9 @@ export function WholesalersSection({ wholesalers, wholesalersLoading, isAdmin }:
                 </Button>
                 <Button size="sm" variant="outline" className={`text-xs flex-1 ${selectedWholesaler.isTestAccount ? "border-yellow-300 text-yellow-700 bg-yellow-50 hover:bg-yellow-100" : "border-gray-200 text-gray-600 hover:bg-gray-50"}`} disabled={toggleTestAccount.isPending} onClick={() => { toggleTestAccount.mutate(selectedWholesaler.id); setDrawerOpen(false); }}>
                   {selectedWholesaler.isTestAccount ? "Remove test flag" : "Mark as test"}
+                </Button>
+                <Button size="sm" variant="outline" className={`text-xs flex-1 ${selectedWholesaler.isInactive ? "border-gray-400 text-gray-600 bg-gray-100 hover:bg-gray-200" : "border-gray-200 text-gray-600 hover:bg-gray-50"}`} disabled={toggleInactive.isPending} onClick={() => { toggleInactive.mutate(selectedWholesaler.id); setDrawerOpen(false); }}>
+                  {selectedWholesaler.isInactive ? "Remove inactive" : "Mark inactive"}
                 </Button>
                 <a href={`mailto:${selectedWholesaler.email}`} className="flex-1">
                   <Button size="sm" variant="outline" className="w-full text-xs gap-1.5">
