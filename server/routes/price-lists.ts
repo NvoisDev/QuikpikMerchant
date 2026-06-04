@@ -293,8 +293,8 @@ export function registerPriceListRoutes(app: Express): void {
       const schema = z.object({
         name: z.string().min(1),
         description: z.string().optional().nullable(),
-        startDate: z.string().optional().nullable(),
-        endDate: z.string().optional().nullable(),
+        startDate: z.string().optional().nullable().transform(v => v || null),
+        endDate: z.string().optional().nullable().transform(v => v || null),
         isActive: z.boolean().optional().default(true),
       });
       const data = schema.parse(req.body);
