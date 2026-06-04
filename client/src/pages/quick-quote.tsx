@@ -262,7 +262,7 @@ export default function QuickQuote() {
   });
 
   const { data: selectedPriceListData } = useQuery<{ id: number; items: { productId: number; customPrice: string | null; discountPercentage: string | null; customPalletPrice: string | null }[] }>({
-    queryKey: ['/api/price-lists', pickerPriceListId],
+    queryKey: [`/api/price-lists/${pickerPriceListId}`],
     enabled: !!pickerPriceListId,
     staleTime: 5 * 60 * 1000,
   });
