@@ -518,7 +518,7 @@ export default function Customers() {
               </Link>
             </DropdownMenuItem>
             {!isViewer && (
-              <DropdownMenuItem onClick={() => setIsInvitationModalOpen(true)}>
+              <DropdownMenuItem onClick={() => setTimeout(() => setIsInvitationModalOpen(true), 0)}>
                 <Share2 className="h-4 w-4 mr-2" /> Invite Customer
               </DropdownMenuItem>
             )}
@@ -855,7 +855,7 @@ export default function Customers() {
                     <DropdownMenuItem onClick={() => {
                       setMergeInitialDuplicates([]);
                       setMergeInitialMode('manual');
-                      setIsMergeDialogOpen(true);
+                      setTimeout(() => setIsMergeDialogOpen(true), 0);
                     }}>
                       <Search className="h-4 w-4 mr-2" />
                       Search & Merge Customers

@@ -461,7 +461,7 @@ export default function ProductDetail() {
                   <Share2 className="h-4 w-4 mr-2" /> Copy public link
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem className="text-red-600 focus:text-red-600" onClick={() => setDeleteDialogOpen(true)}>
+                <DropdownMenuItem className="text-red-600 focus:text-red-600" onClick={() => setTimeout(() => setDeleteDialogOpen(true), 0)}>
                   <Trash2 className="h-4 w-4 mr-2" /> Delete product
                 </DropdownMenuItem>
               </DropdownMenuContent>

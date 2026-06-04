@@ -564,26 +564,26 @@ export default function CustomerDetail() {
               View orders
             </DropdownMenuItem>
             {!isViewer && (
-              <DropdownMenuItem onClick={() => setIsAddToGroupOpen(true)}>
+              <DropdownMenuItem onClick={() => setTimeout(() => setIsAddToGroupOpen(true), 0)}>
                 <Users className="h-4 w-4 mr-2" />
                 Add to Group
               </DropdownMenuItem>
             )}
             {!isViewer && (
-              <DropdownMenuItem onClick={() => setIsAddToPriceListOpen(true)}>
+              <DropdownMenuItem onClick={() => setTimeout(() => setIsAddToPriceListOpen(true), 0)}>
                 <Tag className="h-4 w-4 mr-2" />
                 Add to Price List
               </DropdownMenuItem>
             )}
             {!isViewer && <DropdownMenuSeparator />}
             {!isViewer && (
-              <DropdownMenuItem onClick={openEditContact}>
+              <DropdownMenuItem onClick={() => setTimeout(openEditContact, 0)}>
                 <Edit3 className="h-4 w-4 mr-2" />
                 Edit contact info
               </DropdownMenuItem>
             )}
             {!isViewer && (
-              <DropdownMenuItem onClick={() => setIsEditAddressesOpen(true)}>
+              <DropdownMenuItem onClick={() => setTimeout(() => setIsEditAddressesOpen(true), 0)}>
                 <MapPin className="h-4 w-4 mr-2" />
                 Edit addresses
               </DropdownMenuItem>
