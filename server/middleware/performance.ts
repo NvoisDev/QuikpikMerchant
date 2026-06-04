@@ -204,11 +204,11 @@ export class PerformanceMiddleware {
         'Referrer-Policy': 'strict-origin-when-cross-origin',
         'Content-Security-Policy': `
           default-src 'self';
-          script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://m.stripe.com;
-          style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+          script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://m.stripe.com https://maps.googleapis.com;
+          style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://maps.googleapis.com;
           font-src 'self' https://fonts.gstatic.com;
           img-src 'self' data: https: blob:;
-          connect-src 'self' https://api.stripe.com https://m.stripe.com wss: ws:;
+          connect-src 'self' https://api.stripe.com https://m.stripe.com https://maps.googleapis.com wss: ws:;
           frame-src 'self' https://js.stripe.com https://hooks.stripe.com;
           media-src 'self' blob:;
           worker-src 'self' blob:;
