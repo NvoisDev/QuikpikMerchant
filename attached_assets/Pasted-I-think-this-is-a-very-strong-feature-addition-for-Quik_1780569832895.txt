@@ -1,0 +1,191 @@
+I think this is a very strong feature addition for Quikpik — and it’s the kind of thing users immediately perceive as “premium” because it removes manual admin work.
+
+The important thing is that your agent is approaching it the right way:
+
+lightweight enhancement
+additive only
+no inventory/system risk
+uses infrastructure you already have
+
+That’s exactly the kind of feature you should be adding while live.
+
+A few thoughts to make it even better:
+
+Why This Is Valuable
+
+For wholesalers, onboarding customers is repetitive:
+
+typing shop names
+typing addresses
+postcode mistakes
+inconsistent formatting
+
+Google autocomplete solves:
+
+speed
+accuracy
+professionalism
+delivery accuracy
+
+It also helps:
+
+route planning later
+analytics by location
+fewer failed deliveries
+cleaner customer records
+My Recommendations
+1. Rename the Field
+
+Instead of:
+
+Search on Google
+
+Use:
+
+Search business name or address
+
+Or:
+
+Find business on Google
+
+Feels more natural.
+
+2. Make It Optional
+
+Very important.
+
+Do NOT force Google selection.
+
+Users should still be able to:
+
+manually enter customers
+add market traders
+add temporary buyers
+add informal businesses
+
+So:
+
+Google search = helper
+NOT required workflow
+3. Add Tiny “Powered by Google” Text
+
+Google usually requires attribution for Places autocomplete.
+
+Small subtle text underneath is enough.
+
+4. Keep Fields Editable (VERY IMPORTANT)
+
+Your agent already mentioned this — good.
+
+Never lock fields after autofill.
+
+Wholesalers often:
+
+shorten names
+add unit numbers
+modify delivery instructions
+use warehouse addresses
+5. Add Delivery Notes Field Later
+
+Long-term:
+
+Rear entrance
+Unit 4
+Ask for security
+Loading bay only
+
+That becomes very useful operationally.
+
+6. Restrict Geography (Optional)
+
+Since Quikpik is UK-focused right now:
+
+You could bias autocomplete to:
+
+country: gb
+
+This improves relevance and reduces weird results.
+
+7. Avoid Full Place Details Calls Initially
+
+This is IMPORTANT for cost control.
+
+Autocomplete is relatively cheap.
+
+Full Place Details requests:
+
+cost more
+scale quickly
+
+So for now:
+✅ name
+✅ address
+✅ postcode
+✅ city
+
+is enough.
+
+You can always add:
+
+opening hours
+phone numbers
+website
+later.
+8. Biggest UX Win
+
+The real magic is:
+
+Type "Jumbo"
+↓
+Jumbo Midlands Ltd appears
+↓
+Click
+↓
+Whole form fills instantly
+
+That’s the kind of interaction users remember.
+
+Risk Level
+
+Honestly:
+🟢 LOW RISK
+
+Compared to:
+
+inventory
+invoicing
+payments
+stock history
+
+this is a very safe feature.
+
+Because:
+
+isolated
+additive
+no existing business logic touched
+My Only Warning
+
+Do NOT:
+
+tightly couple customer creation to Google
+overwrite existing customer addresses automatically
+auto-update saved addresses from Google later
+
+That causes data integrity headaches.
+
+Use it:
+
+only at customer creation time.
+
+Overall
+
+This is exactly the kind of feature Quikpik should continue adding:
+
+operational efficiency
+polished UX
+low technical risk
+high perceived value
+saves wholesalers time immediately
+
+I’d definitely add it.

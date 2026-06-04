@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useCurrency } from "@/hooks/useCurrency";
 import PageHeader from "@/components/PageHeader";
 import ElephantLoader from "@/components/ui/elephant-loader";
@@ -21,6 +21,7 @@ import { useLocation, Link } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { BusinessSearchInput, type BusinessPlaceResult } from "@/components/BusinessSearchInput";
 import {
   Users,
   Plus,
@@ -210,6 +211,14 @@ export default function Customers() {
     resolver: zodResolver(addCustomerFormSchema),
     defaultValues: { firstName: "", lastName: "", businessName: "", email: "", phoneNumber: "", groupId: undefined },
   });
+
+  const handleBusinessSearch = useCallback((result: BusinessPlaceResult) => {
+    if (result.businessName) addCustomerForm.setValue('businessName', result.businessName);
+    if (result.streetAddress) addCustomerForm.setValue('streetAddress', result.streetAddress);
+    if (result.city) addCustomerForm.setValue('city', result.city);
+    if (result.postalCode) addCustomerForm.setValue('postalCode', result.postalCode);
+    if (result.country) addCustomerForm.setValue('country', result.country);
+  }, [addCustomerForm]);
 
   // Plan limits — used by CustomerGroupsTab and PriceListManagementDialog
   const { data: planLimits, isLoading: planLimitsLoading } = useQuery<{
@@ -551,6 +560,16 @@ export default function Customers() {
           </DialogHeader>
           <Form {...addCustomerForm}>
             <form onSubmit={addCustomerForm.handleSubmit(handleAddCustomer)} className="space-y-4">
+              <div className="pb-1">
+                <label className="text-sm font-medium mb-1.5 block">Search on Google</label>
+                <BusinessSearchInput
+                  placeholder="Type a business name to auto-fill..."
+                  onSelect={handleBusinessSearch}
+                />
+              </div>
+              <div className="border-t border-dashed pt-3">
+                <p className="text-xs text-muted-foreground mb-3">Or fill in manually:</p>
+              </div>
               <FormField
                 control={addCustomerForm.control}
                 name="firstName"

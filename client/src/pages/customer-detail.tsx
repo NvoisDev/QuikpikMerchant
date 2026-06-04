@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useCurrency } from "@/hooks/useCurrency";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRoute, useLocation } from "wouter";
@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { BusinessSearchInput, type BusinessPlaceResult } from "@/components/BusinessSearchInput";
 import {
   ArrowLeft,
   MoreHorizontal,
@@ -157,6 +158,17 @@ export default function CustomerDetail() {
     postalCode: "",
     country: "",
   });
+
+  const handleBusinessSearchEdit = useCallback((result: BusinessPlaceResult) => {
+    setContactFormData((prev) => ({
+      ...prev,
+      ...(result.businessName && { businessName: result.businessName }),
+      ...(result.streetAddress && { streetAddress: result.streetAddress }),
+      ...(result.city && { city: result.city }),
+      ...(result.postalCode && { postalCode: result.postalCode }),
+      ...(result.country && { country: result.country }),
+    }));
+  }, []);
 
   const { data: customers = [] } = useQuery<Customer[]>({
     queryKey: ["/api/customers"],
@@ -1020,6 +1032,16 @@ export default function CustomerDetail() {
             <DialogTitle>Edit contact information</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleContactSubmit} className="space-y-4">
+            <div className="pb-1">
+              <label className="text-xs font-medium mb-1.5 block">Search on Google</label>
+              <BusinessSearchInput
+                placeholder="Type a business name to auto-fill..."
+                onSelect={handleBusinessSearchEdit}
+              />
+            </div>
+            <div className="border-t border-dashed pt-3">
+              <p className="text-xs text-muted-foreground mb-2">Or fill in manually:</p>
+            </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label className="text-xs">First name</Label>
