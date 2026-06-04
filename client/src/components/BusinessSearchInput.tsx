@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Input } from "@/components/ui/input";
-import { Search, AlertCircle } from "lucide-react";
+import { Building2, Search } from "lucide-react";
 
 declare const google: any;
 
@@ -12,50 +12,40 @@ export interface BusinessPlaceResult {
   country: string;
 }
 
+interface Suggestion {
+  placeId: string;
+  mainText: string;
+  secondaryText: string;
+  placePrediction: any;
+}
+
 interface BusinessSearchInputProps {
   onSelect: (result: BusinessPlaceResult) => void;
   placeholder?: string;
   className?: string;
 }
 
-// Module-level SDK loader — loads once, reused across all instances
 let sdkPromise: Promise<boolean> | null = null;
 
 function loadGoogleMapsSdk(apiKey: string): Promise<boolean> {
   if (sdkPromise) return sdkPromise;
-
   sdkPromise = new Promise((resolve) => {
-    // Already loaded from a previous session
-    if (typeof google !== 'undefined' && google?.maps?.places) {
-      resolve(true);
-      return;
-    }
-
-    // Catch Google auth failures (invalid key, billing disabled, etc.)
-    (window as any).gm_authFailure = () => {
-      console.error('[BusinessSearch] Google Maps auth failure — check API key, billing, and Places API is enabled.');
-      sdkPromise = null;
-      resolve(false);
-    };
-
+    if (typeof google !== 'undefined' && google?.maps?.places) { resolve(true); return; }
+    (window as any).gm_authFailure = () => { sdkPromise = null; resolve(false); };
     const script = document.createElement('script');
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;
+    // v=beta unlocks the new Places API (AutocompleteSuggestion, Place)
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&v=beta`;
     script.async = true;
     script.onload = () => resolve(true);
-    script.onerror = (e) => {
-      console.error('[BusinessSearch] Failed to load Google Maps SDK:', e);
-      sdkPromise = null;
-      resolve(false);
-    };
+    script.onerror = () => { sdkPromise = null; resolve(false); };
     document.head.appendChild(script);
   });
-
   return sdkPromise;
 }
 
-function getComponent(components: any[], type: string, short = false): string {
-  const c = components.find((c: any) => c.types.includes(type));
-  return c ? (short ? c.short_name : c.long_name) : '';
+function getAddressComponent(components: any[], type: string): string {
+  const c = components?.find((c: any) => Array.isArray(c.types) && c.types.includes(type));
+  return c ? (c.longText ?? c.long_name ?? '') : '';
 }
 
 export function BusinessSearchInput({
@@ -63,92 +53,158 @@ export function BusinessSearchInput({
   placeholder = "Find business on Google...",
   className,
 }: BusinessSearchInputProps) {
-  const inputRef = useRef<HTMLInputElement>(null);
-  const onSelectRef = useRef(onSelect);
-  const [error, setError] = useState<string | null>(null);
-  onSelectRef.current = onSelect;
+  const [query, setQuery] = useState('');
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [ready, setReady] = useState(false);
+
+  const sessionTokenRef = useRef<any>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    let autocomplete: any = null;
     let cancelled = false;
-
     async function init() {
       try {
         const res = await fetch('/api/config/google-places-key', { credentials: 'include' });
         if (!res.ok || cancelled) return;
         const { apiKey } = await res.json();
-
-        const loaded = await loadGoogleMapsSdk(apiKey);
-        if (!loaded || cancelled || !inputRef.current) {
-          if (!loaded) setError('Google Places unavailable');
-          return;
-        }
-
-        autocomplete = new google.maps.places.Autocomplete(inputRef.current, {
-          types: ['establishment'],
-          componentRestrictions: { country: 'gb' },
-          fields: ['name', 'address_components'],
-        });
-
-        autocomplete.addListener('place_changed', () => {
-          const place = autocomplete.getPlace();
-          if (!place?.address_components) return;
-
-          const comps = place.address_components;
-          const streetNumber = getComponent(comps, 'street_number');
-          const route = getComponent(comps, 'route');
-          const streetAddress = [streetNumber, route].filter(Boolean).join(' ');
-          const city =
-            getComponent(comps, 'locality') ||
-            getComponent(comps, 'postal_town') ||
-            getComponent(comps, 'administrative_area_level_2');
-
-          onSelectRef.current({
-            businessName: place.name || '',
-            streetAddress,
-            city,
-            postalCode: getComponent(comps, 'postal_code'),
-            country: getComponent(comps, 'country'),
-          });
-
-          if (inputRef.current) inputRef.current.value = '';
-        });
-      } catch (e) {
-        console.error('[BusinessSearch] Init error:', e);
-        setError('Search unavailable');
-      }
+        const ok = await loadGoogleMapsSdk(apiKey);
+        if (!ok || cancelled) return;
+        sessionTokenRef.current = new google.maps.places.AutocompleteSessionToken();
+        if (!cancelled) setReady(true);
+      } catch { /* key not configured */ }
     }
-
     init();
-    return () => {
-      cancelled = true;
-      if (autocomplete && typeof google !== 'undefined') {
-        google.maps.event.clearInstanceListeners(autocomplete);
-      }
-    };
+    return () => { cancelled = true; };
   }, []);
 
-  if (error) {
-    return (
-      <div className={`flex items-center gap-2 text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-md px-3 py-2 ${className ?? ''}`}>
-        <AlertCircle className="h-3 w-3 shrink-0" />
-        <span>Google business search unavailable — fill in manually below</span>
-      </div>
-    );
-  }
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (!ready || query.length < 2) { setSuggestions([]); setOpen(false); return; }
+
+    setLoading(true);
+    debounceRef.current = setTimeout(async () => {
+      try {
+        const { suggestions: results } =
+          await google.maps.places.AutocompleteSuggestion.fetchAutocompleteSuggestions({
+            input: query,
+            includedPrimaryTypes: ['establishment'],
+            includedRegionCodes: ['gb'],
+            sessionToken: sessionTokenRef.current,
+          });
+
+        setLoading(false);
+        const mapped: Suggestion[] = (results || []).slice(0, 5).map((s: any) => ({
+          placeId: s.placePrediction?.placeId ?? '',
+          mainText: s.placePrediction?.mainText?.text ?? '',
+          secondaryText: s.placePrediction?.secondaryText?.text ?? '',
+          placePrediction: s.placePrediction,
+        }));
+        setSuggestions(mapped);
+        setOpen(mapped.length > 0);
+      } catch (e) {
+        console.error('[BusinessSearch] Autocomplete error:', e);
+        setLoading(false);
+        setSuggestions([]);
+        setOpen(false);
+      }
+    }, 300);
+
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+  }, [query, ready]);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const handleSelect = useCallback(async (suggestion: Suggestion) => {
+    setOpen(false);
+    setQuery('');
+    setSuggestions([]);
+
+    try {
+      const place = suggestion.placePrediction.toPlace();
+      await place.fetchFields({ fields: ['displayName', 'addressComponents'] });
+
+      // Refresh session token after a completed selection
+      sessionTokenRef.current = new google.maps.places.AutocompleteSessionToken();
+
+      const comps: any[] = place.addressComponents || [];
+      const streetNumber = getAddressComponent(comps, 'street_number');
+      const route = getAddressComponent(comps, 'route');
+      const streetAddress = [streetNumber, route].filter(Boolean).join(' ');
+      const city =
+        getAddressComponent(comps, 'locality') ||
+        getAddressComponent(comps, 'postal_town') ||
+        getAddressComponent(comps, 'administrative_area_level_2');
+
+      onSelect({
+        businessName: place.displayName || suggestion.mainText,
+        streetAddress,
+        city,
+        postalCode: getAddressComponent(comps, 'postal_code'),
+        country: getAddressComponent(comps, 'country'),
+      });
+    } catch (e) {
+      console.error('[BusinessSearch] Place details error:', e);
+    }
+  }, [onSelect]);
 
   return (
-    <div className={`space-y-1 ${className ?? ''}`}>
+    <div ref={containerRef} className={`relative ${className ?? ''}`}>
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
         <Input
-          ref={inputRef}
-          placeholder={placeholder}
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          onFocus={() => suggestions.length > 0 && setOpen(true)}
+          placeholder={ready ? placeholder : "Loading..."}
+          disabled={!ready}
           className="pl-9 border-blue-200 focus-visible:ring-blue-300 bg-blue-50/40"
           autoComplete="off"
         />
+        {loading && (
+          <div className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin rounded-full border-2 border-blue-300 border-t-transparent" />
+        )}
       </div>
-      <p className="text-[11px] text-muted-foreground/70 text-right pr-1">Powered by Google</p>
+
+      {/* Custom dropdown — inside the Dialog tree, no aria-hidden conflict */}
+      {open && suggestions.length > 0 && (
+        <div className="absolute z-50 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg overflow-hidden">
+          {suggestions.map((s) => (
+            <button
+              key={s.placeId}
+              type="button"
+              className="w-full flex items-start gap-3 px-3 py-2.5 text-left hover:bg-slate-50 transition-colors border-b border-slate-100 last:border-0"
+              onMouseDown={(e) => {
+                e.preventDefault(); // keep input focused until after click
+                handleSelect(s);
+              }}
+            >
+              <Building2 className="h-4 w-4 text-slate-400 mt-0.5 shrink-0" />
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-slate-900 truncate">{s.mainText}</p>
+                <p className="text-xs text-slate-500 truncate">{s.secondaryText}</p>
+              </div>
+            </button>
+          ))}
+          <div className="px-3 py-1.5 bg-slate-50 border-t border-slate-100">
+            <p className="text-[10px] text-slate-400 text-right">Powered by Google</p>
+          </div>
+        </div>
+      )}
+
+      {!open && (
+        <p className="text-[11px] text-muted-foreground/70 text-right pr-1 mt-0.5">Powered by Google</p>
+      )}
     </div>
   );
 }
