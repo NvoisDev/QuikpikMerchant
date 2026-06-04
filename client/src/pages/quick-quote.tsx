@@ -158,6 +158,7 @@ export default function QuickQuote() {
   const [quoteItems, setQuoteItems] = useState<QuoteItem[]>([]);
   const [productDialogOpen, setProductDialogOpen] = useState(false);
   const [productSearch, setProductSearch] = useState("");
+  const [pickerPriceListId, setPickerPriceListId] = useState<number | null>(null);
   const [addCustomerDialogOpen, setAddCustomerDialogOpen] = useState(false);
   const [sendMethod, setSendMethod] = useState<'sms' | 'link'>('sms');
   const [sendSmsNotification, setSendSmsNotification] = useState(true);
@@ -253,6 +254,17 @@ export default function QuickQuote() {
   const { data: allDrafts = [] } = useQuery<any[]>({
     queryKey: ['/api/orders/drafts'],
     enabled: !!editingDraftId,
+  });
+
+  const { data: priceLists = [] } = useQuery<{ id: number; name: string; isActive: boolean; startDate: string | null; endDate: string | null }[]>({
+    queryKey: ['/api/price-lists'],
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const { data: selectedPriceListData } = useQuery<{ id: number; items: { productId: number; customPrice: string | null; discountPercentage: string | null; customPalletPrice: string | null }[] }>({
+    queryKey: ['/api/price-lists', pickerPriceListId],
+    enabled: !!pickerPriceListId,
+    staleTime: 5 * 60 * 1000,
   });
   const draftForEdit = useMemo(
     () => (editingDraftId ? allDrafts.find((d: any) => d.id === editingDraftId) ?? null : null),
@@ -639,6 +651,30 @@ export default function QuickQuote() {
     },
   });
 
+  // Resolve price for a product from the selected price list, or fall back to standard price.
+  const resolvePickerPrice = (product: Product, sellingType: 'units' | 'pallets'): { price: number; fromList: boolean } => {
+    if (selectedPriceListData) {
+      const item = selectedPriceListData.items?.find((i) => i.productId === product.id);
+      if (item) {
+        const base = parseFloat(product.price || '0');
+        let unitPrice = base;
+        if (item.customPrice) unitPrice = parseFloat(item.customPrice);
+        else if (item.discountPercentage) unitPrice = Math.round(base * (1 - parseFloat(item.discountPercentage) / 100) * 100) / 100;
+
+        if (sellingType === 'pallets') {
+          const palletBase = product.palletPrice ? parseFloat(product.palletPrice) : 0;
+          const palletPrice = item.customPalletPrice ? parseFloat(item.customPalletPrice) : palletBase;
+          return { price: palletPrice, fromList: true };
+        }
+        return { price: unitPrice, fromList: true };
+      }
+    }
+    const standard = sellingType === 'pallets'
+      ? (product.palletPrice ? parseFloat(product.palletPrice) : 0)
+      : parseFloat(product.price || '0');
+    return { price: standard, fromList: false };
+  };
+
   const addProduct = (product: Product, sellingType: 'units' | 'pallets' = 'units') => {
     const availableStock = sellingType === 'pallets' ? (product.palletStock || 0) : ((product.totalBatchStock ?? product.stock) || 0);
     if (availableStock <= 0) {
@@ -653,7 +689,7 @@ export default function QuickQuote() {
 
     const unitPriceNum = parseFloat(product.price);
     const palletPriceNum = product.palletPrice ? parseFloat(product.palletPrice) : undefined;
-    const price = sellingType === 'pallets' && palletPriceNum ? palletPriceNum : unitPriceNum;
+    const { price } = resolvePickerPrice(product, sellingType);
 
     const unitCost = product.costPrice ? parseFloat(product.costPrice) : 0;
     // For pallet lines, cost must be per-pallet (unit cost × units-per-pallet) so it matches the per-pallet selling price
@@ -1525,7 +1561,7 @@ export default function QuickQuote() {
                   <Package className="h-5 w-5 shrink-0" />
                   Invoice Items{quoteItems.length > 0 && <span className="text-gray-500 font-normal"> ({quoteItems.length})</span>}
                 </CardTitle>
-                <Dialog open={productDialogOpen} onOpenChange={(open) => { setProductDialogOpen(open); if (open) setProductSearch(""); }}>
+                <Dialog open={productDialogOpen} onOpenChange={(open) => { setProductDialogOpen(open); if (open) { setProductSearch(""); setPickerPriceListId(null); } }}>
                   <DialogTrigger asChild>
                     <Button size="sm" className="bg-green-600 hover:bg-green-700 shrink-0">
                       <Plus className="h-4 w-4 mr-1" /> Add Product
@@ -1544,6 +1580,27 @@ export default function QuickQuote() {
                         className="pl-9"
                       />
                     </div>
+                    {priceLists.length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setPickerPriceListId(null)}
+                          className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${pickerPriceListId === null ? 'bg-green-600 text-white border-green-600' : 'bg-white text-gray-600 border-gray-300 hover:border-green-400'}`}
+                        >
+                          Standard
+                        </button>
+                        {priceLists.map((pl) => (
+                          <button
+                            key={pl.id}
+                            type="button"
+                            onClick={() => setPickerPriceListId(pl.id)}
+                            className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${pickerPriceListId === pl.id ? 'bg-green-600 text-white border-green-600' : 'bg-white text-gray-600 border-gray-300 hover:border-green-400'}`}
+                          >
+                            {pl.name}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                     {(() => {
                       const addedProductIds = new Set(quoteItems.map(qi => qi.productId));
                       const filteredProducts = products.filter((p) =>
@@ -1605,7 +1662,15 @@ export default function QuickQuote() {
                                 className={`flex-1 min-w-[140px] p-2 border rounded-lg transition-colors ${unitInStock ? 'cursor-pointer hover:border-green-500 hover:bg-green-50' : 'border-gray-200 bg-gray-50 opacity-60 cursor-not-allowed'}`}
                                 onClick={() => addProduct(product, 'units')}
                               >
-                                <div className={`text-xs font-medium ${unitInStock ? 'text-gray-500' : 'text-gray-400'}`}>Per Unit</div>
+                                {(() => {
+                                        const { price: resolvedUnit, fromList: unitFromList } = resolvePickerPrice(product, 'units');
+                                        const standardUnit = parseFloat(product.price || '0');
+                                        const unitPriceChanged = unitFromList && Math.abs(resolvedUnit - standardUnit) > 0.001;
+                                        return (<>
+                                <div className={`text-xs font-medium flex items-center gap-1 ${unitInStock ? 'text-gray-500' : 'text-gray-400'}`}>
+                                  Per Unit
+                                  {unitPriceChanged && <span className="text-[10px] bg-green-100 text-green-700 px-1 rounded">List</span>}
+                                </div>
                                 <div className="mt-1">
                                   <div className={`font-semibold ${unitInStock ? 'text-green-600' : 'text-gray-400'}`}>
                                     {promoUnitPrice !== null ? (
@@ -1613,8 +1678,13 @@ export default function QuickQuote() {
                                         <span className="line-through text-gray-400 font-normal mr-1">{formatCurrency(product.price)}</span>
                                         {formatCurrency(promoUnitPrice)}
                                       </>
+                                    ) : unitPriceChanged ? (
+                                      <>
+                                        <span className="line-through text-gray-400 font-normal mr-1 text-xs">{formatCurrency(standardUnit)}</span>
+                                        {formatCurrency(resolvedUnit)}
+                                      </>
                                     ) : (
-                                      <>{formatCurrency(product.price)}</>
+                                      <>{formatCurrency(resolvedUnit)}</>
                                     )}
                                   </div>
                                   <div className={`text-xs mt-0.5 ${unitInStock ? 'text-gray-500' : 'text-red-500 font-medium'}`}>
@@ -1653,6 +1723,8 @@ export default function QuickQuote() {
                                     </div>
                                   )}
                                 </div>
+                              </>);
+                              })()}
                               </div>
                               );
                             })()}
