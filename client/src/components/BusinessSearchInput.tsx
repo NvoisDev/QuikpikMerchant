@@ -16,7 +16,7 @@ interface Suggestion {
   placeId: string;
   mainText: string;
   secondaryText: string;
-  placePrediction: any;
+  description: string;
 }
 
 interface BusinessSearchInputProps {
@@ -30,11 +30,13 @@ let sdkPromise: Promise<boolean> | null = null;
 function loadGoogleMapsSdk(apiKey: string): Promise<boolean> {
   if (sdkPromise) return sdkPromise;
   sdkPromise = new Promise((resolve) => {
-    if (typeof google !== 'undefined' && google?.maps?.places) { resolve(true); return; }
+    if (typeof google !== 'undefined' && google?.maps?.places?.AutocompleteService) {
+      resolve(true);
+      return;
+    }
     (window as any).gm_authFailure = () => { sdkPromise = null; resolve(false); };
     const script = document.createElement('script');
-    // v=beta unlocks the new Places API (AutocompleteSuggestion, Place)
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&v=beta`;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;
     script.async = true;
     script.onload = () => resolve(true);
     script.onerror = () => { sdkPromise = null; resolve(false); };
@@ -43,9 +45,9 @@ function loadGoogleMapsSdk(apiKey: string): Promise<boolean> {
   return sdkPromise;
 }
 
-function getAddressComponent(components: any[], type: string): string {
-  const c = components?.find((c: any) => Array.isArray(c.types) && c.types.includes(type));
-  return c ? (c.longText ?? c.long_name ?? '') : '';
+function getComponent(components: any[], type: string): string {
+  const c = components?.find((c: any) => c.types?.includes(type));
+  return c ? (c.long_name ?? '') : '';
 }
 
 export function BusinessSearchInput({
@@ -59,7 +61,9 @@ export function BusinessSearchInput({
   const [loading, setLoading] = useState(false);
   const [ready, setReady] = useState(false);
 
-  const sessionTokenRef = useRef<any>(null);
+  const autocompleteRef = useRef<any>(null);
+  const placesRef = useRef<any>(null);
+  const attributionRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -72,7 +76,8 @@ export function BusinessSearchInput({
         const { apiKey } = await res.json();
         const ok = await loadGoogleMapsSdk(apiKey);
         if (!ok || cancelled) return;
-        sessionTokenRef.current = new google.maps.places.AutocompleteSessionToken();
+        autocompleteRef.current = new google.maps.places.AutocompleteService();
+        placesRef.current = new google.maps.places.PlacesService(attributionRef.current!);
         if (!cancelled) setReady(true);
       } catch { /* key not configured */ }
     }
@@ -85,31 +90,25 @@ export function BusinessSearchInput({
     if (!ready || query.length < 2) { setSuggestions([]); setOpen(false); return; }
 
     setLoading(true);
-    debounceRef.current = setTimeout(async () => {
-      try {
-        const { suggestions: results } =
-          await google.maps.places.AutocompleteSuggestion.fetchAutocompleteSuggestions({
-            input: query,
-            includedPrimaryTypes: ['establishment'],
-            includedRegionCodes: ['gb'],
-            sessionToken: sessionTokenRef.current,
-          });
-
-        setLoading(false);
-        const mapped: Suggestion[] = (results || []).slice(0, 5).map((s: any) => ({
-          placeId: s.placePrediction?.placeId ?? '',
-          mainText: s.placePrediction?.mainText?.text ?? '',
-          secondaryText: s.placePrediction?.secondaryText?.text ?? '',
-          placePrediction: s.placePrediction,
-        }));
-        setSuggestions(mapped);
-        setOpen(mapped.length > 0);
-      } catch (e) {
-        console.error('[BusinessSearch] Autocomplete error:', e);
-        setLoading(false);
-        setSuggestions([]);
-        setOpen(false);
-      }
+    debounceRef.current = setTimeout(() => {
+      autocompleteRef.current?.getPlacePredictions(
+        { input: query, types: ['establishment'], componentRestrictions: { country: 'gb' } },
+        (results: any[], status: string) => {
+          setLoading(false);
+          if (status === 'OK' && results?.length) {
+            setSuggestions(results.slice(0, 5).map((r) => ({
+              placeId: r.place_id,
+              mainText: r.structured_formatting?.main_text ?? r.description,
+              secondaryText: r.structured_formatting?.secondary_text ?? '',
+              description: r.description,
+            })));
+            setOpen(true);
+          } else {
+            setSuggestions([]);
+            setOpen(false);
+          }
+        }
+      );
     }, 300);
 
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
@@ -125,41 +124,39 @@ export function BusinessSearchInput({
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  const handleSelect = useCallback(async (suggestion: Suggestion) => {
+  const handleSelect = useCallback((suggestion: Suggestion) => {
     setOpen(false);
     setQuery('');
     setSuggestions([]);
 
-    try {
-      const place = suggestion.placePrediction.toPlace();
-      await place.fetchFields({ fields: ['displayName', 'addressComponents'] });
-
-      // Refresh session token after a completed selection
-      sessionTokenRef.current = new google.maps.places.AutocompleteSessionToken();
-
-      const comps: any[] = place.addressComponents || [];
-      const streetNumber = getAddressComponent(comps, 'street_number');
-      const route = getAddressComponent(comps, 'route');
-      const streetAddress = [streetNumber, route].filter(Boolean).join(' ');
-      const city =
-        getAddressComponent(comps, 'locality') ||
-        getAddressComponent(comps, 'postal_town') ||
-        getAddressComponent(comps, 'administrative_area_level_2');
-
-      onSelect({
-        businessName: place.displayName || suggestion.mainText,
-        streetAddress,
-        city,
-        postalCode: getAddressComponent(comps, 'postal_code'),
-        country: getAddressComponent(comps, 'country'),
-      });
-    } catch (e) {
-      console.error('[BusinessSearch] Place details error:', e);
-    }
+    placesRef.current?.getDetails(
+      { placeId: suggestion.placeId, fields: ['name', 'address_components'] },
+      (place: any, status: string) => {
+        if (status !== 'OK' || !place) return;
+        const comps: any[] = place.address_components || [];
+        const streetNumber = getComponent(comps, 'street_number');
+        const route = getComponent(comps, 'route');
+        const streetAddress = [streetNumber, route].filter(Boolean).join(' ');
+        const city =
+          getComponent(comps, 'locality') ||
+          getComponent(comps, 'postal_town') ||
+          getComponent(comps, 'administrative_area_level_2');
+        onSelect({
+          businessName: place.name || suggestion.mainText,
+          streetAddress,
+          city,
+          postalCode: getComponent(comps, 'postal_code'),
+          country: getComponent(comps, 'country'),
+        });
+      }
+    );
   }, [onSelect]);
 
   return (
     <div ref={containerRef} className={`relative ${className ?? ''}`}>
+      {/* Hidden div required by PlacesService for attribution */}
+      <div ref={attributionRef} style={{ display: 'none' }} />
+
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
         <Input
@@ -176,7 +173,7 @@ export function BusinessSearchInput({
         )}
       </div>
 
-      {/* Custom dropdown — inside the Dialog tree, no aria-hidden conflict */}
+      {/* Custom dropdown — rendered inside the Dialog, no aria-hidden issues */}
       {open && suggestions.length > 0 && (
         <div className="absolute z-50 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg overflow-hidden">
           {suggestions.map((s) => (
@@ -185,7 +182,7 @@ export function BusinessSearchInput({
               type="button"
               className="w-full flex items-start gap-3 px-3 py-2.5 text-left hover:bg-slate-50 transition-colors border-b border-slate-100 last:border-0"
               onMouseDown={(e) => {
-                e.preventDefault(); // keep input focused until after click
+                e.preventDefault();
                 handleSelect(s);
               }}
             >
