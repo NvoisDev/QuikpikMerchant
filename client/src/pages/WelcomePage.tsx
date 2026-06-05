@@ -307,100 +307,11 @@ export default function WelcomePage() {
         </div>
       </div>
 
-      {/* Product Preview */}
-      {previewProducts.length > 0 && (
-        <div className="px-4 py-6 bg-gray-50">
-          <div className="max-w-md mx-auto">
-            {/* "Sign up" banner — clicking scrolls to form */}
-            <button
-              onClick={scrollToForm}
-              className="w-full flex items-center gap-2 bg-green-50 border border-green-200 rounded-xl px-4 py-3 mb-4 text-left hover:bg-green-100 transition-colors"
-            >
-              <Tag className="h-4 w-4 text-green-600 flex-shrink-0" />
-              <p className="text-sm font-medium text-green-800 flex-1">Sign up to see prices and place orders.</p>
-              <span className="text-xs font-semibold text-green-700 underline underline-offset-2">Get access →</span>
-            </button>
+      {/* Two-column layout: form left, products right */}
+      <div className="max-w-4xl mx-auto px-4 py-6 flex flex-col lg:flex-row gap-6 lg:gap-8 items-start">
 
-            {/* Category filter chips */}
-            {(() => {
-              const categories = Array.from(
-                new Set(previewProducts.map((p) => p.category).filter((c): c is string => Boolean(c)))
-              );
-              if (categories.length < 2) return null;
-              return (
-                <div className="flex gap-2 flex-wrap mb-4">
-                  <button
-                    onClick={() => setSelectedCategory(null)}
-                    className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
-                      selectedCategory === null
-                        ? "bg-green-600 text-white border-green-600"
-                        : "bg-white text-gray-600 border-gray-200 hover:border-green-400 hover:text-green-700"
-                    }`}
-                  >
-                    All
-                  </button>
-                  {categories.map((cat) => (
-                    <button
-                      key={cat}
-                      onClick={() => setSelectedCategory(cat)}
-                      className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
-                        selectedCategory === cat
-                          ? "bg-green-600 text-white border-green-600"
-                          : "bg-white text-gray-600 border-gray-200 hover:border-green-400 hover:text-green-700"
-                      }`}
-                    >
-                      {cat}
-                    </button>
-                  ))}
-                </div>
-              );
-            })()}
-
-            <div className="grid grid-cols-2 gap-3">
-              {(selectedCategory
-                ? previewProducts.filter((p) => p.category === selectedCategory)
-                : previewProducts
-              ).map((product) => {
-                const thumb = product.imageUrl || (Array.isArray(product.images) && product.images[0]) || null;
-                return (
-                  <div key={product.id} className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-                    <div className="aspect-square bg-gray-100 flex items-center justify-center">
-                      {thumb ? (
-                        <img
-                          src={thumb}
-                          alt={product.name}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-gray-300">
-                          <Store className="h-10 w-10" />
-                        </div>
-                      )}
-                    </div>
-                    <div className="px-3 py-2">
-                      <p className="text-xs font-medium text-gray-900 truncate leading-snug">{product.name}</p>
-                      {product.category && (
-                        <p className="text-xs text-gray-400 truncate mt-0.5">{product.category}</p>
-                      )}
-                      {/* Tapping "Sign up to see price" scrolls to the form */}
-                      <button
-                        onClick={scrollToForm}
-                        className="text-xs text-green-600 font-semibold mt-1 hover:underline"
-                      >
-                        Sign up to see price
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Registration form */}
-      <div ref={formRef} className="flex-1 px-4 py-6 scroll-mt-4">
-        <div className="max-w-md mx-auto">
+        {/* LEFT: Registration form */}
+        <div ref={formRef} className="w-full lg:w-[400px] flex-shrink-0 scroll-mt-4">
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
             <h2 className="text-lg font-bold text-gray-900 mb-1">Request Account Access</h2>
             <p className="text-sm text-gray-500 mb-5">
@@ -546,6 +457,86 @@ export default function WelcomePage() {
             </form>
           </div>
         </div>
+
+        {/* RIGHT: Product preview */}
+        {previewProducts.length > 0 && (
+          <div className="flex-1 min-w-0">
+            <button
+              onClick={scrollToForm}
+              className="w-full flex items-center gap-2 bg-green-50 border border-green-200 rounded-xl px-4 py-3 mb-4 text-left hover:bg-green-100 transition-colors"
+            >
+              <Tag className="h-4 w-4 text-green-600 flex-shrink-0" />
+              <p className="text-sm font-medium text-green-800 flex-1">Sign up to see prices and place orders.</p>
+              <span className="text-xs font-semibold text-green-700 underline underline-offset-2">Get access →</span>
+            </button>
+
+            {(() => {
+              const categories = Array.from(
+                new Set(previewProducts.map((p) => p.category).filter((c): c is string => Boolean(c)))
+              );
+              if (categories.length < 2) return null;
+              return (
+                <div className="flex gap-2 flex-wrap mb-4">
+                  <button
+                    onClick={() => setSelectedCategory(null)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                      selectedCategory === null
+                        ? "bg-green-600 text-white border-green-600"
+                        : "bg-white text-gray-600 border-gray-200 hover:border-green-400 hover:text-green-700"
+                    }`}
+                  >
+                    All
+                  </button>
+                  {categories.map((cat) => (
+                    <button
+                      key={cat}
+                      onClick={() => setSelectedCategory(cat)}
+                      className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                        selectedCategory === cat
+                          ? "bg-green-600 text-white border-green-600"
+                          : "bg-white text-gray-600 border-gray-200 hover:border-green-400 hover:text-green-700"
+                      }`}
+                    >
+                      {cat}
+                    </button>
+                  ))}
+                </div>
+              );
+            })()}
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {(selectedCategory
+                ? previewProducts.filter((p) => p.category === selectedCategory)
+                : previewProducts
+              ).map((product) => {
+                const thumb = product.imageUrl || (Array.isArray(product.images) && product.images[0]) || null;
+                return (
+                  <div key={product.id} className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+                    <div className="aspect-square bg-gray-100 flex items-center justify-center">
+                      {thumb ? (
+                        <img src={thumb} alt={product.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-gray-300">
+                          <Store className="h-10 w-10" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="px-3 py-2">
+                      <p className="text-xs font-medium text-gray-900 truncate leading-snug">{product.name}</p>
+                      {product.category && (
+                        <p className="text-xs text-gray-400 truncate mt-0.5">{product.category}</p>
+                      )}
+                      <button onClick={scrollToForm} className="text-xs text-green-600 font-semibold mt-1 hover:underline">
+                        Sign up to see price
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
       </div>
 
       <footer className="py-4 text-center text-xs text-gray-400">
