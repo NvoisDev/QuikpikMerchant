@@ -885,10 +885,10 @@ export default function LandingPage() {
               <div className="grid sm:grid-cols-4 gap-6 sm:gap-8 relative">
                 <div className="hidden sm:block absolute top-7 left-[calc(12.5%+1.5rem)] right-[calc(12.5%+1.5rem)] h-px bg-gray-200 z-0" />
                 {[
-                  { icon: Search,      step: "STEP 1", title: "Find & Select Products",  desc: "Browse the catalogue to find the right products and add them to your order." },
-                  { icon: ShoppingCart, step: "STEP 2", title: "Review & Adjust",        desc: "Check your order, confirm quantities meet minimums, and adjust as needed." },
-                  { icon: CreditCard,  step: "STEP 3", title: "Checkout & Payment",      desc: "Verify your details and complete your purchase securely by card." },
-                  { icon: Package,     step: "STEP 4", title: "Shipping & Support",       desc: "Your order ships within the agreed timeframe. Need help? We're here." },
+                  { icon: Search,       step: "STEP 1", title: "Get your supplier's link", desc: "Your supplier shares their store link with you via WhatsApp, SMS, or email." },
+                  { icon: ShoppingCart, step: "STEP 2", title: "Browse & add to cart",   desc: "Explore their product catalogue, pick what you need, and add items to your basket." },
+                  { icon: CreditCard,  step: "STEP 3", title: "Place your order",        desc: "Pay securely by card at checkout, or request Pay Later if your supplier offers it." },
+                  { icon: Package,     step: "STEP 4", title: "Supplier delivers",       desc: "Your supplier confirms the order and arranges delivery or collection." },
                 ].map(({ icon: Icon, step, title, desc }, i) => (
                   <div key={i} className="relative z-10 flex flex-col items-center text-center">
                     <div className="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center mb-4 ring-4 ring-white">
