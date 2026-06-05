@@ -450,6 +450,7 @@ export class CustomerStorage extends OrderStorage {
     lastName?: string;
     role: string; 
     email?: string; 
+    businessName?: string;
     streetAddress?: string; 
     city?: string; 
     state?: string; 
@@ -476,6 +477,7 @@ export class CustomerStorage extends OrderStorage {
         lastName: customer.lastName || null,
         role: customer.role,
         email: customer.email,
+        businessName: customer.businessName || null,
         streetAddress: customer.streetAddress,
         city: customer.city,
         state: customer.state,

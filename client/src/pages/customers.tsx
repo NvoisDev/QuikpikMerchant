@@ -449,8 +449,8 @@ export default function Customers() {
   };
 
   const getInitials = (firstName: string, lastName?: string, businessName?: string, phoneNumber?: string) => {
-    if (firstName) return `${firstName[0]}${lastName ? lastName[0] : ''}`.toUpperCase();
     if (businessName) return businessName.slice(0, 2).toUpperCase();
+    if (firstName) return `${firstName[0]}${lastName ? lastName[0] : ''}`.toUpperCase();
     if (phoneNumber) return phoneNumber.replace(/\D/g, '').slice(-2);
     return '?';
   };

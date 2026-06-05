@@ -668,6 +668,9 @@ export function registerCustomerRoutes(app: Express): void {
         if (email && customer.email !== email) {
           updates.email = email;
         }
+        if (businessName !== undefined) {
+          updates.businessName = businessName || null;
+        }
         // Always unarchive if customer is archived 
         if (customer.archived) {
           updates.archived = false;
@@ -729,6 +732,7 @@ export function registerCustomerRoutes(app: Express): void {
           phoneNumber: formattedPhone,
           role: 'customer',
           wholesalerId: targetUserId,
+          ...(businessName ? { businessName } : {}),
           ...(streetAddress ? { streetAddress } : {}),
           ...(addressLine2 ? { addressLine2 } : {}),
           ...(city ? { city } : {}),
