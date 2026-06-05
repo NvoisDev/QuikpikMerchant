@@ -128,10 +128,10 @@ function DashboardMockup() {
 
 function RetailerProductsMockup() {
   const products = [
-    { name: "Organic Green Tea",    supplier: "TW Foods Ltd",  price: "£12.50", unit: "/ cs",  moq: 24, bg: "bg-green-100",  ic: "text-green-600"  },
-    { name: "Premium Coffee Beans", supplier: "BeanCo UK",     price: "£8.99",  unit: "/ kg",  moq: 12, bg: "bg-amber-100",  ic: "text-amber-600"  },
-    { name: "Natural Honey Jars",   supplier: "HiveHarvest",   price: "£22.00", unit: "/ doz", moq: 6,  bg: "bg-yellow-100", ic: "text-yellow-600" },
-    { name: "Artisan Olive Oil",    supplier: "MedProduce UK", price: "£15.50", unit: "/ cs",  moq: 12, bg: "bg-blue-100",   ic: "text-blue-600"   },
+    { name: "Shea Butter (Raw)",     supplier: "GhanaGold Ltd", price: "$18.00", unit: "/ cs",  moq: 24, bg: "bg-yellow-100", ic: "text-yellow-600" },
+    { name: "Arabica Coffee Beans", supplier: "EthioBean Co",  price: "$9.50",  unit: "/ kg",  moq: 12, bg: "bg-amber-100",  ic: "text-amber-600"  },
+    { name: "Natural Honey Jars",   supplier: "HiveHarvest NG",price: "$22.00", unit: "/ doz", moq: 6,  bg: "bg-green-100",  ic: "text-green-600"  },
+    { name: "Argan Oil (Organic)",  supplier: "MarocProduce",  price: "$28.50", unit: "/ cs",  moq: 12, bg: "bg-orange-100", ic: "text-orange-600" },
   ];
   return (
     <div className="bg-white rounded-2xl shadow-2xl overflow-hidden w-full max-w-sm text-gray-900 select-none">
@@ -271,8 +271,8 @@ function MarketplaceSearch() {
     <section className="bg-white border-b border-gray-100 py-12 sm:py-16">
       <div className="max-w-3xl mx-auto px-4 sm:px-6">
         <div className="text-center mb-8">
-          <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight mb-2">Find wholesale suppliers</h2>
-          <p className="text-base text-gray-500 mb-4">Search products from verified UK wholesalers</p>
+          <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight mb-2">Find African wholesale suppliers</h2>
+          <p className="text-base text-gray-500 mb-4">Search products from verified African wholesalers</p>
           {/* Trust badges */}
           <div className="inline-flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 text-xs text-gray-400">
             <span className="flex items-center gap-1.5">
@@ -287,7 +287,7 @@ function MarketplaceSearch() {
             <span className="text-gray-200">·</span>
             <span className="flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-green-400 inline-block" />
-              UK delivery
+              Pan-Africa delivery
             </span>
           </div>
         </div>
@@ -391,7 +391,7 @@ function MarketplaceSearch() {
 
         {!hasContent && (
           <div className="text-center mt-3">
-            <p className="text-xs text-gray-400">Start typing to discover UK wholesale suppliers and their products</p>
+            <p className="text-xs text-gray-400">Start typing to discover African wholesale suppliers and their products</p>
           </div>
         )}
       </div>
@@ -419,7 +419,7 @@ export default function LandingPage() {
           </span>
           <span className="hidden sm:flex items-center gap-1.5">
             <CheckCircle className="h-3 w-3 text-green-400 flex-shrink-0" />
-            Built for UK wholesale businesses
+            Built for African wholesale businesses
           </span>
           <span className="flex items-center gap-1.5">
             <CheckCircle className="h-3 w-3 text-green-400 flex-shrink-0" />
@@ -526,7 +526,7 @@ export default function LandingPage() {
                 <div className="flex-1 max-w-xl">
                   <div className="inline-flex items-center gap-2 bg-green-50 text-green-700 text-xs font-semibold px-4 py-1.5 rounded-full mb-7 border border-green-100 tracking-wide uppercase">
                     <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" />
-                    Find UK wholesale suppliers
+                    Find African wholesale suppliers
                   </div>
 
                   <h1 className="text-4xl sm:text-5xl lg:text-[3.25rem] font-extrabold text-gray-950 leading-[1.15] tracking-tight mb-5">
@@ -535,7 +535,7 @@ export default function LandingPage() {
                   </h1>
 
                   <p className="text-gray-500 text-lg mb-8 leading-relaxed max-w-md">
-                    Browse thousands of wholesale products from verified UK suppliers. Trade prices, low minimums, fast delivery.
+                    Browse thousands of wholesale products from verified African suppliers. Trade prices, low minimums, continent-wide delivery.
                   </p>
 
                   <div className="flex items-stretch w-fit border border-gray-200 rounded-xl overflow-hidden bg-white mb-8 shadow-sm">
@@ -593,7 +593,7 @@ export default function LandingPage() {
                 <div className="flex-1 max-w-xl">
                   <div className="inline-flex items-center gap-2 bg-green-900/60 text-green-300 text-xs font-semibold px-4 py-1.5 rounded-full mb-7 border border-green-800/60 tracking-wide uppercase">
                     <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" />
-                    Built for wholesale businesses
+                    Built for African businesses
                   </div>
 
                   <h1 className="text-4xl sm:text-5xl lg:text-[3.25rem] font-extrabold text-white leading-[1.15] tracking-tight mb-5">
@@ -607,8 +607,8 @@ export default function LandingPage() {
 
                   <div className="flex items-stretch w-fit border border-white/20 rounded-xl overflow-hidden bg-white mb-8 shadow-sm">
                     {[
-                      { value: "500+", label: "UK wholesalers" },
-                      { value: "£2M+", label: "Orders processed" },
+                      { value: "500+", label: "African wholesalers" },
+                      { value: "$2M+", label: "Orders processed" },
                       { value: "Free", label: "To get started" },
                     ].map(({ value, label }, i) => (
                       <div key={i} className={`px-5 py-3 text-left ${i > 0 ? 'border-l border-gray-200' : ''}`}>
@@ -789,7 +789,7 @@ export default function LandingPage() {
               <p className="text-gray-500 text-lg mb-12">Simple, honest pricing with no surprises.</p>
               <div className="grid sm:grid-cols-3 gap-4 mb-10">
                 {[
-                  { icon: CheckCircle, color: "text-green-600",  bg: "bg-green-50",  border: "border-green-100",  title: "£0/month to start",             desc: "Full access on the free plan. No credit card needed." },
+                  { icon: CheckCircle, color: "text-green-600",  bg: "bg-green-50",  border: "border-green-100",  title: "Free to start",                  desc: "Full access on the free plan. No credit card needed." },
                   { icon: CreditCard,  color: "text-blue-600",   bg: "bg-blue-50",   border: "border-blue-100",   title: "Small fee on card payments",    desc: "Only pay on card orders — cash and Pay Later are always free." },
                   { icon: Shield,      color: "text-purple-600", bg: "bg-purple-50", border: "border-purple-100", title: "Offline orders are 100% yours", desc: "Cash, Pay Later, and offline orders have no platform fee." },
                 ].map(({ icon: Icon, color, bg, border, title, desc }, i) => (
@@ -823,7 +823,7 @@ export default function LandingPage() {
                   <div className="p-3 sm:p-4 text-center text-primary font-bold border-l border-gray-100">Quikpik</div>
                 </div>
                 {[
-                  { label: "Monthly cost",     old: "£200–£500+",       new: "Free to start" },
+                  { label: "Monthly cost",     old: "$200–$500+",       new: "Free to start" },
                   { label: "Taking orders",    old: "Manual",           new: "Automated online" },
                   { label: "Payments",         old: "Chasing invoices", new: "Instant card payments" },
                   { label: "Stock tracking",   old: "Spreadsheets",     new: "Real-time, automatic" },
@@ -850,7 +850,7 @@ export default function LandingPage() {
                 Start taking orders today
               </h2>
               <p className="text-green-100 text-lg mb-10 leading-relaxed">
-                Join UK wholesale businesses already using Quikpik to run smarter.
+                Join African wholesale businesses already using Quikpik to run smarter.
               </p>
               <Button
                 onClick={handleGetStarted}
@@ -913,8 +913,8 @@ export default function LandingPage() {
                 <div className="flex-1 bg-white rounded-2xl border border-gray-100 shadow-sm px-6 divide-y divide-gray-100">
                   {[
                     { q: "How does the ordering process work?",       a: "Browse products from your supplier's store, add items to your cart, and check out securely by card. You'll receive an order confirmation by email." },
-                    { q: "Where will my goods come from?",            a: "Your order is fulfilled directly by the wholesaler whose store you're shopping from. Each supplier manages their own stock and delivery." },
-                    { q: "Do the prices include VAT?",                a: "Prices shown are trade prices. VAT and any applicable taxes are shown clearly at checkout before you confirm your order." },
+                    { q: "Where will my goods come from?",            a: "Your order is fulfilled directly by the African wholesaler whose store you're shopping from. Suppliers ship across the continent — delivery areas are confirmed at checkout." },
+                    { q: "Do prices include tax?",                    a: "Prices shown are trade prices. Any applicable taxes or duties vary by country and are shown clearly at checkout before you confirm your order." },
                     { q: "What is a minimum order quantity (MOQ)?",   a: "Some products require a minimum number of units per order. The MOQ is shown on each product card and is set by the supplier." },
                     { q: "Can I order from multiple suppliers?",      a: "Yes — you can browse and place orders with any supplier on the Quikpik network. Each order is processed separately per supplier." },
                     { q: "What if I have an issue with my order?",    a: "Contact your supplier directly through the store, or reach Quikpik support. We aim to resolve all order issues within 24 hours." },
