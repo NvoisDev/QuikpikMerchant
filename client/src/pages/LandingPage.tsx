@@ -548,7 +548,7 @@ export default function LandingPage() {
                       variant="outline"
                       className="text-base px-8 py-6 rounded-lg border border-gray-200 text-gray-700 bg-white hover:bg-gray-50 font-medium"
                     >
-                      Sign up as a buyer
+                      Sign in
                     </Button>
                   </div>
 
