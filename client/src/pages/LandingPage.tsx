@@ -830,7 +830,7 @@ export default function LandingPage() {
                   <div className="p-3 sm:p-4 text-center text-primary font-bold border-l border-gray-100">Quikpik</div>
                 </div>
                 {[
-                  { label: "Monthly cost",     old: "$200–$500+",       new: "Free to start" },
+                  { label: "Monthly cost",     old: "200–500+/month",   new: "Free to start" },
                   { label: "Taking orders",    old: "Manual",           new: "Automated online" },
                   { label: "Payments",         old: "Chasing invoices", new: "Instant card payments" },
                   { label: "Stock tracking",   old: "Spreadsheets",     new: "Real-time, automatic" },
