@@ -27,6 +27,9 @@ interface PublicProduct {
   baseUnitStock?: number | null;
   minOrderQuantity?: number | null;
   sku?: string | null;
+  unitWeightKg?: string | null;
+  totalPackageWeight?: string | null;
+  packQuantity?: number | null;
 }
 
 interface PublicWholesaler {
@@ -103,7 +106,26 @@ function ProductCard({
         {product.category && (
           <p className="text-[10px] text-emerald-600 font-semibold uppercase tracking-wide mb-1">{product.category}</p>
         )}
-        <h3 className="text-sm font-semibold text-gray-900 leading-tight line-clamp-2 mb-2">{product.name}</h3>
+        <h3 className="text-sm font-semibold text-gray-900 leading-tight line-clamp-2 mb-1">{product.name}</h3>
+
+        {/* Description snippet */}
+        {product.description && (
+          <p className="text-[11px] text-gray-500 line-clamp-2 mb-1 leading-snug">{product.description}</p>
+        )}
+
+        {/* Weight info */}
+        {(product.totalPackageWeight || (product.packQuantity && product.unitWeightKg)) && (
+          <p className="text-[11px] text-gray-400 mb-1">
+            {product.totalPackageWeight && (
+              <span>{parseFloat(product.totalPackageWeight)} kg/pack</span>
+            )}
+            {product.packQuantity && product.unitWeightKg && (
+              <span className={product.totalPackageWeight ? ' · ' : ''}>
+                {product.packQuantity} × {parseFloat(product.unitWeightKg)}kg
+              </span>
+            )}
+          </p>
+        )}
 
         {/* MOQ */}
         {product.minOrderQuantity && product.minOrderQuantity > 1 && (

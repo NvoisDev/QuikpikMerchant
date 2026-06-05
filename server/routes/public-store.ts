@@ -63,6 +63,9 @@ export function registerPublicStoreRoutes(app: Express) {
           unitsPerPallet: products.unitsPerPallet,
           baseUnitStock: products.baseUnitStock,
           minOrderQuantity: products.moq,
+          unitWeightKg: products.unitWeightKg,
+          totalPackageWeight: products.totalPackageWeight,
+          packQuantity: products.packQuantity,
         })
         .from(products)
         .where(
