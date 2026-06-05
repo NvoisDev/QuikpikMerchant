@@ -512,7 +512,7 @@ export default function LandingPage() {
                         : 'text-gray-500 hover:text-gray-900'
                   }`}
                 >
-                  {key === 'retailer' ? "I'm a Retailer" : "I'm a Wholesaler"}
+                  {key === 'retailer' ? "I'm a Buyer" : "I'm a Wholesaler"}
                 </button>
               ))}
             </div>
@@ -574,7 +574,7 @@ export default function LandingPage() {
                       <CheckCircle className="h-3.5 w-3.5 text-green-500 flex-shrink-0" /> Free to browse
                     </span>
                     <span className="flex items-center gap-1.5">
-                      <CheckCircle className="h-3.5 w-3.5 text-green-500 flex-shrink-0" /> Verified UK suppliers
+                      <CheckCircle className="h-3.5 w-3.5 text-green-500 flex-shrink-0" /> Verified African suppliers
                     </span>
                     <span className="flex items-center gap-1.5">
                       <CheckCircle className="h-3.5 w-3.5 text-green-500 flex-shrink-0" /> Trade prices
@@ -582,9 +582,16 @@ export default function LandingPage() {
                   </div>
                 </div>
 
-                {/* RETAILER — Right mockup */}
+                {/* BUYER — Right photo */}
                 <div className="flex-shrink-0 w-full max-w-xs sm:max-w-sm lg:max-w-md mx-auto lg:mx-0">
-                  <RetailerProductsMockup />
+                  <div className="relative rounded-2xl overflow-hidden shadow-2xl aspect-[4/5]">
+                    <img
+                      src="/hero-buyer.jpg"
+                      alt="Buyer browsing wholesale products"
+                      className="w-full h-full object-cover object-center"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-gray-950/30 via-transparent to-transparent" />
+                  </div>
                 </div>
               </>
             ) : (
