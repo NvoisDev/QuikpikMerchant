@@ -4,6 +4,7 @@ import { users, products, storeEnquiries } from "@shared/schema";
 import { eq, and, ilike, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import { sendEmail } from "../sendgrid-service";
+import { requireAuth } from "../googleAuth";
 
 export function registerPublicStoreRoutes(app: Express) {
 
@@ -262,7 +263,7 @@ export function registerPublicStoreRoutes(app: Express) {
   });
 
   // GET /api/public/enquiries — wholesaler views their own leads (auth required)
-  app.get("/api/public/enquiries", async (req: any, res) => {
+  app.get("/api/public/enquiries", requireAuth, async (req: any, res) => {
     try {
       const wholesalerId = req.user?.id || req.user?.claims?.sub;
       if (!wholesalerId) return res.status(401).json({ message: "Unauthorised" });
@@ -281,7 +282,7 @@ export function registerPublicStoreRoutes(app: Express) {
   });
 
   // PATCH /api/public/enquiries/:id — mark viewed/responded
-  app.patch("/api/public/enquiries/:id", async (req: any, res) => {
+  app.patch("/api/public/enquiries/:id", requireAuth, async (req: any, res) => {
     try {
       const wholesalerId = req.user?.id || req.user?.claims?.sub;
       if (!wholesalerId) return res.status(401).json({ message: "Unauthorised" });
