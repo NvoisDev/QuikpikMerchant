@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import {
   ArrowRight,
@@ -352,6 +351,24 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-white text-gray-900">
 
+      {/* ── ANNOUNCEMENT BAR ── */}
+      <div className="bg-gray-950 text-gray-300 text-xs py-2.5 px-4">
+        <div className="max-w-6xl mx-auto flex flex-wrap items-center justify-center gap-x-6 gap-y-1">
+          <span className="flex items-center gap-1.5">
+            <CheckCircle className="h-3 w-3 text-green-400 flex-shrink-0" />
+            Free to set up — no monthly fees to start
+          </span>
+          <span className="hidden sm:flex items-center gap-1.5">
+            <CheckCircle className="h-3 w-3 text-green-400 flex-shrink-0" />
+            Built for UK wholesale businesses
+          </span>
+          <span className="flex items-center gap-1.5">
+            <CheckCircle className="h-3 w-3 text-green-400 flex-shrink-0" />
+            Cancel anytime
+          </span>
+        </div>
+      </div>
+
       {/* ── NAV ── */}
       <nav className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-100 shadow-sm">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
@@ -370,7 +387,7 @@ export default function LandingPage() {
             <Button variant="ghost" onClick={handleLogin} className="hidden sm:inline-flex text-sm text-gray-500 hover:text-gray-900 px-3">
               Wholesaler Login
             </Button>
-            <Button onClick={handleGetStarted} className="bg-primary hover:bg-primary/90 text-sm px-5 rounded-full font-semibold shadow-sm ml-1">
+            <Button onClick={handleGetStarted} className="bg-gray-950 hover:bg-gray-800 text-white text-sm px-5 rounded-lg font-semibold shadow-sm ml-1">
               Start Free <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
             </Button>
             {/* Mobile hamburger */}
@@ -403,48 +420,45 @@ export default function LandingPage() {
       <MarketplaceSearch />
 
       {/* ── HERO ── */}
-      <section className="relative bg-gray-950 overflow-hidden min-h-[600px] flex items-center">
-        {/* Warehouse background photo — right half */}
-        <div className="absolute inset-y-0 right-0 w-full sm:w-[65%] lg:w-[58%]">
-          <img
-            src="/hero-warehouse.jpg"
-            alt=""
-            aria-hidden="true"
-            className="w-full h-full object-cover object-[65%_center]"
-            loading="eager"
-          />
-          {/* stronger gradient on mobile so text is always readable */}
-          <div className="absolute inset-0 bg-gradient-to-r from-gray-950 via-gray-950/85 sm:via-gray-950/60 to-transparent" />
-          <div className="absolute inset-0 sm:hidden bg-gray-950/50" />
-          {/* subtle bottom fade */}
-          <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-gray-950/80 to-transparent" />
-        </div>
+      <section className="bg-[#f7f6f2] py-16 sm:py-24 overflow-hidden">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-16">
 
-        {/* Content row */}
-        <div className="relative z-10 w-full max-w-6xl mx-auto px-6 sm:pl-8 sm:pr-6 lg:pr-8 py-16 sm:py-24">
-          <div className="flex flex-col lg:flex-row items-center gap-10 lg:gap-16">
-
-            {/* Copy */}
+            {/* Left — Copy */}
             <div className="flex-1 max-w-xl">
-              <div className="inline-flex items-center gap-2 bg-green-900/60 text-green-300 text-xs font-semibold px-4 py-1.5 rounded-full mb-7 border border-green-800/60 tracking-wide uppercase">
+              <div className="inline-flex items-center gap-2 bg-green-50 text-green-700 text-xs font-semibold px-4 py-1.5 rounded-full mb-7 border border-green-100 tracking-wide uppercase">
                 <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" />
                 Built for wholesale businesses
               </div>
 
-              <h1 className="text-4xl sm:text-5xl lg:text-[3.25rem] font-extrabold text-white leading-[1.15] tracking-tight mb-5">
+              <h1 className="text-4xl sm:text-5xl lg:text-[3.25rem] font-extrabold text-gray-950 leading-[1.15] tracking-tight mb-5">
                 Run your wholesale business<br />
                 <span className="text-primary">without the chaos</span>
               </h1>
 
-              <p className="text-gray-300 text-lg mb-8 leading-relaxed max-w-md">
+              <p className="text-gray-500 text-lg mb-8 leading-relaxed max-w-md">
                 Manage stock, send invoices, track payments, and grow faster — all in one place.
               </p>
+
+              {/* Stat strip — Qogita style */}
+              <div className="flex items-stretch w-fit border border-gray-200 rounded-xl overflow-hidden bg-white mb-8 shadow-sm">
+                {[
+                  { value: "500+", label: "UK wholesalers" },
+                  { value: "£2M+", label: "Orders processed" },
+                  { value: "Free", label: "To get started" },
+                ].map(({ value, label }, i) => (
+                  <div key={i} className={`px-5 py-3 text-left ${i > 0 ? 'border-l border-gray-200' : ''}`}>
+                    <p className="text-xl font-extrabold text-gray-950 leading-none mb-0.5">{value}</p>
+                    <p className="text-xs text-gray-500">{label}</p>
+                  </div>
+                ))}
+              </div>
 
               <div className="flex flex-col sm:flex-row gap-3 mb-7">
                 <Button
                   onClick={handleGetStarted}
                   size="lg"
-                  className="text-base px-8 py-6 bg-primary hover:bg-primary/90 rounded-xl shadow-lg shadow-primary/40 font-semibold"
+                  className="text-base px-8 py-6 bg-gray-950 hover:bg-gray-800 text-white rounded-lg font-semibold"
                 >
                   Start Free <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
@@ -452,7 +466,7 @@ export default function LandingPage() {
                   onClick={handleBookDemo}
                   size="lg"
                   variant="outline"
-                  className="text-base px-8 py-6 rounded-xl border-2 border-white/25 text-white bg-transparent hover:bg-white/10 hover:border-white/40 font-medium"
+                  className="text-base px-8 py-6 rounded-lg border border-gray-200 text-gray-700 bg-white hover:bg-gray-50 font-medium"
                 >
                   Book a Demo
                 </Button>
@@ -471,58 +485,51 @@ export default function LandingPage() {
               </div>
             </div>
 
+            {/* Right — Dashboard mockup */}
+            <div className="flex-shrink-0 w-full max-w-xs sm:max-w-sm lg:max-w-md mx-auto lg:mx-0">
+              <DashboardMockup />
+            </div>
+
           </div>
         </div>
       </section>
 
       {/* ── FEATURE CARDS STRIP ── */}
-      <section className="bg-gray-50 border-b border-gray-100 py-14 sm:py-20">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-20">
-
-            {/* Left — dashboard mockup */}
-            <div className="w-full max-w-xs sm:max-w-sm lg:max-w-md flex-shrink-0 mx-auto lg:mx-0">
-              <DashboardMockup />
-            </div>
-
-            {/* Right — 2×2 feature grid */}
-            <div className="flex-1 w-full">
-              <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-1 tracking-tight">Everything in one dashboard</h2>
-              <p className="text-gray-500 text-sm mb-6">No more juggling apps. Run your whole business from one place.</p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {[
-                  { icon: Box,         title: "Inventory Management",  desc: "Track stock in real time and never oversell." },
-                  { icon: ReceiptText, title: "Invoicing",             desc: "Create and send professional invoices in seconds." },
-                  { icon: UserCheck,   title: "Customer Management",   desc: "Manage customers, balances and order history." },
-                  { icon: Wallet,      title: "Payment Tracking",      desc: "Track payments and get paid faster, every time." },
-                ].map(({ icon: Icon, title, desc }, i) => (
-                  <div
-                    key={i}
-                    className="flex items-start gap-4 p-5 rounded-2xl bg-white border border-gray-100 shadow-sm group hover:shadow-md hover:border-primary/15 transition-all duration-200"
-                  >
-                    <div className="w-9 h-9 rounded-xl bg-green-50 flex items-center justify-center flex-shrink-0 group-hover:bg-green-100 transition-colors">
-                      <Icon className="h-4.5 w-4.5 text-primary" style={{ width: 18, height: 18 }} />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-gray-900 text-sm mb-0.5">{title}</h3>
-                      <p className="text-gray-500 text-xs leading-relaxed">{desc}</p>
-                    </div>
-                  </div>
-                ))}
+      <section className="bg-white border-b border-gray-100 py-14 sm:py-20">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-10">
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-1 tracking-tight">Everything in one dashboard</h2>
+            <p className="text-gray-500 text-sm">No more juggling apps. Run your whole business from one place.</p>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            {[
+              { icon: Box,         title: "Inventory Management",  desc: "Track stock in real time and never oversell." },
+              { icon: ReceiptText, title: "Invoicing",             desc: "Create and send professional invoices in seconds." },
+              { icon: UserCheck,   title: "Customer Management",   desc: "Manage customers, balances and order history." },
+              { icon: Wallet,      title: "Payment Tracking",      desc: "Track payments and get paid faster, every time." },
+            ].map(({ icon: Icon, title, desc }, i) => (
+              <div
+                key={i}
+                className="flex flex-col items-center text-center p-6 rounded-2xl bg-gray-50 border border-gray-100 group hover:bg-white hover:shadow-sm hover:border-gray-200 transition-all duration-200"
+              >
+                <div className="w-11 h-11 rounded-full bg-white border border-gray-200 flex items-center justify-center flex-shrink-0 mb-4 group-hover:border-gray-300 transition-colors">
+                  <Icon className="text-gray-500" style={{ width: 18, height: 18 }} />
+                </div>
+                <h3 className="font-semibold text-gray-900 text-sm mb-1">{title}</h3>
+                <p className="text-gray-500 text-xs leading-relaxed">{desc}</p>
               </div>
-            </div>
-
+            ))}
           </div>
         </div>
       </section>
 
       {/* ── PROBLEM ── */}
-      <section className="py-16 sm:py-24 bg-gray-950 text-white">
+      <section className="py-16 sm:py-24 bg-gray-50">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center">
-          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-3 tracking-tight">
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-3 tracking-tight">
             Still running your business like this?
           </h2>
-          <p className="text-gray-400 text-lg mb-12">Sound familiar? You're not alone.</p>
+          <p className="text-gray-500 text-lg mb-12">Sound familiar? You're not alone.</p>
 
           <div className="grid sm:grid-cols-2 gap-3 text-left max-w-2xl mx-auto">
             {[
@@ -531,17 +538,17 @@ export default function LandingPage() {
               { icon: Package,       text: "Managing stock levels in a spreadsheet that's always out of date" },
               { icon: Users,         text: "Sending individual price lists to every single customer by hand" },
             ].map(({ icon: Icon, text }, i) => (
-              <div key={i} className="flex items-start gap-4 bg-white/[0.04] border border-white/10 rounded-2xl p-5 hover:bg-white/[0.06] transition-colors">
-                <div className="w-9 h-9 bg-red-500/10 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5">
+              <div key={i} className="flex items-start gap-4 bg-white border border-gray-100 rounded-2xl p-5 hover:shadow-sm transition-all">
+                <div className="w-9 h-9 bg-red-50 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5">
                   <Icon className="h-4.5 w-4.5 text-red-400" style={{ width: 18, height: 18 }} />
                 </div>
-                <p className="text-gray-300 text-sm leading-relaxed">{text}</p>
+                <p className="text-gray-600 text-sm leading-relaxed">{text}</p>
               </div>
             ))}
           </div>
 
-          <p className="mt-10 text-gray-400 text-base">
-            There's a better way. <span className="text-white font-semibold">Quikpik handles all of it for you.</span>
+          <p className="mt-10 text-gray-500 text-base">
+            There's a better way. <span className="text-gray-900 font-semibold">Quikpik handles all of it for you.</span>
           </p>
         </div>
       </section>
@@ -618,14 +625,14 @@ export default function LandingPage() {
           <p className="text-gray-500 text-lg mb-14">Three steps. No technical setup required.</p>
 
           <div className="grid sm:grid-cols-3 gap-6 sm:gap-10 relative">
-            <div className="hidden sm:block absolute top-7 left-[calc(16.67%+2rem)] right-[calc(16.67%+2rem)] h-px bg-gradient-to-r from-green-200 via-green-300 to-green-200 z-0" />
+            <div className="hidden sm:block absolute top-7 left-[calc(16.67%+2rem)] right-[calc(16.67%+2rem)] h-px bg-gray-200 z-0" />
             {[
               { step: "1", title: "Set up your store", desc: "Add your products, pricing, and delivery options in minutes." },
               { step: "2", title: "Share your link", desc: "Send your store link to customers via WhatsApp, SMS, or email." },
               { step: "3", title: "Receive orders and get paid", desc: "Customers order online. Payments land directly in your account." },
             ].map(({ step, title, desc }, i) => (
               <div key={i} className="relative z-10 flex flex-col items-center text-center">
-                <div className="w-14 h-14 bg-primary text-white text-xl font-extrabold rounded-2xl flex items-center justify-center mb-5 shadow-lg shadow-primary/25 ring-4 ring-gray-50">
+                <div className="w-14 h-14 bg-gray-950 text-white text-xl font-extrabold rounded-2xl flex items-center justify-center mb-5 ring-4 ring-gray-50">
                   {step}
                 </div>
                 <h3 className="text-base font-bold text-gray-900 mb-2">{title}</h3>
