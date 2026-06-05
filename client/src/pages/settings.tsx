@@ -4,7 +4,7 @@ import PageHeader from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/hooks/useAuth";
 import { useLocation, Link } from "wouter";
-import { User, Settings2, Building2, Bell, Upload, Image, AlertTriangle, Info, ExternalLink, Save, Download, Printer, QrCode, Lock, Eye, EyeOff, Truck, Plus, Pencil, Trash2, Star, X, MapPin, Receipt, CheckCircle2, XCircle, Link2, Loader2, Inbox } from "lucide-react";
+import { User, Settings2, Building2, Bell, Upload, Image, AlertTriangle, Info, ExternalLink, Save, Download, Printer, QrCode, Lock, Eye, EyeOff, Truck, Plus, Pencil, Trash2, Star, X, MapPin, Receipt, CheckCircle2, XCircle, Link2, Loader2, Inbox, Store } from "lucide-react";
 import LeadsPage from "@/pages/leads";
 import Logo from '@/components/ui/logo';
 import { LogoUploader } from '@/components/LogoUploader';
@@ -980,7 +980,7 @@ export default function Settings() {
   useEffect(() => {
     const urlParams = new URLSearchParams(location.split('?')[1] || '');
     const tabFromUrl = urlParams.get('tab');
-    if (tabFromUrl && ['account', 'business', 'notifications', 'leads'].includes(tabFromUrl)) {
+    if (tabFromUrl && ['account', 'business', 'notifications', 'leads', 'store'].includes(tabFromUrl)) {
       setActiveTab(tabFromUrl);
     }
   }, [location]);
@@ -1302,6 +1302,19 @@ export default function Settings() {
                   <span className="text-sm sm:text-base">Notifications</span>
                 </div>
 
+                {/* Store Setup */}
+                <div
+                  className={`flex items-center p-2 sm:p-3 rounded-lg cursor-pointer ${
+                    activeTab === "store"
+                      ? "bg-blue-50 text-blue-700"
+                      : "text-gray-600 hover:bg-gray-50"
+                  }`}
+                  onClick={() => setActiveTab("store")}
+                >
+                  <Store className="h-4 w-4 sm:h-5 sm:w-5 mr-2 sm:mr-3" />
+                  <span className="text-sm sm:text-base">Store Setup</span>
+                </div>
+
                 {/* Leads */}
                 <div
                   className={`flex items-center p-2 sm:p-3 rounded-lg cursor-pointer ${
@@ -1331,6 +1344,7 @@ export default function Settings() {
                   {activeTab === "business" && "Business Settings"}
                   {activeTab === "profiles" && "Business Profiles"}
                   {activeTab === "notifications" && "Notification Settings"}
+                  {activeTab === "store" && "Store Setup"}
                   {activeTab === "leads" && "Leads"}
                 </span>
               </CardTitle>
@@ -1621,7 +1635,7 @@ export default function Settings() {
                         </div>
                         <div className="sm:col-span-2">
                           <dt className="text-sm font-medium text-gray-500">Collection Addresses</dt>
-                          <dd className="mt-1 text-sm text-gray-500 italic">Manage multiple pickup locations in the Collection Addresses section below.</dd>
+                          <dd className="mt-1 text-sm text-gray-500 italic">Manage pickup locations in the Store Setup tab.</dd>
                         </div>
                         <div>
                           <dt className="text-sm font-medium text-gray-500">Timezone</dt>
@@ -1811,7 +1825,7 @@ export default function Settings() {
 
                         <div className="sm:col-span-2 border-t pt-4">
                           <label className="text-sm font-medium text-gray-700 block mb-1">Collection Addresses</label>
-                          <p className="text-xs text-gray-400">Manage multiple pickup locations from the <span className="font-medium text-green-700">Collection Addresses</span> section below — no need to save this form first.</p>
+                          <p className="text-xs text-gray-400">Manage pickup locations in the <span className="font-medium text-green-700">Store Setup</span> tab.</p>
                         </div>
                         
                         <div className="sm:col-span-2">
@@ -1942,75 +1956,9 @@ export default function Settings() {
                   </div>
                   
 
-                  {/* Collection Addresses Section */}
-                  <div className="mt-8 pt-6 border-t border-gray-200">
-                    <CollectionAddressesSection />
-                  </div>
-
                   {/* Bank Details Section */}
                   <div className="mt-8 pt-6 border-t border-gray-200">
                     <BankDetailsSection />
-                  </div>
-
-                  {/* Delivery Settings Section */}
-                  <div className="mt-8 pt-6 border-t border-gray-200">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Truck className="h-5 w-5 text-gray-600" />
-                      <h3 className="text-base sm:text-lg font-medium text-gray-900">Delivery Options</h3>
-                    </div>
-                    <p className="text-sm text-gray-500 mb-4">Control whether you offer delivery to customers, and set your flat delivery rate.</p>
-                    <div className="border border-gray-200 rounded-lg p-4 space-y-4">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm font-medium text-gray-800">Offer Delivery</p>
-                          <p className="text-xs text-gray-500 mt-0.5">When enabled, customers can choose delivery at checkout</p>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => setDeliveryEnabled(!deliveryEnabled)}
-                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${deliveryEnabled ? 'bg-green-600' : 'bg-gray-300'}`}
-                        >
-                          <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${deliveryEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
-                        </button>
-                      </div>
-                      <div>
-                          <label className="text-sm font-medium text-gray-700 mb-1 block">Flat Delivery Rate</label>
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm text-gray-500">£</span>
-                            <Input
-                              type="number"
-                              min="0"
-                              step="0.01"
-                              placeholder="e.g. 5.99"
-                              value={deliveryFlatRate}
-                              onChange={(e) => setDeliveryFlatRateState(e.target.value)}
-                              className="w-32"
-                            />
-                            <span className="text-xs text-gray-400">per order</span>
-                          </div>
-                          <p className="text-xs text-gray-400 mt-1">Leave blank to show delivery as "contact to arrange"</p>
-                        </div>
-                      <div>
-                        <label className="text-sm font-medium text-gray-700 mb-1 block">Delivery Note <span className="text-gray-400 font-normal">(shown to customers at checkout)</span></label>
-                        <textarea
-                          value={deliveryNote}
-                          onChange={(e) => setDeliveryNote(e.target.value)}
-                          placeholder='e.g. "Free delivery on orders over £100" or "Allow 2–3 working days"'
-                          rows={2}
-                          className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:border-green-500 resize-none"
-                        />
-                        <p className="text-xs text-gray-400 mt-1">Customers will see this in the Order Summary during checkout</p>
-                      </div>
-                      <Button
-                        size="sm"
-                        onClick={handleSaveDelivery}
-                        disabled={savingDelivery}
-                        className="flex items-center gap-1.5 bg-green-600 hover:bg-green-700 text-white"
-                      >
-                        <Save className="h-3.5 w-3.5" />
-                        {savingDelivery ? "Saving..." : "Save Delivery Settings"}
-                      </Button>
-                    </div>
                   </div>
 
                   {/* Pay Later Settings Section */}
@@ -2046,7 +1994,79 @@ export default function Settings() {
                     </div>
                   </div>
 
-                  {/* Tax / VAT Settings Section */}
+                </div>
+              )}
+
+              {activeTab === "store" && (
+                <div className="space-y-2">
+
+                  {/* Delivery & Collection */}
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <Truck className="h-5 w-5 text-gray-600" />
+                      <h3 className="text-base sm:text-lg font-medium text-gray-900">Delivery & Collection</h3>
+                    </div>
+                    <p className="text-sm text-gray-500 mb-4">Manage pickup locations and delivery options for your customers.</p>
+
+                    <div className="mb-6">
+                      <CollectionAddressesSection />
+                    </div>
+
+                    <div className="border border-gray-200 rounded-lg p-4 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium text-gray-800">Offer Delivery</p>
+                          <p className="text-xs text-gray-500 mt-0.5">When enabled, customers can choose delivery at checkout</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setDeliveryEnabled(!deliveryEnabled)}
+                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${deliveryEnabled ? 'bg-green-600' : 'bg-gray-300'}`}
+                        >
+                          <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${deliveryEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+                        </button>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-gray-700 mb-1 block">Flat Delivery Rate</label>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-gray-500">£</span>
+                          <Input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            placeholder="e.g. 5.99"
+                            value={deliveryFlatRate}
+                            onChange={(e) => setDeliveryFlatRateState(e.target.value)}
+                            className="w-32"
+                          />
+                          <span className="text-xs text-gray-400">per order</span>
+                        </div>
+                        <p className="text-xs text-gray-400 mt-1">Leave blank to show delivery as "contact to arrange"</p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-gray-700 mb-1 block">Delivery Note <span className="text-gray-400 font-normal">(shown to customers at checkout)</span></label>
+                        <textarea
+                          value={deliveryNote}
+                          onChange={(e) => setDeliveryNote(e.target.value)}
+                          placeholder='e.g. "Free delivery on orders over £100" or "Allow 2–3 working days"'
+                          rows={2}
+                          className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:border-green-500 resize-none"
+                        />
+                        <p className="text-xs text-gray-400 mt-1">Customers will see this in the Order Summary during checkout</p>
+                      </div>
+                      <Button
+                        size="sm"
+                        onClick={handleSaveDelivery}
+                        disabled={savingDelivery}
+                        className="flex items-center gap-1.5 bg-green-600 hover:bg-green-700 text-white"
+                      >
+                        <Save className="h-3.5 w-3.5" />
+                        {savingDelivery ? "Saving..." : "Save Delivery Settings"}
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Tax / VAT Settings */}
                   <div className="mt-8 pt-6 border-t border-gray-200">
                     <div className="flex items-center gap-2 mb-1">
                       <Receipt className="h-5 w-5 text-gray-600" />
@@ -2115,7 +2135,7 @@ export default function Settings() {
                     </div>
                   </div>
 
-                  {/* Custom Store URL Section */}
+                  {/* Custom Store URL */}
                   <div className="mt-8 pt-6 border-t border-gray-200">
                     <div className="flex items-center gap-2 mb-1">
                       <Link2 className="h-5 w-5 text-gray-600" />
@@ -2124,8 +2144,6 @@ export default function Settings() {
                     <p className="text-sm text-gray-500 mb-4">
                       Give your store a short, memorable link instead of the auto-generated one. Only lowercase letters, numbers, and hyphens allowed.
                     </p>
-
-                    {/* Current live URL */}
                     <div className="flex items-center gap-2 mb-4 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
                       <ExternalLink className="h-3.5 w-3.5 text-green-700 flex-shrink-0" />
                       <span className="text-xs text-green-800 font-mono break-all">{storeShareUrl}</span>
@@ -2138,7 +2156,6 @@ export default function Settings() {
                         Copy
                       </Button>
                     </div>
-
                     <div className="space-y-2">
                       <Label className="text-xs text-gray-600">Your custom URL slug</Label>
                       <div className="flex items-center gap-2">
@@ -2181,10 +2198,10 @@ export default function Settings() {
                     </div>
                   </div>
 
-                  {/* ── Public Storefront ── */}
+                  {/* Public Storefront */}
                   <PublicStoreSettings user={user} />
 
-                  {/* Store QR Code Section */}
+                  {/* Store QR Code */}
                   <div className="mt-8 pt-6 border-t border-gray-200">
                     <div className="flex items-center gap-2 mb-1">
                       <QrCode className="h-5 w-5 text-gray-600" />
