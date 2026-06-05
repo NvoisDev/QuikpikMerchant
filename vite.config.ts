@@ -4,7 +4,15 @@ import path from "path";
 import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
 import { VitePWA } from "vite-plugin-pwa";
 
+// Computed once per build. Injected into the service worker template via
+// Vite's define so CACHE_NAME is automatically versioned on every deploy.
+const BUILD_HASH = Date.now().toString(36);
+
 export default defineConfig({
+  define: {
+    // Makes __BUILD_HASH__ available inside client/src/sw.ts at build time.
+    __BUILD_HASH__: JSON.stringify(BUILD_HASH),
+  },
   plugins: [
     react(),
     runtimeErrorOverlay(),
@@ -17,32 +25,18 @@ export default defineConfig({
         ]
       : []),
     VitePWA({
-      strategies: "generateSW",
+      // injectManifest uses client/src/sw.ts as the template.
+      // Workbox replaces self.__WB_MANIFEST with a content-hash precache
+      // manifest at build time, and Vite's define injects __BUILD_HASH__
+      // into the cache names — so every deploy automatically produces
+      // fresh, uniquely-named caches with no manual version string.
+      strategies: "injectManifest",
+      srcDir: "src",
+      filename: "sw.ts",
       registerType: "autoUpdate",
       injectRegister: "auto",
-      workbox: {
+      injectManifest: {
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff,woff2,ttf,eot}"],
-        navigateFallback: "/index.html",
-        navigateFallbackDenylist: [/^\/api\//],
-        runtimeCaching: [
-          {
-            urlPattern: /^\/api\//,
-            handler: "NetworkFirst",
-            options: {
-              cacheName: "quikpik-api",
-              networkTimeoutSeconds: 10,
-              expiration: {
-                maxAgeSeconds: 120,
-                maxEntries: 50,
-              },
-              cacheableResponse: {
-                statuses: [0, 200],
-              },
-            },
-          },
-        ],
-        cleanupOutdatedCaches: true,
-        sourcemap: false,
       },
       devOptions: {
         enabled: false,
