@@ -149,6 +149,37 @@ interface CollectionAddress {
   isActive: boolean;
 }
 
+function buildInvoiceMessage({
+  customerName,
+  businessName,
+  orderRef,
+  total,
+  itemLines,
+  fulfillmentLine,
+  paymentLink,
+}: {
+  customerName: string;
+  businessName: string;
+  orderRef: string;
+  total: string;
+  itemLines: string;
+  fulfillmentLine: string;
+  paymentLink: string;
+}): string {
+  return (
+    `Hi ${customerName} 👋\n\n` +
+    `Here's your invoice from ${businessName}.\n\n` +
+    `📋 Invoice: ${orderRef}\n` +
+    `${itemLines}\n` +
+    `💰 Total: ${total}\n` +
+    `📦 ${fulfillmentLine}\n\n` +
+    `💳 Balance due: ${total}\n` +
+    `Pay here → ${paymentLink}\n\n` +
+    `Thank you for your order! 🙏\n` +
+    `${businessName}`
+  );
+}
+
 export default function QuickQuote() {
   const { user } = useAuth();
   const { isDesktopCollapsed } = useSidebarContext();
@@ -176,6 +207,8 @@ export default function QuickQuote() {
   } | null>(null);
   const [showPickingMode, setShowPickingMode] = useState(false);
   const [isSharingInvoice, setIsSharingInvoice] = useState(false);
+  const [sharePreviewOpen, setSharePreviewOpen] = useState(false);
+  const [sharePreviewMessage, setSharePreviewMessage] = useState('');
   const [newCustomer, setNewCustomer] = useState({
     firstName: '',
     lastName: '',
@@ -634,41 +667,17 @@ export default function QuickQuote() {
       queryClient.invalidateQueries({ queryKey: ['/api/products'] });
 
       if (sendMethod === 'share' && data.paymentLink) {
-        const customerName = selectedCustomer?.firstName || selectedCustomer?.businessName || 'there';
-        const businessName = user?.businessName || 'Your Supplier';
-        const orderRef = data.orderNumber || `#${data.orderId}`;
-        const total = formatCurrency(calculateTotal());
-        const itemLines = quoteItems
-          .map(item => `🛍️ ${item.quantity}× ${item.productName}`)
-          .join('\n');
-        const fulfillmentLine = fulfillmentType === 'delivery' ? 'Delivery' : 'Collection from your store';
-        const message =
-          `Hi ${customerName} 👋\n\n` +
-          `Here's your invoice from ${businessName}.\n\n` +
-          `📋 Invoice: ${orderRef}\n` +
-          `${itemLines}\n` +
-          `💰 Total: ${total}\n` +
-          `📦 ${fulfillmentLine}\n\n` +
-          `💳 Balance due: ${total}\n` +
-          `Pay here → ${data.paymentLink}\n\n` +
-          `Thank you for your order! 🙏\n` +
-          `${businessName}`;
-
-        if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
-          try {
-            await navigator.share({ text: message });
-          } catch (err) {
-            if (err instanceof DOMException && (err.name === 'AbortError' || err.name === 'NotAllowedError')) {
-              // user dismissed — no toast needed
-            } else {
-              navigator.clipboard?.writeText(message).catch(() => {});
-              toast({ title: "Copied to clipboard", description: "Paste the message to send it to your customer." });
-            }
-          }
-        } else {
-          navigator.clipboard?.writeText(message).catch(() => {});
-          toast({ title: "Copied to clipboard", description: "Paste the message to send it to your customer." });
-        }
+        const builtMessage = buildInvoiceMessage({
+          customerName: selectedCustomer?.firstName || selectedCustomer?.businessName || 'there',
+          businessName: user?.businessName || 'Your Supplier',
+          orderRef: data.orderNumber || `#${data.orderId}`,
+          total: formatCurrency(calculateTotal()),
+          itemLines: quoteItems.map(item => `🛍️ ${item.quantity}× ${item.productName}`).join('\n'),
+          fulfillmentLine: fulfillmentType === 'delivery' ? 'Delivery' : 'Collection from your store',
+          paymentLink: data.paymentLink,
+        });
+        setSharePreviewMessage(builtMessage);
+        setSharePreviewOpen(true);
       } else {
         toast({
           title: "Invoice Created",
@@ -925,6 +934,24 @@ export default function QuickQuote() {
 
   const calculateRemainingBalance = () => {
     return calculateTotal() - calculateDepositAmount();
+  };
+
+  const doShare = async (message: string) => {
+    if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
+      try {
+        await navigator.share({ text: message });
+      } catch (err) {
+        if (err instanceof DOMException && (err.name === 'AbortError' || err.name === 'NotAllowedError')) {
+          // user dismissed — no toast needed
+        } else {
+          navigator.clipboard?.writeText(message).catch(() => {});
+          toast({ title: "Copied to clipboard", description: "Paste the message to send it to your customer." });
+        }
+      }
+    } else {
+      navigator.clipboard?.writeText(message).catch(() => {});
+      toast({ title: "Copied to clipboard", description: "Paste the message to send it to your customer." });
+    }
   };
 
   const handleCreateQuote = () => {
@@ -2322,6 +2349,45 @@ export default function QuickQuote() {
           )}
         </div>
       </div>
+
+      {/* Invoice Message Preview Sheet */}
+      <Sheet open={sharePreviewOpen} onOpenChange={setSharePreviewOpen}>
+        <SheetContent side="bottom" className="max-h-[85vh] overflow-y-auto rounded-t-2xl px-4 pb-8">
+          <SheetHeader className="mb-3">
+            <SheetTitle className="text-base">Preview Invoice Message</SheetTitle>
+          </SheetHeader>
+          <p className="text-sm text-gray-500 mb-3">Review or edit the message before sharing. Your customer will receive exactly what you see below.</p>
+          <textarea
+            className="w-full border border-gray-200 rounded-lg p-3 text-sm font-mono leading-relaxed resize-none focus:outline-none focus:ring-2 focus:ring-green-500"
+            rows={14}
+            value={sharePreviewMessage}
+            onChange={(e) => setSharePreviewMessage(e.target.value)}
+          />
+          <div className="flex flex-col gap-2 mt-4">
+            <Button
+              className="w-full bg-green-600 hover:bg-green-700 text-white"
+              size="lg"
+              onClick={() => {
+                setSharePreviewOpen(false);
+                doShare(sharePreviewMessage);
+              }}
+            >
+              <Share2 className="h-4 w-4 mr-2" />
+              Share
+            </Button>
+            <Button
+              variant="outline"
+              size="lg"
+              className="w-full"
+              onClick={() => {
+                setSharePreviewOpen(false);
+              }}
+            >
+              Cancel
+            </Button>
+          </div>
+        </SheetContent>
+      </Sheet>
 
       <div className={`fixed bottom-0 right-0 z-50 bg-white border-t border-gray-200 px-4 py-3 flex items-center justify-between gap-3 shadow-lg left-0 ${isDesktopCollapsed ? "lg:left-14" : "lg:left-64"}`}>
         <div className="hidden sm:block min-w-0">
