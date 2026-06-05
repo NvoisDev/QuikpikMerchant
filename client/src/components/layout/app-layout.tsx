@@ -9,6 +9,7 @@ import ShareBellControls from "@/components/shared/ShareBellControls";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useImpersonation } from "@/contexts/impersonation-context";
+import InstallPromptBanner from "@/components/shared/InstallPromptBanner";
 
 const PAGE_NAMES: { href: string; name: string }[] = [
   { href: "/orders", name: "Orders" },
@@ -148,6 +149,7 @@ function AppLayoutInner({ children }: AppLayoutProps) {
         <main className="flex-1 p-2 sm:p-4 lg:p-6 xl:p-8">{children}</main>
         <Footer />
       </div>
+      {user && <InstallPromptBanner />}
     </div>
   );
 }
