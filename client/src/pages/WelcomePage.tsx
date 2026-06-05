@@ -308,10 +308,10 @@ export default function WelcomePage() {
       </div>
 
       {/* Two-column layout: form left, products right */}
-      <div className="max-w-4xl mx-auto px-4 py-6 flex flex-col lg:flex-row gap-6 lg:gap-8 items-start">
+      <div className="max-w-5xl mx-auto px-4 py-6 flex flex-col-reverse md:flex-row gap-6 md:gap-8 md:items-start">
 
         {/* LEFT: Registration form */}
-        <div ref={formRef} className="w-full lg:w-[400px] flex-shrink-0 scroll-mt-4">
+        <div ref={formRef} className="w-full md:w-[400px] flex-shrink-0 scroll-mt-4">
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
             <h2 className="text-lg font-bold text-gray-900 mb-1">Request Account Access</h2>
             <p className="text-sm text-gray-500 mb-5">
