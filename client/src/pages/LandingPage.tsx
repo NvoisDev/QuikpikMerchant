@@ -540,8 +540,8 @@ export default function LandingPage() {
 
                   <div className="flex items-stretch w-fit border border-gray-200 rounded-xl overflow-hidden bg-white mb-8 shadow-sm">
                     {[
-                      { value: "500+", label: "Verified suppliers" },
-                      { value: "10k+",  label: "Products" },
+                      { value: "100+", label: "Verified suppliers" },
+                      { value: "1,000+", label: "Orders processed" },
                       { value: "Free",  label: "To browse" },
                     ].map(({ value, label }, i) => (
                       <div key={i} className={`px-5 py-3 text-left ${i > 0 ? 'border-l border-gray-200' : ''}`}>
@@ -607,8 +607,8 @@ export default function LandingPage() {
 
                   <div className="flex items-stretch w-fit border border-white/20 rounded-xl overflow-hidden bg-white mb-8 shadow-sm">
                     {[
-                      { value: "500+", label: "African wholesalers" },
-                      { value: "$2M+", label: "Orders processed" },
+                      { value: "100+", label: "African wholesalers" },
+                      { value: "1,000+", label: "Orders processed" },
                       { value: "Free", label: "To get started" },
                     ].map(({ value, label }, i) => (
                       <div key={i} className={`px-5 py-3 text-left ${i > 0 ? 'border-l border-gray-200' : ''}`}>
