@@ -1090,7 +1090,7 @@ export default function QuickQuote() {
     setCostValues({});
     setCreatedQuote(null);
     setSavedDraftResult(null);
-    setSendMethod('sms');
+    setSendMethod('share');
     setDepositPercentage(100);
     setBalanceDueDays(0);
     setQuotePaymentMethod(stripeReady ? 'payment_link' : 'bank_transfer');
