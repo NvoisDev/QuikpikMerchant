@@ -267,7 +267,7 @@ function MarketplaceSearch() {
             {wholesalers.map(w => (
               <a
                 key={w.wholesalerId}
-                href={`/w/${w.storeSlug || w.wholesalerId}`}
+                href={`/w/${w.storeSlug || w.wholesalerId}${query ? `?q=${encodeURIComponent(query)}` : ''}`}
                 className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 hover:shadow-md hover:border-primary/20 transition-all group flex gap-4 items-start"
               >
                 {/* Logo / initials */}

@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useParams, Link } from "wouter";
+import { useState, useEffect } from "react";
+import { useParams, Link, useSearch } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
@@ -270,7 +270,9 @@ function EnquiryModal({
 
 export default function PublicStorePage() {
   const { slug } = useParams<{ slug: string }>();
-  const [search, setSearch] = useState('');
+  const searchString = useSearch();
+  const initialQ = new URLSearchParams(searchString).get('q') || '';
+  const [search, setSearch] = useState(initialQ);
   const [selectedCategory, setSelectedCategory] = useState('');
   const [enquiryProduct, setEnquiryProduct] = useState<PublicProduct | null | 'general'>('none' as any);
   const [showEnquiry, setShowEnquiry] = useState(false);
