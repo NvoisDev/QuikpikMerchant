@@ -7,6 +7,12 @@ export type AuthUser = User & {
   teamMemberRole?: 'admin' | 'member' | 'viewer';
 };
 
+function clearSwApiCache() {
+  if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+    navigator.serviceWorker.controller.postMessage({ type: 'CLEAR_API_CACHE' });
+  }
+}
+
 export function useAuth() {
   const queryClient = useQueryClient();
   
@@ -83,6 +89,7 @@ export function useAuth() {
     },
     onSuccess: () => {
       // Clear all authentication data
+      clearSwApiCache();
       queryClient.setQueryData(["/api/auth/user"], null);
       queryClient.clear();
       localStorage.clear();
@@ -93,6 +100,7 @@ export function useAuth() {
     onError: (error) => {
       console.error("Logout error:", error);
       // Force logout even if API fails
+      clearSwApiCache();
       queryClient.setQueryData(["/api/auth/user"], null);
       queryClient.clear();
       localStorage.clear();
@@ -117,6 +125,7 @@ export function useAuth() {
     },
     onSuccess: () => {
       // Clear all authentication data
+      clearSwApiCache();
       queryClient.setQueryData(["/api/auth/user"], null);
       queryClient.clear();
       localStorage.clear();
@@ -127,6 +136,7 @@ export function useAuth() {
     onError: (error) => {
       console.error("Back to home error:", error);
       // Force logout even if API fails and go to landing
+      clearSwApiCache();
       queryClient.setQueryData(["/api/auth/user"], null);
       queryClient.clear();
       localStorage.clear();

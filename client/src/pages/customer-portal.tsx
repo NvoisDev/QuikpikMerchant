@@ -1357,6 +1357,10 @@ export default function CustomerPortal() {
       });
 
       if (response.ok) {
+        // Clear SW API cache on logout so no cached data persists across sessions
+        if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+          navigator.serviceWorker.controller.postMessage({ type: 'CLEAR_API_CACHE' });
+        }
         // Clear localStorage and sessionStorage
         localStorage.removeItem(`customer_auth_${wholesalerId}`);
         localStorage.clear();

@@ -4,6 +4,7 @@ import { Switch, Route, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
+import OfflineBanner from "@/components/OfflineBanner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
 import { usePresencePing } from "@/hooks/usePresencePing";
@@ -333,6 +334,7 @@ function App() {
         <ImpersonationProvider>
           <TooltipProvider>
             <OnboardingProvider>
+              <OfflineBanner />
               <Router />
               <Toaster />
             </OnboardingProvider>
