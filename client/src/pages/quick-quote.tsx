@@ -160,7 +160,7 @@ export default function QuickQuote() {
   const [productSearch, setProductSearch] = useState("");
   const [pickerPriceListId, setPickerPriceListId] = useState<number | null>(null);
   const [addCustomerDialogOpen, setAddCustomerDialogOpen] = useState(false);
-  const [sendMethod, setSendMethod] = useState<'sms' | 'link'>('sms');
+  const [sendMethod, setSendMethod] = useState<'share' | 'link'>('share');
   const [sendSmsNotification, setSendSmsNotification] = useState(true);
   const [copiedLink, setCopiedLink] = useState(false);
   const [savedDraft, setSavedDraft] = useState<any>(null);
@@ -555,7 +555,7 @@ export default function QuickQuote() {
     mutationFn: async (data: {
       customerId: string;
       items: QuoteItem[];
-      sendVia: 'sms' | 'link';
+      sendVia: 'link';
       sendSmsNotification: boolean;
       depositPercentage: 0 | 25 | 50 | 75 | 100;
       balanceDueDays: 0 | 7 | 14 | 30 | 60;
@@ -632,12 +632,49 @@ export default function QuickQuote() {
       queryClient.invalidateQueries({ queryKey: ['/api/orders/drafts'] });
       queryClient.invalidateQueries({ queryKey: ['/api/orders'] });
       queryClient.invalidateQueries({ queryKey: ['/api/products'] });
-      toast({
-        title: "Invoice Created",
-        description: sendMethod === 'link' 
-          ? "Payment link generated. Copy and share it with your customer."
-          : `Invoice sent to customer via ${sendMethod.toUpperCase()}.`,
-      });
+
+      if (sendMethod === 'share' && data.paymentLink) {
+        const customerName = selectedCustomer?.firstName || selectedCustomer?.businessName || 'there';
+        const businessName = user?.businessName || 'Your Supplier';
+        const orderRef = data.orderNumber || `#${data.orderId}`;
+        const total = formatCurrency(calculateTotal());
+        const itemLines = quoteItems
+          .map(item => `🛍️ ${item.quantity}× ${item.productName}`)
+          .join('\n');
+        const fulfillmentLine = fulfillmentType === 'delivery' ? 'Delivery' : 'Collection from your store';
+        const message =
+          `Hi ${customerName} 👋\n\n` +
+          `Here's your invoice from ${businessName}.\n\n` +
+          `📋 Invoice: ${orderRef}\n` +
+          `${itemLines}\n` +
+          `💰 Total: ${total}\n` +
+          `📦 ${fulfillmentLine}\n\n` +
+          `💳 Balance due: ${total}\n` +
+          `Pay here → ${data.paymentLink}\n\n` +
+          `Thank you for your order! 🙏\n` +
+          `${businessName}`;
+
+        if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
+          try {
+            await navigator.share({ text: message });
+          } catch (err) {
+            if (err instanceof DOMException && (err.name === 'AbortError' || err.name === 'NotAllowedError')) {
+              // user dismissed — no toast needed
+            } else {
+              navigator.clipboard?.writeText(message).catch(() => {});
+              toast({ title: "Copied to clipboard", description: "Paste the message to send it to your customer." });
+            }
+          }
+        } else {
+          navigator.clipboard?.writeText(message).catch(() => {});
+          toast({ title: "Copied to clipboard", description: "Paste the message to send it to your customer." });
+        }
+      } else {
+        toast({
+          title: "Invoice Created",
+          description: "Payment link generated. Copy and share it with your customer.",
+        });
+      }
     },
     onError: (error: Error) => {
       const e = error as Error & { errorType?: string; available?: number; requested?: number; productName?: string };
@@ -967,8 +1004,8 @@ export default function QuickQuote() {
     createQuoteMutation.mutate({
       customerId: selectedCustomer.id,
       items: quoteItems,
-      sendVia: sendMethod,
-      sendSmsNotification,
+      sendVia: 'link',
+      sendSmsNotification: sendMethod === 'link' ? sendSmsNotification : false,
       depositPercentage,
       balanceDueDays: depositPercentage === 0 ? 0 : balanceDueDays,
       fulfillmentType,
@@ -2253,12 +2290,12 @@ export default function QuickQuote() {
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-2">
                 <Button
-                  variant={sendMethod === 'sms' ? 'default' : 'outline'}
-                  className={sendMethod === 'sms' ? 'bg-green-600' : ''}
-                  onClick={() => setSendMethod('sms')}
+                  variant={sendMethod === 'share' ? 'default' : 'outline'}
+                  className={sendMethod === 'share' ? 'bg-green-600' : ''}
+                  onClick={() => setSendMethod('share')}
                 >
-                  <MessageSquare className="h-4 w-4 mr-1" />
-                  SMS
+                  <Share2 className="h-4 w-4 mr-1" />
+                  Share
                 </Button>
                 <Button
                   variant={sendMethod === 'link' ? 'default' : 'outline'}
@@ -2270,13 +2307,15 @@ export default function QuickQuote() {
                 </Button>
               </div>
 
-              <label className="flex items-center gap-2 cursor-pointer select-none">
-                <Checkbox
-                  checked={sendSmsNotification}
-                  onCheckedChange={(v) => setSendSmsNotification(Boolean(v))}
-                />
-                <span className="text-sm text-gray-600">Also send SMS notification to customer</span>
-              </label>
+              {sendMethod === 'link' && (
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <Checkbox
+                    checked={sendSmsNotification}
+                    onCheckedChange={(v) => setSendSmsNotification(Boolean(v))}
+                  />
+                  <span className="text-sm text-gray-600">Also send SMS notification to customer</span>
+                </label>
+              )}
 
             </CardContent>
           </Card>
