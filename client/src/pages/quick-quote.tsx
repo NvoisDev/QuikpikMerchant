@@ -209,6 +209,7 @@ export default function QuickQuote() {
   const [isSharingInvoice, setIsSharingInvoice] = useState(false);
   const [sharePreviewOpen, setSharePreviewOpen] = useState(false);
   const [sharePreviewMessage, setSharePreviewMessage] = useState('');
+  const [defaultShareMessage, setDefaultShareMessage] = useState('');
   const [newCustomer, setNewCustomer] = useState({
     firstName: '',
     lastName: '',
@@ -676,7 +677,9 @@ export default function QuickQuote() {
           fulfillmentLine: fulfillmentType === 'delivery' ? 'Delivery' : 'Collection from your store',
           paymentLink: data.paymentLink,
         });
-        setSharePreviewMessage(builtMessage);
+        setDefaultShareMessage(builtMessage);
+        const savedSuffix = user?.id ? localStorage.getItem(`quikpik_invoice_suffix_${user.id}`) : null;
+        setSharePreviewMessage(savedSuffix ? builtMessage + savedSuffix : builtMessage);
         setSharePreviewOpen(true);
       } else {
         toast({
@@ -2356,7 +2359,18 @@ export default function QuickQuote() {
           <SheetHeader className="mb-3">
             <SheetTitle className="text-base">Preview Invoice Message</SheetTitle>
           </SheetHeader>
-          <p className="text-sm text-gray-500 mb-3">Review or edit the message before sharing. Your customer will receive exactly what you see below.</p>
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-sm text-gray-500">Review or edit the message before sharing. Your customer will receive exactly what you see below.</p>
+            {sharePreviewMessage !== defaultShareMessage && (
+              <button
+                type="button"
+                className="ml-3 shrink-0 text-xs text-green-600 hover:text-green-700 underline underline-offset-2"
+                onClick={() => setSharePreviewMessage(defaultShareMessage)}
+              >
+                Reset to default
+              </button>
+            )}
+          </div>
           <textarea
             className="w-full border border-gray-200 rounded-lg p-3 text-sm font-mono leading-relaxed resize-none focus:outline-none focus:ring-2 focus:ring-green-500"
             rows={14}
@@ -2368,6 +2382,16 @@ export default function QuickQuote() {
               className="w-full bg-green-600 hover:bg-green-700 text-white"
               size="lg"
               onClick={() => {
+                if (user?.id) {
+                  if (sharePreviewMessage.startsWith(defaultShareMessage)) {
+                    const suffix = sharePreviewMessage.slice(defaultShareMessage.length);
+                    if (suffix) {
+                      localStorage.setItem(`quikpik_invoice_suffix_${user.id}`, suffix);
+                    } else {
+                      localStorage.removeItem(`quikpik_invoice_suffix_${user.id}`);
+                    }
+                  }
+                }
                 setSharePreviewOpen(false);
                 doShare(sharePreviewMessage);
               }}
