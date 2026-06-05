@@ -211,21 +211,39 @@ function MarketplaceSearch() {
   const hasContent = searched || query || selectedCategory;
 
   return (
-    <section className="bg-gray-50 border-b border-gray-100 py-10 sm:py-14">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6">
-        <div className="text-center mb-6">
-          <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Find wholesale suppliers</h2>
-          <p className="text-sm text-gray-500 mt-1">Search products from verified UK wholesalers</p>
+    <section className="bg-white border-b border-gray-100 py-12 sm:py-16">
+      <div className="max-w-3xl mx-auto px-4 sm:px-6">
+        <div className="text-center mb-8">
+          <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight mb-2">Find wholesale suppliers</h2>
+          <p className="text-base text-gray-500 mb-4">Search products from verified UK wholesalers</p>
+          {/* Trust badges */}
+          <div className="inline-flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 text-xs text-gray-400">
+            <span className="flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-green-400 inline-block" />
+              Verified wholesalers
+            </span>
+            <span className="text-gray-200">·</span>
+            <span className="flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-green-400 inline-block" />
+              Trade pricing
+            </span>
+            <span className="text-gray-200">·</span>
+            <span className="flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-green-400 inline-block" />
+              UK delivery
+            </span>
+          </div>
         </div>
 
         {/* Search bar */}
-        <div className="max-w-xl mx-auto relative mb-4">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-          <Input
+        <div className="relative mb-5">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4.5 w-4.5 text-gray-400 pointer-events-none" style={{ width: 18, height: 18 }} />
+          <input
+            type="text"
             placeholder="Search products, categories or suppliers…"
             value={query}
             onChange={e => setQuery(e.target.value)}
-            className="pl-10 pr-4 py-5 text-sm rounded-xl border-gray-200 shadow-sm bg-white"
+            className="w-full pl-11 pr-5 py-3.5 text-sm bg-gray-50 border border-gray-200 rounded-2xl shadow-sm focus:outline-none focus:border-primary/50 focus:bg-white focus:ring-2 focus:ring-primary/10 placeholder:text-gray-400 transition-all"
           />
         </div>
 
@@ -236,10 +254,10 @@ function MarketplaceSearch() {
               <button
                 key={cat}
                 onClick={() => setSelectedCategory(c => c === cat ? '' : cat)}
-                className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition-all ${
                   selectedCategory === cat
-                    ? 'bg-primary text-white'
-                    : 'bg-white text-gray-600 border border-gray-200 hover:border-primary/40'
+                    ? 'bg-primary text-white shadow-sm'
+                    : 'bg-white text-gray-600 border border-gray-200 hover:border-primary/40 hover:text-primary'
                 }`}
               >
                 {cat}
@@ -250,32 +268,32 @@ function MarketplaceSearch() {
 
         {/* Results */}
         {loading && (
-          <div className="flex justify-center py-8">
-            <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+          <div className="flex justify-center py-10">
+            <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
           </div>
         )}
 
         {!loading && searched && wholesalers.length === 0 && (
-          <div className="text-center py-8 text-gray-400 text-sm">
-            <Store className="h-8 w-8 mx-auto mb-2 text-gray-300" />
-            No suppliers found — try a different search
+          <div className="text-center py-10">
+            <Store className="h-9 w-9 mx-auto mb-3 text-gray-200" />
+            <p className="text-sm text-gray-400">No suppliers found — try a different search</p>
           </div>
         )}
 
         {!loading && wholesalers.length > 0 && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {wholesalers.map(w => (
               <a
                 key={w.wholesalerId}
                 href={`/w/${w.storeSlug || w.wholesalerId}${query ? `?q=${encodeURIComponent(query)}` : ''}`}
-                className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 hover:shadow-md hover:border-primary/20 transition-all group flex gap-4 items-start"
+                className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 hover:shadow-md hover:border-primary/25 transition-all group flex gap-3.5 items-start"
               >
                 {/* Logo / initials */}
                 <div className="flex-shrink-0">
                   {w.logoUrl
-                    ? <img src={w.logoUrl} alt={w.businessName} className="h-12 w-12 rounded-lg object-contain bg-gray-50 p-1 border border-gray-100" />
+                    ? <img src={w.logoUrl} alt={w.businessName} className="h-11 w-11 rounded-xl object-contain bg-gray-50 p-1 border border-gray-100" />
                     : (
-                      <div className="h-12 w-12 rounded-lg bg-primary flex items-center justify-center">
+                      <div className="h-11 w-11 rounded-xl bg-primary flex items-center justify-center">
                         <span className="text-white font-bold text-sm">{getInitials(w.businessName)}</span>
                       </div>
                     )
@@ -284,10 +302,10 @@ function MarketplaceSearch() {
 
                 {/* Info */}
                 <div className="min-w-0 flex-1">
-                  <p className="font-semibold text-sm text-gray-900 truncate group-hover:text-primary transition-colors">{w.businessName}</p>
+                  <p className="font-semibold text-sm text-gray-900 truncate group-hover:text-primary transition-colors mb-0.5">{w.businessName}</p>
                   {w.city && (
-                    <div className="flex items-center gap-1 mt-0.5 mb-2">
-                      <MapPin className="h-3 w-3 text-gray-400 flex-shrink-0" />
+                    <div className="flex items-center gap-1 mb-2">
+                      <MapPin className="h-3 w-3 text-gray-300 flex-shrink-0" />
                       <span className="text-xs text-gray-400 truncate">{w.city}</span>
                     </div>
                   )}
@@ -295,28 +313,28 @@ function MarketplaceSearch() {
                   {w.products.length > 0 && (
                     <div className="flex flex-wrap gap-1">
                       {w.products.slice(0, 3).map(name => (
-                        <span key={name} className="inline-block bg-gray-100 text-gray-600 text-[10px] px-2 py-0.5 rounded-full truncate max-w-[130px]">
+                        <span key={name} className="inline-block bg-gray-50 border border-gray-100 text-gray-500 text-[10px] px-2 py-0.5 rounded-full truncate max-w-[120px]">
                           {name}
                         </span>
                       ))}
                       {w.products.length > 3 && (
-                        <span className="inline-block bg-gray-100 text-gray-400 text-[10px] px-2 py-0.5 rounded-full">
-                          +{w.products.length - 3} more
+                        <span className="inline-block bg-gray-50 border border-gray-100 text-gray-400 text-[10px] px-2 py-0.5 rounded-full">
+                          +{w.products.length - 3}
                         </span>
                       )}
                     </div>
                   )}
                 </div>
 
-                <ChevronRight className="h-4 w-4 text-gray-300 flex-shrink-0 self-center group-hover:text-primary transition-colors" />
+                <ChevronRight className="h-4 w-4 text-gray-300 flex-shrink-0 self-center group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
               </a>
             ))}
           </div>
         )}
 
         {!hasContent && (
-          <div className="text-center mt-4">
-            <p className="text-xs text-gray-400">Start typing to search across all public wholesale stores</p>
+          <div className="text-center mt-3">
+            <p className="text-xs text-gray-400">Start typing to discover UK wholesale suppliers and their products</p>
           </div>
         )}
       </div>
@@ -335,25 +353,25 @@ export default function LandingPage() {
     <div className="min-h-screen bg-white text-gray-900">
 
       {/* ── NAV ── */}
-      <nav className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-100">
+      <nav className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-100 shadow-sm">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2.5">
             <img src="/quikpik-logo.png" alt="Quikpik" className="h-8 w-8 object-contain" />
-            <span className="text-xl font-bold text-primary">Quikpik</span>
+            <span className="text-xl font-bold text-primary tracking-tight">Quikpik</span>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
             {/* Desktop nav links */}
-            <a href="/blog" className="hidden sm:inline-flex text-sm text-gray-600 hover:text-gray-900 font-medium px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors">
+            <a href="/blog" className="hidden sm:inline-flex text-sm text-gray-500 hover:text-gray-900 font-medium px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors">
               QuikTips & Insights
             </a>
-            <Button variant="ghost" onClick={handleCustomerLogin} className="hidden sm:inline-flex text-sm text-gray-600">
+            <Button variant="ghost" onClick={handleCustomerLogin} className="hidden sm:inline-flex text-sm text-gray-500 hover:text-gray-900 px-3">
               Customer Login
             </Button>
-            <Button variant="ghost" onClick={handleLogin} className="hidden sm:inline-flex text-sm text-gray-600">
+            <Button variant="ghost" onClick={handleLogin} className="hidden sm:inline-flex text-sm text-gray-500 hover:text-gray-900 px-3">
               Wholesaler Login
             </Button>
-            <Button onClick={handleGetStarted} className="bg-primary hover:bg-primary/90 text-sm px-4">
-              Start Free <ArrowRight className="ml-1 h-4 w-4" />
+            <Button onClick={handleGetStarted} className="bg-primary hover:bg-primary/90 text-sm px-5 rounded-full font-semibold shadow-sm ml-1">
+              Start Free <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
             </Button>
             {/* Mobile hamburger */}
             <button
@@ -367,8 +385,8 @@ export default function LandingPage() {
         </div>
         {/* Mobile dropdown */}
         {mobileMenuOpen && (
-          <div className="sm:hidden border-t border-gray-100 bg-white px-4 py-3 flex flex-col gap-2">
-            <a href="/blog" onClick={() => setMobileMenuOpen(false)} className="flex items-center text-sm text-gray-700 font-medium px-3 py-2 rounded-lg hover:bg-gray-100 w-full">
+          <div className="sm:hidden border-t border-gray-100 bg-white px-4 py-3 flex flex-col gap-1">
+            <a href="/blog" onClick={() => setMobileMenuOpen(false)} className="flex items-center text-sm text-gray-700 font-medium px-3 py-2.5 rounded-lg hover:bg-gray-50 w-full">
               QuikTips & Insights
             </a>
             <Button variant="ghost" onClick={() => { setMobileMenuOpen(false); handleCustomerLogin(); }} className="justify-start text-sm text-gray-700 w-full">
@@ -385,7 +403,7 @@ export default function LandingPage() {
       <MarketplaceSearch />
 
       {/* ── HERO ── */}
-      <section className="relative bg-gray-950 overflow-hidden min-h-[620px] flex items-center">
+      <section className="relative bg-gray-950 overflow-hidden min-h-[600px] flex items-center">
         {/* Warehouse background photo — right half */}
         <div className="absolute inset-y-0 right-0 w-full sm:w-[65%] lg:w-[58%]">
           <img
@@ -395,39 +413,38 @@ export default function LandingPage() {
             className="w-full h-full object-cover object-[65%_center]"
             loading="eager"
           />
-          {/* left-to-right gradient so text stays readable */}
-          <div className="absolute inset-0 bg-gradient-to-r from-gray-950 via-gray-950/70 sm:via-gray-950/50 to-transparent" />
+          {/* stronger gradient on mobile so text is always readable */}
+          <div className="absolute inset-0 bg-gradient-to-r from-gray-950 via-gray-950/85 sm:via-gray-950/60 to-transparent" />
+          <div className="absolute inset-0 sm:hidden bg-gray-950/50" />
           {/* subtle bottom fade */}
-          <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-gray-950/60 to-transparent" />
+          <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-gray-950/80 to-transparent" />
         </div>
 
         {/* Content row */}
-        <div className="relative z-10 w-full max-w-6xl mx-auto px-4 sm:pl-0 sm:pr-6 lg:pr-8 py-16 sm:py-20">
+        <div className="relative z-10 w-full max-w-6xl mx-auto px-6 sm:pl-8 sm:pr-6 lg:pr-8 py-16 sm:py-24">
           <div className="flex flex-col lg:flex-row items-center gap-10 lg:gap-16">
 
-            {/* Copy — now the only child of the hero flex row */}
-            <div className="flex-1 max-w-lg">
-              <div className="inline-flex items-center gap-2 bg-green-900/50 text-green-400 text-xs font-semibold px-4 py-2 rounded-full mb-8 border border-green-800/50">
-                <span className="w-1.5 h-1.5 bg-green-400 rounded-full" />
+            {/* Copy */}
+            <div className="flex-1 max-w-xl">
+              <div className="inline-flex items-center gap-2 bg-green-900/60 text-green-300 text-xs font-semibold px-4 py-1.5 rounded-full mb-7 border border-green-800/60 tracking-wide uppercase">
+                <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" />
                 Built for wholesale businesses
               </div>
 
-              <h1 className="text-3xl sm:text-5xl lg:text-[3.25rem] font-extrabold text-white leading-tight tracking-tight mb-6">
-                Run your<br />
-                wholesale business<br />
+              <h1 className="text-4xl sm:text-5xl lg:text-[3.25rem] font-extrabold text-white leading-[1.15] tracking-tight mb-5">
+                Run your wholesale business<br />
                 <span className="text-primary">without the chaos</span>
               </h1>
 
-              <p className="text-gray-300 text-lg mb-10 leading-relaxed">
-                Manage stock, send invoices, track payments,<br className="hidden sm:block" />
-                and grow faster with Quikpik.
+              <p className="text-gray-300 text-lg mb-8 leading-relaxed max-w-md">
+                Manage stock, send invoices, track payments, and grow faster — all in one place.
               </p>
 
-              <div className="flex flex-col sm:flex-row gap-3 mb-8">
+              <div className="flex flex-col sm:flex-row gap-3 mb-7">
                 <Button
                   onClick={handleGetStarted}
                   size="lg"
-                  className="text-base px-8 py-4 sm:py-6 bg-primary hover:bg-primary/90 rounded-xl shadow-lg shadow-primary/30"
+                  className="text-base px-8 py-6 bg-primary hover:bg-primary/90 rounded-xl shadow-lg shadow-primary/40 font-semibold"
                 >
                   Start Free <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
@@ -435,21 +452,21 @@ export default function LandingPage() {
                   onClick={handleBookDemo}
                   size="lg"
                   variant="outline"
-                  className="text-base px-8 py-4 sm:py-6 rounded-xl border-2 border-white/30 text-white bg-transparent hover:bg-white/10 hover:border-white/50"
+                  className="text-base px-8 py-6 rounded-xl border-2 border-white/25 text-white bg-transparent hover:bg-white/10 hover:border-white/40 font-medium"
                 >
-                  Book Demo
+                  Book a Demo
                 </Button>
               </div>
 
-              <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-gray-400">
+              <div className="flex flex-wrap gap-x-5 gap-y-2 text-sm text-gray-400">
                 <span className="flex items-center gap-1.5">
-                  <CheckCircle className="h-4 w-4 text-green-500" /> Setup in minutes
+                  <CheckCircle className="h-3.5 w-3.5 text-green-500 flex-shrink-0" /> Free to start
                 </span>
                 <span className="flex items-center gap-1.5">
-                  <CheckCircle className="h-4 w-4 text-green-500" /> No credit card required
+                  <CheckCircle className="h-3.5 w-3.5 text-green-500 flex-shrink-0" /> No credit card
                 </span>
                 <span className="flex items-center gap-1.5">
-                  <CheckCircle className="h-4 w-4 text-green-500" /> Cancel anytime
+                  <CheckCircle className="h-3.5 w-3.5 text-green-500 flex-shrink-0" /> Cancel anytime
                 </span>
               </div>
             </div>
@@ -459,36 +476,40 @@ export default function LandingPage() {
       </section>
 
       {/* ── FEATURE CARDS STRIP ── */}
-      <section className="bg-white border-b border-gray-100 py-12 sm:py-16">
+      <section className="bg-gray-50 border-b border-gray-100 py-14 sm:py-20">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col lg:flex-row items-center gap-10 lg:gap-16">
+          <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-20">
 
             {/* Left — dashboard mockup */}
             <div className="w-full max-w-xs sm:max-w-sm lg:max-w-md flex-shrink-0 mx-auto lg:mx-0">
               <DashboardMockup />
             </div>
 
-            {/* Right — 2×2 feature grid (single col on mobile) */}
-            <div className="flex-1 w-full grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {[
-                { icon: Box,         title: "Inventory Management",  desc: "Track stock in real time and never run out again." },
-                { icon: ReceiptText, title: "Invoicing",             desc: "Create and send professional invoices in seconds." },
-                { icon: UserCheck,   title: "Customer Management",   desc: "Manage customers, balances and order history easily." },
-                { icon: Wallet,      title: "Payment Tracking",      desc: "Track payments and get paid faster, every time." },
-              ].map(({ icon: Icon, title, desc }, i) => (
-                <div
-                  key={i}
-                  className="flex items-start gap-4 p-5 sm:p-6 rounded-xl border border-gray-100 group hover:bg-green-50/50 hover:border-green-100 transition-colors duration-200"
-                >
-                  <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0 group-hover:bg-green-200 transition-colors">
-                    <Icon className="h-5 w-5 text-primary" />
+            {/* Right — 2×2 feature grid */}
+            <div className="flex-1 w-full">
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-1 tracking-tight">Everything in one dashboard</h2>
+              <p className="text-gray-500 text-sm mb-6">No more juggling apps. Run your whole business from one place.</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {[
+                  { icon: Box,         title: "Inventory Management",  desc: "Track stock in real time and never oversell." },
+                  { icon: ReceiptText, title: "Invoicing",             desc: "Create and send professional invoices in seconds." },
+                  { icon: UserCheck,   title: "Customer Management",   desc: "Manage customers, balances and order history." },
+                  { icon: Wallet,      title: "Payment Tracking",      desc: "Track payments and get paid faster, every time." },
+                ].map(({ icon: Icon, title, desc }, i) => (
+                  <div
+                    key={i}
+                    className="flex items-start gap-4 p-5 rounded-2xl bg-white border border-gray-100 shadow-sm group hover:shadow-md hover:border-primary/15 transition-all duration-200"
+                  >
+                    <div className="w-9 h-9 rounded-xl bg-green-50 flex items-center justify-center flex-shrink-0 group-hover:bg-green-100 transition-colors">
+                      <Icon className="h-4.5 w-4.5 text-primary" style={{ width: 18, height: 18 }} />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-gray-900 text-sm mb-0.5">{title}</h3>
+                      <p className="text-gray-500 text-xs leading-relaxed">{desc}</p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="font-bold text-gray-900 text-sm sm:text-base mb-1">{title}</h3>
-                    <p className="text-gray-500 text-xs sm:text-sm leading-relaxed">{desc}</p>
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
 
           </div>
@@ -496,30 +517,30 @@ export default function LandingPage() {
       </section>
 
       {/* ── PROBLEM ── */}
-      <section className="py-16 sm:py-20 bg-gray-950 text-white">
+      <section className="py-16 sm:py-24 bg-gray-950 text-white">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center">
-          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-4">
-            Still running your wholesale business like this?
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-3 tracking-tight">
+            Still running your business like this?
           </h2>
           <p className="text-gray-400 text-lg mb-12">Sound familiar? You're not alone.</p>
 
-          <div className="grid sm:grid-cols-2 gap-4 text-left max-w-2xl mx-auto">
+          <div className="grid sm:grid-cols-2 gap-3 text-left max-w-2xl mx-auto">
             {[
               { icon: MessageSquare, text: "Taking orders over WhatsApp and writing them down manually" },
               { icon: CreditCard,    text: "Chasing payments long after goods have left the door" },
-              { icon: Package,       text: "Managing stock levels in a spreadsheet (that's always out of date)" },
-              { icon: Users,         text: "Sending individual price lists to every single customer" },
+              { icon: Package,       text: "Managing stock levels in a spreadsheet that's always out of date" },
+              { icon: Users,         text: "Sending individual price lists to every single customer by hand" },
             ].map(({ icon: Icon, text }, i) => (
-              <div key={i} className="flex items-start gap-4 bg-white/5 border border-white/10 rounded-2xl p-5">
-                <div className="w-10 h-10 bg-red-500/10 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <Icon className="h-5 w-5 text-red-400" />
+              <div key={i} className="flex items-start gap-4 bg-white/[0.04] border border-white/10 rounded-2xl p-5 hover:bg-white/[0.06] transition-colors">
+                <div className="w-9 h-9 bg-red-500/10 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <Icon className="h-4.5 w-4.5 text-red-400" style={{ width: 18, height: 18 }} />
                 </div>
                 <p className="text-gray-300 text-sm leading-relaxed">{text}</p>
               </div>
             ))}
           </div>
 
-          <p className="mt-12 text-gray-400 text-base">
+          <p className="mt-10 text-gray-400 text-base">
             There's a better way. <span className="text-white font-semibold">Quikpik handles all of it for you.</span>
           </p>
         </div>
@@ -528,28 +549,28 @@ export default function LandingPage() {
       {/* ── BENEFITS ── */}
       <section className="py-16 sm:py-24 bg-white">
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
-          <div className="text-center mb-14">
-            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
+          <div className="text-center mb-12">
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-gray-900 mb-3 tracking-tight">
               Everything you need to run your wholesale business
             </h2>
-            <p className="text-gray-500 text-lg max-w-2xl mx-auto">
+            <p className="text-gray-500 text-lg max-w-xl mx-auto leading-relaxed">
               One platform replaces the calls, the spreadsheets, and the back-and-forth.
             </p>
           </div>
 
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {[
               {
                 icon: ShoppingBag,
                 color: "bg-blue-50 text-blue-600",
                 title: "Instant Online Ordering",
-                desc: "Customers browse your live catalogue and place orders any time — no calls, no messages, no manual entry.",
+                desc: "Customers browse your live catalogue and place orders any time — no calls, no manual entry.",
               },
               {
                 icon: CreditCard,
                 color: "bg-green-50 text-green-600",
                 title: "Custom Pricing Per Customer",
-                desc: "Set different price lists for different customers. Each buyer sees their own personalised rates automatically.",
+                desc: "Set different price lists for different buyers. Each customer sees their own personalised rates.",
               },
               {
                 icon: FileText,
@@ -567,20 +588,20 @@ export default function LandingPage() {
                 icon: Lock,
                 color: "bg-rose-50 text-rose-600",
                 title: "Pay Now or Pay Later",
-                desc: "Offer trusted customers the option to buy on account while everyone else pays by card.",
+                desc: "Offer trusted customers the option to buy on account while others pay by card.",
               },
               {
                 icon: Phone,
                 color: "bg-teal-50 text-teal-600",
                 title: "SMS & WhatsApp Ready",
-                desc: "Send order confirmations and payment links via SMS and WhatsApp — the channels your customers already use.",
+                desc: "Send confirmations and payment links via the channels your customers already use.",
               },
             ].map(({ icon: Icon, color, title, desc }, i) => (
-              <Card key={i} className="p-6 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
-                <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-5 ${color}`}>
-                  <Icon className="h-6 w-6" />
+              <Card key={i} className="p-7 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md hover:border-gray-200 transition-all">
+                <div className={`w-11 h-11 rounded-xl flex items-center justify-center mb-5 ${color}`}>
+                  <Icon className="h-5 w-5" />
                 </div>
-                <h3 className="text-lg font-bold text-gray-900 mb-2">{title}</h3>
+                <h3 className="text-base font-bold text-gray-900 mb-2">{title}</h3>
                 <p className="text-gray-500 text-sm leading-relaxed">{desc}</p>
               </Card>
             ))}
@@ -591,23 +612,23 @@ export default function LandingPage() {
       {/* ── HOW IT WORKS ── */}
       <section className="py-16 sm:py-24 bg-gray-50">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center">
-          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-gray-900 mb-3 tracking-tight">
             Up and running in minutes
           </h2>
           <p className="text-gray-500 text-lg mb-14">Three steps. No technical setup required.</p>
 
-          <div className="grid sm:grid-cols-3 gap-8 relative">
-            <div className="hidden sm:block absolute top-8 left-1/4 right-1/4 h-0.5 bg-green-200 z-0"></div>
+          <div className="grid sm:grid-cols-3 gap-6 sm:gap-10 relative">
+            <div className="hidden sm:block absolute top-7 left-[calc(16.67%+2rem)] right-[calc(16.67%+2rem)] h-px bg-gradient-to-r from-green-200 via-green-300 to-green-200 z-0" />
             {[
               { step: "1", title: "Set up your store", desc: "Add your products, pricing, and delivery options in minutes." },
               { step: "2", title: "Share your link", desc: "Send your store link to customers via WhatsApp, SMS, or email." },
               { step: "3", title: "Receive orders and get paid", desc: "Customers order online. Payments land directly in your account." },
             ].map(({ step, title, desc }, i) => (
               <div key={i} className="relative z-10 flex flex-col items-center text-center">
-                <div className="w-16 h-16 bg-primary text-white text-2xl font-extrabold rounded-2xl flex items-center justify-center mb-5 shadow-lg shadow-primary/20">
+                <div className="w-14 h-14 bg-primary text-white text-xl font-extrabold rounded-2xl flex items-center justify-center mb-5 shadow-lg shadow-primary/25 ring-4 ring-gray-50">
                   {step}
                 </div>
-                <h3 className="text-lg font-bold text-gray-900 mb-2">{title}</h3>
+                <h3 className="text-base font-bold text-gray-900 mb-2">{title}</h3>
                 <p className="text-gray-500 text-sm leading-relaxed">{desc}</p>
               </div>
             ))}
@@ -618,44 +639,47 @@ export default function LandingPage() {
       {/* ── PRICING ── */}
       <section className="py-16 sm:py-24 bg-white">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 text-center">
-          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-gray-900 mb-3 tracking-tight">
             Start free. Only pay when you get paid.
           </h2>
           <p className="text-gray-500 text-lg mb-12">Simple, honest pricing with no surprises.</p>
 
-          <div className="grid sm:grid-cols-3 gap-6 mb-10">
+          <div className="grid sm:grid-cols-3 gap-4 mb-10">
             {[
               {
                 icon: CheckCircle,
-                color: "text-green-500",
+                color: "text-green-600",
                 bg: "bg-green-50",
+                border: "border-green-100",
                 title: "£0/month to start",
                 desc: "Full access on the free plan. No credit card needed.",
               },
               {
                 icon: CreditCard,
-                color: "text-blue-500",
+                color: "text-blue-600",
                 bg: "bg-blue-50",
+                border: "border-blue-100",
                 title: "Small fee on card payments",
-                desc: "Only pay on card orders — cash and Pay Later orders are always free.",
+                desc: "Only pay on card orders — cash and Pay Later are always free.",
               },
               {
                 icon: Shield,
-                color: "text-purple-500",
+                color: "text-purple-600",
                 bg: "bg-purple-50",
+                border: "border-purple-100",
                 title: "Offline orders are 100% yours",
                 desc: "Cash, Pay Later, and offline orders have no platform fee.",
               },
-            ].map(({ icon: Icon, color, bg, title, desc }, i) => (
-              <div key={i} className={`${bg} rounded-2xl p-6 text-left`}>
-                <Icon className={`h-8 w-8 ${color} mb-4`} />
-                <h3 className="font-bold text-gray-900 mb-2">{title}</h3>
-                <p className="text-gray-500 text-sm">{desc}</p>
+            ].map(({ icon: Icon, color, bg, border, title, desc }, i) => (
+              <div key={i} className={`${bg} border ${border} rounded-2xl p-6 text-left`}>
+                <Icon className={`h-7 w-7 ${color} mb-4`} />
+                <h3 className="font-bold text-gray-900 mb-1.5 text-sm">{title}</h3>
+                <p className="text-gray-500 text-sm leading-relaxed">{desc}</p>
               </div>
             ))}
           </div>
 
-          <Button onClick={handleGetStarted} size="lg" className="bg-primary hover:bg-primary/90 text-base px-10 py-6 rounded-xl shadow-lg shadow-primary/20">
+          <Button onClick={handleGetStarted} size="lg" className="bg-primary hover:bg-primary/90 text-base px-10 py-6 rounded-xl shadow-lg shadow-primary/25 font-semibold">
             Start Free Today <ArrowRight className="ml-2 h-5 w-5" />
           </Button>
           <p className="text-xs text-gray-400 mt-4">No credit card required · Cancel anytime</p>
@@ -665,18 +689,18 @@ export default function LandingPage() {
       {/* ── COMPARISON ── */}
       <section className="py-16 sm:py-24 bg-gray-50">
         <div className="max-w-4xl mx-auto px-4 sm:px-6">
-          <div className="text-center mb-14">
-            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
+          <div className="text-center mb-12">
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-gray-900 mb-3 tracking-tight">
               Stop paying for tools that don't work
             </h2>
             <p className="text-gray-500 text-lg">See how Quikpik stacks up against the old way.</p>
           </div>
 
           <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-            <div className="grid grid-cols-3 text-xs sm:text-sm font-semibold border-b border-gray-100">
-              <div className="col-span-1 p-2 sm:p-4 text-gray-500"></div>
-              <div className="p-2 sm:p-4 text-center text-gray-500 border-l border-gray-100">Traditional</div>
-              <div className="p-2 sm:p-4 text-center text-primary border-l border-gray-100">Quikpik</div>
+            <div className="grid grid-cols-3 text-xs sm:text-sm font-semibold border-b border-gray-100 bg-gray-50/60">
+              <div className="col-span-1 p-3 sm:p-4 text-gray-400" />
+              <div className="p-3 sm:p-4 text-center text-gray-400 border-l border-gray-100">Old way</div>
+              <div className="p-3 sm:p-4 text-center text-primary font-bold border-l border-gray-100">Quikpik</div>
             </div>
             {[
               { label: "Monthly cost",     old: "£200–£500+",       new: "Free to start" },
@@ -686,11 +710,11 @@ export default function LandingPage() {
               { label: "Customer pricing", old: "Sent manually",    new: "Custom price lists" },
               { label: "Contracts",        old: "Annual lock-in",   new: "Cancel anytime" },
             ].map(({ label, old, new: newVal }, i) => (
-              <div key={i} className={`grid grid-cols-3 text-xs sm:text-sm border-b border-gray-50 ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}`}>
-                <div className="p-2 sm:p-4 font-medium text-gray-700">{label}</div>
-                <div className="p-2 sm:p-4 text-center text-gray-400 border-l border-gray-100">{old}</div>
-                <div className="p-2 sm:p-4 text-center text-primary font-semibold border-l border-gray-100 flex items-center justify-center gap-1">
-                  <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" /> {newVal}
+              <div key={i} className={`grid grid-cols-3 text-xs sm:text-sm border-b border-gray-50 last:border-0 ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'}`}>
+                <div className="p-3 sm:p-4 font-medium text-gray-600">{label}</div>
+                <div className="p-3 sm:p-4 text-center text-gray-400 border-l border-gray-100">{old}</div>
+                <div className="p-3 sm:p-4 text-center text-primary font-semibold border-l border-gray-100 flex items-center justify-center gap-1.5">
+                  <CheckCircle className="h-3.5 w-3.5 flex-shrink-0" /> {newVal}
                 </div>
               </div>
             ))}
@@ -699,38 +723,39 @@ export default function LandingPage() {
       </section>
 
       {/* ── FINAL CTA ── */}
-      <section className="py-20 sm:py-28 bg-gradient-to-br from-primary to-green-600 text-white text-center">
-        <div className="max-w-2xl mx-auto px-4 sm:px-6">
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold mb-6 leading-tight">
+      <section className="py-20 sm:py-28 bg-gradient-to-br from-primary to-green-600 text-white text-center relative overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(255,255,255,0.08),transparent_60%)]" />
+        <div className="relative z-10 max-w-2xl mx-auto px-4 sm:px-6">
+          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold mb-5 leading-tight tracking-tight">
             Start taking orders today
           </h2>
-          <p className="text-green-100 text-lg mb-10">
-            Join wholesalers already using Quikpik to run their business smarter.
+          <p className="text-green-100 text-lg mb-10 leading-relaxed">
+            Join UK wholesale businesses already using Quikpik to run smarter.
           </p>
           <Button
             onClick={handleGetStarted}
             size="lg"
-            className="bg-white text-primary hover:bg-gray-50 text-base font-semibold px-10 py-6 rounded-xl shadow-xl"
+            className="bg-white text-primary hover:bg-gray-50 text-base font-bold px-10 py-6 rounded-xl shadow-2xl"
           >
             Start Free <ArrowRight className="ml-2 h-5 w-5" />
           </Button>
-          <p className="text-green-200 text-sm mt-5">No credit card required · Free plan available · Cancel anytime</p>
+          <p className="text-green-200/80 text-sm mt-5">No credit card required · Free plan available · Cancel anytime</p>
         </div>
       </section>
 
       {/* ── FOOTER ── */}
-      <footer className="py-8 bg-gray-950 text-gray-500 text-center text-sm">
-        <div className="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
+      <footer className="py-8 bg-gray-950 text-gray-500 text-sm">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-2.5">
             <img src="/quikpik-logo.png" alt="Quikpik" className="h-6 w-6 object-contain" />
-            <span className="text-white font-bold">Quikpik</span>
+            <span className="text-white font-bold tracking-tight">Quikpik</span>
           </div>
-          <p>© {new Date().getFullYear()} Quikpik. All rights reserved.</p>
-          <div className="flex gap-4">
-            <a href="/blog" className="hover:text-white transition-colors">QuikTips & Insights</a>
-            <button onClick={handleCustomerLogin} className="hover:text-white transition-colors">Customer Login</button>
-            <button onClick={handleLogin} className="hover:text-white transition-colors">Wholesaler Login</button>
-            <button onClick={handleGetStarted} className="hover:text-white transition-colors">Sign Up Free</button>
+          <p className="text-gray-600">© {new Date().getFullYear()} Quikpik. All rights reserved.</p>
+          <div className="flex flex-wrap justify-center gap-x-5 gap-y-2">
+            <a href="/blog" className="hover:text-gray-300 transition-colors">QuikTips & Insights</a>
+            <button onClick={handleCustomerLogin} className="hover:text-gray-300 transition-colors">Customer Login</button>
+            <button onClick={handleLogin} className="hover:text-gray-300 transition-colors">Wholesaler Login</button>
+            <button onClick={handleGetStarted} className="hover:text-white text-gray-400 transition-colors font-medium">Sign Up Free</button>
           </div>
         </div>
       </footer>
