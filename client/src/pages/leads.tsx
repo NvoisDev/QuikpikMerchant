@@ -170,9 +170,10 @@ export default function LeadsPage() {
   const [selected, setSelected] = useState<StoreEnquiry | null>(null);
   const queryClient = useQueryClient();
 
-  const { data: enquiries = [], isLoading } = useQuery<StoreEnquiry[]>({
+  const { data: rawEnquiries, isLoading } = useQuery<StoreEnquiry[]>({
     queryKey: ['/api/public/enquiries'],
   });
+  const enquiries = rawEnquiries ?? [];
 
   const markViewedMutation = useMutation({
     mutationFn: (id: number) => apiRequest('PATCH', `/api/public/enquiries/${id}`, { status: 'viewed' }),
