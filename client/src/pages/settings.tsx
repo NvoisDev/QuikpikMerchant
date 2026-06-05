@@ -4,8 +4,7 @@ import PageHeader from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/hooks/useAuth";
 import { useLocation, Link } from "wouter";
-import { User, Settings2, Building2, Bell, Upload, Image, AlertTriangle, Info, ExternalLink, Save, Download, Printer, QrCode, Lock, Eye, EyeOff, Truck, Plus, Pencil, Trash2, Star, X, MapPin, Receipt, CheckCircle2, XCircle, Link2, Loader2, Inbox, Store } from "lucide-react";
-import LeadsPage from "@/pages/leads";
+import { User, Settings2, Building2, Bell, Upload, Image, AlertTriangle, Info, ExternalLink, Save, Download, Printer, QrCode, Lock, Eye, EyeOff, Truck, Plus, Pencil, Trash2, Star, X, MapPin, Receipt, CheckCircle2, XCircle, Link2, Loader2, Store } from "lucide-react";
 import Logo from '@/components/ui/logo';
 import { LogoUploader } from '@/components/LogoUploader';
 import { useToast } from "@/hooks/use-toast";
@@ -980,7 +979,7 @@ export default function Settings() {
   useEffect(() => {
     const urlParams = new URLSearchParams(location.split('?')[1] || '');
     const tabFromUrl = urlParams.get('tab');
-    if (tabFromUrl && ['account', 'business', 'notifications', 'leads', 'store'].includes(tabFromUrl)) {
+    if (tabFromUrl && ['account', 'business', 'notifications', 'store'].includes(tabFromUrl)) {
       setActiveTab(tabFromUrl);
     }
   }, [location]);
@@ -1315,18 +1314,6 @@ export default function Settings() {
                   <span className="text-sm sm:text-base">Store Setup</span>
                 </div>
 
-                {/* Leads */}
-                <div
-                  className={`flex items-center p-2 sm:p-3 rounded-lg cursor-pointer ${
-                    activeTab === "leads"
-                      ? "bg-blue-50 text-blue-700"
-                      : "text-gray-600 hover:bg-gray-50"
-                  }`}
-                  onClick={() => setActiveTab("leads")}
-                >
-                  <Inbox className="h-4 w-4 sm:h-5 sm:w-5 mr-2 sm:mr-3" />
-                  <span className="text-sm sm:text-base">Leads</span>
-                </div>
                 
               </nav>
             </CardContent>
@@ -1345,7 +1332,6 @@ export default function Settings() {
                   {activeTab === "profiles" && "Business Profiles"}
                   {activeTab === "notifications" && "Notification Settings"}
                   {activeTab === "store" && "Store Setup"}
-                  {activeTab === "leads" && "Leads"}
                 </span>
               </CardTitle>
             </CardHeader>
@@ -2606,10 +2592,6 @@ export default function Settings() {
                     </Button>
                   </div>}
                 </div>
-              )}
-
-              {activeTab === "leads" && (
-                <LeadsPage />
               )}
 
             </CardContent>
