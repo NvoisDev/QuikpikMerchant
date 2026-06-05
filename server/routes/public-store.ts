@@ -3,7 +3,7 @@ import { db } from "../db";
 import { users, products, storeEnquiries } from "@shared/schema";
 import { eq, and, ilike, or, sql } from "drizzle-orm";
 import { z } from "zod";
-import sgMail from "@sendgrid/mail";
+import { sendEmail } from "../sendgrid-service";
 
 export function registerPublicStoreRoutes(app: Express) {
 
@@ -222,7 +222,7 @@ export function registerPublicStoreRoutes(app: Express) {
           const contactLine = data.preferredContact ? `<p><strong>Preferred contact:</strong> ${data.preferredContact}</p>` : '';
           const messageLine = data.message ? `<p><strong>Message:</strong> ${data.message}</p>` : '';
 
-          await sgMail.send({
+          await sendEmail({
             to: wholesaler.email,
             from: 'hello@quikpik.co',
             subject: `New lead${businessLabel} — ${data.enquirerName}`,
