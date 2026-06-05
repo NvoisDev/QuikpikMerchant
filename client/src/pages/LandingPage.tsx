@@ -125,6 +125,47 @@ function DashboardMockup() {
   );
 }
 
+function RetailerProductsMockup() {
+  const products = [
+    { name: "Organic Green Tea",    supplier: "TW Foods Ltd",  price: "£12.50", unit: "per case",  moq: 24, bg: "bg-green-100",  ic: "text-green-600"  },
+    { name: "Premium Coffee Beans", supplier: "BeanCo UK",     price: "£8.99",  unit: "per kg",    moq: 12, bg: "bg-amber-100",  ic: "text-amber-600"  },
+    { name: "Natural Honey Jars",   supplier: "HiveHarvest",   price: "£22.00", unit: "per dozen", moq: 6,  bg: "bg-yellow-100", ic: "text-yellow-600" },
+    { name: "Artisan Olive Oil",    supplier: "MedProduce UK", price: "£15.50", unit: "per case",  moq: 12, bg: "bg-blue-100",   ic: "text-blue-600"   },
+  ];
+  return (
+    <div className="bg-white rounded-2xl shadow-2xl overflow-hidden w-full max-w-sm text-gray-900 select-none">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+        <div className="flex items-center gap-2">
+          <Search className="h-4 w-4 text-primary" />
+          <span className="font-bold text-sm text-gray-900">Wholesale Products</span>
+        </div>
+        <span className="text-xs text-primary font-medium">500+ suppliers</span>
+      </div>
+      <div className="p-3">
+        <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 mb-3">
+          <Search className="h-3.5 w-3.5 text-gray-400" />
+          <span className="text-xs text-gray-400">Search products, brands or categories…</span>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          {products.map(({ name, supplier, price, moq, bg, ic }) => (
+            <div key={name} className="bg-white border border-gray-100 rounded-xl p-2.5 hover:border-primary/20 transition-colors">
+              <div className={`${bg} rounded-lg h-14 flex items-center justify-center mb-2`}>
+                <Package className={`h-5 w-5 ${ic}`} />
+              </div>
+              <p className="text-xs font-semibold text-gray-900 leading-tight mb-0.5 truncate">{name}</p>
+              <p className="text-[10px] text-gray-400 mb-1.5 truncate">{supplier}</p>
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-gray-900">{price}</span>
+                <span className="text-[10px] bg-gray-50 border border-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full">MOQ {moq}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 interface SearchResult {
   productId: number;
   productName: string;
@@ -343,6 +384,7 @@ function MarketplaceSearch() {
 
 export default function LandingPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [activeAudience, setActiveAudience] = useState<'retailer' | 'wholesaler'>('retailer');
   const handleGetStarted = () => { window.location.href = "/signup"; };
   const handleLogin = () => { window.location.href = "/login"; };
   const handleCustomerLogin = () => { window.location.href = "/customer-login"; };
@@ -420,75 +462,180 @@ export default function LandingPage() {
       <MarketplaceSearch />
 
       {/* ── HERO ── */}
-      <section className="bg-[#f7f6f2] py-16 sm:py-24 overflow-hidden">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+      <section className={`overflow-hidden relative flex items-center ${activeAudience === 'wholesaler' ? 'bg-gray-950 min-h-[640px]' : 'bg-[#f7f6f2]'}`}>
+
+        {/* Warehouse background — wholesaler only */}
+        {activeAudience === 'wholesaler' && (
+          <div className="absolute inset-y-0 right-0 w-full sm:w-[65%] lg:w-[58%]">
+            <img src="/hero-warehouse.jpg" alt="" aria-hidden="true" className="w-full h-full object-cover object-[65%_center]" loading="eager" />
+            <div className="absolute inset-0 bg-gradient-to-r from-gray-950 via-gray-950/85 sm:via-gray-950/60 to-transparent" />
+            <div className="absolute inset-0 sm:hidden bg-gray-950/50" />
+            <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-gray-950/80 to-transparent" />
+          </div>
+        )}
+
+        <div className="relative z-10 w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-24">
+
+          {/* Audience toggle */}
+          <div className="flex justify-center mb-10 sm:mb-12">
+            <div className={`inline-flex rounded-xl p-1 ${activeAudience === 'wholesaler' ? 'bg-white/10 border border-white/20' : 'bg-white border border-gray-200 shadow-sm'}`}>
+              {(['retailer', 'wholesaler'] as const).map((key) => (
+                <button
+                  key={key}
+                  onClick={() => setActiveAudience(key)}
+                  className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all ${
+                    activeAudience === key
+                      ? key === 'wholesaler'
+                        ? 'bg-white text-gray-950 shadow-sm'
+                        : 'bg-gray-950 text-white shadow-sm'
+                      : activeAudience === 'wholesaler'
+                        ? 'text-white/60 hover:text-white'
+                        : 'text-gray-500 hover:text-gray-900'
+                  }`}
+                >
+                  {key === 'retailer' ? "I'm a Retailer" : "I'm a Wholesaler"}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-16">
 
-            {/* Left — Copy */}
-            <div className="flex-1 max-w-xl">
-              <div className="inline-flex items-center gap-2 bg-green-50 text-green-700 text-xs font-semibold px-4 py-1.5 rounded-full mb-7 border border-green-100 tracking-wide uppercase">
-                <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" />
-                Built for wholesale businesses
-              </div>
-
-              <h1 className="text-4xl sm:text-5xl lg:text-[3.25rem] font-extrabold text-gray-950 leading-[1.15] tracking-tight mb-5">
-                Run your wholesale business<br />
-                <span className="text-primary">without the chaos</span>
-              </h1>
-
-              <p className="text-gray-500 text-lg mb-8 leading-relaxed max-w-md">
-                Manage stock, send invoices, track payments, and grow faster — all in one place.
-              </p>
-
-              {/* Stat strip — Qogita style */}
-              <div className="flex items-stretch w-fit border border-gray-200 rounded-xl overflow-hidden bg-white mb-8 shadow-sm">
-                {[
-                  { value: "500+", label: "UK wholesalers" },
-                  { value: "£2M+", label: "Orders processed" },
-                  { value: "Free", label: "To get started" },
-                ].map(({ value, label }, i) => (
-                  <div key={i} className={`px-5 py-3 text-left ${i > 0 ? 'border-l border-gray-200' : ''}`}>
-                    <p className="text-xl font-extrabold text-gray-950 leading-none mb-0.5">{value}</p>
-                    <p className="text-xs text-gray-500">{label}</p>
+            {activeAudience === 'retailer' ? (
+              <>
+                {/* RETAILER — Left copy */}
+                <div className="flex-1 max-w-xl">
+                  <div className="inline-flex items-center gap-2 bg-green-50 text-green-700 text-xs font-semibold px-4 py-1.5 rounded-full mb-7 border border-green-100 tracking-wide uppercase">
+                    <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" />
+                    Find UK wholesale suppliers
                   </div>
-                ))}
-              </div>
 
-              <div className="flex flex-col sm:flex-row gap-3 mb-7">
-                <Button
-                  onClick={handleGetStarted}
-                  size="lg"
-                  className="text-base px-8 py-6 bg-gray-950 hover:bg-gray-800 text-white rounded-lg font-semibold"
-                >
-                  Start Free <ArrowRight className="ml-2 h-5 w-5" />
-                </Button>
-                <Button
-                  onClick={handleBookDemo}
-                  size="lg"
-                  variant="outline"
-                  className="text-base px-8 py-6 rounded-lg border border-gray-200 text-gray-700 bg-white hover:bg-gray-50 font-medium"
-                >
-                  Book a Demo
-                </Button>
-              </div>
+                  <h1 className="text-4xl sm:text-5xl lg:text-[3.25rem] font-extrabold text-gray-950 leading-[1.15] tracking-tight mb-5">
+                    Source trade products<br />
+                    <span className="text-primary">for your business</span>
+                  </h1>
 
-              <div className="flex flex-wrap gap-x-5 gap-y-2 text-sm text-gray-400">
-                <span className="flex items-center gap-1.5">
-                  <CheckCircle className="h-3.5 w-3.5 text-green-500 flex-shrink-0" /> Free to start
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <CheckCircle className="h-3.5 w-3.5 text-green-500 flex-shrink-0" /> No credit card
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <CheckCircle className="h-3.5 w-3.5 text-green-500 flex-shrink-0" /> Cancel anytime
-                </span>
-              </div>
-            </div>
+                  <p className="text-gray-500 text-lg mb-8 leading-relaxed max-w-md">
+                    Browse thousands of wholesale products from verified UK suppliers. Trade prices, low minimums, fast delivery.
+                  </p>
 
-            {/* Right — Dashboard mockup */}
-            <div className="flex-shrink-0 w-full max-w-xs sm:max-w-sm lg:max-w-md mx-auto lg:mx-0">
-              <DashboardMockup />
-            </div>
+                  <div className="flex items-stretch w-fit border border-gray-200 rounded-xl overflow-hidden bg-white mb-8 shadow-sm">
+                    {[
+                      { value: "500+", label: "Verified suppliers" },
+                      { value: "10k+",  label: "Products" },
+                      { value: "Free",  label: "To browse" },
+                    ].map(({ value, label }, i) => (
+                      <div key={i} className={`px-5 py-3 text-left ${i > 0 ? 'border-l border-gray-200' : ''}`}>
+                        <p className="text-xl font-extrabold text-gray-950 leading-none mb-0.5">{value}</p>
+                        <p className="text-xs text-gray-500">{label}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row gap-3 mb-7">
+                    <Button
+                      onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                      size="lg"
+                      className="text-base px-8 py-6 bg-gray-950 hover:bg-gray-800 text-white rounded-lg font-semibold"
+                    >
+                      Browse Suppliers <ArrowRight className="ml-2 h-5 w-5" />
+                    </Button>
+                    <Button
+                      onClick={handleCustomerLogin}
+                      size="lg"
+                      variant="outline"
+                      className="text-base px-8 py-6 rounded-lg border border-gray-200 text-gray-700 bg-white hover:bg-gray-50 font-medium"
+                    >
+                      Sign up as a buyer
+                    </Button>
+                  </div>
+
+                  <div className="flex flex-wrap gap-x-5 gap-y-2 text-sm text-gray-400">
+                    <span className="flex items-center gap-1.5">
+                      <CheckCircle className="h-3.5 w-3.5 text-green-500 flex-shrink-0" /> Free to browse
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      <CheckCircle className="h-3.5 w-3.5 text-green-500 flex-shrink-0" /> Verified UK suppliers
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      <CheckCircle className="h-3.5 w-3.5 text-green-500 flex-shrink-0" /> Trade prices
+                    </span>
+                  </div>
+                </div>
+
+                {/* RETAILER — Right mockup */}
+                <div className="flex-shrink-0 w-full max-w-xs sm:max-w-sm lg:max-w-md mx-auto lg:mx-0">
+                  <RetailerProductsMockup />
+                </div>
+              </>
+            ) : (
+              <>
+                {/* WHOLESALER — Left copy */}
+                <div className="flex-1 max-w-xl">
+                  <div className="inline-flex items-center gap-2 bg-green-900/60 text-green-300 text-xs font-semibold px-4 py-1.5 rounded-full mb-7 border border-green-800/60 tracking-wide uppercase">
+                    <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" />
+                    Built for wholesale businesses
+                  </div>
+
+                  <h1 className="text-4xl sm:text-5xl lg:text-[3.25rem] font-extrabold text-white leading-[1.15] tracking-tight mb-5">
+                    Run your wholesale business<br />
+                    <span className="text-primary">without the chaos</span>
+                  </h1>
+
+                  <p className="text-gray-300 text-lg mb-8 leading-relaxed max-w-md">
+                    Manage stock, send invoices, track payments, and grow faster — all in one place.
+                  </p>
+
+                  <div className="flex items-stretch w-fit border border-white/20 rounded-xl overflow-hidden bg-white mb-8 shadow-sm">
+                    {[
+                      { value: "500+", label: "UK wholesalers" },
+                      { value: "£2M+", label: "Orders processed" },
+                      { value: "Free", label: "To get started" },
+                    ].map(({ value, label }, i) => (
+                      <div key={i} className={`px-5 py-3 text-left ${i > 0 ? 'border-l border-gray-200' : ''}`}>
+                        <p className="text-xl font-extrabold text-gray-950 leading-none mb-0.5">{value}</p>
+                        <p className="text-xs text-gray-500">{label}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row gap-3 mb-7">
+                    <Button
+                      onClick={handleGetStarted}
+                      size="lg"
+                      className="text-base px-8 py-6 bg-primary hover:bg-primary/90 text-white rounded-lg font-semibold shadow-lg shadow-primary/30"
+                    >
+                      Start Free <ArrowRight className="ml-2 h-5 w-5" />
+                    </Button>
+                    <Button
+                      onClick={handleBookDemo}
+                      size="lg"
+                      variant="outline"
+                      className="text-base px-8 py-6 rounded-lg border-2 border-white/25 text-white bg-transparent hover:bg-white/10 hover:border-white/40 font-medium"
+                    >
+                      Book a Demo
+                    </Button>
+                  </div>
+
+                  <div className="flex flex-wrap gap-x-5 gap-y-2 text-sm text-gray-400">
+                    <span className="flex items-center gap-1.5">
+                      <CheckCircle className="h-3.5 w-3.5 text-green-500 flex-shrink-0" /> Free to start
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      <CheckCircle className="h-3.5 w-3.5 text-green-500 flex-shrink-0" /> No credit card
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      <CheckCircle className="h-3.5 w-3.5 text-green-500 flex-shrink-0" /> Cancel anytime
+                    </span>
+                  </div>
+                </div>
+
+                {/* WHOLESALER — Right mockup */}
+                <div className="flex-shrink-0 w-full max-w-xs sm:max-w-sm lg:max-w-md mx-auto lg:mx-0">
+                  <DashboardMockup />
+                </div>
+              </>
+            )}
 
           </div>
         </div>
