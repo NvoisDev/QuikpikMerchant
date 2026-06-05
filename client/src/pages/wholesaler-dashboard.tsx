@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { InstallBanner } from "@/components/InstallBanner";
 import ElephantLoader from "@/components/ui/elephant-loader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AnimatedCard, AnimatedCardContent, AnimatedCardHeader, AnimatedCardTitle } from "@/components/ui/animated-card";
@@ -587,6 +588,11 @@ export default function WholesalerDashboard() {
         {/* Priority Setup Alerts */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {user?.role !== 'team_member' && <StripeSetupAlert />}
+        </div>
+
+        {/* PWA Install Banner */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4">
+          <InstallBanner />
         </div>
 
         {/* Dashboard Content */}

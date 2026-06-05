@@ -1,4 +1,5 @@
 import { Store, ShoppingCart, Banknote, History, TrendingUp, ChevronRight, ChevronDown, ShoppingBag, Minus, Plus, Package } from "lucide-react";
+import { InstallBanner } from "@/components/InstallBanner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -86,6 +87,8 @@ export function HomeTab({
         isCreatingIntent={isCreatingIntent}
         handleLogout={handleLogout}
       />
+
+      <InstallBanner />
 
       {/* Welcome Hero Banner */}
       <div className="rounded-2xl px-6 py-7 text-white relative overflow-hidden animate-fade-in gradient-theme-banner">
