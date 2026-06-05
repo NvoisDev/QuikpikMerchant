@@ -142,6 +142,38 @@ interface SearchResult {
   city?: string | null;
 }
 
+interface WholesalerGroup {
+  wholesalerId: string;
+  businessName: string;
+  logoUrl?: string | null;
+  city?: string | null;
+  products: string[];
+}
+
+function getInitials(name: string) {
+  return name.split(' ').map((w: string) => w[0]).filter(Boolean).slice(0, 2).join('').toUpperCase();
+}
+
+function groupByWholesaler(results: SearchResult[]): WholesalerGroup[] {
+  const map = new Map<string, WholesalerGroup>();
+  for (const r of results) {
+    if (!map.has(r.wholesalerId)) {
+      map.set(r.wholesalerId, {
+        wholesalerId: r.wholesalerId,
+        businessName: r.businessName,
+        logoUrl: r.logoUrl,
+        city: r.city,
+        products: [],
+      });
+    }
+    const group = map.get(r.wholesalerId)!;
+    if (!group.products.includes(r.productName)) {
+      group.products.push(r.productName);
+    }
+  }
+  return Array.from(map.values()).slice(0, 12);
+}
+
 function MarketplaceSearch() {
   const [query, setQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
@@ -173,8 +205,7 @@ function MarketplaceSearch() {
     return () => { if (timerRef.current) clearTimeout(timerRef.current); };
   }, [query, selectedCategory]);
 
-  const storeUrl = (r: SearchResult) => `/w/${r.storeSlug || r.wholesalerId}`;
-
+  const wholesalers = groupByWholesaler(results);
   const hasContent = searched || query || selectedCategory;
 
   return (
@@ -222,40 +253,62 @@ function MarketplaceSearch() {
           </div>
         )}
 
-        {!loading && searched && results.length === 0 && (
+        {!loading && searched && wholesalers.length === 0 && (
           <div className="text-center py-8 text-gray-400 text-sm">
             <Store className="h-8 w-8 mx-auto mb-2 text-gray-300" />
-            No results found — try a different search
+            No suppliers found — try a different search
           </div>
         )}
 
-        {!loading && results.length > 0 && (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-            {results.map(r => {
-              const imgSrc = r.imageUrl || (r.images && r.images[0]) || null;
-              const showPrice = r.priceDisplayMode === 'shown';
-              const price = showPrice ? `£${parseFloat(r.price).toFixed(2)}` : null;
-              return (
-                <a key={r.productId} href={storeUrl(r)} className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden hover:shadow-md transition-shadow group">
-                  <div className="aspect-square bg-gray-50 flex items-center justify-center overflow-hidden">
-                    {imgSrc
-                      ? <img src={imgSrc} alt={r.productName} className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform" />
-                      : <Package className="h-8 w-8 text-gray-300" />
-                    }
-                  </div>
-                  <div className="p-2.5">
-                    {r.category && <p className="text-[10px] text-primary font-semibold uppercase tracking-wide mb-0.5 truncate">{r.category}</p>}
-                    <p className="text-xs font-semibold text-gray-900 line-clamp-2 leading-tight mb-1">{r.productName}</p>
-                    {price && <p className="text-sm font-bold text-gray-900 mb-1">{price}</p>}
-                    {r.minOrderQuantity && r.minOrderQuantity > 1 && <p className="text-[10px] text-amber-600">MOQ: {r.minOrderQuantity}</p>}
-                    <div className="flex items-center gap-1 mt-1.5 pt-1.5 border-t border-gray-50">
-                      <Store className="h-3 w-3 text-gray-400 flex-shrink-0" />
-                      <span className="text-[10px] text-gray-400 truncate">{r.businessName}</span>
+        {!loading && wholesalers.length > 0 && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {wholesalers.map(w => (
+              <a
+                key={w.wholesalerId}
+                href={`/store/${w.wholesalerId}`}
+                className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 hover:shadow-md hover:border-primary/20 transition-all group flex gap-4 items-start"
+              >
+                {/* Logo / initials */}
+                <div className="flex-shrink-0">
+                  {w.logoUrl
+                    ? <img src={w.logoUrl} alt={w.businessName} className="h-12 w-12 rounded-lg object-contain bg-gray-50 p-1 border border-gray-100" />
+                    : (
+                      <div className="h-12 w-12 rounded-lg bg-primary flex items-center justify-center">
+                        <span className="text-white font-bold text-sm">{getInitials(w.businessName)}</span>
+                      </div>
+                    )
+                  }
+                </div>
+
+                {/* Info */}
+                <div className="min-w-0 flex-1">
+                  <p className="font-semibold text-sm text-gray-900 truncate group-hover:text-primary transition-colors">{w.businessName}</p>
+                  {w.city && (
+                    <div className="flex items-center gap-1 mt-0.5 mb-2">
+                      <MapPin className="h-3 w-3 text-gray-400 flex-shrink-0" />
+                      <span className="text-xs text-gray-400 truncate">{w.city}</span>
                     </div>
-                  </div>
-                </a>
-              );
-            })}
+                  )}
+                  {/* Matching products */}
+                  {w.products.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {w.products.slice(0, 3).map(name => (
+                        <span key={name} className="inline-block bg-gray-100 text-gray-600 text-[10px] px-2 py-0.5 rounded-full truncate max-w-[130px]">
+                          {name}
+                        </span>
+                      ))}
+                      {w.products.length > 3 && (
+                        <span className="inline-block bg-gray-100 text-gray-400 text-[10px] px-2 py-0.5 rounded-full">
+                          +{w.products.length - 3} more
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                <ChevronRight className="h-4 w-4 text-gray-300 flex-shrink-0 self-center group-hover:text-primary transition-colors" />
+              </a>
+            ))}
           </div>
         )}
 
