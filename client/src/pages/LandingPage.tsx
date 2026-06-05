@@ -17,6 +17,7 @@ import {
   ShoppingCart,
   AlertTriangle,
   ChevronRight,
+  ChevronDown,
   Menu,
   X,
   Box,
@@ -162,6 +163,22 @@ function RetailerProductsMockup() {
           ))}
         </div>
       </div>
+    </div>
+  );
+}
+
+function FAQItem({ question, answer }: { question: string; answer: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="border-b border-gray-100 last:border-0">
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center justify-between py-4 text-left gap-4 group"
+      >
+        <span className="text-sm font-semibold text-gray-900 group-hover:text-primary transition-colors">{question}</span>
+        <ChevronDown className={`h-4 w-4 text-gray-400 flex-shrink-0 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && <p className="text-sm text-gray-500 leading-relaxed pb-4">{answer}</p>}
     </div>
   );
 }
@@ -643,261 +660,295 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── FEATURE CARDS STRIP ── */}
-      <section className="bg-white border-b border-gray-100 py-14 sm:py-20">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-10">
-            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-1 tracking-tight">Everything in one dashboard</h2>
-            <p className="text-gray-500 text-sm">No more juggling apps. Run your whole business from one place.</p>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-            {[
-              { icon: Box,         title: "Inventory Management",  desc: "Track stock in real time and never oversell." },
-              { icon: ReceiptText, title: "Invoicing",             desc: "Create and send professional invoices in seconds." },
-              { icon: UserCheck,   title: "Customer Management",   desc: "Manage customers, balances and order history." },
-              { icon: Wallet,      title: "Payment Tracking",      desc: "Track payments and get paid faster, every time." },
-            ].map(({ icon: Icon, title, desc }, i) => (
-              <div
-                key={i}
-                className="flex flex-col items-center text-center p-6 rounded-2xl bg-gray-50 border border-gray-100 group hover:bg-white hover:shadow-sm hover:border-gray-200 transition-all duration-200"
-              >
-                <div className="w-11 h-11 rounded-full bg-white border border-gray-200 flex items-center justify-center flex-shrink-0 mb-4 group-hover:border-gray-300 transition-colors">
-                  <Icon className="text-gray-500" style={{ width: 18, height: 18 }} />
-                </div>
-                <h3 className="font-semibold text-gray-900 text-sm mb-1">{title}</h3>
-                <p className="text-gray-500 text-xs leading-relaxed">{desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── PROBLEM ── */}
-      <section className="py-16 sm:py-24 bg-gray-50">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center">
-          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-3 tracking-tight">
-            Still running your business like this?
-          </h2>
-          <p className="text-gray-500 text-lg mb-12">Sound familiar? You're not alone.</p>
-
-          <div className="grid sm:grid-cols-2 gap-3 text-left max-w-2xl mx-auto">
-            {[
-              { icon: MessageSquare, text: "Taking orders over WhatsApp and writing them down manually" },
-              { icon: CreditCard,    text: "Chasing payments long after goods have left the door" },
-              { icon: Package,       text: "Managing stock levels in a spreadsheet that's always out of date" },
-              { icon: Users,         text: "Sending individual price lists to every single customer by hand" },
-            ].map(({ icon: Icon, text }, i) => (
-              <div key={i} className="flex items-start gap-4 bg-white border border-gray-100 rounded-2xl p-5 hover:shadow-sm transition-all">
-                <div className="w-9 h-9 bg-red-50 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <Icon className="h-4.5 w-4.5 text-red-400" style={{ width: 18, height: 18 }} />
-                </div>
-                <p className="text-gray-600 text-sm leading-relaxed">{text}</p>
-              </div>
-            ))}
-          </div>
-
-          <p className="mt-10 text-gray-500 text-base">
-            There's a better way. <span className="text-gray-900 font-semibold">Quikpik handles all of it for you.</span>
-          </p>
-        </div>
-      </section>
-
-      {/* ── BENEFITS ── */}
-      <section className="py-16 sm:py-24 bg-white">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6">
-          <div className="text-center mb-12">
-            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-gray-900 mb-3 tracking-tight">
-              Everything you need to run your wholesale business
-            </h2>
-            <p className="text-gray-500 text-lg max-w-xl mx-auto leading-relaxed">
-              One platform replaces the calls, the spreadsheets, and the back-and-forth.
-            </p>
-          </div>
-
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {[
-              {
-                icon: ShoppingBag,
-                color: "bg-blue-50 text-blue-600",
-                title: "Instant Online Ordering",
-                desc: "Customers browse your live catalogue and place orders any time — no calls, no manual entry.",
-              },
-              {
-                icon: CreditCard,
-                color: "bg-green-50 text-green-600",
-                title: "Custom Pricing Per Customer",
-                desc: "Set different price lists for different buyers. Each customer sees their own personalised rates.",
-              },
-              {
-                icon: FileText,
-                color: "bg-purple-50 text-purple-600",
-                title: "Quotes → Payment in One Flow",
-                desc: "Create a quote, send a payment link, and get paid instantly. No follow-up calls needed.",
-              },
-              {
-                icon: Package,
-                color: "bg-orange-50 text-orange-600",
-                title: "Real-Time Stock Control",
-                desc: "Inventory updates automatically with every order. Low-stock alerts stop you overselling.",
-              },
-              {
-                icon: Lock,
-                color: "bg-rose-50 text-rose-600",
-                title: "Pay Now or Pay Later",
-                desc: "Offer trusted customers the option to buy on account while others pay by card.",
-              },
-              {
-                icon: Phone,
-                color: "bg-teal-50 text-teal-600",
-                title: "SMS & WhatsApp Ready",
-                desc: "Send confirmations and payment links via the channels your customers already use.",
-              },
-            ].map(({ icon: Icon, color, title, desc }, i) => (
-              <Card key={i} className="p-7 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md hover:border-gray-200 transition-all">
-                <div className={`w-11 h-11 rounded-xl flex items-center justify-center mb-5 ${color}`}>
-                  <Icon className="h-5 w-5" />
-                </div>
-                <h3 className="text-base font-bold text-gray-900 mb-2">{title}</h3>
-                <p className="text-gray-500 text-sm leading-relaxed">{desc}</p>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── HOW IT WORKS ── */}
-      <section className="py-16 sm:py-24 bg-gray-50">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center">
-          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-gray-900 mb-3 tracking-tight">
-            Up and running in minutes
-          </h2>
-          <p className="text-gray-500 text-lg mb-14">Three steps. No technical setup required.</p>
-
-          <div className="grid sm:grid-cols-3 gap-6 sm:gap-10 relative">
-            <div className="hidden sm:block absolute top-7 left-[calc(16.67%+2rem)] right-[calc(16.67%+2rem)] h-px bg-gray-200 z-0" />
-            {[
-              { step: "1", title: "Set up your store", desc: "Add your products, pricing, and delivery options in minutes." },
-              { step: "2", title: "Share your link", desc: "Send your store link to customers via WhatsApp, SMS, or email." },
-              { step: "3", title: "Receive orders and get paid", desc: "Customers order online. Payments land directly in your account." },
-            ].map(({ step, title, desc }, i) => (
-              <div key={i} className="relative z-10 flex flex-col items-center text-center">
-                <div className="w-14 h-14 bg-gray-950 text-white text-xl font-extrabold rounded-2xl flex items-center justify-center mb-5 ring-4 ring-gray-50">
-                  {step}
-                </div>
-                <h3 className="text-base font-bold text-gray-900 mb-2">{title}</h3>
-                <p className="text-gray-500 text-sm leading-relaxed">{desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── PRICING ── */}
-      <section className="py-16 sm:py-24 bg-white">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 text-center">
-          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-gray-900 mb-3 tracking-tight">
-            Start free. Only pay when you get paid.
-          </h2>
-          <p className="text-gray-500 text-lg mb-12">Simple, honest pricing with no surprises.</p>
-
-          <div className="grid sm:grid-cols-3 gap-4 mb-10">
-            {[
-              {
-                icon: CheckCircle,
-                color: "text-green-600",
-                bg: "bg-green-50",
-                border: "border-green-100",
-                title: "£0/month to start",
-                desc: "Full access on the free plan. No credit card needed.",
-              },
-              {
-                icon: CreditCard,
-                color: "text-blue-600",
-                bg: "bg-blue-50",
-                border: "border-blue-100",
-                title: "Small fee on card payments",
-                desc: "Only pay on card orders — cash and Pay Later are always free.",
-              },
-              {
-                icon: Shield,
-                color: "text-purple-600",
-                bg: "bg-purple-50",
-                border: "border-purple-100",
-                title: "Offline orders are 100% yours",
-                desc: "Cash, Pay Later, and offline orders have no platform fee.",
-              },
-            ].map(({ icon: Icon, color, bg, border, title, desc }, i) => (
-              <div key={i} className={`${bg} border ${border} rounded-2xl p-6 text-left`}>
-                <Icon className={`h-7 w-7 ${color} mb-4`} />
-                <h3 className="font-bold text-gray-900 mb-1.5 text-sm">{title}</h3>
-                <p className="text-gray-500 text-sm leading-relaxed">{desc}</p>
-              </div>
-            ))}
-          </div>
-
-          <Button onClick={handleGetStarted} size="lg" className="bg-primary hover:bg-primary/90 text-base px-10 py-6 rounded-xl shadow-lg shadow-primary/25 font-semibold">
-            Start Free Today <ArrowRight className="ml-2 h-5 w-5" />
-          </Button>
-          <p className="text-xs text-gray-400 mt-4">No credit card required · Cancel anytime</p>
-        </div>
-      </section>
-
-      {/* ── COMPARISON ── */}
-      <section className="py-16 sm:py-24 bg-gray-50">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6">
-          <div className="text-center mb-12">
-            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-gray-900 mb-3 tracking-tight">
-              Stop paying for tools that don't work
-            </h2>
-            <p className="text-gray-500 text-lg">See how Quikpik stacks up against the old way.</p>
-          </div>
-
-          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-            <div className="grid grid-cols-3 text-xs sm:text-sm font-semibold border-b border-gray-100 bg-gray-50/60">
-              <div className="col-span-1 p-3 sm:p-4 text-gray-400" />
-              <div className="p-3 sm:p-4 text-center text-gray-400 border-l border-gray-100">Old way</div>
-              <div className="p-3 sm:p-4 text-center text-primary font-bold border-l border-gray-100">Quikpik</div>
+      {/* ── WHOLESALER SECTIONS ── */}
+      {activeAudience === 'wholesaler' && (
+        <section className="bg-white border-b border-gray-100 py-14 sm:py-20">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center mb-10">
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-1 tracking-tight">Everything in one dashboard</h2>
+              <p className="text-gray-500 text-sm">No more juggling apps. Run your whole business from one place.</p>
             </div>
-            {[
-              { label: "Monthly cost",     old: "£200–£500+",       new: "Free to start" },
-              { label: "Taking orders",    old: "Manual",           new: "Automated online" },
-              { label: "Payments",         old: "Chasing invoices", new: "Instant card payments" },
-              { label: "Stock tracking",   old: "Spreadsheets",     new: "Real-time, automatic" },
-              { label: "Customer pricing", old: "Sent manually",    new: "Custom price lists" },
-              { label: "Contracts",        old: "Annual lock-in",   new: "Cancel anytime" },
-            ].map(({ label, old, new: newVal }, i) => (
-              <div key={i} className={`grid grid-cols-3 text-xs sm:text-sm border-b border-gray-50 last:border-0 ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'}`}>
-                <div className="p-3 sm:p-4 font-medium text-gray-600">{label}</div>
-                <div className="p-3 sm:p-4 text-center text-gray-400 border-l border-gray-100">{old}</div>
-                <div className="p-3 sm:p-4 text-center text-primary font-semibold border-l border-gray-100 flex items-center justify-center gap-1.5">
-                  <CheckCircle className="h-3.5 w-3.5 flex-shrink-0" /> {newVal}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              {[
+                { icon: Box,         title: "Inventory Management",  desc: "Track stock in real time and never oversell." },
+                { icon: ReceiptText, title: "Invoicing",             desc: "Create and send professional invoices in seconds." },
+                { icon: UserCheck,   title: "Customer Management",   desc: "Manage customers, balances and order history." },
+                { icon: Wallet,      title: "Payment Tracking",      desc: "Track payments and get paid faster, every time." },
+              ].map(({ icon: Icon, title, desc }, i) => (
+                <div
+                  key={i}
+                  className="flex flex-col items-center text-center p-6 rounded-2xl bg-gray-50 border border-gray-100 group hover:bg-white hover:shadow-sm hover:border-gray-200 transition-all duration-200"
+                >
+                  <div className="w-11 h-11 rounded-full bg-white border border-gray-200 flex items-center justify-center flex-shrink-0 mb-4 group-hover:border-gray-300 transition-colors">
+                    <Icon className="text-gray-500" style={{ width: 18, height: 18 }} />
+                  </div>
+                  <h3 className="font-semibold text-gray-900 text-sm mb-1">{title}</h3>
+                  <p className="text-gray-500 text-xs leading-relaxed">{desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ── WHOLESALER-ONLY SECTIONS ── */}
+      {activeAudience === 'wholesaler' && (
+        <>
+          {/* ── PROBLEM ── */}
+          <section className="py-16 sm:py-24 bg-gray-50">
+            <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center">
+              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-3 tracking-tight">
+                Still running your business like this?
+              </h2>
+              <p className="text-gray-500 text-lg mb-12">Sound familiar? You're not alone.</p>
+              <div className="grid sm:grid-cols-2 gap-3 text-left max-w-2xl mx-auto">
+                {[
+                  { icon: MessageSquare, text: "Taking orders over WhatsApp and writing them down manually" },
+                  { icon: CreditCard,    text: "Chasing payments long after goods have left the door" },
+                  { icon: Package,       text: "Managing stock levels in a spreadsheet that's always out of date" },
+                  { icon: Users,         text: "Sending individual price lists to every single customer by hand" },
+                ].map(({ icon: Icon, text }, i) => (
+                  <div key={i} className="flex items-start gap-4 bg-white border border-gray-100 rounded-2xl p-5 hover:shadow-sm transition-all">
+                    <div className="w-9 h-9 bg-red-50 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <Icon className="h-4.5 w-4.5 text-red-400" style={{ width: 18, height: 18 }} />
+                    </div>
+                    <p className="text-gray-600 text-sm leading-relaxed">{text}</p>
+                  </div>
+                ))}
+              </div>
+              <p className="mt-10 text-gray-500 text-base">
+                There's a better way. <span className="text-gray-900 font-semibold">Quikpik handles all of it for you.</span>
+              </p>
+            </div>
+          </section>
+
+          {/* ── BENEFITS ── */}
+          <section className="py-16 sm:py-24 bg-white">
+            <div className="max-w-6xl mx-auto px-4 sm:px-6">
+              <div className="text-center mb-12">
+                <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-gray-900 mb-3 tracking-tight">
+                  Everything you need to run your wholesale business
+                </h2>
+                <p className="text-gray-500 text-lg max-w-xl mx-auto leading-relaxed">
+                  One platform replaces the calls, the spreadsheets, and the back-and-forth.
+                </p>
+              </div>
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                {[
+                  { icon: ShoppingBag, color: "bg-blue-50 text-blue-600",   title: "Instant Online Ordering",      desc: "Customers browse your live catalogue and place orders any time — no calls, no manual entry." },
+                  { icon: CreditCard,  color: "bg-green-50 text-green-600", title: "Custom Pricing Per Customer",  desc: "Set different price lists for different buyers. Each customer sees their own personalised rates." },
+                  { icon: FileText,    color: "bg-purple-50 text-purple-600", title: "Quotes → Payment in One Flow", desc: "Create a quote, send a payment link, and get paid instantly. No follow-up calls needed." },
+                  { icon: Package,     color: "bg-orange-50 text-orange-600", title: "Real-Time Stock Control",     desc: "Inventory updates automatically with every order. Low-stock alerts stop you overselling." },
+                  { icon: Lock,        color: "bg-rose-50 text-rose-600",    title: "Pay Now or Pay Later",         desc: "Offer trusted customers the option to buy on account while others pay by card." },
+                  { icon: Phone,       color: "bg-teal-50 text-teal-600",    title: "SMS & WhatsApp Ready",         desc: "Send confirmations and payment links via the channels your customers already use." },
+                ].map(({ icon: Icon, color, title, desc }, i) => (
+                  <Card key={i} className="p-7 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md hover:border-gray-200 transition-all">
+                    <div className={`w-11 h-11 rounded-xl flex items-center justify-center mb-5 ${color}`}>
+                      <Icon className="h-5 w-5" />
+                    </div>
+                    <h3 className="text-base font-bold text-gray-900 mb-2">{title}</h3>
+                    <p className="text-gray-500 text-sm leading-relaxed">{desc}</p>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          </section>
+
+          {/* ── HOW IT WORKS ── */}
+          <section className="py-16 sm:py-24 bg-gray-50">
+            <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center">
+              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-gray-900 mb-3 tracking-tight">
+                Up and running in minutes
+              </h2>
+              <p className="text-gray-500 text-lg mb-14">Three steps. No technical setup required.</p>
+              <div className="grid sm:grid-cols-3 gap-6 sm:gap-10 relative">
+                <div className="hidden sm:block absolute top-7 left-[calc(16.67%+2rem)] right-[calc(16.67%+2rem)] h-px bg-gray-200 z-0" />
+                {[
+                  { step: "1", title: "Set up your store",          desc: "Add your products, pricing, and delivery options in minutes." },
+                  { step: "2", title: "Share your link",             desc: "Send your store link to customers via WhatsApp, SMS, or email." },
+                  { step: "3", title: "Receive orders and get paid", desc: "Customers order online. Payments land directly in your account." },
+                ].map(({ step, title, desc }, i) => (
+                  <div key={i} className="relative z-10 flex flex-col items-center text-center">
+                    <div className="w-14 h-14 bg-gray-950 text-white text-xl font-extrabold rounded-2xl flex items-center justify-center mb-5 ring-4 ring-gray-50">
+                      {step}
+                    </div>
+                    <h3 className="text-base font-bold text-gray-900 mb-2">{title}</h3>
+                    <p className="text-gray-500 text-sm leading-relaxed">{desc}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+
+          {/* ── PRICING ── */}
+          <section className="py-16 sm:py-24 bg-white">
+            <div className="max-w-3xl mx-auto px-4 sm:px-6 text-center">
+              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-gray-900 mb-3 tracking-tight">
+                Start free. Only pay when you get paid.
+              </h2>
+              <p className="text-gray-500 text-lg mb-12">Simple, honest pricing with no surprises.</p>
+              <div className="grid sm:grid-cols-3 gap-4 mb-10">
+                {[
+                  { icon: CheckCircle, color: "text-green-600",  bg: "bg-green-50",  border: "border-green-100",  title: "£0/month to start",             desc: "Full access on the free plan. No credit card needed." },
+                  { icon: CreditCard,  color: "text-blue-600",   bg: "bg-blue-50",   border: "border-blue-100",   title: "Small fee on card payments",    desc: "Only pay on card orders — cash and Pay Later are always free." },
+                  { icon: Shield,      color: "text-purple-600", bg: "bg-purple-50", border: "border-purple-100", title: "Offline orders are 100% yours", desc: "Cash, Pay Later, and offline orders have no platform fee." },
+                ].map(({ icon: Icon, color, bg, border, title, desc }, i) => (
+                  <div key={i} className={`${bg} border ${border} rounded-2xl p-6 text-left`}>
+                    <Icon className={`h-7 w-7 ${color} mb-4`} />
+                    <h3 className="font-bold text-gray-900 mb-1.5 text-sm">{title}</h3>
+                    <p className="text-gray-500 text-sm leading-relaxed">{desc}</p>
+                  </div>
+                ))}
+              </div>
+              <Button onClick={handleGetStarted} size="lg" className="bg-primary hover:bg-primary/90 text-base px-10 py-6 rounded-xl shadow-lg shadow-primary/25 font-semibold">
+                Start Free Today <ArrowRight className="ml-2 h-5 w-5" />
+              </Button>
+              <p className="text-xs text-gray-400 mt-4">No credit card required · Cancel anytime</p>
+            </div>
+          </section>
+
+          {/* ── COMPARISON ── */}
+          <section className="py-16 sm:py-24 bg-gray-50">
+            <div className="max-w-4xl mx-auto px-4 sm:px-6">
+              <div className="text-center mb-12">
+                <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-gray-900 mb-3 tracking-tight">
+                  Stop paying for tools that don't work
+                </h2>
+                <p className="text-gray-500 text-lg">See how Quikpik stacks up against the old way.</p>
+              </div>
+              <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+                <div className="grid grid-cols-3 text-xs sm:text-sm font-semibold border-b border-gray-100 bg-gray-50/60">
+                  <div className="col-span-1 p-3 sm:p-4 text-gray-400" />
+                  <div className="p-3 sm:p-4 text-center text-gray-400 border-l border-gray-100">Old way</div>
+                  <div className="p-3 sm:p-4 text-center text-primary font-bold border-l border-gray-100">Quikpik</div>
+                </div>
+                {[
+                  { label: "Monthly cost",     old: "£200–£500+",       new: "Free to start" },
+                  { label: "Taking orders",    old: "Manual",           new: "Automated online" },
+                  { label: "Payments",         old: "Chasing invoices", new: "Instant card payments" },
+                  { label: "Stock tracking",   old: "Spreadsheets",     new: "Real-time, automatic" },
+                  { label: "Customer pricing", old: "Sent manually",    new: "Custom price lists" },
+                  { label: "Contracts",        old: "Annual lock-in",   new: "Cancel anytime" },
+                ].map(({ label, old, new: newVal }, i) => (
+                  <div key={i} className={`grid grid-cols-3 text-xs sm:text-sm border-b border-gray-50 last:border-0 ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'}`}>
+                    <div className="p-3 sm:p-4 font-medium text-gray-600">{label}</div>
+                    <div className="p-3 sm:p-4 text-center text-gray-400 border-l border-gray-100">{old}</div>
+                    <div className="p-3 sm:p-4 text-center text-primary font-semibold border-l border-gray-100 flex items-center justify-center gap-1.5">
+                      <CheckCircle className="h-3.5 w-3.5 flex-shrink-0" /> {newVal}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+
+          {/* ── FINAL CTA ── */}
+          <section className="py-20 sm:py-28 bg-gradient-to-br from-primary to-green-600 text-white text-center relative overflow-hidden">
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(255,255,255,0.08),transparent_60%)]" />
+            <div className="relative z-10 max-w-2xl mx-auto px-4 sm:px-6">
+              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold mb-5 leading-tight tracking-tight">
+                Start taking orders today
+              </h2>
+              <p className="text-green-100 text-lg mb-10 leading-relaxed">
+                Join UK wholesale businesses already using Quikpik to run smarter.
+              </p>
+              <Button
+                onClick={handleGetStarted}
+                size="lg"
+                className="bg-white text-primary hover:bg-gray-50 text-base font-bold px-10 py-6 rounded-xl shadow-2xl"
+              >
+                Start Free <ArrowRight className="ml-2 h-5 w-5" />
+              </Button>
+              <p className="text-green-200/80 text-sm mt-5">No credit card required · Free plan available · Cancel anytime</p>
+            </div>
+          </section>
+        </>
+      )}
+
+      {/* ── RETAILER-ONLY SECTIONS ── */}
+      {activeAudience === 'retailer' && (
+        <>
+          {/* ── HOW TO ORDER ── */}
+          <section className="py-16 sm:py-24 bg-white">
+            <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center">
+              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-gray-900 mb-3 tracking-tight">
+                How to order
+              </h2>
+              <p className="text-gray-500 text-lg mb-14">Four simple steps from browse to delivery.</p>
+              <div className="grid sm:grid-cols-4 gap-6 sm:gap-8 relative">
+                <div className="hidden sm:block absolute top-7 left-[calc(12.5%+1.5rem)] right-[calc(12.5%+1.5rem)] h-px bg-gray-200 z-0" />
+                {[
+                  { icon: Search,      step: "STEP 1", title: "Find & Select Products",  desc: "Browse the catalogue to find the right products and add them to your order." },
+                  { icon: ShoppingCart, step: "STEP 2", title: "Review & Adjust",        desc: "Check your order, confirm quantities meet minimums, and adjust as needed." },
+                  { icon: CreditCard,  step: "STEP 3", title: "Checkout & Payment",      desc: "Verify your details and complete your purchase securely by card." },
+                  { icon: Package,     step: "STEP 4", title: "Shipping & Support",       desc: "Your order ships within the agreed timeframe. Need help? We're here." },
+                ].map(({ icon: Icon, step, title, desc }, i) => (
+                  <div key={i} className="relative z-10 flex flex-col items-center text-center">
+                    <div className="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center mb-4 ring-4 ring-white">
+                      <Icon className="h-6 w-6 text-gray-500" />
+                    </div>
+                    <p className="text-[10px] font-bold tracking-widest text-gray-400 uppercase mb-1">{step}</p>
+                    <h3 className="text-sm font-extrabold text-gray-900 mb-2 tracking-tight">{title}</h3>
+                    <p className="text-gray-500 text-xs leading-relaxed">{desc}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+
+          {/* ── FAQ ── */}
+          <section className="py-16 sm:py-24 bg-gray-50">
+            <div className="max-w-4xl mx-auto px-4 sm:px-6">
+              <div className="flex flex-col lg:flex-row gap-12 lg:gap-20">
+                {/* Left label */}
+                <div className="lg:w-56 flex-shrink-0">
+                  <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight leading-tight mb-3">
+                    Frequently asked questions
+                  </h2>
+                  <p className="text-sm text-gray-500 leading-relaxed">
+                    Can't find what you're looking for? <button onClick={handleCustomerLogin} className="text-primary font-medium hover:underline">Sign in</button> to reach your supplier directly.
+                  </p>
+                </div>
+                {/* Right accordion */}
+                <div className="flex-1 bg-white rounded-2xl border border-gray-100 shadow-sm px-6 divide-y divide-gray-100">
+                  {[
+                    { q: "How does the ordering process work?",       a: "Browse products from your supplier's store, add items to your cart, and check out securely by card. You'll receive an order confirmation by email." },
+                    { q: "Where will my goods come from?",            a: "Your order is fulfilled directly by the wholesaler whose store you're shopping from. Each supplier manages their own stock and delivery." },
+                    { q: "Do the prices include VAT?",                a: "Prices shown are trade prices. VAT and any applicable taxes are shown clearly at checkout before you confirm your order." },
+                    { q: "What is a minimum order quantity (MOQ)?",   a: "Some products require a minimum number of units per order. The MOQ is shown on each product card and is set by the supplier." },
+                    { q: "Can I order from multiple suppliers?",      a: "Yes — you can browse and place orders with any supplier on the Quikpik network. Each order is processed separately per supplier." },
+                    { q: "What if I have an issue with my order?",    a: "Contact your supplier directly through the store, or reach Quikpik support. We aim to resolve all order issues within 24 hours." },
+                  ].map(({ q, a }) => (
+                    <FAQItem key={q} question={q} answer={a} />
+                  ))}
                 </div>
               </div>
-            ))}
-          </div>
-        </div>
-      </section>
+            </div>
+          </section>
 
-      {/* ── FINAL CTA ── */}
-      <section className="py-20 sm:py-28 bg-gradient-to-br from-primary to-green-600 text-white text-center relative overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(255,255,255,0.08),transparent_60%)]" />
-        <div className="relative z-10 max-w-2xl mx-auto px-4 sm:px-6">
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold mb-5 leading-tight tracking-tight">
-            Start taking orders today
-          </h2>
-          <p className="text-green-100 text-lg mb-10 leading-relaxed">
-            Join UK wholesale businesses already using Quikpik to run smarter.
-          </p>
-          <Button
-            onClick={handleGetStarted}
-            size="lg"
-            className="bg-white text-primary hover:bg-gray-50 text-base font-bold px-10 py-6 rounded-xl shadow-2xl"
-          >
-            Start Free <ArrowRight className="ml-2 h-5 w-5" />
-          </Button>
-          <p className="text-green-200/80 text-sm mt-5">No credit card required · Free plan available · Cancel anytime</p>
-        </div>
-      </section>
+          {/* ── WHOLESALER NUDGE ── */}
+          <section className="py-14 bg-white border-t border-gray-100">
+            <div className="max-w-4xl mx-auto px-4 sm:px-6">
+              <div className="flex flex-col sm:flex-row items-center gap-6 bg-gray-50 border border-gray-200 rounded-2xl p-7">
+                <div className="flex-shrink-0 w-11 h-11 bg-primary/10 rounded-xl flex items-center justify-center">
+                  <TrendingUp className="h-5 w-5 text-primary" />
+                </div>
+                <div className="flex-1 text-center sm:text-left">
+                  <p className="font-bold text-gray-900 text-sm mb-1">Are you a wholesale supplier?</p>
+                  <p className="text-gray-500 text-sm">List your products, manage orders, and reach more buyers — free to get started.</p>
+                </div>
+                <Button
+                  onClick={handleGetStarted}
+                  variant="outline"
+                  className="flex-shrink-0 border-gray-300 text-gray-700 hover:bg-white hover:border-primary hover:text-primary text-sm font-semibold px-5"
+                >
+                  Start selling <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
+                </Button>
+              </div>
+            </div>
+          </section>
+        </>
+      )}
 
       {/* ── FOOTER ── */}
       <footer className="py-8 bg-gray-950 text-gray-500 text-sm">
