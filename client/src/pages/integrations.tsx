@@ -232,7 +232,7 @@ export default function Integrations() {
   };
 
   return (
-    <div className="bg-white min-h-screen">
+    <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
       <PageHeader title="Integrations" description="Connect your business tools to streamline operations" />
       <div className="p-4 sm:p-6">
 

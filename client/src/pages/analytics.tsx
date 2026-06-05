@@ -151,7 +151,7 @@ export default function Analytics() {
   }
 
   return (
-    <div className="bg-white min-h-screen">
+    <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
     <PageHeader title="Analytics & Reports" description="Track your business performance and insights">
       <DateRangePicker 
         value={dateRange} 

@@ -135,7 +135,7 @@ export default function Financials() {
   const stripeNotConnected = !isLoading && !isError && data && data.payouts.length === 0 && data.pendingBalance === 0 && !user?.stripeAccountId;
 
   return (
-    <div className="bg-white min-h-screen">
+    <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
       <PageHeader title="Finance" description="Payouts from Stripe to your bank account" />
 
       <div className="max-w-5xl mx-auto p-4 sm:p-6 space-y-6">

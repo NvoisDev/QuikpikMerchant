@@ -215,7 +215,7 @@ export default function StockAlerts() {
 
   if (isLoading) {
     return (
-      <div className="bg-white min-h-screen">
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
         <PageHeader title="Stock Alerts" description="Monitor and manage low stock notifications" />
         <div className="p-4 md:p-6 max-w-6xl mx-auto space-y-3">
           {[1, 2, 3].map((i) => (
@@ -227,7 +227,7 @@ export default function StockAlerts() {
   }
 
   return (
-    <div className="bg-white min-h-screen">
+    <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
       <PageHeader title="Stock Alerts" description="Monitor and manage low stock notifications">
         <Dialog>
           <DialogTrigger asChild>

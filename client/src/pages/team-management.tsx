@@ -425,7 +425,7 @@ export default function TeamManagement() {
   }
 
   return (
-    <div className="bg-white min-h-screen">
+    <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
       <PageHeader title="Team" description="Manage team access and permissions">
         {user?.role !== 'team_member' && (
           <Button

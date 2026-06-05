@@ -1235,7 +1235,7 @@ export default function Settings() {
   };
 
   return (
-    <div className="bg-white min-h-screen">
+    <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
       <PageHeader title="Settings" description="Manage your account preferences and business settings" />
       <div className="space-y-8 p-4 sm:p-6">
 

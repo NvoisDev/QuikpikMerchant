@@ -332,7 +332,7 @@ export default function Promotions() {
   const isSaving = createMutation.isPending || updateMutation.isPending;
 
   return (
-    <div className="bg-white min-h-screen">
+    <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
     <PageHeader title="Promotions" description="Manage promotional offers across your products" />
     <div className="px-4 sm:px-6 py-5 max-w-6xl mx-auto">
 

@@ -27,7 +27,7 @@ export default function Campaigns() {
   }, [user, permissionsLoading, checkTabAccess, toast, setLocation]);
 
   return (
-    <div className="bg-white min-h-screen">
+    <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
       <PageHeader title="Broadcast" description="Broadcast messaging is coming soon" />
       <div className="max-w-4xl mx-auto p-4 sm:p-6">
         <Card className="border-emerald-100 bg-gradient-to-br from-emerald-50 via-white to-slate-50 shadow-sm">

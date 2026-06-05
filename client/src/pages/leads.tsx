@@ -1,4 +1,5 @@
 import { useState } from "react";
+import PageHeader from "@/components/PageHeader";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Badge } from "@/components/ui/badge";
@@ -189,22 +190,16 @@ export default function LeadsPage() {
   const filtered = filter === 'all' ? enquiries : enquiries.filter(e => e.status === filter);
 
   return (
-    <div className="max-w-3xl mx-auto">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-            <Inbox className="h-6 w-6 text-primary" /> Leads
-          </h1>
-          <p className="hidden sm:block text-sm text-gray-500 mt-0.5">Enquiries from your public store</p>
-        </div>
+    <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+      <PageHeader title="Leads" description="Enquiries from your public store">
         {newCount > 0 && (
           <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-2">
             <Star className="h-4 w-4 text-emerald-600" />
             <span className="text-sm font-semibold text-emerald-700">{newCount} new</span>
           </div>
         )}
-      </div>
+      </PageHeader>
+      <div className="px-4 sm:px-6 py-5 max-w-3xl mx-auto">
 
       {/* Stats */}
       <div className="grid grid-cols-3 gap-3 mb-6">
@@ -305,6 +300,7 @@ export default function LeadsPage() {
       )}
 
       {selected && <EnquiryDrawer enquiry={selected} onClose={() => setSelected(null)} />}
+      </div>
     </div>
   );
 }
