@@ -1,0 +1,167 @@
+Redesign and modernise the Quikpik landing page to feel like a premium SaaS platform for wholesalers, combining both:
+
+1. Wholesale operations management
+2. Wholesale supplier discovery
+
+The current issue is that the page feels split between “inventory software” and “supplier marketplace”. The redesign should unify both messages into one clear positioning:
+
+“Quikpik is the operating system for modern wholesalers.”
+
+GOALS:
+
+* Modern SaaS feel
+* Premium and trustworthy
+* Strong SEO structure
+* Clear messaging hierarchy
+* Mobile responsive
+* Faster perceived performance
+* Better conversion to sign-up/demo
+* Stronger visual storytelling
+* Blend operations + discovery naturally
+
+DESIGN DIRECTION:
+
+* Modern B2B SaaS aesthetic
+* Similar quality level to Stripe, Shopify, Linear, Notion, Ramp, Faire, Qogita
+* Dark + white sections with Quikpik green accent colours
+* Clean typography
+* Smooth spacing
+* Large bold headlines
+* Minimal clutter
+* Soft gradients and glassmorphism allowed lightly
+* More UI screenshots and less generic stock-photo feel
+* High-end polished interactions and hover states
+
+NEW POSITIONING:
+Primary headline:
+“Run and grow your wholesale business in one place”
+
+Alternative supporting messaging:
+
+* Inventory management
+* Batch stock tracking
+* Invoicing & payments
+* Customer management
+* Order fulfilment
+* Wholesale product discovery
+
+HERO SECTION:
+
+* Keep warehouse visual but modernise it
+* Add subtle dashboard overlays/UI mockups on top of the image
+* Reduce prominence of the “WHOLESALER” sign in background
+* Add floating SaaS-style dashboard cards:
+
+  * stock alerts
+  * invoices paid
+  * batch expiry
+  * revenue metrics
+* Add trust indicators:
+
+  * “Built for UK wholesalers”
+  * “No credit card required”
+  * “Used by growing FMCG businesses”
+
+Hero CTA buttons:
+
+* Start Free
+* Book Demo
+
+FEATURES SECTION:
+Create a premium card/grid layout for:
+
+1. Inventory & Batch Tracking
+2. Invoicing & Payments
+3. Orders & Fulfilment
+4. Customer Management
+5. Analytics & Revenue
+6. Wholesale Discovery
+
+Each feature should:
+
+* include icon
+* short SEO-friendly description
+* subtle product UI preview/mockup
+
+DISCOVERY SECTION:
+Instead of abruptly saying “Find wholesale suppliers”, redesign this section to feel integrated into the platform.
+
+Heading:
+“Discover wholesalers and products”
+
+Subheading:
+“Search products and connect directly with verified UK wholesalers.”
+
+Include:
+
+* search bar
+* category pills:
+
+  * Drinks
+  * African Groceries
+  * Frozen Foods
+  * Cosmetics
+  * Household
+* featured supplier cards
+* product preview cards
+
+SEO REQUIREMENTS:
+The page must be structured to rank for:
+
+* wholesale inventory software
+* inventory management for wholesalers
+* batch stock management
+* wholesale invoicing software
+* UK wholesalers
+* African food wholesalers UK
+* wholesale supplier platform
+* FMCG wholesalers
+
+Use proper:
+
+* H1/H2 hierarchy
+* semantic HTML
+* descriptive section copy
+* keyword-rich but natural text
+* fast-loading structure
+* metadata optimisation
+* internal linking structure
+
+ADDITIONAL SECTIONS:
+
+1. “Built for wholesalers” section
+
+   * FMCG wholesalers
+   * African food suppliers
+   * distributors
+   * cash & carry businesses
+   * independent wholesalers
+
+2. Social proof/testimonial section
+
+3. Product screenshots section
+   Show actual Quikpik dashboard UI:
+
+* inventory
+* invoices
+* analytics
+* orders
+* payments
+
+4. Final CTA section:
+   “Start running your wholesale business smarter.”
+
+IMPORTANT:
+The homepage should NOT feel like:
+
+* a generic marketplace
+* Alibaba clone
+* directory website
+
+It should feel like:
+“Modern wholesale commerce infrastructure.”
+
+The operations platform remains the core product, while supplier discovery is presented as an additional growth layer.
+
+Overall feeling:
+Premium, modern, operational, scalable, trustworthy, and built specifically for wholesalers.
