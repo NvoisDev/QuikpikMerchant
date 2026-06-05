@@ -2,19 +2,6 @@ import { createRoot } from "react-dom/client";
 import App from "./App";
 import "./index.css";
 
-// Register service worker for PWA support
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js')
-      .then((registration) => {
-        console.log('[PWA] Service worker registered:', registration.scope);
-      })
-      .catch((error) => {
-        console.error('[PWA] Service worker registration failed:', error);
-      });
-  });
-}
-
 // Add error handling to catch React rendering errors
 try {
   const rootElement = document.getElementById("root");

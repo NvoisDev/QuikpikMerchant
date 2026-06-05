@@ -2,6 +2,7 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import path from "path";
 import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
+import { VitePWA } from "vite-plugin-pwa";
 
 export default defineConfig({
   plugins: [
@@ -15,6 +16,38 @@ export default defineConfig({
           ),
         ]
       : []),
+    VitePWA({
+      strategies: "generateSW",
+      registerType: "autoUpdate",
+      injectRegister: "auto",
+      workbox: {
+        globPatterns: ["**/*.{js,css,html,ico,png,svg,woff,woff2,ttf,eot}"],
+        navigateFallback: "/index.html",
+        navigateFallbackDenylist: [/^\/api\//],
+        runtimeCaching: [
+          {
+            urlPattern: /^\/api\//,
+            handler: "NetworkFirst",
+            options: {
+              cacheName: "quikpik-api",
+              networkTimeoutSeconds: 10,
+              expiration: {
+                maxAgeSeconds: 120,
+                maxEntries: 50,
+              },
+              cacheableResponse: {
+                statuses: [0, 200],
+              },
+            },
+          },
+        ],
+        cleanupOutdatedCaches: true,
+        sourcemap: false,
+      },
+      devOptions: {
+        enabled: false,
+      },
+    }),
   ],
   resolve: {
     alias: {
