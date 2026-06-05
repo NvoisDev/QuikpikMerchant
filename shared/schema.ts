@@ -294,6 +294,12 @@ export const users = pgTable("users", {
   // Custom store URL slug (e.g. "my-store" → quikpik.app/customer/my-store)
   storeSlug: varchar("store_slug", { length: 60 }),
 
+  // Public storefront settings
+  storeVisibility: varchar("store_visibility", { length: 20 }).default('private'), // 'private' | 'public'
+  priceDisplayMode: varchar("price_display_mode", { length: 20 }).default('hidden'), // 'hidden' | 'shown' | 'moq_only'
+  storeDescription: text("store_description"),
+  deliveryRegions: varchar("delivery_regions", { length: 500 }),
+
   // Pay Later — wholesaler-controlled
   allowPayLater: boolean("allow_pay_later").default(false),
 
@@ -1945,6 +1951,26 @@ export type OrderPicking = typeof orderPicking.$inferSelect;
 export const insertOrderItemPickSchema = createInsertSchema(orderItemPicks).omit({ id: true, createdAt: true, updatedAt: true });
 export type InsertOrderItemPick = z.infer<typeof insertOrderItemPickSchema>;
 export type OrderItemPick = typeof orderItemPicks.$inferSelect;
+
+// Public store enquiries (leads from the public storefront)
+export const storeEnquiries = pgTable("store_enquiries", {
+  id: serial("id").primaryKey(),
+  wholesalerId: varchar("wholesaler_id").notNull(),
+  enquirerName: varchar("enquirer_name", { length: 255 }),
+  enquirerEmail: varchar("enquirer_email", { length: 255 }),
+  enquirerPhone: varchar("enquirer_phone", { length: 50 }),
+  enquirerBusiness: varchar("enquirer_business", { length: 255 }),
+  message: text("message"),
+  productId: integer("product_id"),
+  productName: varchar("product_name", { length: 255 }),
+  quantity: integer("quantity"),
+  status: varchar("status", { length: 20 }).default('new'), // 'new' | 'viewed' | 'responded'
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertStoreEnquirySchema = createInsertSchema(storeEnquiries).omit({ id: true, createdAt: true });
+export type InsertStoreEnquiry = z.infer<typeof insertStoreEnquirySchema>;
+export type StoreEnquiry = typeof storeEnquiries.$inferSelect;
 
 // User types
 export type User = typeof users.$inferSelect;

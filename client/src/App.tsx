@@ -58,6 +58,7 @@ const Integrations = lazy(() => import("@/pages/integrations"));
 const OrderDetail = lazy(() => import("@/pages/order-detail"));
 const ProductDetail = lazy(() => import("@/pages/product-detail"));
 const WelcomePage = lazy(() => import("@/pages/WelcomePage"));
+const PublicStorePage = lazy(() => import("@/pages/public-store-page"));
 const Blog = lazy(() => import("@/pages/blog"));
 const BlogPost = lazy(() => import("@/pages/blog-post"));
 
@@ -202,6 +203,7 @@ function PublicRoutes() {
         <Route path="/privacy" component={PrivacyPolicy} />
         <Route path="/admin" component={() => { useEffect(() => setLocation("/super-admin"), []); return null; }} />
         <Route path="/super-admin" component={SuperAdmin} />
+        <Route path="/w/:slug" component={PublicStorePage} />
         <Route path="/" component={LandingPage} />
         <Route path="/landing" component={LandingPage} />
         <Route component={NotFound} />
@@ -298,6 +300,7 @@ function Router() {
     location.startsWith('/customer/') || 
     location.startsWith('/store/') ||
     location.startsWith('/welcome/') ||
+    location.startsWith('/w/') ||
     location.startsWith('/blog') ||
     location.startsWith('/product/') ||
     location.startsWith('/accept-invitation/') ||

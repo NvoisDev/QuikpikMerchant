@@ -616,6 +616,126 @@ function CollectionAddressesSection() {
   );
 }
 
+function PublicStoreSettings({ user }: { user: any }) {
+  const { toast } = useToast();
+  const [isPublic, setIsPublic] = useState(user?.storeVisibility === 'public');
+  const [priceMode, setPriceMode] = useState(user?.priceDisplayMode || 'hidden');
+  const [description, setDescription] = useState(user?.storeDescription || '');
+  const [regions, setRegions] = useState(user?.deliveryRegions || '');
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    setIsPublic(user?.storeVisibility === 'public');
+    setPriceMode(user?.priceDisplayMode || 'hidden');
+    setDescription(user?.storeDescription || '');
+    setRegions(user?.deliveryRegions || '');
+  }, [user?.storeVisibility, user?.priceDisplayMode, user?.storeDescription, user?.deliveryRegions]);
+
+  const storeSlug = user?.storeSlug || user?.id || '';
+  const publicUrl = `${window.location.origin}/w/${storeSlug}`;
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      const r = await apiRequest('PUT', '/api/user/profile', {
+        storeVisibility: isPublic ? 'public' : 'private',
+        priceDisplayMode: priceMode,
+        storeDescription: description.trim() || null,
+        deliveryRegions: regions.trim() || null,
+      });
+      if (r.ok) {
+        queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
+        toast({ title: isPublic ? 'Store is now public 🌐' : 'Store set to private', description: isPublic ? `Visible at ${publicUrl}` : 'Only invited customers can access your store.' });
+      }
+    } catch {
+      toast({ title: 'Save failed', description: 'Please try again.', variant: 'destructive' });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="mt-8 pt-6 border-t border-gray-200">
+      <div className="flex items-center gap-2 mb-1">
+        <ExternalLink className="h-5 w-5 text-gray-600" />
+        <h3 className="text-base sm:text-lg font-medium text-gray-900">Public Storefront</h3>
+      </div>
+      <p className="text-sm text-gray-500 mb-5">Make your catalogue publicly discoverable on Quikpik — anyone can browse and send an enquiry without logging in.</p>
+
+      {/* Toggle */}
+      <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-200 mb-4">
+        <div>
+          <p className="text-sm font-medium text-gray-900">Make store public</p>
+          <p className="text-xs text-gray-500 mt-0.5">Your products become searchable on quikpik.app</p>
+        </div>
+        <Switch
+          checked={isPublic}
+          onCheckedChange={setIsPublic}
+        />
+      </div>
+
+      {isPublic && (
+        <div className="space-y-4">
+          {/* Public link */}
+          <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg">
+            <Link2 className="h-4 w-4 text-green-600 flex-shrink-0" />
+            <a href={publicUrl} target="_blank" rel="noreferrer" className="text-sm text-green-700 font-medium hover:underline truncate">
+              {publicUrl}
+            </a>
+          </div>
+
+          {/* Price display mode */}
+          <div>
+            <Label className="text-xs font-medium text-gray-700 mb-1.5 block">What visitors see</Label>
+            <Select value={priceMode} onValueChange={setPriceMode}>
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="hidden">Prices hidden — enquiry only</SelectItem>
+                <SelectItem value="moq_only">Show MOQ only — no prices</SelectItem>
+                <SelectItem value="shown">Show full prices</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Store description */}
+          <div>
+            <Label className="text-xs font-medium text-gray-700 mb-1.5 block">Store description (optional)</Label>
+            <textarea
+              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/30"
+              rows={3}
+              placeholder="Briefly describe your business and what you supply…"
+              value={description}
+              onChange={e => setDescription(e.target.value)}
+            />
+          </div>
+
+          {/* Delivery regions */}
+          <div>
+            <Label className="text-xs font-medium text-gray-700 mb-1.5 block">Delivery / service areas (optional)</Label>
+            <input
+              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+              placeholder="e.g. London, Birmingham, Manchester"
+              value={regions}
+              onChange={e => setRegions(e.target.value)}
+            />
+          </div>
+        </div>
+      )}
+
+      <button
+        onClick={save}
+        disabled={saving}
+        className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary/90 disabled:opacity-60 transition-colors"
+      >
+        {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+        {saving ? 'Saving…' : 'Save public store settings'}
+      </button>
+    </div>
+  );
+}
+
 export default function Settings() {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -2045,6 +2165,9 @@ export default function Settings() {
                       )}
                     </div>
                   </div>
+
+                  {/* ── Public Storefront ── */}
+                  <PublicStoreSettings user={user} />
 
                   {/* Store QR Code Section */}
                   <div className="mt-8 pt-6 border-t border-gray-200">

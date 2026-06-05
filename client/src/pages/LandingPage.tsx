@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import {
   ArrowRight,
@@ -23,6 +24,9 @@ import {
   ReceiptText,
   UserCheck,
   Wallet,
+  Search,
+  Store,
+  MapPin,
 } from "lucide-react";
 
 function DashboardMockup() {
@@ -119,6 +123,149 @@ function DashboardMockup() {
         </div>
       </div>
     </div>
+  );
+}
+
+interface SearchResult {
+  productId: number;
+  productName: string;
+  category?: string | null;
+  imageUrl?: string | null;
+  images?: string[] | null;
+  price: string;
+  minOrderQuantity?: number | null;
+  wholesalerId: string;
+  businessName: string;
+  storeSlug?: string | null;
+  logoUrl?: string | null;
+  priceDisplayMode: string;
+  city?: string | null;
+}
+
+function MarketplaceSearch() {
+  const [query, setQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('');
+  const [results, setResults] = useState<SearchResult[]>([]);
+  const [categories, setCategories] = useState<string[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [searched, setSearched] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const doSearch = async (q: string, cat: string) => {
+    if (!q && !cat) { setResults([]); setSearched(false); return; }
+    setLoading(true);
+    setSearched(true);
+    try {
+      const params = new URLSearchParams();
+      if (q) params.set('q', q);
+      if (cat) params.set('category', cat);
+      const res = await fetch(`/api/public/search?${params}`);
+      const data = await res.json();
+      setResults(data.results || []);
+      if (data.categories?.length) setCategories(data.categories);
+    } catch { /* silent */ }
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => doSearch(query, selectedCategory), 350);
+    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
+  }, [query, selectedCategory]);
+
+  const storeUrl = (r: SearchResult) => `/w/${r.storeSlug || r.wholesalerId}`;
+
+  const hasContent = searched || query || selectedCategory;
+
+  return (
+    <section className="bg-gray-50 border-b border-gray-100 py-10 sm:py-14">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6">
+        <div className="text-center mb-6">
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Find wholesale suppliers</h2>
+          <p className="text-sm text-gray-500 mt-1">Search products from verified UK wholesalers</p>
+        </div>
+
+        {/* Search bar */}
+        <div className="max-w-xl mx-auto relative mb-4">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <Input
+            placeholder="Search products, categories or suppliers…"
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+            className="pl-10 pr-4 py-5 text-sm rounded-xl border-gray-200 shadow-sm bg-white"
+          />
+        </div>
+
+        {/* Category chips (once populated) */}
+        {categories.length > 0 && (
+          <div className="flex flex-wrap justify-center gap-2 mb-6">
+            {categories.slice(0, 12).map(cat => (
+              <button
+                key={cat}
+                onClick={() => setSelectedCategory(c => c === cat ? '' : cat)}
+                className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                  selectedCategory === cat
+                    ? 'bg-primary text-white'
+                    : 'bg-white text-gray-600 border border-gray-200 hover:border-primary/40'
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Results */}
+        {loading && (
+          <div className="flex justify-center py-8">
+            <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+          </div>
+        )}
+
+        {!loading && searched && results.length === 0 && (
+          <div className="text-center py-8 text-gray-400 text-sm">
+            <Store className="h-8 w-8 mx-auto mb-2 text-gray-300" />
+            No results found — try a different search
+          </div>
+        )}
+
+        {!loading && results.length > 0 && (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+            {results.map(r => {
+              const imgSrc = r.imageUrl || (r.images && r.images[0]) || null;
+              const showPrice = r.priceDisplayMode === 'shown';
+              const price = showPrice ? `£${parseFloat(r.price).toFixed(2)}` : null;
+              return (
+                <a key={r.productId} href={storeUrl(r)} className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden hover:shadow-md transition-shadow group">
+                  <div className="aspect-square bg-gray-50 flex items-center justify-center overflow-hidden">
+                    {imgSrc
+                      ? <img src={imgSrc} alt={r.productName} className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform" />
+                      : <Package className="h-8 w-8 text-gray-300" />
+                    }
+                  </div>
+                  <div className="p-2.5">
+                    {r.category && <p className="text-[10px] text-primary font-semibold uppercase tracking-wide mb-0.5 truncate">{r.category}</p>}
+                    <p className="text-xs font-semibold text-gray-900 line-clamp-2 leading-tight mb-1">{r.productName}</p>
+                    {price && <p className="text-sm font-bold text-gray-900 mb-1">{price}</p>}
+                    {r.minOrderQuantity && r.minOrderQuantity > 1 && <p className="text-[10px] text-amber-600">MOQ: {r.minOrderQuantity}</p>}
+                    <div className="flex items-center gap-1 mt-1.5 pt-1.5 border-t border-gray-50">
+                      <Store className="h-3 w-3 text-gray-400 flex-shrink-0" />
+                      <span className="text-[10px] text-gray-400 truncate">{r.businessName}</span>
+                    </div>
+                  </div>
+                </a>
+              );
+            })}
+          </div>
+        )}
+
+        {!hasContent && (
+          <div className="text-center mt-4">
+            <p className="text-xs text-gray-400">Start typing to search across all public wholesale stores</p>
+          </div>
+        )}
+      </div>
+    </section>
   );
 }
 
@@ -252,6 +399,9 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
+
+      {/* ── MARKETPLACE SEARCH STRIP ── */}
+      <MarketplaceSearch />
 
       {/* ── FEATURE CARDS STRIP ── */}
       <section className="bg-white border-b border-gray-100 py-12 sm:py-16">

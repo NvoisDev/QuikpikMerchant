@@ -20,6 +20,7 @@ import { registerPriceListRoutes } from "./routes/price-lists";
 import { registerBatchRoutes } from "./routes/batches";
 import { registerBusinessProfileRoutes } from "./routes/business-profiles";
 import { registerCollectionAddressRoutes } from "./routes/collection-addresses";
+import { registerPublicStoreRoutes } from "./routes/public-store";
 import { logServerError } from "./lib/errorLogger";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -49,6 +50,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerBatchRoutes(app);
   registerBusinessProfileRoutes(app);
   registerCollectionAddressRoutes(app);
+  registerPublicStoreRoutes(app);
 
   // Global error middleware — captures unhandled route errors and persists them to system_error_logs
   app.use(async (err: Error, req: Request, res: Response, _next: NextFunction) => {
