@@ -545,6 +545,83 @@ export function registerPriceListRoutes(app: Express): void {
     }
   });
 
+  // POST /api/price-lists/:id/customers/:customerId — atomically add one customer
+  app.post("/api/price-lists/:id/customers/:customerId", requireAuth, requireNotViewer, async (req: any, res) => {
+    try {
+      const wholesalerId = getWholesalerId(req);
+      const id = parseInt(req.params.id);
+      const { customerId } = req.params;
+
+      const [list] = await db
+        .select()
+        .from(priceLists)
+        .where(and(eq(priceLists.id, id), eq(priceLists.wholesalerId, wholesalerId)));
+      if (!list) return res.status(404).json({ message: "Price list not found" });
+      if (list.isLocked) return res.status(403).json({ message: "This price list is locked." });
+
+      // Verify customer belongs to this wholesaler
+      const [rel] = await db
+        .select()
+        .from(wholesalerCustomerRelationships)
+        .where(
+          and(
+            eq(wholesalerCustomerRelationships.wholesalerId, wholesalerId),
+            eq(wholesalerCustomerRelationships.customerId, customerId),
+          ),
+        );
+      if (!rel) return res.status(403).json({ message: "Customer not found in your account" });
+
+      // Idempotent insert — skip if already assigned
+      const [existing] = await db
+        .select()
+        .from(priceListAssignments)
+        .where(
+          and(
+            eq(priceListAssignments.priceListId, id),
+            eq(priceListAssignments.customerId, customerId),
+          ),
+        );
+      if (!existing) {
+        await db.insert(priceListAssignments).values({ priceListId: id, customerId, customerGroupId: null });
+      }
+
+      res.json({ success: true });
+    } catch (err) {
+      console.error("Error adding customer to price list:", err);
+      res.status(500).json({ message: "Failed to add customer to price list" });
+    }
+  });
+
+  // DELETE /api/price-lists/:id/customers/:customerId — atomically remove one customer
+  app.delete("/api/price-lists/:id/customers/:customerId", requireAuth, requireNotViewer, async (req: any, res) => {
+    try {
+      const wholesalerId = getWholesalerId(req);
+      const id = parseInt(req.params.id);
+      const { customerId } = req.params;
+
+      const [list] = await db
+        .select()
+        .from(priceLists)
+        .where(and(eq(priceLists.id, id), eq(priceLists.wholesalerId, wholesalerId)));
+      if (!list) return res.status(404).json({ message: "Price list not found" });
+      if (list.isLocked) return res.status(403).json({ message: "This price list is locked." });
+
+      await db
+        .delete(priceListAssignments)
+        .where(
+          and(
+            eq(priceListAssignments.priceListId, id),
+            eq(priceListAssignments.customerId, customerId),
+          ),
+        );
+
+      res.json({ success: true });
+    } catch (err) {
+      console.error("Error removing customer from price list:", err);
+      res.status(500).json({ message: "Failed to remove customer from price list" });
+    }
+  });
+
   // POST /api/price-lists/:id/share — send to all assigned customers
   app.post("/api/price-lists/:id/share", requireAuth, requireNotViewer, async (req: any, res) => {
     try {

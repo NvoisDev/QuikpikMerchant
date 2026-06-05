@@ -49,6 +49,7 @@ import { SubscriptionUpgradeModal } from "@/components/subscription/Subscription
 import { PriceListManagementDialog } from "@/components/customer/PriceListManagementDialog";
 import { CustomerGroupsTab } from "@/components/customer/CustomerGroupsTab";
 import { CustomerMergeDialog } from "@/components/customer/CustomerMergeDialog";
+import { AddToPriceListDialog } from "@/components/customer/AddToPriceListDialog";
 
 // Form Schemas
 const editCustomerFormSchema = z.object({
@@ -181,6 +182,9 @@ export default function Customers() {
 
   // Price list filter (set by address-book badge click, read by PriceListManagementDialog)
   const [priceListFilterCustomer, setPriceListFilterCustomer] = useState<{ id: string; name: string } | null>(null);
+
+  // Add to price list dialog
+  const [priceListTarget, setPriceListTarget] = useState<{ id: string; name: string } | null>(null);
 
   // Merge dialog trigger state (dialog manages its own internal state)
   const [isMergeDialogOpen, setIsMergeDialogOpen] = useState(false);
@@ -987,6 +991,12 @@ export default function Customers() {
                               </DropdownMenuItem>
                             )}
                             {!isViewer && (
+                              <DropdownMenuItem onClick={() => setPriceListTarget({ id: customer.id, name: getDisplayName(customer) })}>
+                                <Tag className="h-4 w-4 mr-2" />
+                                Add to Price List
+                              </DropdownMenuItem>
+                            )}
+                            {!isViewer && (
                               <DropdownMenuItem onClick={() => handleEditCustomer(customer)}>
                                 <Edit3 className="h-4 w-4 mr-2" />
                                 Edit Customer
@@ -1342,6 +1352,13 @@ export default function Customers() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Add to Price List Dialog */}
+      <AddToPriceListDialog
+        customer={priceListTarget}
+        open={!!priceListTarget}
+        onClose={() => setPriceListTarget(null)}
+      />
 
       {/* Customer Merge Dialog */}
       <CustomerMergeDialog
