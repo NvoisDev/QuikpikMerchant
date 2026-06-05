@@ -387,6 +387,7 @@ function MarketplaceSearch() {
         {!hasContent && (
           <div className="text-center mt-3">
             <p className="text-xs text-gray-400">Start typing to discover African wholesale suppliers and their products</p>
+            <p className="text-xs text-gray-300 mt-1.5">Some suppliers keep their stores invite-only — ask your supplier for a direct link.</p>
           </div>
         )}
       </div>
