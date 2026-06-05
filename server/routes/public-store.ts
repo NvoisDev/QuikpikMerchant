@@ -3,6 +3,7 @@ import { db } from "../db";
 import { users, products, storeEnquiries } from "@shared/schema";
 import { eq, and, ilike, or, sql } from "drizzle-orm";
 import { z } from "zod";
+import sgMail from "@sendgrid/mail";
 
 export function registerPublicStoreRoutes(app: Express) {
 
@@ -172,6 +173,9 @@ export function registerPublicStoreRoutes(app: Express) {
         enquirerEmail: z.string().email().optional().or(z.literal('')).transform(v => v || null),
         enquirerPhone: z.string().optional().transform(v => v || null),
         enquirerBusiness: z.string().optional().transform(v => v || null),
+        businessType: z.string().optional().transform(v => v || null),
+        estimatedOrderVolume: z.string().optional().transform(v => v || null),
+        preferredContact: z.string().optional().transform(v => v || null),
         message: z.string().optional().transform(v => v || null),
         productId: z.number().optional().nullable(),
         productName: z.string().optional().transform(v => v || null),
@@ -182,7 +186,7 @@ export function registerPublicStoreRoutes(app: Express) {
 
       // Verify the wholesaler is public
       const [wholesaler] = await db
-        .select({ id: users.id, storeVisibility: users.storeVisibility })
+        .select({ id: users.id, storeVisibility: users.storeVisibility, email: users.email, businessName: users.businessName })
         .from(users)
         .where(eq(users.id, data.wholesalerId));
 
@@ -198,6 +202,9 @@ export function registerPublicStoreRoutes(app: Express) {
           enquirerEmail: data.enquirerEmail ?? null,
           enquirerPhone: data.enquirerPhone ?? null,
           enquirerBusiness: data.enquirerBusiness ?? null,
+          businessType: data.businessType ?? null,
+          estimatedOrderVolume: data.estimatedOrderVolume ?? null,
+          preferredContact: data.preferredContact ?? null,
           message: data.message ?? null,
           productId: data.productId ?? null,
           productName: data.productName ?? null,
@@ -205,6 +212,45 @@ export function registerPublicStoreRoutes(app: Express) {
           status: 'new',
         })
         .returning();
+
+      // Email notification to wholesaler
+      if (wholesaler.email) {
+        try {
+          const businessLabel = data.enquirerBusiness ? ` from ${data.enquirerBusiness}` : '';
+          const productLine = data.productName ? `<p><strong>Product interest:</strong> ${data.productName}${data.quantity ? ` (qty: ${data.quantity})` : ''}</p>` : '';
+          const volumeLine = data.estimatedOrderVolume ? `<p><strong>Estimated order value:</strong> ${data.estimatedOrderVolume}</p>` : '';
+          const businessTypeLine = data.businessType ? `<p><strong>Business type:</strong> ${data.businessType}</p>` : '';
+          const contactLine = data.preferredContact ? `<p><strong>Preferred contact:</strong> ${data.preferredContact}</p>` : '';
+          const messageLine = data.message ? `<p><strong>Message:</strong> ${data.message}</p>` : '';
+
+          await sgMail.send({
+            to: wholesaler.email,
+            from: 'hello@quikpik.co',
+            subject: `New lead${businessLabel} — ${data.enquirerName}`,
+            html: `
+              <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:24px">
+                <h2 style="color:#16a34a;margin-bottom:4px">New Wholesale Enquiry</h2>
+                <p style="color:#6b7280;margin-bottom:20px">Someone found your store on Quikpik and wants to connect.</p>
+                <div style="background:#f9fafb;border-radius:12px;padding:16px;margin-bottom:16px">
+                  <p><strong>Name:</strong> ${data.enquirerName}</p>
+                  ${data.enquirerBusiness ? `<p><strong>Business:</strong> ${data.enquirerBusiness}</p>` : ''}
+                  ${businessTypeLine}
+                  ${data.enquirerPhone ? `<p><strong>Phone/WhatsApp:</strong> ${data.enquirerPhone}</p>` : ''}
+                  ${data.enquirerEmail ? `<p><strong>Email:</strong> ${data.enquirerEmail}</p>` : ''}
+                  ${contactLine}
+                </div>
+                ${productLine || volumeLine || messageLine ? `
+                <div style="background:#f9fafb;border-radius:12px;padding:16px;margin-bottom:16px">
+                  ${productLine}${volumeLine}${messageLine}
+                </div>` : ''}
+                <a href="https://quikpik.app/leads" style="display:inline-block;background:#16a34a;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600">View in Leads Inbox →</a>
+              </div>
+            `,
+          });
+        } catch (emailErr) {
+          console.warn("Failed to send lead email notification:", emailErr);
+        }
+      }
 
       res.json({ success: true, enquiryId: enquiry.id });
     } catch (err) {

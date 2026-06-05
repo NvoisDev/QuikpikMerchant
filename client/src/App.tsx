@@ -59,6 +59,7 @@ const OrderDetail = lazy(() => import("@/pages/order-detail"));
 const ProductDetail = lazy(() => import("@/pages/product-detail"));
 const WelcomePage = lazy(() => import("@/pages/WelcomePage"));
 const PublicStorePage = lazy(() => import("@/pages/public-store-page"));
+const LeadsPage = lazy(() => import("@/pages/leads"));
 const Blog = lazy(() => import("@/pages/blog"));
 const BlogPost = lazy(() => import("@/pages/blog-post"));
 
@@ -126,6 +127,9 @@ const TeamManagementSection = () => (
 );
 const IntegrationsSection = () => (
   <SectionErrorBoundary sectionName="Integrations"><Integrations /></SectionErrorBoundary>
+);
+const LeadsSection = () => (
+  <SectionErrorBoundary sectionName="Leads"><LeadsPage /></SectionErrorBoundary>
 );
 const CustomerPortalSection = () => (
   <SectionErrorBoundary sectionName="Customer portal"><CustomerPortal /></SectionErrorBoundary>
@@ -264,6 +268,7 @@ function AuthenticatedRoutes() {
               <Route path="/help" component={Help} />
               <Route path="/subscription-pricing" component={SubscriptionPricing} />
               <Route path="/integrations" component={IntegrationsSection} />
+              <Route path="/leads" component={LeadsSection} />
             </>
           ) : (
             <>

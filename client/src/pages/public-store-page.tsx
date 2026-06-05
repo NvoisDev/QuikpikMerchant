@@ -138,6 +138,15 @@ function ProductCard({
   );
 }
 
+const BUSINESS_TYPES = [
+  'Retail Store', 'Supermarket', 'Convenience Store', 'Restaurant',
+  'Distributor', 'Cash & Carry', 'Online Store', 'Market Trader', 'Other',
+];
+
+const ORDER_VOLUMES = [
+  'Under £100', '£100–£500', '£500–£1,000', '£1,000+', 'Regular weekly orders',
+];
+
 function EnquiryModal({
   wholesaler,
   product,
@@ -153,6 +162,9 @@ function EnquiryModal({
     enquirerEmail: '',
     enquirerPhone: '',
     enquirerBusiness: '',
+    businessType: '',
+    estimatedOrderVolume: '',
+    preferredContact: '',
     message: '',
     quantity: '',
   });
@@ -165,6 +177,9 @@ function EnquiryModal({
         enquirerEmail: form.enquirerEmail || undefined,
         enquirerPhone: form.enquirerPhone || undefined,
         enquirerBusiness: form.enquirerBusiness || undefined,
+        businessType: form.businessType || undefined,
+        estimatedOrderVolume: form.estimatedOrderVolume || undefined,
+        preferredContact: form.preferredContact || undefined,
         message: form.message || undefined,
         productId: product?.id ?? null,
         productName: product?.name ?? null,
@@ -200,6 +215,8 @@ function EnquiryModal({
         </div>
 
         <div className="p-4 space-y-3">
+          {/* Business details */}
+          <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Your Details</p>
           <div>
             <label className="text-xs font-medium text-gray-700 mb-1 block">Your name *</label>
             <Input
@@ -234,6 +251,34 @@ function EnquiryModal({
               />
             </div>
           </div>
+
+          {/* Business info */}
+          <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider pt-1">Business Info</p>
+          <div>
+            <label className="text-xs font-medium text-gray-700 mb-1 block">Business type</label>
+            <select
+              value={form.businessType}
+              onChange={e => setForm(f => ({ ...f, businessType: e.target.value }))}
+              className="w-full h-9 border border-input rounded-md px-3 text-sm bg-background"
+            >
+              <option value="">Select type…</option>
+              {BUSINESS_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="text-xs font-medium text-gray-700 mb-1 block">Estimated order size</label>
+            <select
+              value={form.estimatedOrderVolume}
+              onChange={e => setForm(f => ({ ...f, estimatedOrderVolume: e.target.value }))}
+              className="w-full h-9 border border-input rounded-md px-3 text-sm bg-background"
+            >
+              <option value="">Select range…</option>
+              {ORDER_VOLUMES.map(v => <option key={v} value={v}>{v}</option>)}
+            </select>
+          </div>
+
+          {/* Enquiry */}
+          <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider pt-1">Your Enquiry</p>
           {product && (
             <div>
               <label className="text-xs font-medium text-gray-700 mb-1 block">Quantity needed</label>
@@ -248,11 +293,32 @@ function EnquiryModal({
           <div>
             <label className="text-xs font-medium text-gray-700 mb-1 block">Message</label>
             <Textarea
-              placeholder="Any specific requirements, delivery location, etc."
+              placeholder="What are you looking for? Any delivery requirements?"
               value={form.message}
               rows={3}
               onChange={e => setForm(f => ({ ...f, message: e.target.value }))}
             />
+          </div>
+
+          {/* Preferred contact */}
+          <div>
+            <label className="text-xs font-medium text-gray-700 mb-1.5 block">Preferred contact method</label>
+            <div className="flex gap-2">
+              {['Phone', 'WhatsApp', 'Email'].map(c => (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => setForm(f => ({ ...f, preferredContact: f.preferredContact === c.toLowerCase() ? '' : c.toLowerCase() }))}
+                  className={`flex-1 py-1.5 rounded-lg border text-xs font-medium transition-colors ${
+                    form.preferredContact === c.toLowerCase()
+                      ? 'bg-emerald-600 text-white border-emerald-600'
+                      : 'bg-white text-gray-600 border-gray-200 hover:border-emerald-400'
+                  }`}
+                >
+                  {c}
+                </button>
+              ))}
+            </div>
           </div>
 
           <Button

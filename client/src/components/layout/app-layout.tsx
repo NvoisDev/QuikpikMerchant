@@ -16,6 +16,7 @@ const PAGE_NAMES: { href: string; name: string }[] = [
   { href: "/products", name: "Products" },
   { href: "/promotions", name: "Promotions" },
   { href: "/customers", name: "Customers" },
+  { href: "/leads", name: "Leads" },
   { href: "/campaigns", name: "Broadcast" },
   { href: "/marketplace", name: "Marketplace" },
   { href: "/integrations", name: "Integrations" },

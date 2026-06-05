@@ -418,6 +418,10 @@ async function runStartupMigrations() {
        AND pack_quantity IS NOT NULL
        AND pack_quantity > 0`,
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS is_inactive BOOLEAN NOT NULL DEFAULT FALSE`,
+    // Phase 2 public store enquiries — lead qualification fields
+    `ALTER TABLE store_enquiries ADD COLUMN IF NOT EXISTS business_type VARCHAR(100)`,
+    `ALTER TABLE store_enquiries ADD COLUMN IF NOT EXISTS estimated_order_volume VARCHAR(50)`,
+    `ALTER TABLE store_enquiries ADD COLUMN IF NOT EXISTS preferred_contact VARCHAR(20)`,
   ];
   for (const stmt of migrations) {
     await db.execute(sql.raw(stmt));

@@ -1,0 +1,201 @@
+This step is VERY important because this is where Quikpik starts becoming a real B2B commerce platform rather than just software.
+
+You want the enquiry flow to:
+
+feel lightweight
+not overwhelm retailers
+collect enough information for wholesalers to qualify leads
+create serious business opportunities
+
+The mistake most platforms make is asking for too much too early.
+
+Best Structure for “Make Contact / Enquiry”
+1. Business Information (Essential)
+Business Name
+Business / Store Name
+Contact Person
+Full Name
+Phone Number
+
+Very important in wholesale.
+
+Email Address
+
+Needed for formal communication.
+
+2. Business Type (Very Valuable)
+
+Dropdown:
+
+Retail Store
+Supermarket
+Convenience Store
+Restaurant
+Distributor
+Cash & Carry
+Online Store
+Market Trader
+Other
+
+This becomes valuable later for:
+
+analytics
+supplier targeting
+lead quality
+3. Location
+Address / Postcode
+
+Very important for:
+
+delivery feasibility
+territory coverage
+route planning later
+
+You could even reuse your Google Places feature here.
+
+4. Products Interested In
+
+Very important.
+
+Options:
+
+Free text
+OR
+Auto-filled from selected products
+
+Example:
+
+Interested in:
+- Indomie
+- Frozen Chicken
+- Malt Drinks
+5. Estimated Order Volume (VERY IMPORTANT)
+
+This helps wholesalers qualify serious buyers.
+
+Simple dropdown:
+
+Estimated Order Size
+Under £100
+£100–£500
+£500–£1,000
+£1,000+
+Regular weekly orders
+
+This is GOLD for wholesalers.
+
+6. Message Box
+Tell the wholesaler what you're looking for
+
+Example:
+
+Looking for weekly supply for our convenience store in Birmingham.
+7. Preferred Contact Method
+Phone
+WhatsApp
+Email
+
+VERY important in wholesale.
+
+Honestly:
+WhatsApp may become dominant for your users.
+
+8. Optional Delivery Questions
+
+Later:
+
+Need delivery?
+Collection only?
+Frequency needed?
+
+But not necessary yet.
+
+My Recommended MVP Form
+Clean Version
+Business Details
+Business Name
+Contact Name
+Phone Number
+Email
+Business Info
+Business Type
+Location/Postcode
+Enquiry
+Products Interested In
+Estimated Order Volume
+Message
+Preferences
+Preferred Contact Method
+What Happens After Submission?
+
+This part matters just as much.
+
+Wholesaler should receive:
+
+email
+dashboard notification
+optional WhatsApp alert later
+
+With:
+
+New wholesale enquiry from XYZ Stores
+
+Then inside Quikpik:
+
+lead pipeline
+contacted/not contacted
+converted/not converted
+
+Eventually this becomes:
+
+wholesale CRM.
+
+VERY Important Strategic Point
+
+Do NOT force pricing transparency yet.
+
+Many wholesalers:
+
+negotiate pricing
+tier pricing
+custom quotes
+relationship pricing
+
+So:
+
+Request Quote
+
+is smarter than:
+
+Buy Now
+
+at this stage.
+
+What I Think Your Real Opportunity Is
+
+You are quietly building:
+
+B2B wholesale infrastructure
+
+Not just:
+
+inventory software
+
+That’s a much bigger category long term.
+
+My Strong Recommendation
+
+Start SIMPLE:
+
+✅ enquiry forms
+✅ storefronts
+✅ retailer discovery
+
+Avoid immediately adding:
+❌ carts
+❌ checkout
+❌ live marketplace logistics
+❌ escrow systems
+❌ public pricing wars
+
+The lightweight network model is much safer and more scalable initially.
