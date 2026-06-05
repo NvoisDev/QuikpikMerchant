@@ -381,6 +381,9 @@ export default function LandingPage() {
         )}
       </nav>
 
+      {/* ── MARKETPLACE SEARCH STRIP ── */}
+      <MarketplaceSearch />
+
       {/* ── HERO ── */}
       <section className="relative bg-gray-950 overflow-hidden min-h-[620px] flex items-center">
         {/* Warehouse background photo — right half */}
@@ -454,9 +457,6 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
-
-      {/* ── MARKETPLACE SEARCH STRIP ── */}
-      <MarketplaceSearch />
 
       {/* ── FEATURE CARDS STRIP ── */}
       <section className="bg-white border-b border-gray-100 py-12 sm:py-16">
