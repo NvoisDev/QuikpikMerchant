@@ -339,8 +339,8 @@ export function registerPriceListRoutes(app: Express): void {
         .set({
           name: name ?? existing.name,
           description: description !== undefined ? description : existing.description,
-          startDate: startDate !== undefined ? startDate : existing.startDate,
-          endDate: endDate !== undefined ? endDate : existing.endDate,
+          startDate: startDate !== undefined ? (startDate || null) : existing.startDate,
+          endDate: endDate !== undefined ? (endDate || null) : existing.endDate,
           isActive: isActive !== undefined ? isActive : existing.isActive,
           updatedAt: new Date(),
         })
