@@ -284,11 +284,6 @@ function MarketplaceSearch() {
               <span className="w-1.5 h-1.5 rounded-full bg-green-400 inline-block" />
               Trade pricing
             </span>
-            <span className="text-gray-200">·</span>
-            <span className="flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-green-400 inline-block" />
-              Pan-Africa delivery
-            </span>
           </div>
         </div>
 
