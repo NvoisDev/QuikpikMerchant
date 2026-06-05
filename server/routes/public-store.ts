@@ -68,7 +68,7 @@ export function registerPublicStoreRoutes(app: Express) {
         .where(
           and(
             eq(products.wholesalerId, wholesaler.id),
-            eq(products.archived, false)
+            eq(products.status, 'active')
           )
         )
         .orderBy(products.name);
@@ -94,7 +94,7 @@ export function registerPublicStoreRoutes(app: Express) {
       const conditions = [
         eq(users.storeVisibility, 'public'),
         eq(users.isInactive, false),
-        eq(products.archived, false),
+        eq(products.status, 'active'),
       ] as any[];
 
       if (q) {
@@ -120,8 +120,8 @@ export function registerPublicStoreRoutes(app: Express) {
           imageUrl: products.imageUrl,
           images: products.images,
           price: products.price,
-          minOrderQuantity: products.minOrderQuantity,
-          unitsPerPack: products.unitsPerPack,
+          minOrderQuantity: products.moq,
+          unitsPerPack: products.quantityInPack,
           wholesalerId: users.id,
           businessName: users.businessName,
           storeSlug: users.storeSlug,
@@ -145,7 +145,7 @@ export function registerPublicStoreRoutes(app: Express) {
           and(
             eq(users.storeVisibility, 'public'),
             eq(users.isInactive, false),
-            eq(products.archived, false),
+            eq(products.status, 'active'),
             sql`${products.category} is not null and ${products.category} != ''`
           )
         )
