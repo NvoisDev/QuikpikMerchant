@@ -43,6 +43,7 @@ interface NavigationItem {
   premiumOnly?: boolean;
   comingSoon?: boolean;
   soonBadge?: boolean;
+  freeTrialBadge?: boolean;
 }
 
 const navigation: NavigationItem[] = [
@@ -51,7 +52,7 @@ const navigation: NavigationItem[] = [
   { name: "Products", href: "/products", icon: Package, onboardingId: "products-list", tabName: "products" },
   { name: "Promotions", href: "/promotions", icon: Tag, tabName: "promotions" },
   { name: "Customers", href: "/customers", icon: Users, onboardingId: "customer-groups", tabName: "customers" },
-  { name: "Leads", href: "/leads", icon: Inbox, tabName: "leads" },
+  { name: "Leads", href: "/leads", icon: Inbox, tabName: "leads", freeTrialBadge: true },
   { name: "Broadcast", href: "/campaigns", icon: MessageSquare, onboardingId: "campaigns", tabName: "campaigns", soonBadge: true },
   { name: "Marketplace", href: "/marketplace", icon: Store, tabName: "marketplace", soonBadge: true },
   { name: "Integrations", href: "/integrations", icon: Puzzle, tabName: "integrations" },
@@ -260,6 +261,11 @@ export default function Sidebar() {
                               Soon
                             </span>
                           )}
+                          {item.freeTrialBadge && (
+                            <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded font-medium border border-emerald-500/30">
+                              Free Trial
+                            </span>
+                          )}
                         </>
                       )}
                       {/* On mobile when dc=true, still show badges */}
@@ -279,6 +285,11 @@ export default function Sidebar() {
                           {showSoonBadge && (
                             <span className="text-[10px] bg-slate-800 text-slate-500 px-1.5 py-0.5 rounded font-medium border border-slate-700">
                               Soon
+                            </span>
+                          )}
+                          {item.freeTrialBadge && (
+                            <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded font-medium border border-emerald-500/30">
+                              Free Trial
                             </span>
                           )}
                         </span>
