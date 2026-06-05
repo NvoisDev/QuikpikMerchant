@@ -127,10 +127,10 @@ function DashboardMockup() {
 
 function RetailerProductsMockup() {
   const products = [
-    { name: "Organic Green Tea",    supplier: "TW Foods Ltd",  price: "£12.50", unit: "per case",  moq: 24, bg: "bg-green-100",  ic: "text-green-600"  },
-    { name: "Premium Coffee Beans", supplier: "BeanCo UK",     price: "£8.99",  unit: "per kg",    moq: 12, bg: "bg-amber-100",  ic: "text-amber-600"  },
-    { name: "Natural Honey Jars",   supplier: "HiveHarvest",   price: "£22.00", unit: "per dozen", moq: 6,  bg: "bg-yellow-100", ic: "text-yellow-600" },
-    { name: "Artisan Olive Oil",    supplier: "MedProduce UK", price: "£15.50", unit: "per case",  moq: 12, bg: "bg-blue-100",   ic: "text-blue-600"   },
+    { name: "Organic Green Tea",    supplier: "TW Foods Ltd",  price: "£12.50", unit: "/ cs",  moq: 24, bg: "bg-green-100",  ic: "text-green-600"  },
+    { name: "Premium Coffee Beans", supplier: "BeanCo UK",     price: "£8.99",  unit: "/ kg",  moq: 12, bg: "bg-amber-100",  ic: "text-amber-600"  },
+    { name: "Natural Honey Jars",   supplier: "HiveHarvest",   price: "£22.00", unit: "/ doz", moq: 6,  bg: "bg-yellow-100", ic: "text-yellow-600" },
+    { name: "Artisan Olive Oil",    supplier: "MedProduce UK", price: "£15.50", unit: "/ cs",  moq: 12, bg: "bg-blue-100",   ic: "text-blue-600"   },
   ];
   return (
     <div className="bg-white rounded-2xl shadow-2xl overflow-hidden w-full max-w-sm text-gray-900 select-none">
@@ -147,7 +147,7 @@ function RetailerProductsMockup() {
           <span className="text-xs text-gray-400">Search products, brands or categories…</span>
         </div>
         <div className="grid grid-cols-2 gap-2">
-          {products.map(({ name, supplier, price, moq, bg, ic }) => (
+          {products.map(({ name, supplier, price, unit, moq, bg, ic }) => (
             <div key={name} className="bg-white border border-gray-100 rounded-xl p-2.5 hover:border-primary/20 transition-colors">
               <div className={`${bg} rounded-lg h-14 flex items-center justify-center mb-2`}>
                 <Package className={`h-5 w-5 ${ic}`} />
@@ -155,7 +155,7 @@ function RetailerProductsMockup() {
               <p className="text-xs font-semibold text-gray-900 leading-tight mb-0.5 truncate">{name}</p>
               <p className="text-[10px] text-gray-400 mb-1.5 truncate">{supplier}</p>
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-gray-900">{price}</span>
+                <span className="text-xs font-bold text-gray-900">{price} <span className="font-normal text-gray-400">{unit}</span></span>
                 <span className="text-[10px] bg-gray-50 border border-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full">MOQ {moq}</span>
               </div>
             </div>
@@ -459,7 +459,9 @@ export default function LandingPage() {
       </nav>
 
       {/* ── MARKETPLACE SEARCH STRIP ── */}
-      <MarketplaceSearch />
+      <div id="marketplace-search">
+        <MarketplaceSearch />
+      </div>
 
       {/* ── HERO ── */}
       <section className={`overflow-hidden relative flex items-center ${activeAudience === 'wholesaler' ? 'bg-gray-950 min-h-[640px]' : 'bg-[#f7f6f2]'}`}>
@@ -478,12 +480,12 @@ export default function LandingPage() {
 
           {/* Audience toggle */}
           <div className="flex justify-center mb-10 sm:mb-12">
-            <div className={`inline-flex rounded-xl p-1 ${activeAudience === 'wholesaler' ? 'bg-white/10 border border-white/20' : 'bg-white border border-gray-200 shadow-sm'}`}>
+            <div className={`flex w-full sm:w-auto rounded-xl p-1 ${activeAudience === 'wholesaler' ? 'bg-white/10 border border-white/20' : 'bg-white border border-gray-200 shadow-sm'}`}>
               {(['retailer', 'wholesaler'] as const).map((key) => (
                 <button
                   key={key}
                   onClick={() => setActiveAudience(key)}
-                  className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all ${
+                  className={`flex-1 sm:flex-none px-5 py-2 rounded-lg text-sm font-semibold transition-all ${
                     activeAudience === key
                       ? key === 'wholesaler'
                         ? 'bg-white text-gray-950 shadow-sm'
@@ -534,7 +536,7 @@ export default function LandingPage() {
 
                   <div className="flex flex-col sm:flex-row gap-3 mb-7">
                     <Button
-                      onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                      onClick={() => document.getElementById('marketplace-search')?.scrollIntoView({ behavior: 'smooth' })}
                       size="lg"
                       className="text-base px-8 py-6 bg-gray-950 hover:bg-gray-800 text-white rounded-lg font-semibold"
                     >
