@@ -58,11 +58,10 @@ export function registerPublicStoreRoutes(app: Express) {
           category: products.category,
           imageUrl: products.imageUrl,
           images: products.images,
-          unitsPerPack: products.unitsPerPack,
+          unitsPerPack: products.quantityInPack,
           unitsPerPallet: products.unitsPerPallet,
           baseUnitStock: products.baseUnitStock,
-          minOrderQuantity: products.minOrderQuantity,
-          sku: products.sku,
+          minOrderQuantity: products.moq,
         })
         .from(products)
         .where(
