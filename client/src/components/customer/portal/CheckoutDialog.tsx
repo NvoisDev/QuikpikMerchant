@@ -130,10 +130,10 @@ export function CheckoutDialog({
 
   return (
     <Dialog open={showCheckout} onOpenChange={(open) => { setShowCheckout(open); if (!open) setPayLaterMode(false); }}>
-      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="text-xl font-semibold">Complete Your Order</DialogTitle>
-          <DialogDescription>
+      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto bg-[#f7f6f2]">
+        <DialogHeader className="pb-2">
+          <DialogTitle className="text-xl font-extrabold tracking-tight text-gray-950">Complete Your Order</DialogTitle>
+          <DialogDescription className="text-sm text-gray-500">
             Review your items and complete your purchase
           </DialogDescription>
         </DialogHeader>
@@ -141,8 +141,8 @@ export function CheckoutDialog({
         {cart.length > 0 && wholesaler && (
           <div className="space-y-6">
             {/* Order Summary with Fee Breakdown */}
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <h3 className="font-semibold mb-3">Order Summary</h3>
+            <div className="bg-white p-5 rounded-2xl border border-gray-100">
+              <h3 className="font-bold text-gray-900 tracking-tight mb-4">Order Summary</h3>
               <div className="space-y-3">
                 {cart.map((item, index) => {
                   let itemPrice;
@@ -412,8 +412,8 @@ export function CheckoutDialog({
             </div>
 
             {/* Customer Information Form */}
-            <div className="space-y-4">
-              <h3 className="font-semibold">Customer Information</h3>
+            <div className="bg-white p-5 rounded-2xl border border-gray-100 space-y-4">
+              <h3 className="font-bold text-gray-900 tracking-tight">Customer Information</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="customer-name">Full Name</Label>
@@ -447,8 +447,8 @@ export function CheckoutDialog({
             </div>
 
             {/* Shipping Options */}
-            <div className="space-y-4">
-              <h3 className="font-semibold">
+            <div className="bg-white p-5 rounded-2xl border border-gray-100 space-y-4">
+              <h3 className="font-bold text-gray-900 tracking-tight">
                 Delivery Options
                 {!customerData.shippingOption && (
                   <span className="text-red-500 ml-2 text-sm">*Required</span>
@@ -575,7 +575,7 @@ export function CheckoutDialog({
               </div>
 
               {customerData.shippingOption === 'delivery' && wholesaler?.id && (
-                <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
+                <div className="space-y-4 p-4 bg-[#f7f6f2] rounded-xl border border-gray-100">
                   <div className="flex items-center justify-between">
                     <h4 className="font-medium">Choose Delivery Address</h4>
                     {customerData.selectedDeliveryAddress && (
@@ -645,8 +645,8 @@ export function CheckoutDialog({
             </div>
 
             {/* Order Notes */}
-            <div className="space-y-2">
-              <Label htmlFor="notes">Order Notes (Optional)</Label>
+            <div className="bg-white p-5 rounded-2xl border border-gray-100 space-y-2">
+              <Label htmlFor="notes" className="font-bold text-gray-900 tracking-tight text-sm">Order Notes (Optional)</Label>
               <Textarea
                 id="notes"
                 value={customerData.notes}
@@ -657,10 +657,10 @@ export function CheckoutDialog({
             </div>
 
             {/* Payment Form */}
-            <div className="border-t pt-6">
+            <div className="bg-white p-5 rounded-2xl border border-gray-100">
               {customerData.shippingOption && wholesaler?.allowPayLater && (
                 <div className="mb-5">
-                  <h3 className="font-semibold mb-2">Payment Method</h3>
+                  <h3 className="font-bold text-gray-900 tracking-tight mb-3">Payment Method</h3>
                   <div className="flex rounded-lg border border-gray-200 overflow-hidden">
                     <button
                       type="button"

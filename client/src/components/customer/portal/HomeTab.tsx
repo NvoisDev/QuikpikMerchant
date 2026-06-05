@@ -201,8 +201,8 @@ export function HomeTab({
       {/* Top Selling Products */}
       <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
         <div className="flex items-center justify-between mb-5">
-          <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-            <TrendingUp className="w-5 h-5 text-theme-primary" />
+          <h2 className="text-base font-extrabold text-gray-950 tracking-tight flex items-center gap-2">
+            <TrendingUp className="w-4 h-4 text-theme-primary" />
             Top Selling
           </h2>
           <button
@@ -225,21 +225,21 @@ export function HomeTab({
               const pricing = calculatePromotionalPricing(product, product.moq);
 
               return (
-                <Card key={product.id} className="h-full personalized-card animate-fade-in group cursor-pointer rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-md transition-shadow"
+                <Card key={product.id} className="h-full animate-fade-in group cursor-pointer rounded-2xl overflow-hidden border border-gray-100 hover:border-gray-200 hover:shadow-md transition-all duration-200 bg-white"
                       style={{animationDelay: `${Math.random() * 0.3}s`}}>
                   <CardContent className="p-0">
                     <div className="space-y-0">
                       {/* Product Image */}
-                      <div className="relative h-44 bg-gray-100 overflow-hidden group-hover:shadow-inner transition-all duration-300">
+                      <div className="relative h-44 bg-gray-50 overflow-hidden">
                         {product.imageUrl ? (
                           <img
                             src={product.imageUrl}
                             alt={product.name}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                            className="w-full h-full object-contain p-2 group-hover:scale-105 transition-transform duration-300"
                           />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center">
-                            <Package className="w-8 h-8 text-gray-400 group-hover:scale-110 transition-transform duration-300" />
+                            <Package className="w-8 h-8 text-gray-300" />
                           </div>
                         )}
                         {pricing.promoLabel && (
@@ -257,7 +257,7 @@ export function HomeTab({
                       {/* Product Info */}
                       <div className="p-4 space-y-3">
                         <div>
-                          <h3 className="font-semibold text-gray-900 line-clamp-1 group-hover:text-theme-primary transition-colors duration-300">
+                          <h3 className="font-bold text-gray-900 text-sm line-clamp-1 tracking-tight group-hover:text-theme-primary transition-colors duration-300">
                             {product.name}
                           </h3>
                           <div className="flex items-center justify-between mt-1">

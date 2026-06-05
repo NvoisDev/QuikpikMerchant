@@ -1626,7 +1626,7 @@ export default function CustomerPortal() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-[#f7f6f2]">
       {/* Preview Mode Banner */}
       {isEnhancedPreviewMode && (
         <div className="bg-orange-500 text-white px-4 py-2 text-center text-sm font-medium">
@@ -1635,7 +1635,7 @@ export default function CustomerPortal() {
       )}
 
       {/* Header - Single-row on all viewports */}
-      <div className="bg-white shadow-sm sticky top-0 z-50">
+      <div className="bg-[#f7f6f2] border-b border-gray-200 sticky top-0 z-50">
         <div className="container mx-auto px-4 py-3">
           <div className="flex items-center justify-between gap-3">
             {/* Left — Store Logo + Name */}
@@ -1644,10 +1644,10 @@ export default function CustomerPortal() {
                 <img 
                   src={wholesaler.logoUrl} 
                   alt={wholesaler.businessName || "Business logo"} 
-                  className="h-10 w-10 rounded-xl object-contain flex-shrink-0 shadow-sm"
+                  className="h-10 w-10 rounded-xl object-contain flex-shrink-0 bg-white border border-gray-200 p-0.5"
                 />
               ) : wholesaler?.logoType === "business" && wholesaler?.businessName ? (
-                <div className="h-10 w-10 rounded-xl bg-theme-primary flex items-center justify-center flex-shrink-0 shadow-sm">
+                <div className="h-10 w-10 rounded-xl bg-theme-primary flex items-center justify-center flex-shrink-0">
                   <span className="text-sm font-bold text-white">
                     {wholesaler.businessName
                       .split(' ')
@@ -1657,7 +1657,7 @@ export default function CustomerPortal() {
                   </span>
                 </div>
               ) : (
-                <div className="h-10 w-10 rounded-xl bg-theme-primary flex items-center justify-center flex-shrink-0 shadow-sm">
+                <div className="h-10 w-10 rounded-xl bg-theme-primary flex items-center justify-center flex-shrink-0">
                   <span className="text-sm font-bold text-white">
                     {wholesaler?.businessName ? (
                       wholesaler.businessName.charAt(0).toUpperCase() + 
@@ -1667,7 +1667,7 @@ export default function CustomerPortal() {
                 </div>
               )}
               <div className="min-w-0">
-                <h1 className="text-base font-bold text-gray-900 truncate leading-tight">
+                <h1 className="text-base font-extrabold text-gray-950 truncate leading-tight tracking-tight">
                   {wholesalerLoading ? (
                     <span className="text-gray-400">Loading...</span>
                   ) : wholesalerError ? (

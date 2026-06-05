@@ -165,7 +165,7 @@ export function ProductsTab({
       </div>
 
       {/* Sticky search + filter toolbar */}
-      <div className="sticky top-16 z-30 bg-white -mx-4 px-4 pt-2 pb-3 border-b border-gray-100 space-y-3 sm:mx-0 sm:px-4 sm:border sm:rounded-xl sm:shadow-sm sm:border-gray-100">
+      <div className="sticky top-16 z-30 bg-[#f7f6f2] -mx-4 px-4 pt-2 pb-3 border-b border-gray-200 space-y-3 sm:mx-0 sm:px-4 sm:border sm:rounded-2xl sm:shadow-sm sm:border-gray-200 sm:bg-white">
         <div className="flex items-center gap-2">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -252,22 +252,28 @@ export function ProductsTab({
             ))}
           </div>
         ) : productsError ? (
-          <div className="text-center py-16">
-            <Package className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">Unable to load products</h3>
-            <p className="text-gray-500 mb-4">There was an error loading the product catalog.</p>
-            <Button onClick={() => refetchProducts()} variant="outline">
+          <div className="text-center py-20 bg-white rounded-2xl border border-gray-100">
+            <div className="w-16 h-16 bg-gray-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <Package className="w-8 h-8 text-gray-300" />
+            </div>
+            <h3 className="text-base font-extrabold text-gray-900 tracking-tight mb-1">Unable to load products</h3>
+            <p className="text-sm text-gray-500 mb-5">There was an error loading the product catalogue. Please try again.</p>
+            <Button onClick={() => refetchProducts()} variant="outline" className="rounded-full px-5">
               Try Again
             </Button>
           </div>
         ) : filteredProducts.length === 0 ? (
-          <div className="text-center py-16">
-            <Package className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No products found</h3>
-            <p className="text-gray-500">
+          <div className="text-center py-20 bg-white rounded-2xl border border-gray-100">
+            <div className="w-16 h-16 bg-gray-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <Package className="w-8 h-8 text-gray-300" />
+            </div>
+            <h3 className="text-base font-extrabold text-gray-900 tracking-tight mb-1">
+              {searchTerm || selectedCategory !== "all" ? "No matches found" : "No products yet"}
+            </h3>
+            <p className="text-sm text-gray-500">
               {searchTerm || selectedCategory !== "all"
-                ? "Try adjusting your search or filters"
-                : "This store doesn't have any products available yet."
+                ? "Try a different search term or clear your filters"
+                : "This store hasn't listed any products yet. Check back soon."
               }
             </p>
           </div>
@@ -388,11 +394,11 @@ export function ProductsTab({
                     {/* Product Info */}
                     <div className="p-4 space-y-2">
                       <div>
-                        <h3 className="font-semibold text-gray-900 text-sm leading-snug line-clamp-2 mb-1">
+                        <h3 className="font-bold text-gray-900 text-sm leading-snug line-clamp-2 mb-1 tracking-tight">
                           {product.name}
                         </h3>
                         {product.description && (
-                          <p className="text-xs text-gray-500 line-clamp-2">
+                          <p className="text-xs text-gray-500 line-clamp-2 leading-relaxed">
                             {cleanAIDescription(product.description)}
                           </p>
                         )}
