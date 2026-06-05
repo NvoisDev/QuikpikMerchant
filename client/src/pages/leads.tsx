@@ -196,7 +196,7 @@ export default function LeadsPage() {
           <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
             <Inbox className="h-6 w-6 text-primary" /> Leads
           </h1>
-          <p className="text-sm text-gray-500 mt-0.5">Enquiries from your public store</p>
+          <p className="hidden sm:block text-sm text-gray-500 mt-0.5">Enquiries from your public store</p>
         </div>
         {newCount > 0 && (
           <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-2">
