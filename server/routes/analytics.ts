@@ -839,7 +839,7 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
           const customer = customers.find(c => c.id === customerId);
           return {
             id: customerId,
-            name: customer?.firstName ? `${customer.firstName} ${customer.lastName || ''}`.trim() : customer?.businessName || data.customerName || 'Unknown Customer',
+            name: customer?.businessName || (customer?.firstName ? `${customer.firstName} ${customer.lastName || ''}`.trim() : null) || data.customerName || 'Unknown Customer',
             phone: customer?.phoneNumber || '',
             orderCount: data.orderCount,
             totalSpent: Math.round(data.totalSpent * 100) / 100,
