@@ -114,18 +114,20 @@ function ProductCard({
         )}
 
         {/* Weight info */}
-        {(product.totalPackageWeight || (product.packQuantity && product.unitWeightKg)) && (
-          <p className="text-[11px] text-gray-400 mb-1">
-            {product.totalPackageWeight && (
-              <span>{parseFloat(product.totalPackageWeight)} kg/pack</span>
-            )}
-            {product.packQuantity && product.unitWeightKg && (
-              <span className={product.totalPackageWeight ? ' · ' : ''}>
-                {product.packQuantity} × {parseFloat(product.unitWeightKg)}kg
-              </span>
-            )}
-          </p>
-        )}
+        {(product.totalPackageWeight || product.packQuantity) && (() => {
+          const totalW = parseFloat(product.totalPackageWeight ?? '0') || 0;
+          const qty = product.packQuantity || 0;
+          const storedUnit = parseFloat(product.unitWeightKg ?? '0') || 0;
+          const unitW = storedUnit > 0 ? storedUnit : (totalW > 0 && qty > 0 ? totalW / qty : 0);
+          return (
+            <p className="text-[11px] text-gray-400 mb-1">
+              {totalW > 0 && <span>{totalW} kg/pack</span>}
+              {qty > 0 && unitW > 0 && (
+                <span>{totalW > 0 ? ' · ' : ''}{qty} × {+unitW.toFixed(3)}kg</span>
+              )}
+            </p>
+          );
+        })()}
 
         {/* MOQ */}
         {product.minOrderQuantity && product.minOrderQuantity > 1 && (
