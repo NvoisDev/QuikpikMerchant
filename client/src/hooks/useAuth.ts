@@ -130,18 +130,16 @@ export function useAuth() {
       queryClient.clear();
       localStorage.clear();
       sessionStorage.clear();
-      // Force redirect to landing page instead of login
-      window.location.href = "/landing";
+      window.location.href = "/";
     },
     onError: (error) => {
       console.error("Back to home error:", error);
-      // Force logout even if API fails and go to landing
       clearSwApiCache();
       queryClient.setQueryData(["/api/auth/user"], null);
       queryClient.clear();
       localStorage.clear();
       sessionStorage.clear();
-      window.location.href = "/landing";
+      window.location.href = "/";
     }
   });
 
