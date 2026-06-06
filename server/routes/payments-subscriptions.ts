@@ -118,7 +118,9 @@ export function registerSubscriptionRoutes(app: Express): void {
       const isTestAccount = false;
       const stripe = getStripeClient(false);
 
-      // Get or create Stripe customer
+      // Get or create Stripe customer.
+      // Any mode-mismatch (live customer ID used against a test client, or vice-versa)
+      // is detected and recovered from inside getOrCreateStripeCustomer — no extra guard needed here.
       const stripeCustomerId = await SubscriptionService.getOrCreateStripeCustomer(userId, isTestAccount);
       
       // Check for existing active subscription

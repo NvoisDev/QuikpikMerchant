@@ -355,18 +355,20 @@ export class SubscriptionService {
       }
 
       // Validate stored customer ID exists in the current Stripe mode (live vs test).
-      // Accounts created while the platform was in test mode have a test customer ID
-      // (e.g. cus_T1...) that is rejected by the live-mode Stripe API.
+      // This guard handles BOTH mismatch directions:
+      //   • test ID stored → live-mode client   (e.g. account created in test mode, now going live)
+      //   • live ID stored → test-mode client   (e.g. test-account flag set after live customer created)
+      // In either case the Stripe API returns resource_missing, which we catch and recover from
+      // by clearing the stale ID and creating a fresh customer in the correct mode.
       if (user.stripeCustomerId) {
         try {
           await stripe.customers.retrieve(user.stripeCustomerId);
           return user.stripeCustomerId;
         } catch (verifyErr: any) {
-          // resource_missing with "a similar object exists in test mode" means a
-          // test customer is stored but we are now in live mode — clear it and
-          // fall through to create a fresh live-mode customer below.
+          // resource_missing is returned regardless of which direction the mode mismatch
+          // goes — clear the stale ID and fall through to create a fresh customer below.
           if (verifyErr?.code === 'resource_missing') {
-            console.warn(`⚠️ Stored Stripe customer ${user.stripeCustomerId} is invalid in current mode — creating a new one.`);
+            console.warn(`⚠️ Stored Stripe customer ${user.stripeCustomerId} is invalid in current mode (mode mismatch) — creating a new one.`);
             await db.update(users)
               .set({ stripeCustomerId: null })
               .where(eq(users.id, userId));
