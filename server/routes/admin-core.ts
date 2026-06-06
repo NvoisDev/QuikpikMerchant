@@ -210,6 +210,7 @@ export function registerAdminCoreRoutes(app: Express): void {
           lastSeenAt: w.lastSeenAt ?? null,
           lastRealUserActivityAt: w.lastRealUserActivityAt ?? null,
           enableMultiProfile: w.enableMultiProfile ?? false,
+          showOnHomepage: w.showOnHomepage ?? false,
           legalBusinessName: w.legalBusinessName ?? null,
           vatNumber: w.vatNumber ?? null,
           companyRegistrationNumber: w.companyRegistrationNumber ?? null,
@@ -431,6 +432,24 @@ export function registerAdminCoreRoutes(app: Express): void {
     } catch (error) {
       console.error('Admin toggle-inactive error:', error);
       res.status(500).json({ error: 'Failed to toggle inactive status' });
+    }
+  });
+
+  // PATCH /api/admin/wholesalers/:id/toggle-show-on-homepage
+  app.patch('/api/admin/wholesalers/:id/toggle-show-on-homepage', requireAuth, async (req: any, res) => {
+    try {
+      if (!ADMIN_EMAILS.includes(getAdminEmail(req) || "")) return res.status(403).json({ error: 'Forbidden' });
+      const targetUser = await db.select().from(users).where(eq(users.id, req.params.id)).limit(1);
+      if (!targetUser.length || targetUser[0].role !== 'wholesaler') {
+        return res.status(404).json({ error: 'Wholesaler not found' });
+      }
+      const newValue = !targetUser[0].showOnHomepage;
+      await db.update(users).set({ showOnHomepage: newValue }).where(eq(users.id, req.params.id));
+      console.log(`[admin] showOnHomepage toggled to ${newValue} for ${targetUser[0].email}`);
+      res.json({ id: req.params.id, showOnHomepage: newValue });
+    } catch (error) {
+      console.error('Admin toggle-show-on-homepage error:', error);
+      res.status(500).json({ error: 'Failed to toggle homepage visibility' });
     }
   });
 

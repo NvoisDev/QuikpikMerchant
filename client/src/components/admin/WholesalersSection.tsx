@@ -19,7 +19,7 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   Eye, Mail, CreditCard, Building2, Info, FileText, UserCheck,
-  ToggleLeft, ToggleRight, UserPlus, Percent, LogIn,
+  ToggleLeft, ToggleRight, UserPlus, Percent, LogIn, Globe,
 } from "lucide-react";
 import { format } from "date-fns";
 import { formatDateTime } from "@shared/utils/date";
@@ -196,6 +196,20 @@ export function WholesalersSection({ wholesalers, wholesalersLoading, isAdmin }:
     onError: (e: Error) => toast({ title: e.message, variant: "destructive" }),
   });
 
+  const toggleShowOnHomepage = useMutation({
+    mutationFn: async (id: string) => {
+      const r = await apiRequest("PATCH", `/api/admin/wholesalers/${id}/toggle-show-on-homepage`);
+      if (!r.ok) { const e = await r.json(); throw new Error(e.error || "Failed"); }
+      return r.json() as Promise<{ id: string; showOnHomepage: boolean }>;
+    },
+    onSuccess: (_data, id) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/wholesalers"] });
+      setSelectedWholesaler(prev => prev ? { ...prev, showOnHomepage: _data.showOnHomepage } : prev);
+      toast({ title: _data.showOnHomepage ? "Added to homepage strip" : "Removed from homepage strip" });
+    },
+    onError: (e: Error) => toast({ title: e.message, variant: "destructive" }),
+  });
+
   const legalInfoMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: { legalBusinessName: string; vatNumber: string; companyRegistrationNumber: string } }) => {
       const r = await apiRequest("PATCH", `/api/admin/users/${id}/legal-info`, data);
@@ -335,6 +349,16 @@ export function WholesalersSection({ wholesalers, wholesalersLoading, isAdmin }:
                           <p className="text-xs font-medium text-gray-800">{w.businessName || `${w.firstName || ''} ${w.lastName || ''}`.trim()}</p>
                           {w.isTestAccount && <span className="text-xs bg-yellow-100 text-yellow-700 border border-yellow-200 px-1.5 py-0.5 rounded font-medium">Test</span>}
                           {w.isInactive && <span className="text-xs bg-gray-100 text-gray-500 border border-gray-300 px-1.5 py-0.5 rounded font-medium">Inactive</span>}
+                          {w.showOnHomepage && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-xs font-medium bg-green-50 text-green-700 border border-green-200 cursor-default">
+                                  <Globe className="h-2.5 w-2.5" />Home
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent side="top" className="text-xs">Shown on homepage logo strip</TooltipContent>
+                            </Tooltip>
+                          )}
                         </div>
                         <p className="text-xs text-gray-400">{w.email}</p>
                       </TableCell>
@@ -682,6 +706,29 @@ export function WholesalersSection({ wholesalers, wholesalersLoading, isAdmin }:
                     )}
                     <span className={selectedWholesaler.enableMultiProfile ? "text-blue-700" : "text-gray-400"}>
                       {selectedWholesaler.enableMultiProfile ? "Enabled" : "Disabled"}
+                    </span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Homepage Logo Strip */}
+              <div className="border-t border-gray-100 pt-3">
+                <p className="text-xs font-semibold text-gray-700 mb-1 flex items-center gap-1.5">
+                  <Globe className="h-3.5 w-3.5" style={{ color: GREEN }} />Homepage Logo Strip
+                </p>
+                <p className="text-xs text-gray-400 mb-2">Controls whether this wholesaler's logo appears in the homepage logo strip.</p>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => toggleShowOnHomepage.mutate(selectedWholesaler.id)}
+                    disabled={toggleShowOnHomepage.isPending}
+                    className="flex items-center gap-2 text-xs font-medium">
+                    {selectedWholesaler.showOnHomepage ? (
+                      <ToggleRight className="h-5 w-5" style={{ color: GREEN }} />
+                    ) : (
+                      <ToggleLeft className="h-5 w-5 text-gray-400" />
+                    )}
+                    <span className={selectedWholesaler.showOnHomepage ? "text-green-700" : "text-gray-400"}>
+                      {selectedWholesaler.showOnHomepage ? "Shown on homepage" : "Hidden from homepage"}
                     </span>
                   </button>
                 </div>

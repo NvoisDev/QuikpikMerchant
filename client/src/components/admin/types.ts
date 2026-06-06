@@ -37,6 +37,7 @@ export interface WholesalerRow {
   lastSeenAt?: string | null;
   lastRealUserActivityAt?: string | null;
   enableMultiProfile?: boolean;
+  showOnHomepage?: boolean;
   legalBusinessName?: string | null;
   vatNumber?: string | null;
   companyRegistrationNumber?: string | null;
