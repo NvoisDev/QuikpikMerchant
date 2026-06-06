@@ -501,9 +501,9 @@ export default function LandingPage() {
         {activeAudience === 'wholesaler' && (
           <div className="absolute inset-y-0 right-0 w-full sm:w-[65%] lg:w-[58%]">
             <img src="/hero-warehouse.jpg" alt="" aria-hidden="true" className="w-full h-full object-cover object-[65%_center]" loading="eager" />
-            <div className="absolute inset-0 bg-gradient-to-r from-gray-950 via-gray-950/85 sm:via-gray-950/60 to-transparent" />
-            <div className="absolute inset-0 sm:hidden bg-gray-950/50" />
-            <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-gray-950/80 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-r from-gray-950/75 via-gray-950/40 sm:via-gray-950/25 to-transparent" />
+            <div className="absolute inset-0 sm:hidden bg-gray-950/20" />
+            <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-gray-950/50 to-transparent" />
           </div>
         )}
 
@@ -670,10 +670,6 @@ export default function LandingPage() {
                   </div>
                 </div>
 
-                {/* WHOLESALER — Right mockup */}
-                <div className="flex-shrink-0 w-full max-w-xs sm:max-w-sm lg:max-w-md mx-auto lg:mx-0">
-                  <DashboardMockup />
-                </div>
               </>
             )}
 
@@ -684,29 +680,41 @@ export default function LandingPage() {
       {/* ── WHOLESALER SECTIONS ── */}
       {activeAudience === 'wholesaler' && (
         <section className="bg-white border-b border-gray-100 py-14 sm:py-20">
-          <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center mb-10">
-              <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-1 tracking-tight">Everything in one dashboard</h2>
-              <p className="text-gray-500 text-sm">No more juggling apps. Run your whole business from one place.</p>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-              {[
-                { icon: Box,         title: "Inventory Management",  desc: "Track stock in real time and never oversell." },
-                { icon: ReceiptText, title: "Invoicing",             desc: "Create and send professional invoices in seconds." },
-                { icon: UserCheck,   title: "Customer Management",   desc: "Manage customers, balances and order history." },
-                { icon: Wallet,      title: "Payment Tracking",      desc: "Track payments and get paid faster, every time." },
-              ].map(({ icon: Icon, title, desc }, i) => (
-                <div
-                  key={i}
-                  className="flex flex-col items-center text-center p-6 rounded-2xl bg-gray-50 border border-gray-100 group hover:bg-white hover:shadow-sm hover:border-gray-200 transition-all duration-200"
-                >
-                  <div className="w-11 h-11 rounded-full bg-white border border-gray-200 flex items-center justify-center flex-shrink-0 mb-4 group-hover:border-gray-300 transition-colors">
-                    <Icon className="text-gray-500" style={{ width: 18, height: 18 }} />
-                  </div>
-                  <h3 className="font-semibold text-gray-900 text-sm mb-1">{title}</h3>
-                  <p className="text-gray-500 text-xs leading-relaxed">{desc}</p>
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex flex-col lg:flex-row items-center gap-10 lg:gap-16">
+
+              {/* Left — dashboard mockup */}
+              <div className="flex-shrink-0 w-full max-w-sm mx-auto lg:mx-0">
+                <DashboardMockup />
+              </div>
+
+              {/* Right — heading + feature cards */}
+              <div className="flex-1 w-full">
+                <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-1 tracking-tight">Everything in one dashboard</h2>
+                <p className="text-gray-500 text-sm mb-8">No more juggling apps. Run your whole business from one place.</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {[
+                    { icon: Box,         title: "Inventory Management",  desc: "Track stock in real time and never oversell." },
+                    { icon: ReceiptText, title: "Invoicing",             desc: "Create and send professional invoices in seconds." },
+                    { icon: UserCheck,   title: "Customer Management",   desc: "Manage customers, balances and order history." },
+                    { icon: Wallet,      title: "Payment Tracking",      desc: "Track payments and get paid faster, every time." },
+                  ].map(({ icon: Icon, title, desc }, i) => (
+                    <div
+                      key={i}
+                      className="flex items-start gap-4 p-5 rounded-2xl bg-gray-50 border border-gray-100 group hover:bg-white hover:shadow-sm hover:border-gray-200 transition-all duration-200"
+                    >
+                      <div className="w-10 h-10 rounded-full bg-white border border-gray-200 flex items-center justify-center flex-shrink-0 group-hover:border-gray-300 transition-colors">
+                        <Icon className="text-gray-500" style={{ width: 17, height: 17 }} />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-gray-900 text-sm mb-0.5">{title}</h3>
+                        <p className="text-gray-500 text-xs leading-relaxed">{desc}</p>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              </div>
+
             </div>
           </div>
         </section>
