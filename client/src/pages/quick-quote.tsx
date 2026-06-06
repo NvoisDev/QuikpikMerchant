@@ -158,6 +158,10 @@ function buildInvoiceMessage({
   fulfillmentLine,
   paymentLink,
   signOff,
+  paymentMethod,
+  balanceDueDays,
+  depositPercentage,
+  bankDetails,
 }: {
   customerName: string;
   businessName: string;
@@ -167,10 +171,45 @@ function buildInvoiceMessage({
   fulfillmentLine: string;
   paymentLink: string;
   signOff?: string | null;
+  paymentMethod?: string | null;
+  balanceDueDays?: number | null;
+  depositPercentage?: number | null;
+  bankDetails?: {
+    bankName?: string | null;
+    accountName?: string | null;
+    accountNumber?: string | null;
+    sortCode?: string | null;
+    iban?: string | null;
+    swift?: string | null;
+  } | null;
 }): string {
   const closingLine = signOff && signOff.trim()
     ? signOff.trim()
     : `Thank you for your order! 🙏\n${businessName}`;
+
+  let paymentSection: string;
+
+  if (depositPercentage === 0) {
+    paymentSection = `📝 Your order has been noted. We'll be in touch about payment.`;
+  } else if (paymentMethod === 'bank_transfer') {
+    const dueText = !balanceDueDays || balanceDueDays === 0 ? 'now' : `within ${balanceDueDays} days`;
+    const bankLines: string[] = [];
+    if (bankDetails?.bankName) bankLines.push(`Bank: ${bankDetails.bankName}`);
+    if (bankDetails?.accountName) bankLines.push(`Account Name: ${bankDetails.accountName}`);
+    if (bankDetails?.accountNumber) bankLines.push(`Account No: ${bankDetails.accountNumber}`);
+    if (bankDetails?.sortCode) bankLines.push(`Sort Code: ${bankDetails.sortCode}`);
+    if (bankDetails?.iban) bankLines.push(`IBAN: ${bankDetails.iban}`);
+    if (bankDetails?.swift) bankLines.push(`SWIFT/BIC: ${bankDetails.swift}`);
+    paymentSection = `💳 Balance due: ${total}\n🏦 Please pay by bank transfer ${dueText}.` +
+      (bankLines.length > 0 ? `\n\n🏦 Bank Details:\n${bankLines.join('\n')}` : '');
+  } else if (paymentMethod === 'cash' || paymentMethod === 'cheque') {
+    const dueText = !balanceDueDays || balanceDueDays === 0 ? 'now' : `within ${balanceDueDays} days`;
+    paymentSection = `💳 Balance due: ${total}\nPlease pay by ${paymentMethod} ${dueText}.`;
+  } else {
+    const dueText = balanceDueDays && balanceDueDays > 0 ? `\n⏰ Payment due within ${balanceDueDays} days.` : '';
+    paymentSection = `💳 Balance due: ${total}${dueText}\nPay here → ${paymentLink}`;
+  }
+
   return (
     `Hi ${customerName} 👋\n\n` +
     `Here's your invoice from ${businessName}.\n\n` +
@@ -178,8 +217,7 @@ function buildInvoiceMessage({
     `${itemLines}\n` +
     `💰 Total: ${total}\n` +
     `📦 ${fulfillmentLine}\n\n` +
-    `💳 Balance due: ${total}\n` +
-    `Pay here → ${paymentLink}\n\n` +
+    `${paymentSection}\n\n` +
     closingLine
   );
 }
@@ -274,6 +312,17 @@ export default function QuickQuote() {
 
   const { data: invoiceSignOffData } = useQuery<{ invoiceSignOff: string | null }>({
     queryKey: ['/api/business-profile/invoice-sign-off'],
+  });
+
+  const { data: bankDetailsData } = useQuery<{
+    bankName: string | null;
+    accountName: string | null;
+    accountNumber: string | null;
+    sortCode: string | null;
+    iban: string | null;
+    swift: string | null;
+  }>({
+    queryKey: ['/api/business-profile/bank-details'],
   });
 
   const { data: collectionAddresses = [] } = useQuery<CollectionAddress[]>({
@@ -685,6 +734,10 @@ export default function QuickQuote() {
           fulfillmentLine: fulfillmentType === 'delivery' ? 'Delivery' : 'Collection from your store',
           paymentLink: data.paymentLink,
           signOff: invoiceSignOffData?.invoiceSignOff ?? null,
+          paymentMethod: quotePaymentMethod,
+          balanceDueDays,
+          depositPercentage,
+          bankDetails: bankDetailsData ?? null,
         });
         setDefaultShareMessage(builtMessage);
         const savedSuffix = user?.id ? localStorage.getItem(`quikpik_invoice_suffix_${user.id}`) : null;
