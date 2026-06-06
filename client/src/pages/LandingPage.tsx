@@ -27,6 +27,7 @@ import {
   Search,
   Store,
   MapPin,
+  Handshake,
 } from "lucide-react";
 
 function DashboardMockup() {
@@ -940,25 +941,39 @@ export default function LandingPage() {
           {/* ── WHOLESALER NUDGE ── */}
           <section className="py-12 bg-[#f7f8fa]">
             <div className="max-w-3xl mx-auto px-4 sm:px-6">
-              <div className="flex items-center gap-4 bg-white border border-gray-200 rounded-2xl shadow-sm px-5 py-4">
-                <div className="flex-shrink-0">
+              <div className="flex flex-col lg:flex-row gap-4 items-stretch">
+                {/* Warehouse photo — above on mobile, left on desktop */}
+                <div className="lg:w-2/5 flex-shrink-0 rounded-2xl overflow-hidden">
                   <img
-                    src="/wholesaler-banner.jpg"
-                    alt="Wholesale supplier"
-                    className="w-12 h-12 rounded-full object-cover object-top"
+                    src="/plota-warehouse.jpg"
+                    alt="Plota Foods warehouse"
+                    className="w-full h-48 lg:h-full object-cover object-center"
                   />
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-gray-900 text-sm">Are you a wholesale supplier?</p>
-                  <p className="text-gray-500 text-sm leading-snug">List your products, manage orders, and reach more buyers — free to get started.</p>
+                {/* Banner card */}
+                <div className="flex-1 flex items-center gap-4 bg-white border border-gray-200 rounded-2xl shadow-sm px-5 py-4">
+                  <div className="flex-shrink-0">
+                    <img
+                      src="/wholesaler-banner.jpg"
+                      alt="Plota Foods"
+                      className="w-12 h-12 rounded-full object-cover object-center"
+                    />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-gray-900 text-sm">Are you a wholesale supplier?</p>
+                    <p className="text-gray-500 text-sm leading-snug">List your products, manage orders, and reach more buyers — free to get started.</p>
+                    <p className="text-xs text-gray-400 mt-1 flex items-center gap-1">
+                      <Handshake className="h-3 w-3" /> Plota Foods is a featured partner
+                    </p>
+                  </div>
+                  <Button
+                    onClick={handleGetStarted}
+                    variant="outline"
+                    className="flex-shrink-0 border-gray-300 text-gray-800 hover:border-gray-400 text-sm font-semibold px-5 rounded-xl"
+                  >
+                    Start selling <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
+                  </Button>
                 </div>
-                <Button
-                  onClick={handleGetStarted}
-                  variant="outline"
-                  className="flex-shrink-0 border-gray-300 text-gray-800 hover:border-gray-400 text-sm font-semibold px-5 rounded-xl"
-                >
-                  Start selling <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
-                </Button>
               </div>
             </div>
           </section>
