@@ -398,10 +398,28 @@ function MarketplaceSearch() {
 export default function LandingPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeAudience, setActiveAudience] = useState<'retailer' | 'wholesaler'>('retailer');
+  const [featuredLogos, setFeaturedLogos] = useState<{ logoUrl: string | null; businessName: string }[]>([]);
   const handleGetStarted = () => { window.location.href = "/signup"; };
   const handleLogin = () => { window.location.href = "/login"; };
   const handleCustomerLogin = () => { window.location.href = "/customer-login"; };
   const handleBookDemo = () => { window.open("https://calendly.com/hello-quikpik/30min", "_blank"); };
+
+  useEffect(() => {
+    fetch('/api/public/search')
+      .then(r => r.json())
+      .then(data => {
+        const seen = new Set<string>();
+        const logos: { logoUrl: string | null; businessName: string }[] = [];
+        for (const r of (data.results || [])) {
+          if (!seen.has(r.wholesalerId) && logos.length < 4) {
+            seen.add(r.wholesalerId);
+            logos.push({ logoUrl: r.logoUrl ?? null, businessName: r.businessName ?? '' });
+          }
+        }
+        setFeaturedLogos(logos);
+      })
+      .catch(() => {});
+  }, []);
 
   return (
     <div className="min-h-screen bg-white text-gray-900">
@@ -933,8 +951,30 @@ export default function LandingPage() {
           <section className="py-14 bg-white border-t border-gray-100">
             <div className="max-w-4xl mx-auto px-4 sm:px-6">
               <div className="flex flex-col sm:flex-row items-center gap-6 bg-gray-50 border border-gray-200 rounded-2xl p-7">
-                <div className="flex-shrink-0 w-11 h-11 bg-primary/10 rounded-xl flex items-center justify-center">
-                  <TrendingUp className="h-5 w-5 text-primary" />
+                <div className="flex-shrink-0 flex items-center">
+                  {featuredLogos.length > 0 ? (
+                    <div className="flex -space-x-2">
+                      {featuredLogos.slice(0, 4).map((w, i) => (
+                        w.logoUrl
+                          ? <img
+                              key={i}
+                              src={w.logoUrl}
+                              alt={w.businessName}
+                              className="w-10 h-10 rounded-full object-contain bg-white border-2 border-white shadow-sm"
+                            />
+                          : <div
+                              key={i}
+                              className="w-10 h-10 rounded-full bg-primary flex items-center justify-center border-2 border-white shadow-sm text-white text-xs font-bold"
+                            >
+                              {w.businessName.charAt(0).toUpperCase()}
+                            </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="w-11 h-11 bg-primary/10 rounded-xl flex items-center justify-center">
+                      <TrendingUp className="h-5 w-5 text-primary" />
+                    </div>
+                  )}
                 </div>
                 <div className="flex-1 text-center sm:text-left">
                   <p className="font-bold text-gray-900 text-sm mb-1">Are you a wholesale supplier?</p>
