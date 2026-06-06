@@ -31,13 +31,56 @@ export function registerSubscriptionRoutes(app: Express): void {
       // Team members inherit their wholesaler's subscription plan
       const userId = resolveWholesalerId(req);
       const subscription = await SubscriptionService.getUserSubscription(userId);
-      res.json(subscription);
+
+      // Augment with payment method details from Stripe (non-blocking)
+      let paymentMethod: { brand: string; last4: string; expMonth: number; expYear: number } | null = null;
+      const stripeSubId = subscription?.subscription?.stripeSubscriptionId;
+      if (stripeSubId) {
+        try {
+          const stripe = getStripeClient(false);
+          const sub = await stripe.subscriptions.retrieve(stripeSubId, {
+            expand: ['default_payment_method'],
+          });
+          const pm = sub.default_payment_method;
+          if (pm && typeof pm === 'object' && (pm as any).card) {
+            const card = (pm as any).card;
+            paymentMethod = {
+              brand: card.brand ?? 'card',
+              last4: card.last4 ?? '????',
+              expMonth: card.exp_month ?? 0,
+              expYear: card.exp_year ?? 0,
+            };
+          }
+        } catch {
+          // Non-fatal — just omit payment method from response
+        }
+      }
+
+      res.json({ ...subscription, paymentMethod });
     } catch (error) {
       console.error('❌ Failed to get user subscription:', error);
       res.status(500).json({ 
         message: 'Failed to get user subscription',
         error: error instanceof Error ? error.message : 'Unknown error'
       });
+    }
+  });
+
+  // POST /api/subscriptions/billing-portal
+  app.post('/api/subscriptions/billing-portal', requireAuth, requireOwner, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const stripeCustomerId = await SubscriptionService.getOrCreateStripeCustomer(userId, false);
+      const returnUrl = `${process.env.FRONTEND_URL || 'https://quikpik.app'}/subscription-pricing`;
+      const stripe = getStripeClient(false);
+      const portalSession = await stripe.billingPortal.sessions.create({
+        customer: stripeCustomerId,
+        return_url: returnUrl,
+      });
+      res.json({ url: portalSession.url });
+    } catch (error: any) {
+      console.error('❌ Failed to create billing portal session:', error);
+      res.status(500).json({ message: error?.message || 'Failed to open billing portal' });
     }
   });
 

@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { CheckIcon, AlertTriangleIcon } from 'lucide-react';
+import { CheckIcon, AlertTriangleIcon, CreditCard, Loader2 } from 'lucide-react';
 import { DowngradeConfirmationModal } from '@/components/subscription/DowngradeConfirmationModal';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useAuth } from '@/hooks/useAuth';
@@ -41,6 +41,7 @@ interface CurrentSubscription {
   plan: SubscriptionPlan | null;
   currentPlan: string;
   subscriptionStatus: string;
+  paymentMethod: { brand: string; last4: string; expMonth: number; expYear: number } | null;
 }
 
 export default function SubscriptionPricing() {
@@ -55,6 +56,23 @@ export default function SubscriptionPricing() {
   const [showUpgradeWarningModal, setShowUpgradeWarningModal] = useState(false);
   const [pendingUpgrade, setPendingUpgrade] = useState<{ priceId: string; planName: string; planId: string } | null>(null);
   const [billingMode, setBillingMode] = useState<'monthly' | 'annual'>('monthly');
+  const [isBillingPortalLoading, setIsBillingPortalLoading] = useState(false);
+
+  const openBillingPortal = async () => {
+    setIsBillingPortalLoading(true);
+    try {
+      const response = await apiRequest('POST', '/api/subscriptions/billing-portal');
+      const data = await response.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error('No portal URL returned');
+      }
+    } catch {
+      toast({ title: 'Error', description: 'Could not open billing portal. Please try again.', variant: 'destructive' });
+      setIsBillingPortalLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (permissionsLoading) return;
@@ -455,6 +473,58 @@ export default function SubscriptionPricing() {
               </div>
             )}
           </div>
+
+          {/* Payment method + Manage Billing */}
+          {(() => {
+            const pm = currentSubscription.paymentMethod;
+            const isPastDue = currentSubscription.subscriptionStatus === 'past_due';
+            const isExpiringSoon = pm
+              ? new Date(pm.expYear, pm.expMonth - 1) <= new Date(Date.now() + 60 * 24 * 60 * 60 * 1000)
+              : false;
+            return (
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+                <div className="flex flex-col gap-1">
+                  {pm ? (
+                    <p className="text-sm text-gray-600 flex items-center gap-1.5">
+                      <CreditCard className="h-3.5 w-3.5 text-gray-400" />
+                      <span className="capitalize">{pm.brand}</span> ending in {pm.last4}
+                      &nbsp;·&nbsp;expires {pm.expMonth}/{pm.expYear}
+                      {isExpiringSoon && (
+                        <Badge variant="outline" className="ml-1 text-amber-600 border-amber-300 text-[10px] px-1.5 py-0">
+                          Expiring soon
+                        </Badge>
+                      )}
+                    </p>
+                  ) : (
+                    <p className="text-sm text-gray-400 flex items-center gap-1.5">
+                      <CreditCard className="h-3.5 w-3.5" /> Payment method on file
+                    </p>
+                  )}
+                  {isPastDue && (
+                    <p className="text-sm text-red-600 flex items-center gap-1.5">
+                      <AlertTriangleIcon className="h-3.5 w-3.5" />
+                      Payment failed — update your card to avoid interruption
+                    </p>
+                  )}
+                </div>
+                {user?.role !== 'team_member' && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={openBillingPortal}
+                    disabled={isBillingPortalLoading}
+                    className="text-sm font-medium shrink-0"
+                  >
+                    {isBillingPortalLoading ? (
+                      <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />Opening…</>
+                    ) : (
+                      <><CreditCard className="h-3.5 w-3.5 mr-1.5" />Manage Billing</>
+                    )}
+                  </Button>
+                )}
+              </div>
+            );
+          })()}
 
           {/* Downgrade pending — subscription ends at period end */}
           {currentSubscription.subscription?.cancelAtPeriodEnd && currentSubscription.user?.subscriptionPeriodEnd && (
