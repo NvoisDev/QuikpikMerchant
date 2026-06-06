@@ -938,24 +938,24 @@ export default function LandingPage() {
           </section>
 
           {/* ── WHOLESALER NUDGE ── */}
-          <section className="py-14 bg-white border-t border-gray-100">
-            <div className="max-w-4xl mx-auto px-4 sm:px-6">
-              <div className="flex flex-col sm:flex-row items-center gap-6 bg-gray-50 border border-gray-200 rounded-2xl p-7">
+          <section className="py-12 bg-[#f7f8fa]">
+            <div className="max-w-3xl mx-auto px-4 sm:px-6">
+              <div className="flex items-center gap-4 bg-white border border-gray-200 rounded-2xl shadow-sm px-5 py-4">
                 <div className="flex-shrink-0">
                   <img
                     src="/wholesaler-banner.jpg"
                     alt="Wholesale supplier"
-                    className="w-14 h-14 rounded-xl object-cover object-top shadow-sm"
+                    className="w-12 h-12 rounded-full object-cover object-top"
                   />
                 </div>
-                <div className="flex-1 text-center sm:text-left">
-                  <p className="font-bold text-gray-900 text-sm mb-1">Are you a wholesale supplier?</p>
-                  <p className="text-gray-500 text-sm">List your products, manage orders, and reach more buyers — free to get started.</p>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-gray-900 text-sm">Are you a wholesale supplier?</p>
+                  <p className="text-gray-500 text-sm leading-snug">List your products, manage orders, and reach more buyers — free to get started.</p>
                 </div>
                 <Button
                   onClick={handleGetStarted}
                   variant="outline"
-                  className="flex-shrink-0 border-gray-300 text-gray-700 hover:bg-white hover:border-primary hover:text-primary text-sm font-semibold px-5"
+                  className="flex-shrink-0 border-gray-300 text-gray-800 hover:border-gray-400 text-sm font-semibold px-5 rounded-xl"
                 >
                   Start selling <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
                 </Button>
