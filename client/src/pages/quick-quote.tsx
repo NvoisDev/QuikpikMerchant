@@ -206,7 +206,9 @@ function buildInvoiceMessage({
     const dueText = !balanceDueDays || balanceDueDays === 0 ? 'now' : `within ${balanceDueDays} days`;
     paymentSection = `💳 Balance due: ${total}\nPlease pay by ${paymentMethod} ${dueText}.`;
   } else {
-    const dueText = balanceDueDays && balanceDueDays > 0 ? `\n⏰ Payment due within ${balanceDueDays} days.` : '';
+    const dueText = balanceDueDays && balanceDueDays > 0
+      ? `\n⏰ Payment due within ${balanceDueDays} days.`
+      : `\n⏰ Payment due now.`;
     paymentSection = `💳 Balance due: ${total}${dueText}\nPay here → ${paymentLink}`;
   }
 
