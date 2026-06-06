@@ -343,7 +343,9 @@ export function registerPaymentConnectRoutes(app: Express): void {
               amountPaid: cumulativePaid.toFixed(2),
               amountOutstanding: newOutstanding.toFixed(2),
               paymentStatus: paymentStatus,
-              status: paymentStatus === 'paid' ? 'confirmed' : existingOrder.status,
+              status: paymentStatus === 'paid'
+                ? (existingOrder.status === 'fulfilled' ? 'fulfilled' : 'confirmed')
+                : existingOrder.status,
               stripePaymentIntentId: (() => {
                 // Append the new PI to existing ones (comma-separated) so multi-PI refunds work
                 const newPi = session.payment_intent as string | null;
@@ -625,7 +627,9 @@ export function registerPaymentConnectRoutes(app: Express): void {
                 amountPaid: cumulativePaid.toFixed(2),
                 amountOutstanding: newOutstanding.toFixed(2),
                 paymentStatus,
-                status: paymentStatus === 'paid' ? 'confirmed' : existingOrder.status,
+                status: paymentStatus === 'paid'
+                  ? (existingOrder.status === 'fulfilled' ? 'fulfilled' : 'confirmed')
+                  : existingOrder.status,
                 stripePaymentIntentId: newPiList,
                 stripePaymentLinkUrl: null,
                 stripePaymentLinkId: null,
