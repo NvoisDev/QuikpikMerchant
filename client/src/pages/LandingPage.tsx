@@ -967,7 +967,7 @@ export default function LandingPage() {
                         <img
                           src={w.logoUrl}
                           alt={w.businessName || 'Wholesaler'}
-                          className="w-16 h-16 rounded-full object-cover object-center ring-2 ring-white shadow-sm"
+                          className="w-16 h-16 rounded-xl object-contain"
                         />
                       ) : (
                         <div className="w-16 h-16 rounded-full bg-primary/10 ring-2 ring-white shadow-sm flex items-center justify-center">
