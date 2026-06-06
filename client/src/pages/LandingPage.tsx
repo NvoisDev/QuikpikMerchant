@@ -1023,52 +1023,96 @@ export default function LandingPage() {
                 </div>
 
                 {/* Right: warehouse image + floating platform cards */}
-                <div className="flex-1 w-full relative">
-                  {/* Image */}
-                  <div className="rounded-2xl overflow-hidden shadow-xl">
-                    <img
-                      src="/wholesaler-hero.jpg"
-                      alt="Wholesaler managing stock"
-                      className="w-full h-72 lg:h-[400px] object-cover object-top"
-                    />
+                <div className="flex-1 w-full">
+                  {/* Image wrapper — relative only on sm+ so absolute cards work */}
+                  <div className="relative">
+                    <div className="rounded-2xl overflow-hidden shadow-xl">
+                      <img
+                        src="/wholesaler-hero.jpg"
+                        alt="Wholesaler managing stock"
+                        className="w-full h-72 lg:h-[400px] object-cover object-top"
+                      />
+                    </div>
+
+                    {/* Floating card: New order received — hidden on mobile */}
+                    <div className="hidden sm:flex absolute top-5 right-5 bg-white rounded-2xl shadow-xl px-4 py-3 items-center gap-3 max-w-[220px]">
+                      <div className="w-9 h-9 rounded-xl bg-amber-100 flex items-center justify-center flex-shrink-0">
+                        <Bell className="h-4 w-4 text-amber-600" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-semibold text-gray-900 whitespace-nowrap">New order received</p>
+                        <p className="text-xs text-gray-500">Order #4521 · £1,280</p>
+                      </div>
+                    </div>
+
+                    {/* Floating card: Analytics — hidden on mobile */}
+                    <div className="hidden sm:block absolute bottom-5 left-5 bg-white rounded-2xl shadow-xl px-4 py-3 min-w-[180px]">
+                      <p className="text-xs font-bold text-green-600 mb-2 flex items-center gap-1">
+                        <TrendingUp className="h-3.5 w-3.5" /> +12.4% vs last month
+                      </p>
+                      <div className="flex items-end gap-0.5 h-8">
+                        {[3,4,3,5,4,5,4,6,8,9].map((h, i) => (
+                          <div
+                            key={i}
+                            className={`flex-1 rounded-sm ${i >= 8 ? 'bg-gray-800' : 'bg-gray-200'}`}
+                            style={{ height: `${h * 3}px` }}
+                          />
+                        ))}
+                      </div>
+                      <p className="text-[10px] text-gray-400 mt-1.5">from 300 orders</p>
+                    </div>
+
+                    {/* Floating card: New customers — hidden on mobile */}
+                    <div className="hidden sm:flex absolute bottom-5 right-5 bg-white rounded-2xl shadow-xl px-4 py-3 items-center gap-2.5">
+                      <div className="w-9 h-9 rounded-xl bg-green-100 flex items-center justify-center flex-shrink-0">
+                        <Users className="h-4 w-4 text-green-600" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-semibold text-gray-900">3 new customers</p>
+                        <p className="text-xs text-gray-500">This week</p>
+                      </div>
+                    </div>
                   </div>
 
-                  {/* Floating card: New order received */}
-                  <div className="absolute top-5 right-5 bg-white rounded-2xl shadow-xl px-4 py-3 flex items-center gap-3 max-w-[220px]">
-                    <div className="w-9 h-9 rounded-xl bg-amber-100 flex items-center justify-center flex-shrink-0">
-                      <Bell className="h-4 w-4 text-amber-600" />
+                  {/* Mobile-only horizontal scrolling strip of cards */}
+                  <div className="sm:hidden mt-4 flex gap-3 overflow-x-auto pb-1 -mx-1 px-1">
+                    {/* Card: New order received */}
+                    <div className="flex-shrink-0 bg-white rounded-2xl shadow-md border border-gray-100 px-4 py-3 flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-xl bg-amber-100 flex items-center justify-center flex-shrink-0">
+                        <Bell className="h-4 w-4 text-amber-600" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-semibold text-gray-900 whitespace-nowrap">New order received</p>
+                        <p className="text-xs text-gray-500">Order #4521 · £1,280</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-xs font-semibold text-gray-900 whitespace-nowrap">New order received</p>
-                      <p className="text-xs text-gray-500">Order #4521 · £1,280</p>
-                    </div>
-                  </div>
 
-                  {/* Floating card: Analytics */}
-                  <div className="absolute bottom-5 left-5 bg-white rounded-2xl shadow-xl px-4 py-3 min-w-[180px]">
-                    <p className="text-xs font-bold text-green-600 mb-2 flex items-center gap-1">
-                      <TrendingUp className="h-3.5 w-3.5" /> +12.4% vs last month
-                    </p>
-                    <div className="flex items-end gap-0.5 h-8">
-                      {[3,4,3,5,4,5,4,6,8,9].map((h, i) => (
-                        <div
-                          key={i}
-                          className={`flex-1 rounded-sm ${i >= 8 ? 'bg-gray-800' : 'bg-gray-200'}`}
-                          style={{ height: `${h * 3}px` }}
-                        />
-                      ))}
+                    {/* Card: Analytics */}
+                    <div className="flex-shrink-0 bg-white rounded-2xl shadow-md border border-gray-100 px-4 py-3 min-w-[180px]">
+                      <p className="text-xs font-bold text-green-600 mb-2 flex items-center gap-1">
+                        <TrendingUp className="h-3.5 w-3.5" /> +12.4% vs last month
+                      </p>
+                      <div className="flex items-end gap-0.5 h-8">
+                        {[3,4,3,5,4,5,4,6,8,9].map((h, i) => (
+                          <div
+                            key={i}
+                            className={`flex-1 rounded-sm ${i >= 8 ? 'bg-gray-800' : 'bg-gray-200'}`}
+                            style={{ height: `${h * 3}px` }}
+                          />
+                        ))}
+                      </div>
+                      <p className="text-[10px] text-gray-400 mt-1.5">from 300 orders</p>
                     </div>
-                    <p className="text-[10px] text-gray-400 mt-1.5">from 300 orders</p>
-                  </div>
 
-                  {/* Floating card: New customers */}
-                  <div className="absolute bottom-5 right-5 bg-white rounded-2xl shadow-xl px-4 py-3 flex items-center gap-2.5">
-                    <div className="w-9 h-9 rounded-xl bg-green-100 flex items-center justify-center flex-shrink-0">
-                      <Users className="h-4 w-4 text-green-600" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-semibold text-gray-900">3 new customers</p>
-                      <p className="text-xs text-gray-500">This week</p>
+                    {/* Card: New customers */}
+                    <div className="flex-shrink-0 bg-white rounded-2xl shadow-md border border-gray-100 px-4 py-3 flex items-center gap-2.5">
+                      <div className="w-9 h-9 rounded-xl bg-green-100 flex items-center justify-center flex-shrink-0">
+                        <Users className="h-4 w-4 text-green-600" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-semibold text-gray-900 whitespace-nowrap">3 new customers</p>
+                        <p className="text-xs text-gray-500">This week</p>
+                      </div>
                     </div>
                   </div>
                 </div>
