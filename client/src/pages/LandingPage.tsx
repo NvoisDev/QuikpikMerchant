@@ -938,6 +938,31 @@ export default function LandingPage() {
             </div>
           </section>
 
+          {/* ── TRUSTED BY LOGO STRIP ── */}
+          <section className="py-8 bg-[#f7f8fa] border-t border-gray-100">
+            <div className="max-w-3xl mx-auto px-4 sm:px-6">
+              <p className="text-center text-xs font-semibold uppercase tracking-widest text-gray-400 mb-5">
+                Trusted by leading wholesalers
+              </p>
+              <div className="flex items-center justify-center gap-6 flex-wrap">
+                <div className="flex flex-col items-center gap-1.5">
+                  <img
+                    src="/wholesaler-banner.jpg"
+                    alt="Plota Foods"
+                    className="w-12 h-12 rounded-full object-cover object-center ring-2 ring-white shadow-sm"
+                  />
+                  <span className="text-xs text-gray-500 font-medium">Plota Foods</span>
+                </div>
+                <div className="flex flex-col items-center gap-1.5 opacity-40 select-none">
+                  <div className="w-12 h-12 rounded-full bg-gray-200 ring-2 ring-white shadow-sm flex items-center justify-center">
+                    <span className="text-gray-400 text-lg font-bold">+</span>
+                  </div>
+                  <span className="text-xs text-gray-400 font-medium">Your brand</span>
+                </div>
+              </div>
+            </div>
+          </section>
+
           {/* ── WHOLESALER NUDGE ── */}
           <section className="py-12 bg-[#f7f8fa]">
             <div className="max-w-3xl mx-auto px-4 sm:px-6">
