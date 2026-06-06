@@ -28,7 +28,6 @@ import {
   Store,
   MapPin,
   Handshake,
-  Bell,
 } from "lucide-react";
 
 function DashboardMockup() {
@@ -1003,118 +1002,30 @@ export default function LandingPage() {
           </section>
 
           {/* ── WHOLESALER NUDGE ── */}
-          <section className="py-20 bg-white border-t border-gray-100">
-            <div className="max-w-5xl mx-auto px-4 sm:px-6">
-              <div className="flex flex-col lg:flex-row gap-12 items-center">
-                {/* Left: headline + CTA */}
-                <div className="flex-1 max-w-lg">
-                  <h2 className="text-4xl sm:text-5xl font-bold text-gray-900 leading-tight mb-5">
-                    Are you a wholesale supplier?
-                  </h2>
-                  <p className="text-lg text-gray-500 leading-relaxed mb-8">
-                    List your products, manage orders, and reach more buyers — free to get started.
-                  </p>
+          <section className="py-12 bg-[#f7f8fa]">
+            <div className="max-w-3xl mx-auto px-4 sm:px-6">
+              <div className="flex flex-col lg:flex-row gap-4 items-stretch">
+                {/* Warehouse photo — above on mobile, left on desktop */}
+                <div className="lg:w-2/5 flex-shrink-0 rounded-2xl overflow-hidden">
+                  <img
+                    src="/plota-warehouse.jpg"
+                    alt="Wholesaler warehouse"
+                    className="w-full h-48 lg:h-full object-cover object-center"
+                  />
+                </div>
+                {/* Banner card */}
+                <div className="flex-1 flex items-center gap-4 bg-white border border-gray-200 rounded-2xl shadow-sm px-5 py-4">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-gray-900 text-sm">Are you a wholesale supplier?</p>
+                    <p className="text-gray-500 text-sm leading-snug">List your products, manage orders, and reach more buyers — free to get started.</p>
+                  </div>
                   <Button
                     onClick={handleGetStarted}
-                    className="bg-green-600 hover:bg-green-700 text-white text-base font-semibold px-8 py-3 rounded-xl h-auto shadow-sm"
+                    variant="outline"
+                    className="flex-shrink-0 border-gray-300 text-gray-800 hover:border-gray-400 text-sm font-semibold px-5 rounded-xl"
                   >
-                    Start selling <ArrowRight className="ml-2 h-4 w-4" />
+                    Start selling <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
                   </Button>
-                </div>
-
-                {/* Right: warehouse image + floating platform cards */}
-                <div className="flex-1 w-full">
-                  {/* Image wrapper — relative only on sm+ so absolute cards work */}
-                  <div className="relative">
-                    <div className="rounded-2xl overflow-hidden shadow-xl">
-                      <img
-                        src="/wholesaler-hero.jpg"
-                        alt="Wholesaler managing stock"
-                        className="w-full h-72 lg:h-[400px] object-cover object-top"
-                      />
-                    </div>
-
-                    {/* Floating card: New order received — hidden on mobile */}
-                    <div className="hidden sm:flex absolute top-5 right-5 bg-white rounded-2xl shadow-xl px-4 py-3 items-center gap-3 max-w-[220px]">
-                      <div className="w-9 h-9 rounded-xl bg-amber-100 flex items-center justify-center flex-shrink-0">
-                        <Bell className="h-4 w-4 text-amber-600" />
-                      </div>
-                      <div>
-                        <p className="text-xs font-semibold text-gray-900 whitespace-nowrap">New order received</p>
-                        <p className="text-xs text-gray-500">Order #4521 · £1,280</p>
-                      </div>
-                    </div>
-
-                    {/* Floating card: Analytics — hidden on mobile */}
-                    <div className="hidden sm:block absolute bottom-5 left-5 bg-white rounded-2xl shadow-xl px-4 py-3 min-w-[180px]">
-                      <p className="text-xs font-bold text-green-600 mb-2 flex items-center gap-1">
-                        <TrendingUp className="h-3.5 w-3.5" /> +12.4% vs last month
-                      </p>
-                      <div className="flex items-end gap-0.5 h-8">
-                        {[3,4,3,5,4,5,4,6,8,9].map((h, i) => (
-                          <div
-                            key={i}
-                            className={`flex-1 rounded-sm ${i >= 8 ? 'bg-gray-800' : 'bg-gray-200'}`}
-                            style={{ height: `${h * 3}px` }}
-                          />
-                        ))}
-                      </div>
-                      <p className="text-[10px] text-gray-400 mt-1.5">from 300 orders</p>
-                    </div>
-
-                    {/* Floating card: New customers — hidden on mobile */}
-                    <div className="hidden sm:flex absolute bottom-5 right-5 bg-white rounded-2xl shadow-xl px-4 py-3 items-center gap-2.5">
-                      <div className="w-9 h-9 rounded-xl bg-green-100 flex items-center justify-center flex-shrink-0">
-                        <Users className="h-4 w-4 text-green-600" />
-                      </div>
-                      <div>
-                        <p className="text-xs font-semibold text-gray-900">3 new customers</p>
-                        <p className="text-xs text-gray-500">This week</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Mobile-only horizontal scrolling strip of cards */}
-                  <div className="sm:hidden mt-4 flex gap-3 overflow-x-auto pb-1 -mx-1 px-1">
-                    {/* Card: New order received */}
-                    <div className="flex-shrink-0 bg-white rounded-2xl shadow-md border border-gray-100 px-4 py-3 flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-xl bg-amber-100 flex items-center justify-center flex-shrink-0">
-                        <Bell className="h-4 w-4 text-amber-600" />
-                      </div>
-                      <div>
-                        <p className="text-xs font-semibold text-gray-900 whitespace-nowrap">New order received</p>
-                        <p className="text-xs text-gray-500">Order #4521 · £1,280</p>
-                      </div>
-                    </div>
-
-                    {/* Card: Analytics */}
-                    <div className="flex-shrink-0 bg-white rounded-2xl shadow-md border border-gray-100 px-4 py-3 min-w-[180px]">
-                      <p className="text-xs font-bold text-green-600 mb-2 flex items-center gap-1">
-                        <TrendingUp className="h-3.5 w-3.5" /> +12.4% vs last month
-                      </p>
-                      <div className="flex items-end gap-0.5 h-8">
-                        {[3,4,3,5,4,5,4,6,8,9].map((h, i) => (
-                          <div
-                            key={i}
-                            className={`flex-1 rounded-sm ${i >= 8 ? 'bg-gray-800' : 'bg-gray-200'}`}
-                            style={{ height: `${h * 3}px` }}
-                          />
-                        ))}
-                      </div>
-                      <p className="text-[10px] text-gray-400 mt-1.5">from 300 orders</p>
-                    </div>
-
-                    {/* Card: New customers */}
-                    <div className="flex-shrink-0 bg-white rounded-2xl shadow-md border border-gray-100 px-4 py-3 flex items-center gap-2.5">
-                      <div className="w-9 h-9 rounded-xl bg-green-100 flex items-center justify-center flex-shrink-0">
-                        <Users className="h-4 w-4 text-green-600" />
-                      </div>
-                      <div>
-                        <p className="text-xs font-semibold text-gray-900 whitespace-nowrap">3 new customers</p>
-                        <p className="text-xs text-gray-500">This week</p>
-                      </div>
-                    </div>
-                  </div>
                 </div>
               </div>
             </div>
