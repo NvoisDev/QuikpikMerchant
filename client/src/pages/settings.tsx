@@ -824,11 +824,11 @@ function PublicStoreSettings({ user }: { user: any }) {
                 <img
                   src={user.logoUrl}
                   alt={user?.businessName || 'Your logo'}
-                  className="w-12 h-12 rounded-full object-cover object-center ring-2 ring-white shadow-sm"
+                  className="w-16 h-16 rounded-full object-cover object-center ring-2 ring-white shadow-sm"
                 />
               ) : (
-                <div className="w-12 h-12 rounded-full bg-primary/10 ring-2 ring-white shadow-sm flex items-center justify-center">
-                  <span className="text-primary text-base font-bold">
+                <div className="w-16 h-16 rounded-full bg-primary/10 ring-2 ring-white shadow-sm flex items-center justify-center">
+                  <span className="text-primary text-lg font-bold">
                     {(user?.businessName || user?.firstName || '?').charAt(0).toUpperCase()}
                   </span>
                 </div>
