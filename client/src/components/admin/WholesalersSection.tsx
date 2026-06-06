@@ -730,7 +730,16 @@ export function WholesalersSection({ wholesalers, wholesalersLoading, isAdmin }:
                 {selectedWholesaler.showOnHomepage && !selectedWholesaler.logoUrl && (
                   <div className="flex items-start gap-1.5 bg-amber-50 border border-amber-200 rounded-md px-2.5 py-2 mb-2">
                     <AlertTriangle className="h-3.5 w-3.5 text-amber-600 mt-0.5 shrink-0" />
-                    <p className="text-xs text-amber-700">This wholesaler is shown on the homepage strip but has no logo uploaded. Their slot will appear blank. Ask them to upload a logo or remove them from the strip.</p>
+                    <div className="flex-1">
+                      <p className="text-xs text-amber-700 mb-1.5">This wholesaler is shown on the homepage strip but has no logo uploaded. Their slot will appear blank. Ask them to upload a logo or remove them from the strip.</p>
+                      <a
+                        href={`mailto:${selectedWholesaler.email}?subject=${encodeURIComponent("Action needed: Upload your logo")}&body=${encodeURIComponent(`Hi ${selectedWholesaler.businessName || "there"},\n\nYour store is currently featured on the homepage logo strip, but you haven't uploaded a logo yet. This means your slot appears blank to visitors.\n\nPlease log in and upload your logo from your store settings so your brand is properly represented.\n\nThanks!`)}`}
+                        className="inline-flex items-center gap-1 text-xs font-medium text-amber-800 bg-amber-100 hover:bg-amber-200 border border-amber-300 rounded px-2 py-1 transition-colors"
+                      >
+                        <Mail className="h-3 w-3" />
+                        Contact wholesaler
+                      </a>
+                    </div>
                   </div>
                 )}
                 <div className="flex items-center gap-3">
