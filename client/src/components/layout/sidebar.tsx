@@ -112,7 +112,7 @@ export default function Sidebar() {
         {/* Sidebar panel */}
         <div
           className={cn(
-            "bg-slate-900 h-screen fixed left-0 top-0 z-[50] flex flex-col",
+            "bg-slate-900 h-[100dvh] fixed left-0 top-0 z-[50] flex flex-col",
             "transition-[width,transform] duration-200 ease-in-out",
             // Mobile: full width drawer that slides in/out
             "w-64",
