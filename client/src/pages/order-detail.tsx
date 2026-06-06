@@ -803,16 +803,30 @@ export default function OrderDetail() {
       const data = await response.json();
       if (data.success && data.paymentLink) {
         if (data.order) setOrder({ ...order, ...data.order, stripePaymentLinkUrl: data.paymentLink });
-        const shareData = {
-          title: `Payment for Order #${order.orderNumber}`,
-          text: `Hi, here is your payment link for order #${order.orderNumber}:`,
-          url: data.paymentLink,
-        };
-        if (navigator.share && navigator.canShare?.(shareData)) {
+        const orderRef = order.orderNumber || `#${order.id}`;
+        const shareTitle = `Payment for Order ${orderRef}`;
+        const shareText = `Hi, here is your payment link for order ${orderRef}:`;
+
+        if (navigator.share) {
+          // Try to attach the invoice PDF to the share sheet
+          let pdfFile: File | null = null;
+          try {
+            const pdfRes = await fetch(`/api/orders/${order.id}/invoice/customer`, { credentials: 'include' });
+            if (pdfRes.ok) {
+              const blob = await pdfRes.blob();
+              pdfFile = new File([blob], `invoice-${orderRef}.pdf`, { type: 'application/pdf' });
+            }
+          } catch { /* non-fatal — share without PDF */ }
+
+          const shareWithFile = pdfFile && navigator.canShare?.({ files: [pdfFile] });
+          const shareData = shareWithFile
+            ? { title: shareTitle, text: shareText, url: data.paymentLink, files: [pdfFile!] }
+            : { title: shareTitle, text: shareText, url: data.paymentLink };
+
           try {
             await navigator.share(shareData);
           } catch (err: any) {
-            if (err?.name !== 'AbortError') {
+            if (err?.name !== 'AbortError' && err?.name !== 'NotAllowedError') {
               try { await navigator.clipboard.writeText(data.paymentLink); } catch {}
               toast({ title: "Link Copied", description: "Payment link copied to clipboard." });
             }
