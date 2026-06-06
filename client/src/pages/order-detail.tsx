@@ -994,10 +994,12 @@ export default function OrderDetail() {
   type PrimaryAction = 'send_payment_link' | 'record_payment' | 'ready_for_collection' | 'mark_fulfilled' | null;
 
   const getPrimaryAction = (): PrimaryAction => {
-    if (isViewer || isCancelled || isFulfilled) return null;
+    if (isViewer || isCancelled) return null;
     if (!isPaid) {
-      return (order.isQuote && canUsePaymentLink) ? 'send_payment_link' : 'record_payment';
+      const canSendLink = ((order.isQuote || order.paymentMethod === 'payment_link') && canUsePaymentLink);
+      return canSendLink ? 'send_payment_link' : 'record_payment';
     }
+    if (isFulfilled) return null;
     if (isPickup && !isReadyForCollection) return 'ready_for_collection';
     return 'mark_fulfilled';
   };
