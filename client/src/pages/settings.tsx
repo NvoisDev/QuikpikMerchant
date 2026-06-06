@@ -814,6 +814,34 @@ function PublicStoreSettings({ user }: { user: any }) {
         />
       </div>
 
+      {/* Live preview of how the logo appears in the landing page strip */}
+      {showOnHomepage && (
+        <div className="mt-3 p-4 bg-[#f7f8fa] border border-gray-200 rounded-xl">
+          <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-3">Preview — as seen on homepage</p>
+          <div className="flex items-center gap-4">
+            <div className="flex flex-col items-center gap-1.5">
+              {user?.logoUrl ? (
+                <img
+                  src={user.logoUrl}
+                  alt={user?.businessName || 'Your logo'}
+                  className="w-12 h-12 rounded-full object-cover object-center ring-2 ring-white shadow-sm"
+                />
+              ) : (
+                <div className="w-12 h-12 rounded-full bg-primary/10 ring-2 ring-white shadow-sm flex items-center justify-center">
+                  <span className="text-primary text-base font-bold">
+                    {(user?.businessName || user?.firstName || '?').charAt(0).toUpperCase()}
+                  </span>
+                </div>
+              )}
+              <span className="text-xs text-gray-500 font-medium max-w-[80px] text-center truncate">
+                {user?.businessName || user?.firstName || 'Your brand'}
+              </span>
+            </div>
+            <p className="text-xs text-gray-400 italic">This is exactly how your brand will appear in the "Trusted by" strip.</p>
+          </div>
+        </div>
+      )}
+
       <button
         onClick={save}
         disabled={saving}
