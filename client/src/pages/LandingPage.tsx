@@ -985,7 +985,7 @@ export default function LandingPage() {
                       <img
                         src="/wholesaler-banner.jpg"
                         alt="Plota Foods"
-                        className="w-16 h-16 rounded-full object-cover object-center ring-2 ring-white shadow-sm"
+                        className="w-16 h-16 rounded-xl object-contain"
                       />
                       <span className="text-xs text-gray-500 font-medium">Plota Foods</span>
                     </div>
