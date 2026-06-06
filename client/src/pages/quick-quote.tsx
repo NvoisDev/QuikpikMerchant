@@ -253,6 +253,7 @@ export default function QuickQuote() {
   const [isSharingInvoice, setIsSharingInvoice] = useState(false);
   const [sharePreviewMessage, setSharePreviewMessage] = useState('');
   const [defaultShareMessage, setDefaultShareMessage] = useState('');
+  const [showMessagePreview, setShowMessagePreview] = useState(false);
   const [newCustomer, setNewCustomer] = useState({
     firstName: '',
     lastName: '',
@@ -1187,6 +1188,7 @@ export default function QuickQuote() {
     setSendMethod('share');
     setSharePreviewMessage('');
     setDefaultShareMessage('');
+    setShowMessagePreview(false);
     setDepositPercentage(100);
     setBalanceDueDays(0);
     setQuotePaymentMethod(stripeReady ? 'payment_link' : 'bank_transfer');
@@ -1255,45 +1257,59 @@ export default function QuickQuote() {
             )}
 
             {sharePreviewMessage && (
-              <div className="space-y-2 border border-gray-200 rounded-xl p-4 bg-gray-50">
-                <div className="flex items-center justify-between">
-                  <p className="text-xs font-medium text-gray-600">Invoice Message</p>
-                  {sharePreviewMessage !== defaultShareMessage && (
-                    <button
-                      type="button"
-                      className="text-xs text-green-600 hover:text-green-700 underline underline-offset-2"
-                      onClick={() => setSharePreviewMessage(defaultShareMessage)}
-                    >
-                      Reset
-                    </button>
-                  )}
-                </div>
-                <textarea
-                  className="w-full border border-gray-200 rounded-lg p-3 text-sm font-mono leading-relaxed resize-none focus:outline-none focus:ring-2 focus:ring-green-500 bg-white"
-                  rows={12}
-                  value={sharePreviewMessage}
-                  onChange={(e) => setSharePreviewMessage(e.target.value)}
-                />
+              <div className="space-y-2">
                 <Button
-                  className="w-full bg-green-600 hover:bg-green-700 text-white"
+                  variant="outline"
+                  className="w-full border-green-300 text-green-700 hover:bg-green-50"
                   size="lg"
-                  onClick={() => {
-                    if (user?.id) {
-                      if (sharePreviewMessage.startsWith(defaultShareMessage)) {
-                        const suffix = sharePreviewMessage.slice(defaultShareMessage.length);
-                        if (suffix) {
-                          localStorage.setItem(`quikpik_invoice_suffix_${user.id}`, suffix);
-                        } else {
-                          localStorage.removeItem(`quikpik_invoice_suffix_${user.id}`);
-                        }
-                      }
-                    }
-                    doShare(sharePreviewMessage);
-                  }}
+                  onClick={() => setShowMessagePreview(v => !v)}
                 >
                   <Share2 className="h-4 w-4 mr-2" />
-                  Share Message
+                  {showMessagePreview ? 'Hide Message' : 'Preview Message'}
                 </Button>
+
+                {showMessagePreview && (
+                  <div className="space-y-2 border border-gray-200 rounded-xl p-4 bg-gray-50">
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs font-medium text-gray-600">Edit before sharing</p>
+                      {sharePreviewMessage !== defaultShareMessage && (
+                        <button
+                          type="button"
+                          className="text-xs text-green-600 hover:text-green-700 underline underline-offset-2"
+                          onClick={() => setSharePreviewMessage(defaultShareMessage)}
+                        >
+                          Reset
+                        </button>
+                      )}
+                    </div>
+                    <textarea
+                      className="w-full border border-gray-200 rounded-lg p-3 text-sm font-mono leading-relaxed resize-none focus:outline-none focus:ring-2 focus:ring-green-500 bg-white"
+                      rows={12}
+                      value={sharePreviewMessage}
+                      onChange={(e) => setSharePreviewMessage(e.target.value)}
+                    />
+                    <Button
+                      className="w-full bg-green-600 hover:bg-green-700 text-white"
+                      size="lg"
+                      onClick={() => {
+                        if (user?.id) {
+                          if (sharePreviewMessage.startsWith(defaultShareMessage)) {
+                            const suffix = sharePreviewMessage.slice(defaultShareMessage.length);
+                            if (suffix) {
+                              localStorage.setItem(`quikpik_invoice_suffix_${user.id}`, suffix);
+                            } else {
+                              localStorage.removeItem(`quikpik_invoice_suffix_${user.id}`);
+                            }
+                          }
+                        }
+                        doShare(sharePreviewMessage);
+                      }}
+                    >
+                      <Share2 className="h-4 w-4 mr-2" />
+                      Share Message
+                    </Button>
+                  </div>
+                )}
               </div>
             )}
 
