@@ -1,1 +1,2 @@
 - [Stripe Live Webhook Setup](stripe-webhook-setup.md) — Snapshot payload required for subscription/checkout events; Thin payload is v2-only and incompatible.
+- [Static assets must go in client/public](static-assets-path.md) — Vite root is client/, so only client/public/ is served; root-level public/ is NOT served in dev.
