@@ -1,0 +1,19 @@
+Analyzing ⁠image_2.png⁠ and ⁠image_3.png⁠ makes the core UI/UX conflict much clearer.
+The white text update on the dark overlay looks massively better and completely fixes the readability issues from earlier. However, the placement of the "I'm a Buyer / I'm a Wholesaler" toggle creates a jarring clash between the search zone and the platform sections.
+Here is a breakdown of why it clashes and how to fix it:
+The Core Problem: A Conceptual Clash
+The toggle is acting as a global gatekeeper (switching the entire website's perspective between Buyer mode and Wholesaler mode). However, by sticking it below the search bar or splicing it directly between two conflicting background images, it breaks standard layout logic.
+1. The Clutter in ⁠image_2.png⁠
+ The Clash: Here, the toggle splits two completely different hero sections. The top half is the Buyer search; the bottom half is the Wholesaler pitch ("Run your wholesale business").
+ Why it feels off: The toggle sits on a hard line where two different background images meet. Worse, when "I'm a Wholesaler" is selected, the Buyer search bar is still active right above it. A wholesaler doesn't want to "Search products, categories or suppliers..." as their primary action—they want to list products or manage their business.
+2. The Disconnect in ⁠image_3.png⁠
+ The Clash: When "I'm a Buyer" is selected here, the search bar gets abruptly cut off at the bottom of the image, followed by a massive block of white space, the toggle, and then a completely separate header ("Source trade products...").
+ Why it feels off: The search bar belongs to the "Buyer" experience, but it is visually separated from the actual Buyer text section by the toggle. The layout loses its cohesive flow.
+The Solution: Pick a Layout Strategy
+To fix this clash, the toggle needs a definitive structural job. Here are the two best ways to handle it:
+Option A: Make the Toggle a Fixed Global Header Element (Recommended)
+Instead of forcing the toggle into the middle of the scrollable page content, lift it out entirely.
+ How it works: Place a clean, smaller version of the "Buyer / Wholesaler" toggle at the very top of the page (either right below the main header or integrated into it).
+ The Flow:
+ If the user selects "I'm a Buyer", the page loads the Buyer Hero image, the search bar, and the "Source trade products..." copy seamlessly.
+ If the user selects "I'm a Wholesaler", the search bar disappears entirely, and the page dynamically switches to the Wholesaler Hero image and "Run your wholesale business" copy.

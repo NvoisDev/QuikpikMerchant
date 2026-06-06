@@ -441,13 +441,34 @@ export default function LandingPage() {
 
       {/* ── NAV ── */}
       <nav className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-100 shadow-sm">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center gap-4">
+          {/* Logo */}
+          <div className="flex items-center gap-2.5 flex-shrink-0">
             <img src="/quikpik-logo.png" alt="Quikpik" className="h-8 w-8 object-contain" />
             <span className="text-xl font-bold text-primary tracking-tight">Quikpik</span>
           </div>
-          <div className="flex items-center gap-1">
-            {/* Desktop nav links */}
+
+          {/* Audience toggle — desktop center */}
+          <div className="flex-1 flex justify-center">
+            <div className="hidden sm:flex rounded-xl bg-gray-100 p-0.5">
+              {(['retailer', 'wholesaler'] as const).map((key) => (
+                <button
+                  key={key}
+                  onClick={() => setActiveAudience(key)}
+                  className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all ${
+                    activeAudience === key
+                      ? 'bg-white text-gray-950 shadow-sm'
+                      : 'text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  {key === 'retailer' ? "I'm a Buyer" : "I'm a Wholesaler"}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Right nav links */}
+          <div className="flex items-center gap-1 flex-shrink-0">
             <a href="/blog" className="hidden sm:inline-flex text-sm text-gray-500 hover:text-gray-900 font-medium px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors">
               QuikTips & Insights
             </a>
@@ -472,7 +493,21 @@ export default function LandingPage() {
         </div>
         {/* Mobile dropdown */}
         {mobileMenuOpen && (
-          <div className="sm:hidden border-t border-gray-100 bg-white px-4 py-3 flex flex-col gap-1">
+          <div className="sm:hidden border-t border-gray-100 bg-white px-4 py-3 flex flex-col gap-2">
+            {/* Audience toggle — mobile */}
+            <div className="flex rounded-xl bg-gray-100 p-0.5 mb-1">
+              {(['retailer', 'wholesaler'] as const).map((key) => (
+                <button
+                  key={key}
+                  onClick={() => { setActiveAudience(key); setMobileMenuOpen(false); }}
+                  className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all ${
+                    activeAudience === key ? 'bg-white text-gray-950 shadow-sm' : 'text-gray-500'
+                  }`}
+                >
+                  {key === 'retailer' ? "I'm a Buyer" : "I'm a Wholesaler"}
+                </button>
+              ))}
+            </div>
             <a href="/blog" onClick={() => setMobileMenuOpen(false)} className="flex items-center text-sm text-gray-700 font-medium px-3 py-2.5 rounded-lg hover:bg-gray-50 w-full">
               QuikTips & Insights
             </a>
@@ -486,48 +521,17 @@ export default function LandingPage() {
         )}
       </nav>
 
-      {/* ── MARKETPLACE SEARCH STRIP ── */}
-      <div id="marketplace-search">
-        <MarketplaceSearch />
-      </div>
+      {/* ── MARKETPLACE SEARCH STRIP — buyer only ── */}
+      {activeAudience === 'retailer' && (
+        <div id="marketplace-search">
+          <MarketplaceSearch />
+        </div>
+      )}
 
       {/* ── HERO ── */}
       <section className={`overflow-hidden relative flex items-center ${activeAudience === 'wholesaler' ? 'bg-gray-950 min-h-[640px]' : 'bg-[#f7f6f2]'}`}>
 
-        {/* Warehouse background — wholesaler only */}
-        {activeAudience === 'wholesaler' && (
-          <div className="absolute inset-y-0 right-0 w-full sm:w-[65%] lg:w-[58%]">
-            <img src="/hero-warehouse.jpg" alt="" aria-hidden="true" className="w-full h-full object-cover object-[65%_center]" loading="eager" />
-            <div className="absolute inset-0 bg-gradient-to-r from-gray-950/75 via-gray-950/40 sm:via-gray-950/25 to-transparent" />
-            <div className="absolute inset-0 sm:hidden bg-gray-950/20" />
-            <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-gray-950/50 to-transparent" />
-          </div>
-        )}
-
         <div className="relative z-10 w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-24">
-
-          {/* Audience toggle */}
-          <div className="flex justify-center mb-10 sm:mb-12">
-            <div className={`flex w-full sm:w-auto rounded-xl p-1 ${activeAudience === 'wholesaler' ? 'bg-white/10 border border-white/20' : 'bg-white border border-gray-200 shadow-sm'}`}>
-              {(['retailer', 'wholesaler'] as const).map((key) => (
-                <button
-                  key={key}
-                  onClick={() => setActiveAudience(key)}
-                  className={`flex-1 sm:flex-none px-5 py-2 rounded-lg text-sm font-semibold transition-all ${
-                    activeAudience === key
-                      ? key === 'wholesaler'
-                        ? 'bg-white text-gray-950 shadow-sm'
-                        : 'bg-gray-950 text-white shadow-sm'
-                      : activeAudience === 'wholesaler'
-                        ? 'text-white/60 hover:text-white'
-                        : 'text-gray-500 hover:text-gray-900'
-                  }`}
-                >
-                  {key === 'retailer' ? "I'm a Buyer" : "I'm a Wholesaler"}
-                </button>
-              ))}
-            </div>
-          </div>
 
           <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-16">
 
@@ -664,6 +668,18 @@ export default function LandingPage() {
                     <span className="flex items-center gap-1.5">
                       <CheckCircle className="h-3.5 w-3.5 text-green-500 flex-shrink-0" /> Cancel anytime
                     </span>
+                  </div>
+                </div>
+
+                {/* WHOLESALER — Right photo */}
+                <div className="flex-shrink-0 w-full max-w-xs sm:max-w-sm lg:max-w-md mx-auto lg:mx-0">
+                  <div className="relative rounded-2xl overflow-hidden shadow-2xl aspect-[4/5]">
+                    <img
+                      src="/wholesaler-nudge.jpg"
+                      alt="Wholesaler managing their business"
+                      className="w-full h-full object-cover object-[center_15%]"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-gray-950/30 via-transparent to-transparent" />
                   </div>
                 </div>
 
