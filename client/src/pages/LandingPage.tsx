@@ -1010,14 +1010,14 @@ export default function LandingPage() {
                   <img
                     src="/plota-warehouse.jpg"
                     alt="Wholesaler warehouse"
-                    className="w-full h-48 lg:h-full object-cover object-center"
+                    className="w-full h-48 lg:h-full object-cover object-top"
                   />
                 </div>
                 {/* Banner card */}
                 <div className="flex-1 flex items-center gap-4 bg-white border border-gray-200 rounded-2xl shadow-sm px-5 py-4">
                   <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-gray-900 text-sm">Are you a wholesale supplier?</p>
-                    <p className="text-gray-500 text-sm leading-snug">List your products, manage orders, and reach more buyers — free to get started.</p>
+                    <p className="font-bold text-gray-900 text-base">Are you a wholesale supplier?</p>
+                    <p className="text-gray-500 text-base leading-snug">List your products, manage orders, and reach more buyers — free to get started.</p>
                   </div>
                   <Button
                     onClick={handleGetStarted}
