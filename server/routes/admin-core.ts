@@ -23,7 +23,7 @@ export function registerAdminCoreRoutes(app: Express): void {
       const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
       const [allWholesalers, allOrdersData, newWholesalers, planRows] = await Promise.all([
-        db.select({ subscriptionTier: users.subscriptionTier, archived: users.archived, subscriptionStatus: users.subscriptionStatus })
+        db.select({ subscriptionTier: users.subscriptionTier, archived: users.archived, subscriptionStatus: users.subscriptionStatus, showOnHomepage: users.showOnHomepage })
           .from(users).where(and(eq(users.role, 'wholesaler'), eq(users.isTestAccount, false), eq(users.isInactive, false))),
         db.select({
           subtotal: orders.subtotal,
@@ -48,6 +48,7 @@ export function registerAdminCoreRoutes(app: Express): void {
       const totalWholesalers = allWholesalers.length;
       const activeWholesalers = allWholesalers.filter(w => !w.archived).length;
       const suspendedWholesalers = allWholesalers.filter(w => w.archived).length;
+      const homepageFeaturedWholesalers = allWholesalers.filter(w => w.showOnHomepage).length;
       const wholesalersByPlan = {
         free: allWholesalers.filter(w => !w.subscriptionTier || w.subscriptionTier === 'free').length,
         standard: allWholesalers.filter(w => w.subscriptionTier === 'standard').length,
@@ -87,7 +88,7 @@ export function registerAdminCoreRoutes(app: Express): void {
       }
 
       res.json({
-        totalWholesalers, activeWholesalers, suspendedWholesalers, wholesalersByPlan,
+        totalWholesalers, activeWholesalers, suspendedWholesalers, homepageFeaturedWholesalers, wholesalersByPlan,
         totalOrders, completedOrders, cancelledOrders, ordersThisMonth,
         completedOrdersThisMonth, cancelledOrdersThisMonth, todayOrders, todayRevenue,
         totalGMV, totalCustomerFees, totalPlatformFees,

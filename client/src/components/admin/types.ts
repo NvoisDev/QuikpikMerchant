@@ -9,6 +9,7 @@ export interface PlatformStats {
   totalGMV: number; totalCustomerFees: number; totalPlatformFees: number; totalGrossRevenue: number;
   newWholesalersThisMonth: number; subscriptionRevenueMRR: number;
   subscriptionBreakdown: { standard: { count: number; mrr: number }; premium: { count: number; mrr: number } };
+  homepageFeaturedWholesalers: number;
 }
 
 export interface AlertsData {

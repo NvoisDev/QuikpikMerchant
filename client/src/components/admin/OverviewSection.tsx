@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  Building2, ShoppingCart, Package, TrendingUp, DollarSign, AlertTriangle, AlertCircle,
+  Building2, ShoppingCart, Package, TrendingUp, DollarSign, AlertTriangle, AlertCircle, Star,
 } from "lucide-react";
 import { formatNumber } from "@shared/utils/currency";
 import {
@@ -63,6 +63,7 @@ export function OverviewSection({ stats, statsLoading, revenueData, revenueLoadi
       ) : (
         <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
           <StatCard label="Active Wholesalers"   value={stats?.activeWholesalers ?? 0}  sub={`${stats?.totalWholesalers ?? 0} total`}                          icon={<Building2 className="h-4 w-4" />}    color={GREEN}  />
+          <StatCard label="Homepage Featured"    value={stats?.homepageFeaturedWholesalers ?? 0} sub="Featured on homepage"                                       icon={<Star className="h-4 w-4" />}         color={AMBER}  />
           <StatCard label="Orders Today"         value={stats?.todayOrders ?? 0}        sub={fmt(stats?.todayRevenue ?? 0) + " GMV"}                           icon={<ShoppingCart className="h-4 w-4" />}  color={AMBER}  />
           <StatCard label="Orders this Month"    value={stats?.ordersThisMonth ?? 0}    sub={`${stats?.completedOrdersThisMonth ?? 0} completed · ${stats?.cancelledOrdersThisMonth ?? 0} cancelled`} icon={<Package className="h-4 w-4" />} color={BLUE} />
           <StatCard label="Total Orders (All-time)" value={formatNumber(stats?.totalOrders ?? 0)} sub={`${stats?.completedOrders ?? 0} completed · ${stats?.cancelledOrders ?? 0} cancelled`} icon={<ShoppingCart className="h-4 w-4" />} color={BLUE} />
