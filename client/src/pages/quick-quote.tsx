@@ -1150,7 +1150,7 @@ export default function QuickQuote() {
             const blob = await response.blob();
             const file = new File([blob], filename, { type: 'application/pdf' });
             if (navigator.canShare({ files: [file] })) {
-              await navigator.share({ title: `Invoice ${orderRef}`, text: `Here's your invoice ${orderRef}`, files: [file] });
+              await navigator.share({ title: `Invoice ${orderRef}`, text: sharePreviewMessage || `Here's your invoice ${orderRef}`, files: [file] });
               nativeShareSucceeded = true;
               toast({ title: 'Invoice shared', description: 'The invoice PDF has been shared.' });
               return;
