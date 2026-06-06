@@ -643,6 +643,8 @@ export const businessProfiles = pgTable("business_profiles", {
   sortCode: varchar("sort_code", { length: 20 }),
   iban: varchar("iban", { length: 100 }),
   swift: varchar("swift", { length: 20 }),
+  // Custom sign-off appended to every WhatsApp invoice message
+  invoiceSignOff: text("invoice_sign_off"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => ({

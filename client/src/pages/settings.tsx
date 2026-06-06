@@ -362,6 +362,81 @@ function BankDetailsSection() {
   );
 }
 
+function InvoiceSignOffSection() {
+  const { toast } = useToast();
+  const { user: authUser } = useAuth();
+  const canManage = authUser?.role !== 'team_member' || authUser?.teamMemberRole === 'admin';
+
+  const { data: saved, isLoading } = useQuery<{ invoiceSignOff: string | null }>({
+    queryKey: ["/api/business-profile/invoice-sign-off"],
+  });
+
+  const [value, setValue] = useState('');
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    if (saved && !loaded) {
+      setValue(saved.invoiceSignOff || '');
+      setLoaded(true);
+    }
+  }, [saved, loaded]);
+
+  const saveMutation = useMutation({
+    mutationFn: async (signOff: string) => {
+      const r = await apiRequest("PUT", "/api/business-profile/invoice-sign-off", {
+        invoiceSignOff: signOff.trim() || null,
+      });
+      if (!r.ok) { const e = await r.json(); throw new Error(e.error || "Failed to save"); }
+      return r.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/business-profile/invoice-sign-off"] });
+      toast({ title: "Sign-off saved" });
+    },
+    onError: (e: Error) => toast({ title: e.message, variant: "destructive" }),
+  });
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <h3 className="text-base sm:text-lg font-medium text-gray-900">Invoice Message Sign-off</h3>
+        <p className="text-sm text-gray-500 mt-0.5">
+          This text is added at the end of every WhatsApp invoice message instead of the default sign-off. Leave blank to use the default.
+        </p>
+      </div>
+
+      {isLoading ? (
+        <div className="text-sm text-gray-400">Loading…</div>
+      ) : (
+        <div>
+          <Label className="text-xs text-gray-600">Sign-off text</Label>
+          <textarea
+            value={value}
+            onChange={e => setValue(e.target.value)}
+            placeholder={"e.g. Looking forward to your next order! — The Smith's Wholesale Team"}
+            className="mt-1 flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none min-h-[80px]"
+            maxLength={500}
+            disabled={!canManage}
+          />
+          <p className="text-xs text-gray-400 mt-1">{value.length}/500 characters</p>
+        </div>
+      )}
+
+      {canManage && (
+        <div className="flex justify-end pt-2">
+          <Button
+            size="sm"
+            onClick={() => saveMutation.mutate(value)}
+            disabled={saveMutation.isPending || isLoading}
+          >
+            {saveMutation.isPending ? <><Loader2 className="h-4 w-4 mr-1.5 animate-spin" />Saving…</> : <><Save className="h-4 w-4 mr-1.5" />Save Sign-off</>}
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 interface CollectionAddress {
   id: number;
   wholesalerId: string;
@@ -1945,6 +2020,11 @@ export default function Settings() {
                   {/* Bank Details Section */}
                   <div className="mt-8 pt-6 border-t border-gray-200">
                     <BankDetailsSection />
+                  </div>
+
+                  {/* Invoice Message Sign-off Section */}
+                  <div className="mt-8 pt-6 border-t border-gray-200">
+                    <InvoiceSignOffSection />
                   </div>
 
                   {/* Pay Later Settings Section */}

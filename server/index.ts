@@ -422,6 +422,8 @@ async function runStartupMigrations() {
     `ALTER TABLE store_enquiries ADD COLUMN IF NOT EXISTS business_type VARCHAR(100)`,
     `ALTER TABLE store_enquiries ADD COLUMN IF NOT EXISTS estimated_order_volume VARCHAR(50)`,
     `ALTER TABLE store_enquiries ADD COLUMN IF NOT EXISTS preferred_contact VARCHAR(20)`,
+    // Task #1221: Custom invoice message sign-off stored on the wholesaler's default business profile
+    `ALTER TABLE business_profiles ADD COLUMN IF NOT EXISTS invoice_sign_off TEXT`,
   ];
   for (const stmt of migrations) {
     await db.execute(sql.raw(stmt));

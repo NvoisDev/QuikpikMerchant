@@ -12,6 +12,10 @@ export interface BankDetails {
   swift?: string | null;
 }
 
+export interface InvoiceSignOffData {
+  invoiceSignOff?: string | null;
+}
+
 export class BusinessProfileStorage extends DeliveryStorage {
   async getBusinessProfiles(wholesalerId: string): Promise<BusinessProfile[]> {
     let profiles = await db
@@ -117,6 +121,21 @@ export class BusinessProfileStorage extends DeliveryStorage {
         sortCode: trim(data.sortCode),
         iban: trim(data.iban),
         swift: trim(data.swift),
+        updatedAt: new Date(),
+      })
+      .where(eq(businessProfiles.id, profile.id))
+      .returning();
+    return updated;
+  }
+
+  async updateInvoiceSignOff(wholesalerId: string, data: InvoiceSignOffData): Promise<BusinessProfile | undefined> {
+    const profile = await this.getDefaultBusinessProfile(wholesalerId);
+    if (!profile) return undefined;
+    const trim = (v: string | null | undefined) => (typeof v === 'string' ? v.trim() || null : null);
+    const [updated] = await db
+      .update(businessProfiles)
+      .set({
+        invoiceSignOff: trim(data.invoiceSignOff),
         updatedAt: new Date(),
       })
       .where(eq(businessProfiles.id, profile.id))

@@ -157,6 +157,7 @@ function buildInvoiceMessage({
   itemLines,
   fulfillmentLine,
   paymentLink,
+  signOff,
 }: {
   customerName: string;
   businessName: string;
@@ -165,7 +166,11 @@ function buildInvoiceMessage({
   itemLines: string;
   fulfillmentLine: string;
   paymentLink: string;
+  signOff?: string | null;
 }): string {
+  const closingLine = signOff && signOff.trim()
+    ? signOff.trim()
+    : `Thank you for your order! 🙏\n${businessName}`;
   return (
     `Hi ${customerName} 👋\n\n` +
     `Here's your invoice from ${businessName}.\n\n` +
@@ -175,8 +180,7 @@ function buildInvoiceMessage({
     `📦 ${fulfillmentLine}\n\n` +
     `💳 Balance due: ${total}\n` +
     `Pay here → ${paymentLink}\n\n` +
-    `Thank you for your order! 🙏\n` +
-    `${businessName}`
+    closingLine
   );
 }
 
@@ -266,6 +270,10 @@ export default function QuickQuote() {
   const { data: businessProfiles = [] } = useQuery<{ id: number; name: string; logoUrl: string | null; address: string | null; isDefault: boolean }[]>({
     queryKey: ['/api/business-profiles'],
     enabled: !!user?.enableMultiProfile,
+  });
+
+  const { data: invoiceSignOffData } = useQuery<{ invoiceSignOff: string | null }>({
+    queryKey: ['/api/business-profile/invoice-sign-off'],
   });
 
   const { data: collectionAddresses = [] } = useQuery<CollectionAddress[]>({
@@ -676,6 +684,7 @@ export default function QuickQuote() {
           itemLines: quoteItems.map(item => `🛍️ ${item.quantity}× ${item.productName}`).join('\n'),
           fulfillmentLine: fulfillmentType === 'delivery' ? 'Delivery' : 'Collection from your store',
           paymentLink: data.paymentLink,
+          signOff: invoiceSignOffData?.invoiceSignOff ?? null,
         });
         setDefaultShareMessage(builtMessage);
         const savedSuffix = user?.id ? localStorage.getItem(`quikpik_invoice_suffix_${user.id}`) : null;

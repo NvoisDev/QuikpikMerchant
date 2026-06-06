@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { storage, requireAuth, requireNotViewer, db, eq, users, z, ADMIN_EMAILS } from "./shared";
 import { insertBusinessProfileSchema, businessProfiles } from "@shared/schema";
-import type { BankDetails } from "../storage/business-profiles";
+import type { BankDetails, InvoiceSignOffData } from "../storage/business-profiles";
 
 function getAdminEmail(req: any): string | undefined {
   return req._adminEmail || req.user?.email;
@@ -190,6 +190,53 @@ export function registerBusinessProfileRoutes(app: Express): void {
     } catch (error) {
       console.error("Error saving bank details:", error);
       res.status(500).json({ error: "Failed to save bank details" });
+    }
+  });
+
+  // GET /api/business-profile/invoice-sign-off — fetch sign-off for the authenticated wholesaler
+  app.get("/api/business-profile/invoice-sign-off", requireAuth, async (req: any, res) => {
+    try {
+      if (req.user.role !== "wholesaler" && req.user.role !== "team_member") {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+      const wholesalerId =
+        req.user.role === "team_member" && req.user.wholesalerId
+          ? req.user.wholesalerId
+          : req.user.id;
+      const profile = await storage.getDefaultBusinessProfile(wholesalerId);
+      res.json({ invoiceSignOff: profile?.invoiceSignOff ?? null });
+    } catch (error) {
+      console.error("Error fetching invoice sign-off:", error);
+      res.status(500).json({ error: "Failed to fetch invoice sign-off" });
+    }
+  });
+
+  // PUT /api/business-profile/invoice-sign-off — save sign-off for the authenticated wholesaler
+  app.put("/api/business-profile/invoice-sign-off", requireAuth, requireNotViewer, async (req: any, res) => {
+    try {
+      if (req.user.role !== "wholesaler" && req.user.role !== "team_member") {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+      const wholesalerId =
+        req.user.role === "team_member" && req.user.wholesalerId
+          ? req.user.wholesalerId
+          : req.user.id;
+
+      const { invoiceSignOff } = req.body;
+      if (invoiceSignOff !== undefined && invoiceSignOff !== null && typeof invoiceSignOff !== "string") {
+        return res.status(400).json({ error: "invoiceSignOff must be a string" });
+      }
+      if (typeof invoiceSignOff === "string" && invoiceSignOff.trim().length > 500) {
+        return res.status(400).json({ error: "Invoice sign-off must be 500 characters or fewer" });
+      }
+
+      const data: InvoiceSignOffData = { invoiceSignOff: invoiceSignOff ?? null };
+      const updated = await storage.updateInvoiceSignOff(wholesalerId, data);
+      if (!updated) return res.status(404).json({ error: "No business profile found" });
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error saving invoice sign-off:", error);
+      res.status(500).json({ error: "Failed to save invoice sign-off" });
     }
   });
 
