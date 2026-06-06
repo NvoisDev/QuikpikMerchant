@@ -354,9 +354,26 @@ export class SubscriptionService {
         throw new Error('User not found');
       }
 
-      // Return existing Stripe customer ID if exists
+      // Validate stored customer ID exists in the current Stripe mode (live vs test).
+      // Accounts created while the platform was in test mode have a test customer ID
+      // (e.g. cus_T1...) that is rejected by the live-mode Stripe API.
       if (user.stripeCustomerId) {
-        return user.stripeCustomerId;
+        try {
+          await stripe.customers.retrieve(user.stripeCustomerId);
+          return user.stripeCustomerId;
+        } catch (verifyErr: any) {
+          // resource_missing with "a similar object exists in test mode" means a
+          // test customer is stored but we are now in live mode — clear it and
+          // fall through to create a fresh live-mode customer below.
+          if (verifyErr?.code === 'resource_missing') {
+            console.warn(`⚠️ Stored Stripe customer ${user.stripeCustomerId} is invalid in current mode — creating a new one.`);
+            await db.update(users)
+              .set({ stripeCustomerId: null })
+              .where(eq(users.id, userId));
+          } else {
+            throw verifyErr;
+          }
+        }
       }
 
       // Create new Stripe customer
