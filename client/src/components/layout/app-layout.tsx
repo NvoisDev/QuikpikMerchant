@@ -3,13 +3,14 @@ import Sidebar from "./sidebar";
 import Footer from "@/components/ui/footer";
 import { SidebarProvider, useSidebarContext } from "@/contexts/sidebar-context";
 import Logo from "@/components/ui/logo";
-import { Menu, Shield, LogOut } from "lucide-react";
+import { Menu, Shield, LogOut, Clock, RefreshCw, CreditCard } from "lucide-react";
 import { useLocation } from "wouter";
 import ShareBellControls from "@/components/shared/ShareBellControls";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useImpersonation } from "@/contexts/impersonation-context";
 import InstallPromptBanner from "@/components/shared/InstallPromptBanner";
+import { useEffect } from "react";
 
 const PAGE_NAMES: { href: string; name: string }[] = [
   { href: "/orders", name: "Orders" },
@@ -38,6 +39,89 @@ function usePageName() {
 
 interface AppLayoutProps {
   children: React.ReactNode;
+}
+
+function PendingPaymentGate() {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  // Poll every 10 s — Stripe webhook will flip status to 'active' once payment clears
+  useQuery({
+    queryKey: ["/api/auth/user"],
+    refetchInterval: 10_000,
+    refetchIntervalInBackground: true,
+  });
+
+  const handleLogout = async () => {
+    await apiRequest("POST", "/api/auth/logout", {});
+    queryClient.clear();
+    window.location.href = "/login";
+  };
+
+  const handleRefresh = () => {
+    queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6">
+      <div className="w-full max-w-md bg-white rounded-2xl shadow-lg border border-gray-100 p-8 text-center">
+        {/* Icon */}
+        <div className="w-16 h-16 bg-amber-50 border border-amber-100 rounded-full flex items-center justify-center mx-auto mb-6">
+          <Clock className="h-8 w-8 text-amber-500" />
+        </div>
+
+        {/* Logo */}
+        <div className="flex items-center justify-center gap-2 mb-6">
+          <img src="/quikpik-logo.png" alt="Quikpik" className="h-6 w-6 object-contain" />
+          <span className="text-lg font-bold text-primary">Quikpik</span>
+        </div>
+
+        <h1 className="text-xl font-bold text-gray-900 mb-2">Payment pending confirmation</h1>
+        <p className="text-sm text-gray-500 leading-relaxed mb-6">
+          Your subscription payment is being verified by our payment provider.
+          This usually completes within a few minutes — this page checks automatically.
+        </p>
+
+        {/* Auto-check indicator */}
+        <div className="flex items-center justify-center gap-2 text-xs text-gray-400 bg-gray-50 rounded-lg px-4 py-2.5 mb-8">
+          <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse flex-shrink-0" />
+          Checking every 10 seconds…
+        </div>
+
+        {/* Actions */}
+        <div className="flex flex-col gap-3">
+          <button
+            onClick={handleRefresh}
+            className="w-full flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 text-white text-sm font-semibold px-4 py-3 rounded-xl transition-colors"
+          >
+            <RefreshCw className="h-4 w-4" />
+            Check now
+          </button>
+          <a
+            href="/subscription-pricing"
+            className="w-full flex items-center justify-center gap-2 border border-gray-200 text-gray-700 hover:bg-gray-50 text-sm font-medium px-4 py-3 rounded-xl transition-colors"
+          >
+            <CreditCard className="h-4 w-4" />
+            Manage payment
+          </a>
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center justify-center gap-2 text-gray-400 hover:text-gray-600 text-sm px-4 py-2 rounded-xl transition-colors"
+          >
+            <LogOut className="h-4 w-4" />
+            Sign out
+          </button>
+        </div>
+
+        <p className="mt-6 text-xs text-gray-400">
+          Need help?{" "}
+          <a href="mailto:hello@quikpik.io" className="text-primary hover:underline">
+            Contact support
+          </a>
+        </p>
+      </div>
+    </div>
+  );
 }
 
 function AppLayoutInner({ children }: AppLayoutProps) {
@@ -88,6 +172,12 @@ function AppLayoutInner({ children }: AppLayoutProps) {
         </div>
       </div>
     );
+  }
+
+  // Block dashboard access when Stripe subscription payment hasn't cleared yet.
+  // Admins impersonating a wholesaler are allowed through so they can investigate.
+  if (user?.subscriptionStatus === 'incomplete' && !isImpersonating) {
+    return <PendingPaymentGate />;
   }
 
   return (
