@@ -531,6 +531,23 @@ export default function LandingPage() {
       {/* ── HERO ── */}
       <section className={`overflow-hidden relative flex items-center ${activeAudience === 'wholesaler' ? 'bg-[#0f172a] min-h-[640px]' : 'bg-[#f7f6f2]'}`}>
 
+        {/* Full-bleed warehouse photo — wholesaler only */}
+        {activeAudience === 'wholesaler' && (
+          <div className="absolute inset-y-0 right-0 w-full sm:w-[58%]">
+            <img
+              src="/wholesaler-nudge.jpg"
+              alt=""
+              aria-hidden="true"
+              className="w-full h-full object-cover object-[center_15%]"
+              loading="eager"
+            />
+            {/* Gradient: solid dark on left → transparent on right */}
+            <div className="absolute inset-0 bg-gradient-to-r from-[#0f172a] via-[#0f172a]/60 to-transparent" />
+            {/* Mobile: extra dark overlay so text above stays legible */}
+            <div className="absolute inset-0 sm:hidden bg-[#0f172a]/70" />
+          </div>
+        )}
+
         <div className="relative z-10 w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-24">
 
           <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-16">
@@ -668,18 +685,6 @@ export default function LandingPage() {
                     <span className="flex items-center gap-1.5">
                       <CheckCircle className="h-3.5 w-3.5 text-green-500 flex-shrink-0" /> Cancel anytime
                     </span>
-                  </div>
-                </div>
-
-                {/* WHOLESALER — Right photo */}
-                <div className="flex-shrink-0 w-full max-w-xs sm:max-w-sm lg:max-w-md mx-auto lg:mx-0">
-                  <div className="relative rounded-2xl overflow-hidden shadow-2xl aspect-[4/5]">
-                    <img
-                      src="/wholesaler-nudge.jpg"
-                      alt="Wholesaler managing their business"
-                      className="w-full h-full object-cover object-[center_15%]"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-gray-950/30 via-transparent to-transparent" />
                   </div>
                 </div>
 
