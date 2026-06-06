@@ -1008,9 +1008,9 @@ export default function LandingPage() {
                 {/* Warehouse photo — above on mobile, left on desktop */}
                 <div className="lg:w-2/5 flex-shrink-0 rounded-2xl overflow-hidden">
                   <img
-                    src="/plota-warehouse.jpg"
+                    src="/wholesaler-nudge.jpg"
                     alt="Wholesaler warehouse"
-                    className="w-full h-48 lg:h-full object-cover object-top"
+                    className="w-full h-64 lg:h-full object-cover object-[center_15%]"
                   />
                 </div>
                 {/* Banner card */}
