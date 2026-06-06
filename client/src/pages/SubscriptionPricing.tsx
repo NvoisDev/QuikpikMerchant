@@ -507,7 +507,12 @@ export default function SubscriptionPricing() {
                     </p>
                   )}
                 </div>
-                {user?.role !== 'team_member' && (
+                {user?.role === 'team_member' ? (
+                  <div className="flex items-center gap-1.5 text-xs text-gray-400 shrink-0 border border-gray-200 rounded-md px-3 py-1.5">
+                    <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" /></svg>
+                    Owner only
+                  </div>
+                ) : (
                   <Button
                     variant="outline"
                     size="sm"
@@ -558,24 +563,47 @@ export default function SubscriptionPricing() {
         </div>
       )}
 
-      {/* Free plan — show a clear notice if the account was recently downgraded */}
-      {currentSubscription && currentSubscription.currentPlan === 'free' && currentSubscription.user?.subscriptionPeriodEnd && (
-        <div className="mb-8 p-4 bg-gray-50 border border-gray-200 rounded-lg flex items-start gap-3">
-          <div className="w-5 h-5 text-gray-400 mt-0.5 flex-shrink-0">
-            <svg fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" /></svg>
-          </div>
-          <div>
-            <div className="text-sm font-medium text-gray-700">Downgraded to Free</div>
-            <div className="text-sm text-gray-500 mt-0.5">
-              Your paid subscription ended on{' '}
-              <strong>
-                {new Date(currentSubscription.user.subscriptionPeriodEnd).toLocaleDateString('en-GB', {
-                  weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
-                })}
-              </strong>
-              . Upgrade any time to restore full access.
+      {/* Free plan — billing card */}
+      {currentSubscription && currentSubscription.currentPlan === 'free' && (
+        <div className="mb-8 p-6 bg-gray-50 border border-gray-200 rounded-lg">
+          <h3 className="text-lg font-semibold text-gray-800 mb-1 flex items-center gap-2">
+            <CreditCard className="w-5 h-5 text-gray-500" />
+            Billing
+          </h3>
+          <p className="text-sm text-gray-500 mb-4">
+            You're on the free plan. Upgrade to unlock unlimited products, price lists, team members, and more.
+          </p>
+          {currentSubscription.user?.subscriptionPeriodEnd && (
+            <div className="mb-4 p-3 bg-white border border-gray-200 rounded-md flex items-start gap-2.5 text-sm text-gray-600">
+              <svg className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" /></svg>
+              <span>
+                Your paid subscription ended on{' '}
+                <strong>
+                  {new Date(currentSubscription.user.subscriptionPeriodEnd).toLocaleDateString('en-GB', {
+                    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+                  })}
+                </strong>
+                . Upgrade any time to restore full access.
+              </span>
             </div>
-          </div>
+          )}
+          {user?.role === 'team_member' ? (
+            <div className="flex items-center gap-1.5 text-xs text-gray-400 border border-gray-200 rounded-md px-3 py-1.5 w-fit">
+              <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" /></svg>
+              Only the account owner can upgrade
+            </div>
+          ) : (
+            <Button
+              size="sm"
+              className="bg-green-600 hover:bg-green-700 text-white"
+              onClick={() => {
+                const firstPaidPlan = document.getElementById('plan-grid');
+                firstPaidPlan?.scrollIntoView({ behavior: 'smooth' });
+              }}
+            >
+              Start a paid plan
+            </Button>
+          )}
         </div>
       )}
 
@@ -662,7 +690,7 @@ export default function SubscriptionPricing() {
       </div>
 
       {/* Pricing Plans */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12 items-start">
+      <div id="plan-grid" className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12 items-start">
         {visiblePlans.map((plan: SubscriptionPlan) => {
           const savings = getAnnualSavings(plan);
           const isAnnual = plan.billingInterval === 'yearly';

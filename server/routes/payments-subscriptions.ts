@@ -70,6 +70,14 @@ export function registerSubscriptionRoutes(app: Express): void {
   app.post('/api/subscriptions/billing-portal', requireAuth, requireOwner, async (req: any, res) => {
     try {
       const userId = req.user.id;
+
+      // Only active paid subscribers may open the portal
+      const subscription = await SubscriptionService.getUserSubscription(userId);
+      const activePaidPlan = subscription?.currentPlan && subscription.currentPlan !== 'free';
+      if (!activePaidPlan) {
+        return res.status(400).json({ message: 'No active paid subscription — upgrade first to manage billing.' });
+      }
+
       const stripeCustomerId = await SubscriptionService.getOrCreateStripeCustomer(userId, false);
       const returnUrl = `${process.env.FRONTEND_URL || 'https://quikpik.app'}/subscription-pricing`;
       const stripe = getStripeClient(false);
