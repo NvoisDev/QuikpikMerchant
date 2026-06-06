@@ -209,7 +209,6 @@ function PublicRoutes() {
         <Route path="/super-admin" component={SuperAdmin} />
         <Route path="/w/:slug" component={PublicStorePage} />
         <Route path="/" component={LandingPage} />
-        <Route path="/landing" component={LandingPage} />
         <Route component={NotFound} />
       </Switch>
     </Suspense>
@@ -299,7 +298,7 @@ function Router() {
     );
   }
   
-  const publicRoutes = ['/login', '/customer-login', '/landing', '/signup', '/signup-complete', '/auth-success', '/team-invitation', '/forgot-password', '/reset-password', '/super-admin', '/terms', '/privacy'];
+  const publicRoutes = ['/login', '/customer-login', '/signup', '/signup-complete', '/auth-success', '/team-invitation', '/forgot-password', '/reset-password', '/super-admin', '/terms', '/privacy'];
   const isPublicRoute = location.startsWith('/campaign/') || 
     location.startsWith('/marketplace/product/') || 
     location.startsWith('/customer/') || 
@@ -312,10 +311,6 @@ function Router() {
     location.startsWith('/select-wholesaler') ||
     publicRoutes.includes(location);
 
-  if (location === '/landing') {
-    return <PublicRoutes />;
-  }
-  
   if (isLoading) {
     return <PageLoader />;
   }
