@@ -45,6 +45,7 @@ export interface WholesalerRow {
   isCustomPricing?: boolean;
   internalNote?: string | null;
   customPriceExpiresAt?: string | null;
+  logoUrl?: string | null;
 }
 
 export interface RevenueTotals {

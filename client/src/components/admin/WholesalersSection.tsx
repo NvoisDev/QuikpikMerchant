@@ -19,7 +19,7 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   Eye, Mail, CreditCard, Building2, Info, FileText, UserCheck,
-  ToggleLeft, ToggleRight, UserPlus, Percent, LogIn, Globe,
+  ToggleLeft, ToggleRight, UserPlus, Percent, LogIn, Globe, AlertTriangle,
 } from "lucide-react";
 import { format } from "date-fns";
 import { formatDateTime } from "@shared/utils/date";
@@ -357,6 +357,16 @@ export function WholesalersSection({ wholesalers, wholesalersLoading, isAdmin }:
                                 </span>
                               </TooltipTrigger>
                               <TooltipContent side="top" className="text-xs">Shown on homepage logo strip</TooltipContent>
+                            </Tooltip>
+                          )}
+                          {w.showOnHomepage && !w.logoUrl && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200 cursor-default">
+                                  <AlertTriangle className="h-2.5 w-2.5" />No logo
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent side="top" className="text-xs">On homepage strip but has no logo uploaded — will render as a blank slot</TooltipContent>
                             </Tooltip>
                           )}
                         </div>
@@ -717,6 +727,12 @@ export function WholesalersSection({ wholesalers, wholesalersLoading, isAdmin }:
                   <Globe className="h-3.5 w-3.5" style={{ color: GREEN }} />Homepage Logo Strip
                 </p>
                 <p className="text-xs text-gray-400 mb-2">Controls whether this wholesaler's logo appears in the homepage logo strip.</p>
+                {selectedWholesaler.showOnHomepage && !selectedWholesaler.logoUrl && (
+                  <div className="flex items-start gap-1.5 bg-amber-50 border border-amber-200 rounded-md px-2.5 py-2 mb-2">
+                    <AlertTriangle className="h-3.5 w-3.5 text-amber-600 mt-0.5 shrink-0" />
+                    <p className="text-xs text-amber-700">This wholesaler is shown on the homepage strip but has no logo uploaded. Their slot will appear blank. Ask them to upload a logo or remove them from the strip.</p>
+                  </div>
+                )}
                 <div className="flex items-center gap-3">
                   <button
                     onClick={() => toggleShowOnHomepage.mutate(selectedWholesaler.id)}

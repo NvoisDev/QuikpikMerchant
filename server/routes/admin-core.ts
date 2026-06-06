@@ -218,6 +218,7 @@ export function registerAdminCoreRoutes(app: Express): void {
           isCustomPricing: subscriptionByWholesaler[w.id]?.isCustomPricing ?? false,
           internalNote: subscriptionByWholesaler[w.id]?.internalNote ?? null,
           customPriceExpiresAt: subscriptionByWholesaler[w.id]?.customPriceExpiresAt ?? null,
+          logoUrl: w.logoUrl ?? null,
         };
       }).sort((a, b) => {
         if (a.isTestAccount !== b.isTestAccount) return a.isTestAccount ? 1 : -1;
