@@ -269,8 +269,13 @@ function MarketplaceSearch() {
   const hasContent = searched || query || selectedCategory;
 
   return (
-    <section className="bg-white border-b border-gray-100 py-12 sm:py-16">
-      <div className="max-w-3xl mx-auto px-4 sm:px-6">
+    <section
+      className="relative border-b border-gray-100 py-12 sm:py-16 overflow-hidden"
+      style={{ backgroundImage: 'url(/hero-buyer-bg.jpg)', backgroundSize: 'cover', backgroundPosition: 'center 30%' }}
+    >
+      {/* Subtle white overlay so text stays crisp */}
+      <div className="absolute inset-0 bg-white/88 backdrop-blur-[2px]" />
+      <div className="relative max-w-3xl mx-auto px-4 sm:px-6">
         <div className="text-center mb-8">
           <h2 className="text-4xl sm:text-5xl font-extrabold text-gray-900 tracking-tight mb-2">Find African wholesale suppliers</h2>
           <p className="text-base text-gray-500 mb-4">Search products from verified African wholesalers</p>
