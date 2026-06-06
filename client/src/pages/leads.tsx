@@ -1,13 +1,15 @@
 import { useState } from "react";
+import { Link } from "wouter";
 import PageHeader from "@/components/PageHeader";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import {
   Inbox, Phone, Mail, Building2, Package, MessageSquare,
-  Clock, CheckCircle2, Eye, X, TrendingUp, Users, Star,
+  Clock, CheckCircle2, Eye, X, TrendingUp, Users, Star, Settings,
 } from "lucide-react";
 
 interface StoreEnquiry {
@@ -170,6 +172,22 @@ export default function LeadsPage() {
   const [filter, setFilter] = useState<'all' | 'new' | 'viewed' | 'responded'>('all');
   const [selected, setSelected] = useState<StoreEnquiry | null>(null);
   const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  const { data: user } = useQuery<{ storeVisibility?: string }>({
+    queryKey: ['/api/auth/user'],
+  });
+
+  const isPublic = user?.storeVisibility === 'public';
+
+  const visibilityMutation = useMutation({
+    mutationFn: (pub: boolean) =>
+      apiRequest('PUT', '/api/user/profile', { storeVisibility: pub ? 'public' : 'private' }),
+    onSuccess: (_, pub) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
+      toast({ title: pub ? 'Store is now public 🌐' : 'Store set to private', description: pub ? 'Customers can now find and enquire about your products.' : 'Only invited customers can access your store.' });
+    },
+  });
 
   const { data: rawEnquiries, isLoading } = useQuery<StoreEnquiry[]>({
     queryKey: ['/api/public/enquiries'],
@@ -200,6 +218,31 @@ export default function LeadsPage() {
         )}
       </PageHeader>
       <div className="px-4 sm:px-6 py-5 max-w-3xl mx-auto">
+
+      {/* Public store toggle */}
+      <div className="bg-white border border-gray-100 rounded-2xl p-4 mb-5 shadow-sm">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="font-semibold text-gray-900 text-sm">Make store public</p>
+            <p className="text-xs text-gray-500 mt-0.5">Your products become searchable on quikpik.app</p>
+          </div>
+          <Switch
+            checked={isPublic}
+            disabled={visibilityMutation.isPending}
+            onCheckedChange={(v) => visibilityMutation.mutate(v)}
+            className="data-[state=checked]:bg-green-600"
+          />
+        </div>
+        <p className="text-[11px] text-gray-400 mt-3 flex items-center gap-1">
+          <Settings className="h-3 w-3 shrink-0" />
+          <span>Go to{' '}
+            <Link href="/settings?tab=store" className="text-green-600 underline underline-offset-2">
+              Settings → Store Setup
+            </Link>{' '}
+            to customise your store details.
+          </span>
+        </p>
+      </div>
 
       {/* Stats */}
       <div className="grid grid-cols-3 gap-3 mb-6">
