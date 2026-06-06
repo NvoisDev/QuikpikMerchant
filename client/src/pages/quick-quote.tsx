@@ -251,7 +251,6 @@ export default function QuickQuote() {
   } | null>(null);
   const [showPickingMode, setShowPickingMode] = useState(false);
   const [isSharingInvoice, setIsSharingInvoice] = useState(false);
-  const [sharePreviewOpen, setSharePreviewOpen] = useState(false);
   const [sharePreviewMessage, setSharePreviewMessage] = useState('');
   const [defaultShareMessage, setDefaultShareMessage] = useState('');
   const [newCustomer, setNewCustomer] = useState({
@@ -744,7 +743,7 @@ export default function QuickQuote() {
         setDefaultShareMessage(builtMessage);
         const savedSuffix = user?.id ? localStorage.getItem(`quikpik_invoice_suffix_${user.id}`) : null;
         setSharePreviewMessage(savedSuffix ? builtMessage + savedSuffix : builtMessage);
-        setSharePreviewOpen(true);
+        // message rendered inline on success screen — no Portal sheet needed
       } else {
         toast({
           title: "Invoice Created",
@@ -1186,6 +1185,8 @@ export default function QuickQuote() {
     setCreatedQuote(null);
     setSavedDraftResult(null);
     setSendMethod('share');
+    setSharePreviewMessage('');
+    setDefaultShareMessage('');
     setDepositPercentage(100);
     setBalanceDueDays(0);
     setQuotePaymentMethod(stripeReady ? 'payment_link' : 'bank_transfer');
@@ -1251,6 +1252,49 @@ export default function QuickQuote() {
               <p className="text-xs md:text-sm text-gray-600 text-center">
                 Share this link with your customer to collect payment.
               </p>
+            )}
+
+            {sharePreviewMessage && (
+              <div className="space-y-2 border border-gray-200 rounded-xl p-4 bg-gray-50">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-medium text-gray-600">Invoice Message</p>
+                  {sharePreviewMessage !== defaultShareMessage && (
+                    <button
+                      type="button"
+                      className="text-xs text-green-600 hover:text-green-700 underline underline-offset-2"
+                      onClick={() => setSharePreviewMessage(defaultShareMessage)}
+                    >
+                      Reset
+                    </button>
+                  )}
+                </div>
+                <textarea
+                  className="w-full border border-gray-200 rounded-lg p-3 text-sm font-mono leading-relaxed resize-none focus:outline-none focus:ring-2 focus:ring-green-500 bg-white"
+                  rows={12}
+                  value={sharePreviewMessage}
+                  onChange={(e) => setSharePreviewMessage(e.target.value)}
+                />
+                <Button
+                  className="w-full bg-green-600 hover:bg-green-700 text-white"
+                  size="lg"
+                  onClick={() => {
+                    if (user?.id) {
+                      if (sharePreviewMessage.startsWith(defaultShareMessage)) {
+                        const suffix = sharePreviewMessage.slice(defaultShareMessage.length);
+                        if (suffix) {
+                          localStorage.setItem(`quikpik_invoice_suffix_${user.id}`, suffix);
+                        } else {
+                          localStorage.removeItem(`quikpik_invoice_suffix_${user.id}`);
+                        }
+                      }
+                    }
+                    doShare(sharePreviewMessage);
+                  }}
+                >
+                  <Share2 className="h-4 w-4 mr-2" />
+                  Share Message
+                </Button>
+              </div>
             )}
 
             <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-2 md:pt-4">
@@ -2417,66 +2461,6 @@ export default function QuickQuote() {
           )}
         </div>
       </div>
-
-      {/* Invoice Message Preview Sheet */}
-      <Sheet open={sharePreviewOpen} onOpenChange={setSharePreviewOpen}>
-        <SheetContent side="bottom" className="max-h-[85vh] overflow-y-auto rounded-t-2xl px-4 pb-8">
-          <SheetHeader className="mb-3">
-            <SheetTitle className="text-base">Preview Invoice Message</SheetTitle>
-          </SheetHeader>
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-sm text-gray-500">Review or edit the message before sharing. Your customer will receive exactly what you see below.</p>
-            {sharePreviewMessage !== defaultShareMessage && (
-              <button
-                type="button"
-                className="ml-3 shrink-0 text-xs text-green-600 hover:text-green-700 underline underline-offset-2"
-                onClick={() => setSharePreviewMessage(defaultShareMessage)}
-              >
-                Reset to default
-              </button>
-            )}
-          </div>
-          <textarea
-            className="w-full border border-gray-200 rounded-lg p-3 text-sm font-mono leading-relaxed resize-none focus:outline-none focus:ring-2 focus:ring-green-500"
-            rows={14}
-            value={sharePreviewMessage}
-            onChange={(e) => setSharePreviewMessage(e.target.value)}
-          />
-          <div className="flex flex-col gap-2 mt-4">
-            <Button
-              className="w-full bg-green-600 hover:bg-green-700 text-white"
-              size="lg"
-              onClick={() => {
-                if (user?.id) {
-                  if (sharePreviewMessage.startsWith(defaultShareMessage)) {
-                    const suffix = sharePreviewMessage.slice(defaultShareMessage.length);
-                    if (suffix) {
-                      localStorage.setItem(`quikpik_invoice_suffix_${user.id}`, suffix);
-                    } else {
-                      localStorage.removeItem(`quikpik_invoice_suffix_${user.id}`);
-                    }
-                  }
-                }
-                setSharePreviewOpen(false);
-                doShare(sharePreviewMessage);
-              }}
-            >
-              <Share2 className="h-4 w-4 mr-2" />
-              Share
-            </Button>
-            <Button
-              variant="outline"
-              size="lg"
-              className="w-full"
-              onClick={() => {
-                setSharePreviewOpen(false);
-              }}
-            >
-              Cancel
-            </Button>
-          </div>
-        </SheetContent>
-      </Sheet>
 
       <div className={`fixed bottom-0 right-0 z-50 bg-white border-t border-gray-200 px-4 py-3 flex items-center justify-between gap-3 shadow-lg left-0 ${isDesktopCollapsed ? "lg:left-14" : "lg:left-64"}`}>
         <div className="hidden sm:block min-w-0">
