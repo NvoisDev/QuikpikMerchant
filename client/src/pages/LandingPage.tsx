@@ -270,22 +270,22 @@ function MarketplaceSearch() {
 
   return (
     <section
-      className="relative border-b border-gray-100 py-12 sm:py-16 overflow-hidden"
+      className="relative border-b border-gray-100 py-12 sm:py-16 pb-16 sm:pb-20 overflow-hidden"
       style={{ backgroundImage: 'url(/hero-buyer-bg.jpg)', backgroundSize: 'cover', backgroundPosition: 'center 30%' }}
     >
-      {/* Subtle white overlay so text stays crisp */}
-      <div className="absolute inset-0 bg-white/88 backdrop-blur-[2px]" />
+      {/* Dark overlay for contrast */}
+      <div className="absolute inset-0 bg-black/55" />
       <div className="relative max-w-3xl mx-auto px-4 sm:px-6">
         <div className="text-center mb-8">
-          <h2 className="text-4xl sm:text-5xl font-extrabold text-gray-900 tracking-tight mb-2">Find African wholesale suppliers</h2>
-          <p className="text-base text-gray-500 mb-4">Search products from verified African wholesalers</p>
+          <h2 className="text-4xl sm:text-5xl font-extrabold text-white tracking-tight mb-2 drop-shadow-sm">Find African wholesale suppliers</h2>
+          <p className="text-base text-white/80 mb-4">Search products from verified African wholesalers</p>
           {/* Trust badges */}
-          <div className="inline-flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 text-xs text-gray-400">
+          <div className="inline-flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 text-xs text-white/70">
             <span className="flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-green-400 inline-block" />
               Verified wholesalers
             </span>
-            <span className="text-gray-200">·</span>
+            <span className="text-white/30">·</span>
             <span className="flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-green-400 inline-block" />
               Trade pricing
@@ -390,12 +390,6 @@ function MarketplaceSearch() {
           </div>
         )}
 
-        {!hasContent && (
-          <div className="text-center mt-3">
-            <p className="text-xs text-gray-400">Start typing to discover African wholesale suppliers and their products</p>
-            <p className="text-xs text-gray-300 mt-1.5">Some suppliers keep their stores invite-only — ask your supplier for a direct link.</p>
-          </div>
-        )}
       </div>
     </section>
   );

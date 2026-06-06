@@ -1,0 +1,24 @@
+Based on ⁠image.png⁠, the UI for Quikpik has a great foundation with a clean, modern aesthetic, a solid color scheme, and a clear purpose. However, there are a few critical usability and design issues—mostly related to text readability and spacing—that need fixing to make it truly shine.
+Here is a breakdown of what's working and what can be improved:
+1. Contrast & Readability (Critical)
+The biggest issue in this layout is text legibility over the background image.
+ The Hero Text: "Find African wholesale suppliers" is dark blue/black text placed directly over a busy, multi-colored warehouse background. It gets heavily lost in the model's hair and the background shelving.
+ The Subtext: The text above and below the search bar ("Search products from...", "Start typing to discover...", and "Some suppliers keep...") is light gray/blue on top of a light/blurred background. It is almost entirely unreadable.
+ The Fix:
+ Add a darker, semi-transparent overlay (e.g., black at 40–50% opacity) over the background image and change the text to white.
+ Alternatively, place a solid or slightly translucent white card behind the text and search bar to separate it from the image completely.
+2. Header & Navigation (Good)
+The header layout is clean and follows standard mobile UX patterns well.
+ The Good: The logo is clear, the "Start Free" Call-to-Action (CTA) button stands out beautifully, and the hamburger menu is appropriately placed.
+ The Fix: The black banner at the very top ("Free to set up...") feels a bit cramped. Increasing the vertical padding slightly would give the text more room to breathe.
+3. Search Bar (Good)
+ The Good: The search bar is prominent, has a clear icon, and the placeholder text ("Search products, categories or suppliers...") clarifies exactly what the user can do.
+ The Fix: Because the text below the search bar is so hard to read, it adds visual clutter. If you fix the background contrast, this text will look better, but consider if all of that helper text is necessary. Good UX usually means the search bar speaks for itself.
+4. Bottom Navigation / Toggle (Needs Tweaking)
+At the bottom, you have an "I'm a Buyer" / "I'm a Wholesaler" toggle switch.
+ The Good: Segmented controls are great for tailoring the user experience quickly.
+ The Fix: The toggle is partially cut off by the browser's native bottom navigation overlay (the back arrow, share icon, safari/chrome icons). You need to add more bottom padding (safe area margins) to the webpage so that crucial interactive elements like this toggle sit safely above the browser bar and don't get blocked or accidentally misclicked.
+Summary Checklist for Improvements:
+1. [ ] Darken the background image overlay and switch the hero/subtext to white for better contrast.
+2. [ ] Reduce the amount of subtext around the search bar to declutter the viewport.
+3. [ ] Add bottom padding to push the "Buyer/Wholesaler" toggle higher so browser navigation doesn't overlap it.
