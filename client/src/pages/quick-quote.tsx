@@ -1097,6 +1097,7 @@ export default function QuickQuote() {
             if (navigator.canShare({ files: [file] })) {
               await navigator.share({ title: `Invoice ${orderRef}`, text: `Here's your invoice ${orderRef}`, files: [file] });
               nativeShareSucceeded = true;
+              toast({ title: 'Invoice shared', description: 'The invoice PDF has been shared.' });
               return;
             }
           }
