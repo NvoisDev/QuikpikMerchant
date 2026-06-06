@@ -396,13 +396,28 @@ function MarketplaceSearch() {
   );
 }
 
+interface HomepageWholesaler {
+  id: string;
+  businessName: string | null;
+  logoUrl: string | null;
+  logoType: string | null;
+}
+
 export default function LandingPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeAudience, setActiveAudience] = useState<'retailer' | 'wholesaler'>('retailer');
+  const [homepageWholesalers, setHomepageWholesalers] = useState<HomepageWholesaler[]>([]);
   const handleGetStarted = () => { window.location.href = "/signup"; };
   const handleLogin = () => { window.location.href = "/login"; };
   const handleCustomerLogin = () => { window.location.href = "/customer-login"; };
   const handleBookDemo = () => { window.open("https://calendly.com/hello-quikpik/30min", "_blank"); };
+
+  useEffect(() => {
+    fetch('/api/public/homepage-wholesalers')
+      .then(r => r.ok ? r.json() : [])
+      .then(data => setHomepageWholesalers(Array.isArray(data) ? data : []))
+      .catch(() => {});
+  }, []);
 
   return (
     <div className="min-h-screen bg-white text-gray-900">
@@ -945,20 +960,43 @@ export default function LandingPage() {
                 Trusted by leading wholesalers
               </p>
               <div className="flex items-center justify-center gap-6 flex-wrap">
-                <div className="flex flex-col items-center gap-1.5">
-                  <img
-                    src="/wholesaler-banner.jpg"
-                    alt="Plota Foods"
-                    className="w-12 h-12 rounded-full object-cover object-center ring-2 ring-white shadow-sm"
-                  />
-                  <span className="text-xs text-gray-500 font-medium">Plota Foods</span>
-                </div>
-                <div className="flex flex-col items-center gap-1.5 opacity-40 select-none">
-                  <div className="w-12 h-12 rounded-full bg-gray-200 ring-2 ring-white shadow-sm flex items-center justify-center">
-                    <span className="text-gray-400 text-lg font-bold">+</span>
-                  </div>
-                  <span className="text-xs text-gray-400 font-medium">Your brand</span>
-                </div>
+                {homepageWholesalers.length > 0 ? (
+                  homepageWholesalers.map(w => (
+                    <div key={w.id} className="flex flex-col items-center gap-1.5">
+                      {w.logoUrl ? (
+                        <img
+                          src={w.logoUrl}
+                          alt={w.businessName || 'Wholesaler'}
+                          className="w-12 h-12 rounded-full object-cover object-center ring-2 ring-white shadow-sm"
+                        />
+                      ) : (
+                        <div className="w-12 h-12 rounded-full bg-primary/10 ring-2 ring-white shadow-sm flex items-center justify-center">
+                          <span className="text-primary text-base font-bold">
+                            {(w.businessName || '?').charAt(0).toUpperCase()}
+                          </span>
+                        </div>
+                      )}
+                      <span className="text-xs text-gray-500 font-medium">{w.businessName || 'Wholesaler'}</span>
+                    </div>
+                  ))
+                ) : (
+                  <>
+                    <div className="flex flex-col items-center gap-1.5">
+                      <img
+                        src="/wholesaler-banner.jpg"
+                        alt="Plota Foods"
+                        className="w-12 h-12 rounded-full object-cover object-center ring-2 ring-white shadow-sm"
+                      />
+                      <span className="text-xs text-gray-500 font-medium">Plota Foods</span>
+                    </div>
+                    <div className="flex flex-col items-center gap-1.5 opacity-40 select-none">
+                      <div className="w-12 h-12 rounded-full bg-gray-200 ring-2 ring-white shadow-sm flex items-center justify-center">
+                        <span className="text-gray-400 text-lg font-bold">+</span>
+                      </div>
+                      <span className="text-xs text-gray-400 font-medium">Your brand</span>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           </section>

@@ -139,6 +139,10 @@ export function registerAuthCoreRoutes(app: Express): void {
         }
       }
 
+      if (updates.showOnHomepage !== undefined) {
+        updates.showOnHomepage = Boolean(updates.showOnHomepage);
+      }
+
       if (updates.storeTagline !== undefined) {
         const trimmedTagline = updates.storeTagline == null ? '' : String(updates.storeTagline).trim();
         if (!trimmedTagline) {

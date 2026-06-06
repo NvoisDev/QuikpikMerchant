@@ -8,6 +8,33 @@ import { requireAuth } from "../googleAuth";
 
 export function registerPublicStoreRoutes(app: Express) {
 
+  // GET /api/public/homepage-wholesalers
+  // Returns wholesalers who have opted in to appear on the landing page logo strip (no auth required)
+  app.get("/api/public/homepage-wholesalers", async (_req, res) => {
+    try {
+      const wholesalers = await db
+        .select({
+          id: users.id,
+          businessName: users.businessName,
+          logoUrl: users.logoUrl,
+          logoType: users.logoType,
+        })
+        .from(users)
+        .where(
+          and(
+            eq(users.showOnHomepage, true),
+            eq(users.isInactive, false),
+            eq(users.role, 'wholesaler')
+          )
+        );
+
+      return res.json(wholesalers);
+    } catch (error) {
+      console.error("Error fetching homepage wholesalers:", error);
+      return res.status(500).json({ message: "Failed to fetch wholesalers" });
+    }
+  });
+
   // GET /api/public/wholesaler/:slug
   // Returns public wholesaler info + their public products (no auth required)
   app.get("/api/public/wholesaler/:slug", async (req, res) => {

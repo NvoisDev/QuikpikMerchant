@@ -303,6 +303,9 @@ export const users = pgTable("users", {
   // Pay Later — wholesaler-controlled
   allowPayLater: boolean("allow_pay_later").default(false),
 
+  // Public homepage opt-in — wholesaler chooses to appear on the landing page logo strip
+  showOnHomepage: boolean("show_on_homepage").default(false),
+
   // Per-wholesaler customer fee override (null = fall back to platform-wide config)
   // customerFeePercentage stored as decimal rate: 0.0200 = 2%
   // customerFixedFee stored as pound amount:      0.70   = £0.70

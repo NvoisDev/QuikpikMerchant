@@ -697,6 +697,7 @@ function PublicStoreSettings({ user }: { user: any }) {
   const [priceMode, setPriceMode] = useState(user?.priceDisplayMode || 'hidden');
   const [description, setDescription] = useState(user?.storeDescription || '');
   const [regions, setRegions] = useState(user?.deliveryRegions || '');
+  const [showOnHomepage, setShowOnHomepage] = useState(user?.showOnHomepage ?? false);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -704,7 +705,8 @@ function PublicStoreSettings({ user }: { user: any }) {
     setPriceMode(user?.priceDisplayMode || 'hidden');
     setDescription(user?.storeDescription || '');
     setRegions(user?.deliveryRegions || '');
-  }, [user?.storeVisibility, user?.priceDisplayMode, user?.storeDescription, user?.deliveryRegions]);
+    setShowOnHomepage(user?.showOnHomepage ?? false);
+  }, [user?.storeVisibility, user?.priceDisplayMode, user?.storeDescription, user?.deliveryRegions, user?.showOnHomepage]);
 
   const storeSlug = user?.storeSlug || user?.id || '';
   const publicUrl = `${window.location.origin}/w/${storeSlug}`;
@@ -717,6 +719,7 @@ function PublicStoreSettings({ user }: { user: any }) {
         priceDisplayMode: priceMode,
         storeDescription: description.trim() || null,
         deliveryRegions: regions.trim() || null,
+        showOnHomepage,
       });
       if (r.ok) {
         queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
@@ -798,6 +801,18 @@ function PublicStoreSettings({ user }: { user: any }) {
           </div>
         </div>
       )}
+
+      {/* Homepage logo strip opt-in */}
+      <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-200 mt-4">
+        <div>
+          <p className="text-sm font-medium text-gray-900">Show my brand on the public homepage</p>
+          <p className="text-xs text-gray-500 mt-0.5">Your logo and business name will appear in the "Trusted by" strip on the Quikpik landing page</p>
+        </div>
+        <Switch
+          checked={showOnHomepage}
+          onCheckedChange={setShowOnHomepage}
+        />
+      </div>
 
       <button
         onClick={save}
