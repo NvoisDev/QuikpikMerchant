@@ -272,7 +272,7 @@ function MarketplaceSearch() {
     <section className="bg-white border-b border-gray-100 py-12 sm:py-16">
       <div className="max-w-3xl mx-auto px-4 sm:px-6">
         <div className="text-center mb-8">
-          <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight mb-2">Find African wholesale suppliers</h2>
+          <h2 className="text-4xl sm:text-5xl font-extrabold text-gray-900 tracking-tight mb-2">Find African wholesale suppliers</h2>
           <p className="text-base text-gray-500 mb-4">Search products from verified African wholesalers</p>
           {/* Trust badges */}
           <div className="inline-flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 text-xs text-gray-400">
