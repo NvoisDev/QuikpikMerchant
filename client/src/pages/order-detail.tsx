@@ -802,14 +802,25 @@ export default function OrderDetail() {
       });
       const data = await response.json();
       if (data.success && data.paymentLink) {
-        try { await navigator.clipboard.writeText(data.paymentLink); } catch {}
         if (data.order) setOrder({ ...order, ...data.order, stripePaymentLinkUrl: data.paymentLink });
-        toast({
-          title: data.smsSent ? "Payment Link Sent!" : "Payment Link Copied",
-          description: data.smsSent
-            ? `Customer has been texted the payment link. Link also copied to clipboard.`
-            : `Payment link copied to clipboard.`
-        });
+        const shareData = {
+          title: `Payment for Order #${order.orderNumber}`,
+          text: `Hi, here is your payment link for order #${order.orderNumber}:`,
+          url: data.paymentLink,
+        };
+        if (navigator.share && navigator.canShare?.(shareData)) {
+          try {
+            await navigator.share(shareData);
+          } catch (err: any) {
+            if (err?.name !== 'AbortError') {
+              try { await navigator.clipboard.writeText(data.paymentLink); } catch {}
+              toast({ title: "Link Copied", description: "Payment link copied to clipboard." });
+            }
+          }
+        } else {
+          try { await navigator.clipboard.writeText(data.paymentLink); } catch {}
+          toast({ title: "Payment Link Copied", description: "Payment link copied to clipboard." });
+        }
       } else {
         toast({ title: "Error", description: data.error || "Failed to generate payment link", variant: "destructive" });
       }
