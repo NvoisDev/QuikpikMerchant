@@ -501,8 +501,17 @@ export default function PublicStorePage() {
               placeholder="Search products…"
               value={search}
               onChange={e => setSearch(e.target.value)}
-              className="pl-9"
+              className={`pl-9 ${search ? 'pr-9' : ''}`}
             />
+            {search && (
+              <button
+                onClick={() => setSearch('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-emerald-600 hover:text-emerald-800 transition-colors"
+                aria-label="Clear search"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
           </div>
         </div>
 
