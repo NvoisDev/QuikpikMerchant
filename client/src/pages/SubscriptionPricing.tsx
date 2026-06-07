@@ -8,6 +8,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { CheckIcon, AlertTriangleIcon, CreditCard, Loader2 } from 'lucide-react';
+import { PLAN_HIERARCHY } from '@/lib/planUtils';
 import { DowngradeConfirmationModal } from '@/components/subscription/DowngradeConfirmationModal';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useAuth } from '@/hooks/useAuth';
@@ -269,15 +270,9 @@ export default function SubscriptionPricing() {
       return;
     }
     
-    // Plan hierarchy for upgrade/downgrade detection
-    const planHierarchy: Record<string, number> = {
-      'listing': 0, 'listing_annual_intro': 0, 'listing_annual': 0,
-      'free': 1, 'starter': 1, 'starter_annual_intro': 1, 'starter_annual': 1,
-      'standard': 2, 'standard_annual_intro': 2, 'standard_annual': 2,
-      'premium': 3, 'premium_annual_intro': 3, 'premium_annual': 3,
-    };
-    const currentPlanLevel = planHierarchy[currentPlan] ?? 1;
-    const targetPlanLevel = planHierarchy[plan.planId] ?? 1;
+    // Plan hierarchy for upgrade/downgrade detection (imported from planUtils)
+    const currentPlanLevel = PLAN_HIERARCHY[currentPlan] ?? 1;
+    const targetPlanLevel = PLAN_HIERARCHY[plan.planId] ?? 1;
     
     // Handle downgrades (moving to a lower tier)
     if (targetPlanLevel < currentPlanLevel) {
@@ -911,7 +906,8 @@ export default function SubscriptionPricing() {
         currentPlan={currentSubscription?.currentPlan || 'free'}
         targetPlan={targetDowngradePlan}
         onConfirmDowngrade={() => {
-          if (targetDowngradePlan === 'free') {
+          // 'listing' and 'free' are the two no-Stripe tiers — both use the cancel path
+          if (targetDowngradePlan === 'free' || targetDowngradePlan === 'listing') {
             cancelSubscriptionMutation.mutate();
           } else {
             downgradeSubscriptionMutation.mutate(targetDowngradePlan);

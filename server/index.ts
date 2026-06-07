@@ -236,20 +236,18 @@ async function runStartupMigrations() {
     // so the DB is correct from the very first request even before that function fires.
     `UPDATE subscription_plans
      SET monthly_price = '499.99',
-         features = '["Up to 20 products","Up to 5 price lists","Broadcast tools coming soon","Basic dashboard analytics","Priority email support","Save vs monthly billing"]',
-         limits = '{"products":20,"broadcasts":25,"teamMembers":2,"customGroups":5,"priceLists":5}'
-     WHERE plan_id = 'standard_annual_intro'
-       AND monthly_price != '499.99'`,
+         features = '["Up to 50 products","Up to 10 price lists","Broadcast tools coming soon","Basic dashboard analytics","Priority email support","Save vs monthly billing"]',
+         limits = '{"products":50,"broadcasts":25,"teamMembers":3,"customGroups":10,"priceLists":10}'
+     WHERE plan_id = 'standard_annual_intro'`,
     `UPDATE subscription_plans
      SET monthly_price = '899.99'
      WHERE plan_id = 'premium_annual_intro'
        AND monthly_price != '899.99'`,
     `UPDATE subscription_plans
      SET monthly_price = '599.99',
-         features = '["Up to 20 products","Up to 5 price lists","Broadcast tools coming soon","Basic dashboard analytics","Priority email support"]',
-         limits = '{"products":20,"broadcasts":25,"teamMembers":2,"customGroups":5,"priceLists":5}'
-     WHERE plan_id = 'standard_annual'
-       AND monthly_price != '599.99'`,
+         features = '["Up to 50 products","Up to 10 price lists","Broadcast tools coming soon","Basic dashboard analytics","Priority email support"]',
+         limits = '{"products":50,"broadcasts":25,"teamMembers":3,"customGroups":10,"priceLists":10}'
+     WHERE plan_id = 'standard_annual'`,
     `UPDATE subscription_plans
      SET monthly_price = '999.99'
      WHERE plan_id = 'premium_annual'

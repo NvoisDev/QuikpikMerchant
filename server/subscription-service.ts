@@ -672,19 +672,52 @@ export class SubscriptionService {
   static async initializeAnnualPlans() {
     const annualPlanDefs = [
       {
+        planId: 'listing_annual',
+        name: 'Listing Annual',
+        price: 199.90,
+        description: 'Annual Listing plan — save 16% vs monthly',
+        features: [
+          'Up to 10 products',
+          'Public storefront listing',
+          'Basic product catalogue',
+          'WhatsApp enquiries',
+          'Save 16% vs monthly',
+        ],
+        limits: { products: 10, broadcasts: 0, teamMembers: 1, customGroups: 2, priceLists: 2 },
+        sortOrder: 5,
+        skipStripe: true, // Admin creates the Stripe product manually; prevents blocking at startup
+      },
+      {
+        planId: 'starter_annual',
+        name: 'Starter Annual',
+        price: 299.90,
+        description: 'Annual Starter plan — save 16% vs monthly',
+        features: [
+          'Up to 20 products',
+          'Invoices & payments',
+          'Order management',
+          'Up to 5 price lists',
+          'Customer tools',
+          'Save 16% vs monthly',
+        ],
+        limits: { products: 20, broadcasts: 10, teamMembers: 1, customGroups: 5, priceLists: 5 },
+        sortOrder: 6,
+        skipStripe: true, // Admin creates the Stripe product manually; prevents blocking at startup
+      },
+      {
         planId: 'standard_annual_intro',
         name: 'Standard Annual (Intro)',
         price: 499.99,
         description: 'Annual plan — introductory rate until May 2027',
         features: [
-          'Up to 20 products',
-          'Up to 5 price lists',
+          'Up to 50 products',
+          'Up to 10 price lists',
           'Broadcast tools coming soon',
           'Basic dashboard analytics',
           'Priority email support',
           'Save vs monthly billing',
         ],
-        limits: { products: 20, broadcasts: 25, teamMembers: 2, customGroups: 5, priceLists: 5 },
+        limits: { products: 50, broadcasts: 25, teamMembers: 3, customGroups: 10, priceLists: 10 },
         sortOrder: 10,
       },
       {
@@ -709,13 +742,13 @@ export class SubscriptionService {
         price: 599.99,
         description: 'Full-rate annual Standard plan (from May 2027)',
         features: [
-          'Up to 20 products',
-          'Up to 5 price lists',
+          'Up to 50 products',
+          'Up to 10 price lists',
           'Broadcast tools coming soon',
           'Basic dashboard analytics',
           'Priority email support',
         ],
-        limits: { products: 20, broadcasts: 25, teamMembers: 2, customGroups: 5, priceLists: 5 },
+        limits: { products: 50, broadcasts: 25, teamMembers: 3, customGroups: 10, priceLists: 10 },
         sortOrder: 12,
         isPubliclyVisible: false,
       },
@@ -752,7 +785,7 @@ export class SubscriptionService {
       let stripeProductId: string | null = null;
       let stripePriceId: string | null = null;
 
-      if (platformStripe) {
+      if (platformStripe && !(plan as any).skipStripe) {
         // Create Stripe product+price; throw on failure so we don't store a plan without a price
         const product = await platformStripe.products.create({
           name: plan.name,

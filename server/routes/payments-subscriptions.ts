@@ -257,8 +257,8 @@ export function registerSubscriptionRoutes(app: Express): void {
 
       // Zod validation for targetPlan
       const targetPlanSchema = z.object({
-        targetPlan: z.enum(['free', 'standard', 'premium'], {
-          errorMap: () => ({ message: 'targetPlan must be one of: free, standard, premium' })
+        targetPlan: z.enum(['listing', 'free', 'starter', 'standard', 'premium'], {
+          errorMap: () => ({ message: 'targetPlan must be one of: listing, starter, standard, premium' })
         })
       });
 
@@ -289,10 +289,11 @@ export function registerSubscriptionRoutes(app: Express): void {
 
       const targetPlanData = plans[0];
 
-      // Handle downgrade to free plan with proper proration
-      if (targetPlan === 'free') {
+      // Handle downgrade to listing or free — both have no Stripe price, so cancel the subscription
+      if (targetPlan === 'free' || targetPlan === 'listing') {
+        const effectiveCancelPlan = targetPlan; // 'free' (legacy) or 'listing' (new base tier)
         // Compute projected impact BEFORE proratedFreeDowngrade mutates the DB
-        const projectedImpact = await getProjectedDowngradeImpact(userId, 'free');
+        const projectedImpact = await getProjectedDowngradeImpact(userId, effectiveCancelPlan);
 
         const result = await SubscriptionService.proratedFreeDowngrade(
           currentSubscription.stripeSubscriptionId,
@@ -301,7 +302,7 @@ export function registerSubscriptionRoutes(app: Express): void {
         );
 
         // Enforce limits immediately (immediate downgrade path)
-        const enforcedNow = await enforceNewPlanLimits(userId, 'free');
+        const enforcedNow = await enforceNewPlanLimits(userId, effectiveCancelPlan);
 
         // Send downgrade scheduled/immediate confirmation email
         // The webhook will also send the "effective" email when customer.subscription.deleted fires
