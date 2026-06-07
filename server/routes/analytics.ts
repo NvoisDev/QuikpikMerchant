@@ -1,14 +1,14 @@
 import type { Express } from "express";
 import {
   and, count, customerGroups, db, eq, gte, inArray, lte, openai, or, orderCancellationRequests,
-  orderItems, orders, products, requireAuth, requireNotViewer, storage, sum
+  orderItems, orders, products, requireAuth, requireNotViewer, requireBooleanFeature, storage, sum
 } from "./shared";
 import { resolveWholesalerId } from "../utils/resolveWholesalerId";
 import { productBatches } from "@shared/schema";
 
 export function registerAnalyticsRoutes(app: Express): void {
   // GET /api/analytics/cancellations
-  app.get('/api/analytics/cancellations', requireAuth, async (req: any, res) => {
+  app.get('/api/analytics/cancellations', requireAuth, requireBooleanFeature('analytics'), async (req: any, res) => {
     try {
       const wholesalerId = resolveWholesalerId(req);
       
@@ -100,7 +100,7 @@ export function registerAnalyticsRoutes(app: Express): void {
   });
 
   // GET /api/analytics/stats
-  app.get('/api/analytics/stats', requireAuth, async (req: any, res) => {
+  app.get('/api/analytics/stats', requireAuth, requireBooleanFeature('analytics'), async (req: any, res) => {
     try {
       // Use parent company ID for team members
       const targetUserId = resolveWholesalerId(req);
@@ -134,7 +134,7 @@ export function registerAnalyticsRoutes(app: Express): void {
   });
 
   // GET /api/analytics/chart-data
-  app.get('/api/analytics/chart-data', requireAuth, async (req: any, res) => {
+  app.get('/api/analytics/chart-data', requireAuth, requireBooleanFeature('analytics'), async (req: any, res) => {
     try {
       const targetUserId = resolveWholesalerId(req);
       const { fromDate, toDate } = req.query;
@@ -260,7 +260,7 @@ export function registerAnalyticsRoutes(app: Express): void {
   });
 
   // GET /api/analytics/top-products
-  app.get('/api/analytics/top-products', requireAuth, async (req: any, res) => {
+  app.get('/api/analytics/top-products', requireAuth, requireBooleanFeature('analytics'), async (req: any, res) => {
     try {
       // Use parent company ID for team members
       const targetUserId = resolveWholesalerId(req);
@@ -275,7 +275,7 @@ export function registerAnalyticsRoutes(app: Express): void {
   });
 
   // GET /api/analytics/recent-orders
-  app.get('/api/analytics/recent-orders', requireAuth, async (req: any, res) => {
+  app.get('/api/analytics/recent-orders', requireAuth, requireBooleanFeature('analytics'), async (req: any, res) => {
     try {
       // Use parent company ID for team members
       const targetUserId = resolveWholesalerId(req);
@@ -290,7 +290,7 @@ export function registerAnalyticsRoutes(app: Express): void {
   });
 
   // GET /api/analytics/broadcast-stats
-  app.get('/api/analytics/broadcast-stats', requireAuth, async (req: any, res) => {
+  app.get('/api/analytics/broadcast-stats', requireAuth, requireBooleanFeature('analytics'), async (req: any, res) => {
     try {
       // Use parent company ID for team members
       const targetUserId = resolveWholesalerId(req);
@@ -304,7 +304,7 @@ export function registerAnalyticsRoutes(app: Express): void {
   });
 
   // GET /api/analytics/margin-summary
-  app.get('/api/analytics/margin-summary', requireAuth, async (req: any, res) => {
+  app.get('/api/analytics/margin-summary', requireAuth, requireBooleanFeature('analytics'), async (req: any, res) => {
     try {
       const targetUserId = resolveWholesalerId(req);
 
@@ -421,7 +421,7 @@ export function registerAnalyticsRoutes(app: Express): void {
   });
 
   // GET /api/analytics/dashboard
-  app.get('/api/analytics/dashboard', requireAuth, async (req: any, res) => {
+  app.get('/api/analytics/dashboard', requireAuth, requireBooleanFeature('analytics'), async (req: any, res) => {
     try {
       // Check subscription tier for Business Performance access (Standard or Premium required)
       if (req.user.subscriptionTier === 'free') {
@@ -487,7 +487,7 @@ export function registerAnalyticsRoutes(app: Express): void {
   });
 
   // GET /api/analytics/revenue
-  app.get('/api/analytics/revenue', requireAuth, async (req: any, res) => {
+  app.get('/api/analytics/revenue', requireAuth, requireBooleanFeature('analytics'), async (req: any, res) => {
     try {
       // Use parent company ID for team members
       const targetUserId = resolveWholesalerId(req);
@@ -515,7 +515,7 @@ export function registerAnalyticsRoutes(app: Express): void {
   });
 
   // GET /api/analytics/products
-  app.get('/api/analytics/products', requireAuth, async (req: any, res) => {
+  app.get('/api/analytics/products', requireAuth, requireBooleanFeature('analytics'), async (req: any, res) => {
     try {
       // Use parent company ID for team members
       const targetUserId = resolveWholesalerId(req);
@@ -537,7 +537,7 @@ export function registerAnalyticsRoutes(app: Express): void {
   });
 
   // GET /api/financial-health
-  app.get('/api/financial-health', requireAuth, async (req: any, res) => {
+  app.get('/api/financial-health', requireAuth, requireBooleanFeature('analytics'), async (req: any, res) => {
     try {
       // Check subscription tier for Business Performance access (Standard or Premium required)
       if (req.user.subscriptionTier === 'free') {
@@ -657,7 +657,7 @@ export function registerAnalyticsRoutes(app: Express): void {
   });
 
   // POST /api/financial-health/insights
-  app.post('/api/financial-health/insights', requireAuth, async (req: any, res) => {
+  app.post('/api/financial-health/insights', requireAuth, requireBooleanFeature('analytics'), async (req: any, res) => {
     try {
       const userId = req.user.id;
       const { analysis_type, period } = req.body;
@@ -754,7 +754,7 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
   });
 
   // GET /api/analytics/customers
-  app.get('/api/analytics/customers', requireAuth, async (req: any, res) => {
+  app.get('/api/analytics/customers', requireAuth, requireBooleanFeature('analytics'), async (req: any, res) => {
     try {
       const user = req.user;
       const targetUserId = user.role === 'team_member' ? user.wholesalerId : user.id;
@@ -874,7 +874,7 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
   });
 
   // GET /api/analytics/inventory
-  app.get('/api/analytics/inventory', requireAuth, async (req: any, res) => {
+  app.get('/api/analytics/inventory', requireAuth, requireBooleanFeature('analytics'), async (req: any, res) => {
     try {
       // Check subscription tier for Business Performance access (Standard or Premium required)
       if (req.user.subscriptionTier === 'free') {
@@ -1006,7 +1006,7 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
   });
 
   // GET /api/stock-alerts
-  app.get('/api/stock-alerts', requireAuth, async (req: any, res) => {
+  app.get('/api/stock-alerts', requireAuth, requireBooleanFeature('analytics'), async (req: any, res) => {
     try {
       const wholesalerId = resolveWholesalerId(req);
       const unreadOnly = req.query.unreadOnly === 'true';

@@ -1,5 +1,5 @@
 import type { Express } from "express";
-import { storage, requireAuth, requireNotViewer, z, db, eq, and, sql } from "./shared";
+import { storage, requireAuth, requireNotViewer, requireBooleanFeature, z, db, eq, and, sql } from "./shared";
 import { products, productBatches, insertProductBatchSchema } from "@shared/schema";
 import type { ProductBatch } from "@shared/schema";
 
@@ -92,7 +92,7 @@ export function registerBatchRoutes(app: Express): void {
   });
 
   // POST /api/products/:id/batches  — create a new batch (stock-in event)
-  app.post('/api/products/:id/batches', requireAuth, requireNotViewer, async (req: any, res) => {
+  app.post('/api/products/:id/batches', requireAuth, requireBooleanFeature('batch_tracking'), requireNotViewer, async (req: any, res) => {
     try {
       const productId = parseInt(req.params.id);
       if (isNaN(productId)) return res.status(400).json({ error: 'Invalid product id' });
@@ -130,7 +130,7 @@ export function registerBatchRoutes(app: Express): void {
   });
 
   // PATCH /api/products/:id/batches/:batchId  — update batch fields or adjust quantity
-  app.patch('/api/products/:id/batches/:batchId', requireAuth, requireNotViewer, async (req: any, res) => {
+  app.patch('/api/products/:id/batches/:batchId', requireAuth, requireBooleanFeature('batch_tracking'), requireNotViewer, async (req: any, res) => {
     try {
       const productId = parseInt(req.params.id);
       const batchId = parseInt(req.params.batchId);
@@ -244,7 +244,7 @@ export function registerBatchRoutes(app: Express): void {
   });
 
   // DELETE /api/products/:id/batches/:batchId  — soft-delete (mark as depleted)
-  app.delete('/api/products/:id/batches/:batchId', requireAuth, requireNotViewer, async (req: any, res) => {
+  app.delete('/api/products/:id/batches/:batchId', requireAuth, requireBooleanFeature('batch_tracking'), requireNotViewer, async (req: any, res) => {
     try {
       const productId = parseInt(req.params.id);
       const batchId = parseInt(req.params.batchId);

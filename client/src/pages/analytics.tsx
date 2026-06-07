@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useCurrency } from "@/hooks/useCurrency";
 import { useQuery } from "@tanstack/react-query";
+import { FeatureLock, isListingTier } from "@/components/FeatureLock";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -122,6 +123,11 @@ export default function Analytics() {
     enabled: !!user,
   });
 
+  const { data: planLimits } = useQuery<{ plan: string }>({
+    queryKey: ["/api/subscriptions/plan-limits"],
+    enabled: !!user,
+  });
+
   const formatChange = (change: number) => {
     const isPositive = change >= 0;
     return (
@@ -133,6 +139,17 @@ export default function Analytics() {
   };
 
   const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4'];
+
+  if (isListingTier(planLimits?.plan)) {
+    return (
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <FeatureLock
+          feature="Analytics & Reports"
+          description="Analytics, financial reports, and business performance data are available on the Starter plan and above."
+        />
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (

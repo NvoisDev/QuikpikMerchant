@@ -8,7 +8,7 @@ import {
   InventoryCalculator, and, asc, db, emailButton, emailCard, emailHeading, eq,
   formatPackDescriptor, generateOrderNumber, getEmailLogoUrl,
   inArray, isNull, ne, or, orderItems, orders, productBatches, products,
-  requireAuth, requireNotViewer, sendEmail, sendWhatsAppMessage, sendCustomerInvoiceEmail,
+  requireAuth, requireNotViewer, requireBooleanFeature, sendEmail, sendWhatsAppMessage, sendCustomerInvoiceEmail,
   sql, stockMovements, storage, sum, wrapCustomerEmail, desc, quoteActivityLogs,
   teamMembers, users,
 } from "./shared";
@@ -31,7 +31,7 @@ type ExistingOrderItem = Awaited<ReturnType<typeof storage.getOrderItems>>[numbe
 
 export function registerQuoteRoutes(app: Express): void {
   // POST /api/quotes
-  app.post('/api/quotes', requireAuth, requireNotViewer, async (req: any, res) => {
+  app.post('/api/quotes', requireAuth, requireBooleanFeature('invoices'), requireNotViewer, async (req: any, res) => {
     try {
       const wholesalerId = resolveWholesalerId(req);
       
@@ -916,7 +916,7 @@ export function registerQuoteRoutes(app: Express): void {
   });
 
   // PATCH /api/quotes/:id — edit an existing quote before payment is completed
-  app.patch('/api/quotes/:id', requireAuth, requireNotViewer, async (req: any, res) => {
+  app.patch('/api/quotes/:id', requireAuth, requireBooleanFeature('invoices'), requireNotViewer, async (req: any, res) => {
     try {
       const wholesalerId = resolveWholesalerId(req);
 

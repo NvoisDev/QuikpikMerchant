@@ -3,7 +3,31 @@ import SubscriptionService from '../subscription-service';
 import { db } from '../db';
 import { teamMembers, priceLists } from '@shared/schema';
 import { eq, and, count as drizzleCount } from 'drizzle-orm';
-import { PLAN_LIMITS, PLAN_HIERARCHY, getPlanLimits } from '../config/plan-limits';
+import { PLAN_LIMITS, PLAN_HIERARCHY, getPlanLimits, hasFeatureFlag, type BooleanFeature } from '../config/plan-limits';
+
+/**
+ * Boolean feature gate middleware.
+ * Blocks requests from Listing-tier users (and any future tiers where the flag is disabled).
+ * Returns 403 with code: 'FEATURE_NOT_IN_PLAN' so the frontend can show an upgrade prompt.
+ */
+export function requireBooleanFeature(feature: BooleanFeature) {
+  return (req: Request, res: Response, next: NextFunction) => {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Authentication required', code: 'AUTH_REQUIRED' });
+    }
+    const tier: string = req.user.subscriptionTier || 'free';
+    if (!hasFeatureFlag(tier, feature)) {
+      return res.status(403).json({
+        error: 'This feature is not available on your current plan. Upgrade to Starter or above to unlock it.',
+        feature,
+        currentPlan: tier,
+        code: 'FEATURE_NOT_IN_PLAN',
+        upgradeUrl: '/subscription/pricing',
+      });
+    }
+    next();
+  };
+}
 
 /**
  * Feature gating middleware - checks if user has access to specific features

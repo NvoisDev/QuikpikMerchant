@@ -87,3 +87,66 @@ export function getPlanLimits(tier: string): PlanLimitShape {
   const resolved = tier === 'free' ? 'starter' : tier;
   return (PLAN_LIMITS as Record<string, PlanLimitShape>)[resolved] ?? PLAN_LIMITS.starter;
 }
+
+// ─── Boolean feature flags ────────────────────────────────────────────────────
+// The Listing tier is discovery-only; Starter and above get full operational access.
+// Only add entries here when a feature needs to be DISABLED for a specific tier.
+
+export type BooleanFeature =
+  | 'invoices'
+  | 'payments'
+  | 'analytics'
+  | 'order_management'
+  | 'customer_management'
+  | 'batch_tracking'
+  | 'reports'
+  | 'draft_invoices'
+  | 'price_lists_operational';
+
+const ALL_ENABLED: Record<BooleanFeature, boolean> = {
+  invoices: true,
+  payments: true,
+  analytics: true,
+  order_management: true,
+  customer_management: true,
+  batch_tracking: true,
+  reports: true,
+  draft_invoices: true,
+  price_lists_operational: true,
+};
+
+const LISTING_DISABLED: Record<BooleanFeature, boolean> = {
+  invoices: false,
+  payments: false,
+  analytics: false,
+  order_management: false,
+  customer_management: false,
+  batch_tracking: false,
+  reports: false,
+  draft_invoices: false,
+  price_lists_operational: false,
+};
+
+export const FEATURE_FLAGS: Record<string, Record<BooleanFeature, boolean>> = {
+  listing: LISTING_DISABLED,
+  listing_annual_intro: LISTING_DISABLED,
+  listing_annual: LISTING_DISABLED,
+  free: ALL_ENABLED,
+  starter: ALL_ENABLED,
+  starter_annual_intro: ALL_ENABLED,
+  starter_annual: ALL_ENABLED,
+  standard: ALL_ENABLED,
+  standard_annual_intro: ALL_ENABLED,
+  standard_annual: ALL_ENABLED,
+  premium: ALL_ENABLED,
+  premium_annual_intro: ALL_ENABLED,
+  premium_annual: ALL_ENABLED,
+};
+
+/**
+ * Returns true if the given tier has access to the given boolean feature.
+ * Unknown tiers default to true (permissive) to avoid blocking existing users.
+ */
+export function hasFeatureFlag(tier: string, feature: BooleanFeature): boolean {
+  return FEATURE_FLAGS[tier]?.[feature] ?? true;
+}

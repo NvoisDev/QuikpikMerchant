@@ -5,7 +5,7 @@ import {
   ReliableSMSService, and, customerGroups, customerRegistrationRequests, db, desc, emailCard,
   emailHeading, eq, formatPhoneToInternational, getCustomerGroupLimit, getEmailLogoUrl,
   insertCustomerGroupSchema, multiWholesalerService, or, orders, parseCustomerName, products,
-  requireAuth, requireMemberPermission, requireNotViewer, sendEmail, sendWelcomeMessages, storage, twilio,
+  requireAuth, requireMemberPermission, requireNotViewer, requireBooleanFeature, sendEmail, sendWelcomeMessages, storage, twilio,
   users, validatePhoneNumber, whatsAppBusinessService, wholesalerCustomerRelationships,
   wrapCustomerEmail, z
 } from "./shared";
@@ -130,7 +130,7 @@ export function registerCustomerRoutes(app: Express): void {
   });
 
   // POST /api/customer-groups
-  app.post('/api/customer-groups', requireAuth, requireNotViewer, requireMemberPermission('customers'), async (req: any, res) => {
+  app.post('/api/customer-groups', requireAuth, requireBooleanFeature('customer_management'), requireNotViewer, requireMemberPermission('customers'), async (req: any, res) => {
     try {
       // Use parent company ID for team members to inherit data access
       const targetUserId = resolveWholesalerId(req);
@@ -178,7 +178,7 @@ export function registerCustomerRoutes(app: Express): void {
   });
 
   // PUT /api/customer-groups/:id
-  app.put('/api/customer-groups/:id', requireAuth, requireNotViewer, requireMemberPermission('customers'), async (req: any, res) => {
+  app.put('/api/customer-groups/:id', requireAuth, requireBooleanFeature('customer_management'), requireNotViewer, requireMemberPermission('customers'), async (req: any, res) => {
     try {
       // Use parent company ID for team members to inherit data access
       const targetUserId = resolveWholesalerId(req);
@@ -211,7 +211,7 @@ export function registerCustomerRoutes(app: Express): void {
   });
 
   // DELETE /api/customer-groups/:id
-  app.delete('/api/customer-groups/:id', requireAuth, requireNotViewer, requireMemberPermission('customers'), async (req: any, res) => {
+  app.delete('/api/customer-groups/:id', requireAuth, requireBooleanFeature('customer_management'), requireNotViewer, requireMemberPermission('customers'), async (req: any, res) => {
     try {
       // Use parent company ID for team members to inherit data access
       const targetUserId = resolveWholesalerId(req);
@@ -241,7 +241,7 @@ export function registerCustomerRoutes(app: Express): void {
   });
 
   // POST /api/customer-groups/:groupId/members
-  app.post('/api/customer-groups/:groupId/members', requireAuth, requireNotViewer, requireMemberPermission('customers'), async (req: any, res) => {
+  app.post('/api/customer-groups/:groupId/members', requireAuth, requireBooleanFeature('customer_management'), requireNotViewer, requireMemberPermission('customers'), async (req: any, res) => {
     try {
       // Use parent company ID for team members to inherit data access
       const targetUserId = resolveWholesalerId(req);
@@ -436,7 +436,7 @@ export function registerCustomerRoutes(app: Express): void {
   });
 
   // POST /api/customer-groups/:groupId/members/:customerId
-  app.post('/api/customer-groups/:groupId/members/:customerId', requireAuth, requireNotViewer, requireMemberPermission('customers'), async (req: any, res) => {
+  app.post('/api/customer-groups/:groupId/members/:customerId', requireAuth, requireBooleanFeature('customer_management'), requireNotViewer, requireMemberPermission('customers'), async (req: any, res) => {
     try {
       // Use parent company ID for team members to inherit data access
       const targetUserId = resolveWholesalerId(req);
@@ -516,7 +516,7 @@ export function registerCustomerRoutes(app: Express): void {
   });
 
   // DELETE /api/customer-groups/:groupId/members/:customerId
-  app.delete('/api/customer-groups/:groupId/members/:customerId', requireAuth, requireNotViewer, requireMemberPermission('customers'), async (req: any, res) => {
+  app.delete('/api/customer-groups/:groupId/members/:customerId', requireAuth, requireBooleanFeature('customer_management'), requireNotViewer, requireMemberPermission('customers'), async (req: any, res) => {
     try {
       // Use parent company ID for team members to inherit data access
       const targetUserId = resolveWholesalerId(req);
@@ -603,7 +603,7 @@ export function registerCustomerRoutes(app: Express): void {
   });
 
   // POST /api/customers/merge
-  app.post('/api/customers/merge', requireAuth, requireNotViewer, requireMemberPermission('customers'), async (req: any, res) => {
+  app.post('/api/customers/merge', requireAuth, requireBooleanFeature('customer_management'), requireNotViewer, requireMemberPermission('customers'), async (req: any, res) => {
     try {
       const targetUserId = resolveWholesalerId(req);
       
@@ -642,7 +642,7 @@ export function registerCustomerRoutes(app: Express): void {
   });
 
   // POST /api/customers
-  app.post('/api/customers', requireAuth, requireNotViewer, requireMemberPermission('customers'), async (req: any, res) => {
+  app.post('/api/customers', requireAuth, requireBooleanFeature('customer_management'), requireNotViewer, requireMemberPermission('customers'), async (req: any, res) => {
     try {
       const targetUserId = resolveWholesalerId(req);
       
@@ -825,7 +825,7 @@ export function registerCustomerRoutes(app: Express): void {
   });
 
   // POST /api/customers/:id/send-welcome
-  app.post('/api/customers/:id/send-welcome', requireAuth, requireNotViewer, requireMemberPermission('customers'), async (req: any, res) => {
+  app.post('/api/customers/:id/send-welcome', requireAuth, requireBooleanFeature('customer_management'), requireNotViewer, requireMemberPermission('customers'), async (req: any, res) => {
     try {
       const customerId = req.params.id;
       const targetUserId = resolveWholesalerId(req);
@@ -920,7 +920,7 @@ export function registerCustomerRoutes(app: Express): void {
   });
 
   // DELETE /api/customers/:id
-  app.delete('/api/customers/:id', requireAuth, requireNotViewer, requireMemberPermission('customers'), async (req: any, res) => {
+  app.delete('/api/customers/:id', requireAuth, requireBooleanFeature('customer_management'), requireNotViewer, requireMemberPermission('customers'), async (req: any, res) => {
     try {
       const customerId = req.params.id;
       const targetUserId = resolveWholesalerId(req);
@@ -1020,7 +1020,7 @@ export function registerCustomerRoutes(app: Express): void {
   });
 
   // PATCH /api/customers/:id
-  app.patch('/api/customers/:id', requireAuth, requireNotViewer, requireMemberPermission('customers'), async (req: any, res) => {
+  app.patch('/api/customers/:id', requireAuth, requireBooleanFeature('customer_management'), requireNotViewer, requireMemberPermission('customers'), async (req: any, res) => {
     try {
       const targetUserId = resolveWholesalerId(req);
       const customerId = req.params.id;
@@ -1083,7 +1083,7 @@ export function registerCustomerRoutes(app: Express): void {
   });
 
   // PATCH /api/customers/bulk
-  app.patch('/api/customers/bulk', requireAuth, requireNotViewer, requireMemberPermission('customers'), async (req: any, res) => {
+  app.patch('/api/customers/bulk', requireAuth, requireBooleanFeature('customer_management'), requireNotViewer, requireMemberPermission('customers'), async (req: any, res) => {
     try {
       const { customerUpdates } = req.body;
       
@@ -1112,7 +1112,7 @@ export function registerCustomerRoutes(app: Express): void {
   });
 
   // POST /api/wholesaler/invite-customer
-  app.post('/api/wholesaler/invite-customer', requireAuth, requireNotViewer, requireMemberPermission('customers'), async (req: any, res) => {
+  app.post('/api/wholesaler/invite-customer', requireAuth, requireBooleanFeature('customer_management'), requireNotViewer, requireMemberPermission('customers'), async (req: any, res) => {
     try {
       const wholesalerId = req.user.id;
       const { email, phoneNumber, firstName, lastName, customMessage } = req.body;
@@ -1188,7 +1188,7 @@ export function registerCustomerRoutes(app: Express): void {
   });
 
   // DELETE /api/wholesaler/customer/:customerId
-  app.delete('/api/wholesaler/customer/:customerId', requireAuth, requireNotViewer, requireMemberPermission('customers'), async (req: any, res) => {
+  app.delete('/api/wholesaler/customer/:customerId', requireAuth, requireBooleanFeature('customer_management'), requireNotViewer, requireMemberPermission('customers'), async (req: any, res) => {
     try {
       const wholesalerId = req.user.id;
       const { customerId } = req.params;

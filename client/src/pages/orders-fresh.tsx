@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useRef, Fragment } from "react";
 import { calculatePlatformFee } from "@shared/utils/fees";
+import { FeatureLock, isListingTier } from "@/components/FeatureLock";
 import { useOptimizedQuery } from "@/hooks/useOptimizedQuery";
 import { useQuery } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
@@ -221,6 +222,11 @@ export default function OrdersFresh() {
   // Draft orders
   const { data: draftOrders = [], refetch: refetchDrafts } = useQuery<any[]>({
     queryKey: ['/api/orders/drafts'],
+  });
+
+  const { data: planLimits } = useQuery<{ plan: string }>({
+    queryKey: ['/api/subscriptions/plan-limits'],
+    enabled: !!user,
   });
   const [isDeletingDraft, setIsDeletingDraft] = useState<number | null>(null);
   const [isApprovingDraft, setIsApprovingDraft] = useState<number | null>(null);
@@ -944,6 +950,17 @@ export default function OrdersFresh() {
             </div>
           </CardContent>
         </Card>
+      </div>
+    );
+  }
+
+  if (isListingTier(planLimits?.plan)) {
+    return (
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <FeatureLock
+          feature="Order Management"
+          description="Creating and managing orders is available on the Starter plan and above."
+        />
       </div>
     );
   }

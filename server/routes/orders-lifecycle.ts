@@ -14,7 +14,7 @@ import { logQuoteActivity } from "../utils/quote-activity";
 import { sendCancellationNotification } from "../services/orderCancellationNotificationService";
 import {
   storage, db,
-  requireAuth, requireNotViewer, requireMemberPermission,
+  requireAuth, requireNotViewer, requireMemberPermission, requireBooleanFeature,
   orders, orderItems, orderCancellationRequests, stockMovements, products, campaignOrders,
   sql, eq, and, or, inArray, lt, isNull, sum, asc, ne,
   getStripeClient, refundAcrossPaymentIntents,
@@ -149,7 +149,7 @@ export function registerOrderLifecycleRoutes(app: Express): void {
   // ── Draft Invoice Endpoints ──────────────────────────────────────────────────
 
   // POST /api/orders/draft — save current form state as a draft (no stock, no notifications)
-  app.post('/api/orders/draft', requireAuth, requireNotViewer, requireMemberPermission('orders'), async (req: any, res) => {
+  app.post('/api/orders/draft', requireAuth, requireBooleanFeature('order_management'), requireNotViewer, requireMemberPermission('orders'), async (req: any, res) => {
     try {
       const wholesalerId = resolveWholesalerId(req);
       const {
@@ -241,7 +241,7 @@ export function registerOrderLifecycleRoutes(app: Express): void {
   });
 
   // PATCH /api/orders/:id/draft — update a draft's fields and items
-  app.patch('/api/orders/:id/draft', requireAuth, requireNotViewer, requireMemberPermission('orders'), async (req: any, res) => {
+  app.patch('/api/orders/:id/draft', requireAuth, requireBooleanFeature('order_management'), requireNotViewer, requireMemberPermission('orders'), async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) return res.status(400).json({ error: 'Invalid order ID' });
@@ -297,7 +297,7 @@ export function registerOrderLifecycleRoutes(app: Express): void {
   });
 
   // DELETE /api/orders/:id/draft — hard-delete a draft order
-  app.delete('/api/orders/:id/draft', requireAuth, requireNotViewer, requireMemberPermission('orders'), async (req: any, res) => {
+  app.delete('/api/orders/:id/draft', requireAuth, requireBooleanFeature('order_management'), requireNotViewer, requireMemberPermission('orders'), async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) return res.status(400).json({ error: 'Invalid order ID' });
@@ -319,7 +319,7 @@ export function registerOrderLifecycleRoutes(app: Express): void {
   });
 
   // POST /api/orders/:id/approve — approve a draft: deduct stock, assign order number, send email
-  app.post('/api/orders/:id/approve', requireAuth, requireNotViewer, requireMemberPermission('orders'), async (req: any, res) => {
+  app.post('/api/orders/:id/approve', requireAuth, requireBooleanFeature('order_management'), requireNotViewer, requireMemberPermission('orders'), async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) return res.status(400).json({ error: 'Invalid order ID' });
@@ -779,7 +779,7 @@ export function registerOrderLifecycleRoutes(app: Express): void {
   });
 
   // PUT /api/orders/:id/ready-for-collection
-  app.put('/api/orders/:id/ready-for-collection', requireAuth, requireNotViewer, requireMemberPermission('orders'), async (req: any, res) => {
+  app.put('/api/orders/:id/ready-for-collection', requireAuth, requireBooleanFeature('order_management'), requireNotViewer, requireMemberPermission('orders'), async (req: any, res) => {
     try {
       const orderId = parseInt(req.params.id);
 
@@ -960,7 +960,7 @@ export function registerOrderLifecycleRoutes(app: Express): void {
   });
 
   // POST /api/orders/:id/mark-as-paid
-  app.post('/api/orders/:id/mark-as-paid', requireAuth, requireNotViewer, requireMemberPermission('orders'), async (req: any, res) => {
+  app.post('/api/orders/:id/mark-as-paid', requireAuth, requireBooleanFeature('order_management'), requireNotViewer, requireMemberPermission('orders'), async (req: any, res) => {
     try {
       const stripe = getStripeClient(Boolean(req.user.isTestAccount));
       const orderId = parseInt(req.params.id);
@@ -1211,7 +1211,7 @@ export function registerOrderLifecycleRoutes(app: Express): void {
   });
 
   // PUT /api/orders/:id/items-prepared
-  app.put("/api/orders/:id/items-prepared", requireAuth, requireNotViewer, requireMemberPermission('orders'), async (req, res) => {
+  app.put("/api/orders/:id/items-prepared", requireAuth, requireBooleanFeature('order_management'), requireNotViewer, requireMemberPermission('orders'), async (req, res) => {
     try {
       const orderId = parseInt(req.params.id);
       if (isNaN(orderId)) return res.status(400).json({ error: 'Invalid order ID' });
@@ -1247,7 +1247,7 @@ export function registerOrderLifecycleRoutes(app: Express): void {
   });
 
   // POST /api/orders
-  app.post('/api/orders', requireAuth, requireNotViewer, requireMemberPermission('orders'), async (req: any, res) => {
+  app.post('/api/orders', requireAuth, requireBooleanFeature('order_management'), requireNotViewer, requireMemberPermission('orders'), async (req: any, res) => {
     try {
       const userId = req.user.id;
       const { items, deliveryAddress, notes, collectionAddressId } = req.body;
@@ -1391,7 +1391,7 @@ export function registerOrderLifecycleRoutes(app: Express): void {
   });
 
   // PATCH /api/orders/:id/status
-  app.patch('/api/orders/:id/status', requireAuth, requireNotViewer, requireMemberPermission('orders'), async (req: any, res) => {
+  app.patch('/api/orders/:id/status', requireAuth, requireBooleanFeature('order_management'), requireNotViewer, requireMemberPermission('orders'), async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) return res.status(400).json({ error: 'Invalid order ID' });
@@ -1442,7 +1442,7 @@ export function registerOrderLifecycleRoutes(app: Express): void {
   });
 
   // POST /api/orders/:id/cancel
-  app.post('/api/orders/:id/cancel', requireAuth, requireNotViewer, requireMemberPermission('orders'), async (req: any, res) => {
+  app.post('/api/orders/:id/cancel', requireAuth, requireBooleanFeature('order_management'), requireNotViewer, requireMemberPermission('orders'), async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) return res.status(400).json({ error: 'Invalid order ID' });
@@ -1700,7 +1700,7 @@ export function registerOrderLifecycleRoutes(app: Express): void {
   });
 
   // POST /api/orders/:id/retry-refund
-  app.post('/api/orders/:id/retry-refund', requireAuth, requireNotViewer, requireMemberPermission('orders'), async (req: any, res) => {
+  app.post('/api/orders/:id/retry-refund', requireAuth, requireBooleanFeature('order_management'), requireNotViewer, requireMemberPermission('orders'), async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) return res.status(400).json({ error: 'Invalid order ID' });
@@ -1760,7 +1760,7 @@ export function registerOrderLifecycleRoutes(app: Express): void {
   });
 
   // POST /api/orders/:id/mark-refunded
-  app.post('/api/orders/:id/mark-refunded', requireAuth, requireNotViewer, requireMemberPermission('orders'), async (req: any, res) => {
+  app.post('/api/orders/:id/mark-refunded', requireAuth, requireBooleanFeature('order_management'), requireNotViewer, requireMemberPermission('orders'), async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) return res.status(400).json({ error: 'Invalid order ID' });
@@ -1797,7 +1797,7 @@ export function registerOrderLifecycleRoutes(app: Express): void {
   });
 
   // POST /api/cancellation-requests/:id/respond
-  app.post('/api/cancellation-requests/:id/respond', requireAuth, requireNotViewer, requireMemberPermission('orders'), async (req: any, res) => {
+  app.post('/api/cancellation-requests/:id/respond', requireAuth, requireBooleanFeature('order_management'), requireNotViewer, requireMemberPermission('orders'), async (req: any, res) => {
     try {
       const requestId = parseInt(req.params.id);
       if (isNaN(requestId)) return res.status(400).json({ error: 'Invalid request ID' });
@@ -2012,7 +2012,7 @@ export function registerOrderLifecycleRoutes(app: Express): void {
   });
 
   // POST /api/orders/:id/refund
-  app.post('/api/orders/:id/refund', requireAuth, requireNotViewer, requireMemberPermission('orders'), async (req: any, res) => {
+  app.post('/api/orders/:id/refund', requireAuth, requireBooleanFeature('order_management'), requireNotViewer, requireMemberPermission('orders'), async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) return res.status(400).json({ error: 'Invalid order ID' });
@@ -2166,7 +2166,7 @@ export function registerOrderLifecycleRoutes(app: Express): void {
   });
 
   // DELETE /api/orders/bulk-delete
-  app.delete("/api/orders/bulk-delete", requireAuth, requireNotViewer, requireMemberPermission('orders'), async (req: any, res) => {
+  app.delete("/api/orders/bulk-delete", requireAuth, requireBooleanFeature('order_management'), requireNotViewer, requireMemberPermission('orders'), async (req: any, res) => {
     try {
       const userId = req.user.id;
       const {

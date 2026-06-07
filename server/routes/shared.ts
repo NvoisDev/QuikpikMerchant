@@ -47,7 +47,7 @@ import twilio from "twilio";
 import { SubscriptionService } from "../subscription-service";
 import {
   requireFeatureAccess, requireProductLimits, requireBroadcastLimits,
-  requireTeamMemberLimits, getUserPlanLimits,
+  requireTeamMemberLimits, getUserPlanLimits, requireBooleanFeature,
 } from "../middleware/feature-gating";
 import sgMail from "@sendgrid/mail";
 import type { MailDataRequired } from "@sendgrid/mail";
@@ -75,7 +75,7 @@ import {
   eq, and, desc, inArray, or, gt, sql, count, sum, gte, lte, lt, ne, asc, isNull, like,
 } from "drizzle-orm";
 import { getEmailDeliveryAddress } from "../utils/address-helper";
-import { PLAN_LIMITS, getPlanLimits } from "../config/plan-limits";
+import { PLAN_LIMITS, getPlanLimits, FEATURE_FLAGS, hasFeatureFlag, type BooleanFeature } from "../config/plan-limits";
 
 // ─── Re-exports ───────────────────────────────────────────────────────────────
 export {
@@ -111,7 +111,7 @@ export {
   twilio,
   SubscriptionService,
   requireFeatureAccess, requireProductLimits, requireBroadcastLimits,
-  requireTeamMemberLimits, getUserPlanLimits,
+  requireTeamMemberLimits, getUserPlanLimits, requireBooleanFeature,
   sgMail,
   ReliableSMSService, sendSMS, sendWhatsAppMessage, sendEmail, sendStripeVerifiedEmail,
   generateResetToken, createResetExpiration, sendPasswordResetEmail, hashResetToken,
@@ -465,7 +465,8 @@ export async function getWholesalerFeeRate(wholesalerId: string): Promise<number
 // PLAN_ENFORCEMENT_LIMITS is an alias for PLAN_LIMITS (single source of truth in server/config/plan-limits.ts).
 // `teamMembers` replaces the old `invitedMembersAllowed` field name.
 export const PLAN_ENFORCEMENT_LIMITS = PLAN_LIMITS;
-export { getPlanLimits };
+export { getPlanLimits, FEATURE_FLAGS, hasFeatureFlag };
+export type { BooleanFeature };
 
 export async function enforceNewPlanLimits(
   userId: string, targetTier: string

@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback } from "react";
 import { useCurrency } from "@/hooks/useCurrency";
+import { FeatureLock, isListingTier } from "@/components/FeatureLock";
 import PageHeader from "@/components/PageHeader";
 import ElephantLoader from "@/components/ui/elephant-loader";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -514,6 +515,17 @@ export default function Customers() {
   const handleRemoveFromGroup = (customerId: string, groupId: number) => {
     removeFromGroupMutation.mutate({ groupId, customerId });
   };
+
+  if (isListingTier(planLimits?.plan)) {
+    return (
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <FeatureLock
+          feature="Customer Management"
+          description="Managing customers, groups, and invitations is available on the Starter plan and above."
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
