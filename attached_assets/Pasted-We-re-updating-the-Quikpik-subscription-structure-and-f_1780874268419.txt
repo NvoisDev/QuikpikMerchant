@@ -1,0 +1,146 @@
+We’re updating the Quikpik subscription structure and feature access model. The goal is to introduce a dedicated supplier listing/discovery tier while keeping the current operational SaaS structure stable for existing users.
+IMPORTANT:
+This rollout must NOT break:
+existing live users
+Stripe subscriptions
+feature permissions
+onboarding flow
+current operational access
+The implementation should use clean feature gating and tier-based permission checks.
+UPDATED TIER STRUCTURE
+Listing Tier (NEW FREE PLAN)
+Purpose:
+A lightweight supplier visibility plan focused on marketplace/discovery access only.
+Pricing: £19.99/month or £199.90/year (Save 16% / £39.98/year)
+Introductory Price is free — valid for 3 months
+Existing users maintain their current subscription
+Limits:
+Up to 10 products
+Up to 2 price lists
+1 user account
+Includes:
+Public supplier profile
+Product listings
+Marketplace/discovery visibility
+Retailer enquiries/leads
+Search visibility
+Basic supplier dashboard
+Restrictions:
+No invoices
+No payments
+No analytics
+No advanced stock management
+No batch tracking
+No customer management
+No operational workflows
+No draft invoices
+No reports
+No order management
+Suggested positioning:
+“Get discovered by retailers”
+Starter Tier (£29.99/month)
+IMPORTANT:
+The current “Free” operational plan is being renamed/repositioned into the new Starter tier.
+Purpose:
+Entry-level operational plan for wholesalers actively managing stock, invoices, and customer orders.
+Pricing: £29.99/month or £299.90/year (Save 16% / £59.98/year)
+Existing users maintain their current subscription
+Limits:
+Up to 20 products
+Up to 5 price lists
+1 user account
+Includes:
+Invoices
+Payments
+Advanced stock tools
+Batch tracking
+Analytics
+Customer management
+Order management
+Existing operational workflows
+Draft invoices
+Customer portal
+Stock history
+Basic reporting
+Suggested positioning:
+“Everything you need to run your wholesale business”
+Standard Tier (£49.99/month)
+Purpose:
+Designed for growing wholesale businesses needing more operational scale.
+Pricing: £49.99/month or £499.90/year (Save 16% / £99.98/year)
+Existing users maintain their current subscription
+Limits:
+Up to 50 products
+Up to 10 price lists
+Up to 3 user accounts
+Includes:
+Everything in Starter
+Expanded operational limits
+Picking/checklists
+Advanced analytics
+Lead management
+Enhanced reporting
+Priority support
+Improved workflow tools
+Suggested positioning:
+“Built for growing wholesale operations”
+Premium Tier (£99.99/month)
+Purpose:
+Advanced tools for scaling wholesalers and larger operations.
+Pricing: £99.99/month or £999.90/year (Save 16% / £199.98/year)
+Existing users maintain their current subscription
+Limits:
+Unlimited products
+Unlimited price lists
+Unlimited users
+Includes:
+Everything in Standard
+Automation features
+Advanced reporting
+Broadcast/marketing tools
+Advanced permissions
+Premium support
+Future integrations/API readiness
+Priority supplier ranking
+Suggested positioning:
+“Advanced tools for scaling wholesalers”
+IMPLEMENTATION REQUIREMENTS
+Feature Gating
+Implement clean permission checks for:
+invoices
+payments
+analytics
+inventory tools
+batch tracking
+reports
+order workflows
+customer management
+lead tools
+Existing Users
+Existing live users must retain current access
+No automatic downgrades
+No subscription interruptions
+Preserve Stripe subscription mappings
+Explicit guarantee: Existing users maintain their current subscription and billing structure without any modification
+Pricing Page Updates
+Update pricing cards to clearly show:
+limits
+included features
+progression between tiers
+marketplace vs operational access
+UI/UX Updates
+The pricing structure should visually communicate this journey:
+Listing → Starter → Standard → Premium
+Where:
+Listing = visibility/discovery
+Starter = operational foundation
+Standard = business growth
+Premium = scale & automation
+Subscription/Billing Logic
+Ensure:
+Stripe products/prices map correctly
+feature permissions sync correctly
+upgrade/downgrade flows work safely
+future Listing Tier paid conversion (May 2027) is supported cleanly
+IMPORTANT:
+This update should feel evolutionary, not disruptive. Existing workflows and live users should continue functioning normally while enabling the new supplier discovery model.
