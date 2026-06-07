@@ -24,6 +24,11 @@ class SectionErrorBoundary extends React.Component<SectionErrorBoundaryProps, Se
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    const msg = error.message ?? '';
+    if (msg.includes('Failed to fetch dynamically imported module') || msg.includes('Loading chunk') || msg.includes('Importing a module script failed')) {
+      window.location.reload();
+      return;
+    }
     console.error(`SectionErrorBoundary [${this.props.sectionName ?? 'unknown'}] caught an error:`, error, errorInfo);
   }
 

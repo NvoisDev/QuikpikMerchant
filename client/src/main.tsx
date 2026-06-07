@@ -2,6 +2,10 @@ import { createRoot } from "react-dom/client";
 import App from "./App";
 import "./index.css";
 
+window.addEventListener('vite:preloadError', () => {
+  window.location.reload();
+});
+
 // Add error handling to catch React rendering errors
 try {
   const rootElement = document.getElementById("root");
