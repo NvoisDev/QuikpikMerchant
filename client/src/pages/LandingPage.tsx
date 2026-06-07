@@ -921,14 +921,15 @@ export default function LandingPage() {
               <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-gray-900 mb-3 tracking-tight">
                 How to order
               </h2>
-              <p className="text-gray-500 text-lg mb-14">Four simple steps from browse to delivery.</p>
-              <div className="grid sm:grid-cols-4 gap-6 sm:gap-8 relative">
-                <div className="hidden sm:block absolute top-7 left-[calc(12.5%+1.5rem)] right-[calc(12.5%+1.5rem)] h-px bg-gray-200 z-0" />
+              <p className="text-gray-500 text-lg mb-14">Five simple steps from browse to delivery.</p>
+              <div className="grid sm:grid-cols-5 gap-6 sm:gap-6 relative">
+                <div className="hidden sm:block absolute top-7 left-[calc(10%+1.5rem)] right-[calc(10%+1.5rem)] h-px bg-gray-200 z-0" />
                 {[
-                  { icon: Search,       step: "STEP 1", title: "Request access",          desc: "Find your supplier's store and submit a quick registration request to join." },
-                  { icon: ShoppingCart, step: "STEP 2", title: "Get approved",            desc: "Your supplier reviews your request and approves your account — usually within hours." },
-                  { icon: CreditCard,  step: "STEP 3", title: "Browse & place your order", desc: "Explore their catalogue and checkout by card, or request Pay Later if offered." },
-                  { icon: Package,     step: "STEP 4", title: "Supplier delivers",       desc: "Your supplier confirms the order and arranges delivery or collection to you." },
+                  { icon: Search,       step: "STEP 1", title: "Request access",            desc: "Find your supplier's store and submit a quick registration request to join." },
+                  { icon: ShoppingCart, step: "STEP 2", title: "Get approved",              desc: "Your supplier reviews your request and approves your account — usually within hours." },
+                  { icon: ShoppingBag,  step: "STEP 3", title: "Order or get invoiced",     desc: "Browse the catalogue and place your own order — or your supplier can create and send you an invoice directly." },
+                  { icon: Wallet,       step: "STEP 4", title: "Pay your way",              desc: "Settle by card at checkout, bank transfer, or via a payment link sent by your supplier. Pay Later available if offered." },
+                  { icon: Package,      step: "STEP 5", title: "Supplier delivers",         desc: "Your supplier confirms and arranges delivery or collection to you." },
                 ].map(({ icon: Icon, step, title, desc }, i) => (
                   <div key={i} className="relative z-10 flex flex-col items-center text-center">
                     <div className="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center mb-4 ring-4 ring-white">

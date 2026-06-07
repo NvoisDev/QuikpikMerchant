@@ -1,0 +1,186 @@
+We’re updating the Quikpik subscription structure and feature access model. The goal is to introduce a dedicated supplier listing/discovery tier while keeping the current operational SaaS structure stable for existing users.
+
+IMPORTANT:
+This rollout must NOT break:
+
+* existing live users
+* Stripe subscriptions
+* feature permissions
+* onboarding flow
+* current operational access
+
+The implementation should use clean feature gating and tier-based permission checks.
+
+UPDATED TIER STRUCTURE
+
+1. Listing Tier (NEW FREE PLAN)
+    Purpose:
+    A lightweight supplier visibility plan focused on marketplace/discovery access only.
+
+Pricing:
+Introductory Price is free — valid until 30 April 2027
+From 1 May 2027: £19.99/month
+You’re saving 100%
+
+Limits:
+
+* Up to 10 products
+* Up to 2 price lists
+* 1 user account
+
+Includes:
+
+* Public supplier profile
+* Product listings
+* Marketplace/discovery visibility
+* Retailer enquiries/leads
+* Search visibility
+* Basic supplier dashboard
+
+Restrictions:
+
+* No invoices
+* No payments
+* No analytics
+* No advanced stock management
+* No batch tracking
+* No customer management
+* No operational workflows
+* No draft invoices
+* No reports
+* No order management
+
+Suggested positioning:
+“Get discovered by retailers”
+
+2. Starter Tier (£19.99/month)
+    IMPORTANT:
+    The current “Free” operational plan is being renamed/repositioned into the new Starter tier.
+
+Purpose:
+Entry-level operational plan for wholesalers actively managing stock, invoices, and customer orders.
+
+Limits:
+
+* Up to 50 products
+* Up to 5 price lists
+* 1 user account
+
+Includes:
+
+* Invoices
+* Payments
+* Advanced stock tools
+* Batch tracking
+* Analytics
+* Customer management
+* Order management
+* Existing operational workflows
+* Draft invoices
+* Customer portal
+* Stock history
+* Basic reporting
+
+Suggested positioning:
+“Everything you need to run your wholesale business”
+
+3. Standard Tier (£49.99/month)
+    Purpose:
+    Designed for growing wholesale businesses needing more operational scale.
+
+Limits:
+
+* Up to 100 products
+* Up to 10 price lists
+* Up to 3 user accounts
+
+Includes:
+
+* Everything in Starter
+* Expanded operational limits
+* Picking/checklists
+* Advanced analytics
+* Lead management
+* Enhanced reporting
+* Priority support
+* Improved workflow tools
+
+Suggested positioning:
+“Built for growing wholesale operations”
+
+4. Premium Tier (£99.99/month)
+    Purpose:
+    Advanced tools for scaling wholesalers and larger operations.
+
+Limits:
+
+* Unlimited products
+* Unlimited price lists
+* Unlimited users
+
+Includes:
+
+* Everything in Standard
+* Automation features
+* Advanced reporting
+* Broadcast/marketing tools
+* Advanced permissions
+* Premium support
+* Future integrations/API readiness
+* Priority supplier ranking
+
+Suggested positioning:
+“Advanced tools for scaling wholesalers”
+
+IMPLEMENTATION REQUIREMENTS
+
+1. Feature Gating
+    Implement clean permission checks for:
+
+* invoices
+* payments
+* analytics
+* inventory tools
+* batch tracking
+* reports
+* order workflows
+* customer management
+* lead tools
+
+2. Existing Users
+
+* Existing live users must retain current access
+* No automatic downgrades
+* No subscription interruptions
+* Preserve Stripe subscription mappings
+
+3. Pricing Page Updates
+    Update pricing cards to clearly show:
+
+* limits
+* included features
+* progression between tiers
+* marketplace vs operational access
+
+4. UI/UX Updates
+    The pricing structure should visually communicate this journey:
+
+Listing → Starter → Standard → Premium
+
+Where:
+
+* Listing = visibility/discovery
+* Starter = operational foundation
+* Standard = business growth
+* Premium = scale & automation
+
+5. Subscription/Billing Logic
+    Ensure:
+
+* Stripe products/prices map correctly
+* feature permissions sync correctly
+* upgrade/downgrade flows work safely
+* future Listing Tier paid conversion (May 2027) is supported cleanly
+
+IMPORTANT:
+This update should feel evolutionary, not disruptive. Existing workflows and live users should continue functioning normally while enabling the new supplier discovery model.
