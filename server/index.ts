@@ -652,6 +652,12 @@ app.get('/api/health', (_req: Request, res: Response) => {
   });
 });
 
+const SERVER_START_TIME = Date.now();
+app.get('/api/version', (_req: Request, res: Response) => {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.json({ version: SERVER_START_TIME });
+});
+
 const port = 5000;
 
 // Create the HTTP server and start listening IMMEDIATELY so the deployment

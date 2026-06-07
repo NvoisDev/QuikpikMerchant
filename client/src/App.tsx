@@ -13,6 +13,7 @@ import { ImpersonationProvider } from "@/contexts/impersonation-context";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import SectionErrorBoundary from "@/components/SectionErrorBoundary";
 import ElephantLoader from "@/components/ui/elephant-loader";
+import { useVersionCheck } from "@/hooks/useVersionCheck";
 
 const NotFound = lazy(() => import("@/pages/not-found"));
 const Login = lazy(() => import("@/pages/Login"));
@@ -330,6 +331,17 @@ function Router() {
   }
 }
 
+function AppInner() {
+  useVersionCheck();
+  return (
+    <>
+      <OfflineBanner />
+      <Router />
+      <Toaster />
+    </>
+  );
+}
+
 function App() {
   return (
     <ErrorBoundary>
@@ -337,9 +349,7 @@ function App() {
         <ImpersonationProvider>
           <TooltipProvider>
             <OnboardingProvider>
-              <OfflineBanner />
-              <Router />
-              <Toaster />
+              <AppInner />
             </OnboardingProvider>
           </TooltipProvider>
         </ImpersonationProvider>
