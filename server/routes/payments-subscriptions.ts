@@ -299,6 +299,7 @@ export function registerSubscriptionRoutes(app: Express): void {
           currentSubscription.stripeSubscriptionId,
           userId,
           isTestAccount,
+          effectiveCancelPlan,
         );
 
         // Enforce limits immediately (immediate downgrade path)

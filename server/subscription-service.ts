@@ -4,6 +4,7 @@ import { users, subscriptionPlans, userSubscriptions } from "@shared/schema";
 import { eq, and, inArray, sql } from "drizzle-orm";
 
 import { getStripeClient } from "./stripeConfig";
+import { getPlanLimits } from "./config/plan-limits";
 
 function requireStripe(isTestAccount: boolean | null | undefined) {
   if (isTestAccount == null) throw new Error("Missing isTestAccount context for Stripe operation");
@@ -513,9 +514,10 @@ export class SubscriptionService {
   }
 
   /**
-   * Handle prorated free downgrade with credit calculation and immediate effect
+   * Handle prorated cancel-to-base-tier downgrade with credit calculation and immediate effect.
+   * @param targetPlanId - The plan to land on after cancellation ('listing' or 'free'). Defaults to 'free' for backward compat.
    */
-  static async proratedFreeDowngrade(subscriptionId: string, userId: string, isTestAccount: boolean): Promise<{
+  static async proratedFreeDowngrade(subscriptionId: string, userId: string, isTestAccount: boolean, targetPlanId: string = 'free'): Promise<{
     success: boolean;
     proratedCredit: number;
     message: string;
@@ -570,10 +572,10 @@ export class SubscriptionService {
         throw new Error('User not found');
       }
 
-      // Update user's subscription fields to free plan immediately
+      // Update user's subscription fields to the target base tier immediately
       await db.update(users).set({
-        subscriptionStatus: 'free',
-        currentPlan: 'free',
+        subscriptionStatus: targetPlanId,
+        currentPlan: targetPlanId,
         stripeSubscriptionId: null, // Clear subscription ID since cancelled
         subscriptionPeriodStart: null,
         subscriptionPeriodEnd: null,
@@ -585,9 +587,9 @@ export class SubscriptionService {
         .where(eq(userSubscriptions.userId, userId));
 
       if (existingSub.length > 0) {
-        // Update existing subscription to cancelled/free
+        // Update existing subscription to cancelled/base-tier
         await db.update(userSubscriptions).set({
-          planId: 'free',
+          planId: targetPlanId,
           stripeSubscriptionId: null, // Clear since cancelled
           status: 'canceled',
           cancelAtPeriodEnd: null, // No longer relevant
@@ -595,12 +597,12 @@ export class SubscriptionService {
         }).where(eq(userSubscriptions.userId, userId));
         
       } else {
-        // Create new free subscription record
+        // Create new base-tier subscription record
         await db.insert(userSubscriptions).values({
           userId: userId,
-          planId: 'free',
+          planId: targetPlanId,
           stripeSubscriptionId: null,
-          status: 'free',
+          status: targetPlanId,
           currentPeriodStart: null,
           currentPeriodEnd: null,
           cancelAtPeriodEnd: null
@@ -950,37 +952,22 @@ export class SubscriptionService {
   }
 
   /**
-   * Check if user has access to a feature based on their plan
+   * Check if user has access to a feature based on their plan.
+   * Uses getPlanLimits() so 'free' users are resolved to starter-tier limits.
    */
   static async checkFeatureAccess(userId: string, feature: string, value?: number): Promise<boolean> {
     try {
-      const { plan, currentPlan } = await this.getUserSubscription(userId);
+      const { currentPlan } = await this.getUserSubscription(userId);
       
-      // Free plan users get basic access
-      if (!plan || currentPlan === 'free') {
-        const freeLimits = {
-          products: 2,
-          broadcasts: 5,
-          teamMembers: 1,
-          customGroups: 2
-        };
-        
-        if (value !== undefined) {
-          return value <= (freeLimits[feature as keyof typeof freeLimits] || 0);
-        }
-        return feature in freeLimits;
-      }
+      // getPlanLimits handles 'free' → 'starter' mapping and all tier normalisation
+      const limits = getPlanLimits(currentPlan || 'listing');
 
-      // Check plan limits
-      const limits = plan.limits as Record<string, unknown>;
-      if (!limits || !limits[feature]) {
-        return true; // No limit defined = unlimited access
-      }
+      const limit = (limits as Record<string, unknown>)[feature];
 
-      const limit = limits[feature];
-      if (limit === -1) {
-        return true; // -1 = unlimited
-      }
+      // Feature not in limits = unlimited access
+      if (limit === undefined) return true;
+      // -1 = unlimited
+      if (limit === -1) return true;
 
       if (value !== undefined) {
         return value <= (limit as number);
