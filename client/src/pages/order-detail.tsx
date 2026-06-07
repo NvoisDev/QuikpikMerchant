@@ -12,6 +12,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -1152,7 +1153,35 @@ export default function OrderDetail() {
                     <MoreHorizontal className="h-5 w-5" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuContent align="end" className="w-52">
+                  {order.paymentStatus !== 'paid' && (
+                    <DropdownMenuItem
+                      className="text-green-600 focus:text-green-600"
+                      onClick={() => setIsMarkAsPaidOpen(true)}
+                    >
+                      <DollarSign className="h-4 w-4 mr-2" />
+                      Mark as Paid
+                    </DropdownMenuItem>
+                  )}
+                  {!['ready_for_collection', 'fulfilled', 'cancelled'].includes(order.status) && (
+                    <DropdownMenuItem
+                      className="text-orange-600 focus:text-orange-600"
+                      onClick={markReadyForCollection}
+                    >
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      Mark Ready
+                    </DropdownMenuItem>
+                  )}
+                  {order.status !== 'fulfilled' && (
+                    <DropdownMenuItem
+                      className="text-blue-600 focus:text-blue-600"
+                      onClick={markAsFulfilled}
+                    >
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      Mark Fulfilled
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuSeparator />
                   {order.status !== 'fulfilled' && (
                     <DropdownMenuItem
                       className="text-red-600 focus:text-red-600"
