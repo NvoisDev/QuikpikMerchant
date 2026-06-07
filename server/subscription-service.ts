@@ -32,23 +32,24 @@ export class SubscriptionService {
       // Create default plans
       const defaultPlans = [
         {
-          name: "Free",
-          planId: "free",
+          name: "Listing",
+          planId: "listing",
           stripeProductId: null,
           stripePriceId: null,
-          monthlyPrice: "0.00",
+          monthlyPrice: "19.99",
           currency: "GBP",
-          description: "Get started with basic features",
+          description: "Get discovered by retailers",
           features: [
-            "Up to 2 products",
+            "Public supplier profile",
+            "Up to 10 product listings",
             "Up to 2 price lists",
-            "Broadcast tools coming soon",
-            "Basic dashboard analytics",
-            "Standard email support"
+            "Marketplace & search visibility",
+            "Retailer enquiries & leads",
+            "Basic supplier dashboard",
           ],
           limits: {
-            products: 2,
-            broadcasts: 5,
+            products: 10,
+            broadcasts: 0,
             teamMembers: 1,
             customGroups: 2,
             priceLists: 2,
@@ -56,52 +57,112 @@ export class SubscriptionService {
           sortOrder: 0
         },
         {
-          name: "Standard",
-          planId: "standard", 
+          name: "Starter",
+          planId: "starter",
           stripeProductId: null,
           stripePriceId: null,
-          monthlyPrice: isIntroPricingPeriod() ? "19.99" : "49.99",
+          monthlyPrice: "29.99",
           currency: "GBP",
-          description: "Perfect for growing wholesale businesses",
+          description: "Everything you need to run your wholesale business",
           features: [
             "Up to 20 products",
             "Up to 5 price lists",
-            "Broadcast tools coming soon",
-            "Basic dashboard analytics",
-            "Priority email support"
+            "Invoices & payments",
+            "Customer management",
+            "Order management",
+            "Stock history & tracking",
+            "Basic reporting",
+            "Customer portal",
           ],
           limits: {
             products: 20,
-            broadcasts: 25,
-            teamMembers: 2,
+            broadcasts: 10,
+            teamMembers: 1,
             customGroups: 5,
             priceLists: 5,
           },
           sortOrder: 1
         },
         {
+          name: "Free",
+          planId: "free",
+          stripeProductId: null,
+          stripePriceId: null,
+          monthlyPrice: "0.00",
+          currency: "GBP",
+          description: "Legacy free plan — grandfathered to Starter access",
+          features: [
+            "Up to 20 products",
+            "Up to 5 price lists",
+            "Invoices & payments",
+            "Customer management",
+            "Order management",
+            "Standard email support",
+          ],
+          limits: {
+            products: 20,
+            broadcasts: 10,
+            teamMembers: 1,
+            customGroups: 5,
+            priceLists: 5,
+          },
+          sortOrder: 2
+        },
+        {
+          name: "Standard",
+          planId: "standard",
+          stripeProductId: null,
+          stripePriceId: null,
+          monthlyPrice: "49.99",
+          currency: "GBP",
+          description: "Built for growing wholesale operations",
+          features: [
+            "Up to 50 products",
+            "Up to 10 price lists",
+            "Up to 3 team members",
+            "Everything in Starter",
+            "Picking & checklists",
+            "Advanced analytics",
+            "Lead management",
+            "Enhanced reporting",
+            "Priority support",
+          ],
+          limits: {
+            products: 50,
+            broadcasts: 25,
+            teamMembers: 3,
+            customGroups: 10,
+            priceLists: 10,
+          },
+          sortOrder: 3
+        },
+        {
           name: "Premium",
           planId: "premium",
           stripeProductId: null,
           stripePriceId: null,
-          monthlyPrice: isIntroPricingPeriod() ? "49.99" : "99.99",
-          currency: "GBP", 
-          description: "Everything you need to scale your wholesale business",
+          monthlyPrice: "99.99",
+          currency: "GBP",
+          description: "Advanced tools for scaling wholesalers",
           features: [
             "Unlimited products",
             "Unlimited price lists",
-            "Broadcast tools coming soon",
-            "Custom reports and insights",
-            "Priority email and phone support"
+            "Unlimited team members",
+            "Everything in Standard",
+            "Automation features",
+            "Broadcast & marketing tools",
+            "Advanced permissions",
+            "Priority supplier ranking",
+            "Premium support",
           ],
           limits: {
-            products: -1, // unlimited
-            broadcasts: -1, // unlimited  
-            teamMembers: -1, // unlimited
-            customGroups: -1, // unlimited
-            priceLists: -1, // unlimited
+            products: -1,
+            broadcasts: -1,
+            teamMembers: -1,
+            customGroups: -1,
+            priceLists: -1,
           },
-          sortOrder: 2
+          sortOrder: 4
         }
       ];
 
@@ -109,6 +170,14 @@ export class SubscriptionService {
         const createdPlans = await db.insert(subscriptionPlans).values(defaultPlans).returning();
         console.log('✅ Default subscription plans created:', createdPlans.map(p => p.name).join(', '));
         return createdPlans;
+      }
+
+      // Upsert: update existing plans and insert any new ones that don't exist yet
+      const existingPlanIds = new Set(existingPlans.map(p => p.planId));
+      const toInsert = defaultPlans.filter(p => !existingPlanIds.has(p.planId));
+      if (toInsert.length > 0) {
+        await db.insert(subscriptionPlans).values(toInsert);
+        console.log('✅ New subscription plans inserted:', toInsert.map(p => p.name).join(', '));
       }
 
       // Always sync all plan fields so any code-level change is reflected in DB on restart

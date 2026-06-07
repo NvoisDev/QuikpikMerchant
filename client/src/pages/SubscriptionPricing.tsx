@@ -269,14 +269,15 @@ export default function SubscriptionPricing() {
       return;
     }
     
-    // Define plan hierarchy for upgrade/downgrade detection (annual plans map to same tier)
+    // Plan hierarchy for upgrade/downgrade detection
     const planHierarchy: Record<string, number> = {
-      'free': 0,
-      'standard': 1, 'standard_annual_intro': 1, 'standard_annual': 1,
-      'premium': 2, 'premium_annual_intro': 2, 'premium_annual': 2,
+      'listing': 0, 'listing_annual_intro': 0, 'listing_annual': 0,
+      'free': 1, 'starter': 1, 'starter_annual_intro': 1, 'starter_annual': 1,
+      'standard': 2, 'standard_annual_intro': 2, 'standard_annual': 2,
+      'premium': 3, 'premium_annual_intro': 3, 'premium_annual': 3,
     };
-    const currentPlanLevel = planHierarchy[currentPlan] ?? 0;
-    const targetPlanLevel = planHierarchy[plan.planId] ?? 0;
+    const currentPlanLevel = planHierarchy[currentPlan] ?? 1;
+    const targetPlanLevel = planHierarchy[plan.planId] ?? 1;
     
     // Handle downgrades (moving to a lower tier)
     if (targetPlanLevel < currentPlanLevel) {
@@ -285,11 +286,11 @@ export default function SubscriptionPricing() {
       return;
     }
     
-    // Handle free plan selection for users already on free
-    if (!plan.stripePriceId && currentPlan === 'free') {
+    // Handle plans with no Stripe price (Listing or legacy free)
+    if (!plan.stripePriceId && (currentPlan === 'free' || currentPlan === 'listing')) {
       toast({
-        title: "Free Plan Active",
-        description: "You're already on the free plan with basic features.",
+        title: "Current Plan Active",
+        description: `You're already on the ${plan.name} plan.`,
       });
       return;
     }
@@ -318,29 +319,36 @@ export default function SubscriptionPricing() {
 
   const getPlanIcon = (planId: string) => {
     const tier = getPlanBaseTier(planId);
-    if (tier === 'free') return (
-      <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-        <path d="M24 38V22" stroke="#4ade80" strokeWidth="1.5" strokeLinecap="round"/>
-        <path d="M24 22C24 22 18 18 18 12C18 12 24 10 28 16C28 16 30 12 34 13C34 13 34 18 28 20" stroke="#4ade80" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-        <path d="M24 28C24 28 20 25 16 26" stroke="#4ade80" strokeWidth="1.5" strokeLinecap="round"/>
+    if (tier === 'listing') return (
+      <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <circle cx="20" cy="20" r="18" stroke="#6b7280" strokeWidth="1.5"/>
+        <path d="M14 20h12M20 14v12" stroke="#6b7280" strokeWidth="1.5" strokeLinecap="round"/>
+        <circle cx="20" cy="20" r="4" stroke="#6b7280" strokeWidth="1.5"/>
+      </svg>
+    );
+    if (tier === 'starter') return (
+      <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <path d="M20 34V20" stroke="#3b82f6" strokeWidth="1.5" strokeLinecap="round"/>
+        <path d="M20 20C20 20 14 16 14 10C14 10 20 8 24 14C24 14 26 10 30 11C30 11 30 16 24 18" stroke="#3b82f6" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M20 26C20 26 16 23 12 24" stroke="#3b82f6" strokeWidth="1.5" strokeLinecap="round"/>
       </svg>
     );
     if (tier === 'standard') return (
-      <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-        <path d="M24 38V18" stroke="#22c55e" strokeWidth="1.5" strokeLinecap="round"/>
-        <path d="M24 18C24 18 16 13 15 7C15 7 22 5 26 12" stroke="#22c55e" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-        <path d="M24 26C24 26 30 22 35 24" stroke="#22c55e" strokeWidth="1.5" strokeLinecap="round"/>
-        <path d="M24 22C24 22 19 18 14 20" stroke="#22c55e" strokeWidth="1.5" strokeLinecap="round"/>
-        <path d="M24 18C24 18 29 14 33 10" stroke="#22c55e" strokeWidth="1.5" strokeLinecap="round"/>
+      <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <path d="M20 34V16" stroke="#22c55e" strokeWidth="1.5" strokeLinecap="round"/>
+        <path d="M20 16C20 16 13 11 12 6C12 6 19 4 22 10" stroke="#22c55e" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M20 24C20 24 25 20 29 22" stroke="#22c55e" strokeWidth="1.5" strokeLinecap="round"/>
+        <path d="M20 20C20 20 15 16 11 18" stroke="#22c55e" strokeWidth="1.5" strokeLinecap="round"/>
+        <path d="M20 16C20 16 25 12 29 9" stroke="#22c55e" strokeWidth="1.5" strokeLinecap="round"/>
       </svg>
     );
     return (
-      <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-        <path d="M14 32H34" stroke="#f59e0b" strokeWidth="1.5" strokeLinecap="round"/>
-        <path d="M14 32L11 18L19 23L24 12L29 23L37 18L34 32" stroke="#f59e0b" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-        <circle cx="11" cy="18" r="2" stroke="#f59e0b" strokeWidth="1.5"/>
-        <circle cx="24" cy="12" r="2" stroke="#f59e0b" strokeWidth="1.5"/>
-        <circle cx="37" cy="18" r="2" stroke="#f59e0b" strokeWidth="1.5"/>
+      <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <path d="M10 28H30" stroke="#f59e0b" strokeWidth="1.5" strokeLinecap="round"/>
+        <path d="M10 28L8 16L15 20L20 10L25 20L32 16L30 28" stroke="#f59e0b" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        <circle cx="8" cy="16" r="2" stroke="#f59e0b" strokeWidth="1.5"/>
+        <circle cx="20" cy="10" r="2" stroke="#f59e0b" strokeWidth="1.5"/>
+        <circle cx="32" cy="16" r="2" stroke="#f59e0b" strokeWidth="1.5"/>
       </svg>
     );
   };
@@ -349,7 +357,13 @@ export default function SubscriptionPricing() {
   const getAnnualSavings = (plan: SubscriptionPlan): { pct: number; amount: number } | null => {
     if (plan.billingInterval !== 'yearly') return null;
     const tier = getPlanBaseTier(plan.planId);
-    const monthlyEquiv = tier === 'standard' ? 49.99 : tier === 'premium' ? 99.99 : null;
+    const monthlyEquivMap: Record<string, number> = {
+      listing: 19.99,
+      starter: 29.99,
+      standard: 49.99,
+      premium: 99.99,
+    };
+    const monthlyEquiv = monthlyEquivMap[tier] ?? null;
     if (!monthlyEquiv) return null;
     const monthlyTotal = monthlyEquiv * 12;
     const annualPrice = parseFloat(plan.monthlyPrice);
@@ -359,14 +373,13 @@ export default function SubscriptionPricing() {
   };
 
   // Plans to show depending on billing mode.
-  // Monthly mode: plans with no billing interval (free, standard, premium)
-  // Annual mode:  free + whichever annual plans are currently active in the DB.
-  // The API already filters isActive=true, so after the May 2027 migration the
-  // intro plans will disappear and the full-rate annual plans will appear automatically.
+  // Monthly: listing, starter, standard, premium (exclude legacy 'free' from display)
+  // Annual:  annual variants of the four tiers
   const visiblePlans = plans.filter((p: SubscriptionPlan) => {
     const isAnnual = p.billingInterval === 'yearly';
+    if (p.planId === 'free') return false; // legacy — never shown on pricing page
     if (billingMode === 'monthly') return !isAnnual;
-    if (billingMode === 'annual') return p.planId === 'free' || isAnnual;
+    if (billingMode === 'annual') return isAnnual;
     return true;
   });
 
@@ -409,13 +422,15 @@ export default function SubscriptionPricing() {
         <div className="mb-8 text-center">
           <div className="inline-flex items-center gap-2 bg-green-100 text-green-800 px-4 py-2 rounded-full">
             <CheckIcon className="w-4 h-4" />
-            Current Plan: {currentSubscription.currentPlan?.toUpperCase() || 'FREE'}
+            Current Plan: {currentSubscription.currentPlan === 'free'
+              ? 'STARTER'
+              : (currentSubscription.currentPlan?.toUpperCase() || 'LISTING')}
           </div>
         </div>
       )}
 
-      {/* Billing Information Section — shown for paid plans, and for free users who recently downgraded */}
-      {currentSubscription && currentSubscription.currentPlan !== 'free' && (
+      {/* Billing Information Section — shown for paid plans */}
+      {currentSubscription && currentSubscription.currentPlan !== 'free' && currentSubscription.currentPlan !== 'listing' && (
         <div className="mb-8 p-6 bg-blue-50 border border-blue-200 rounded-lg">
           <h3 className="text-lg font-semibold text-blue-900 mb-4 flex items-center gap-2">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -554,7 +569,7 @@ export default function SubscriptionPricing() {
                     })()}
                   </div>
                   <div className="text-xs text-orange-600 mt-2">
-                    You keep all {currentSubscription.currentPlan} features until then, then your account automatically switches to the Free plan.
+                    You keep all {currentSubscription.currentPlan} features until then, then your account automatically switches to the Listing plan.
                   </div>
                 </div>
               </div>
@@ -563,15 +578,17 @@ export default function SubscriptionPricing() {
         </div>
       )}
 
-      {/* Free plan — billing card */}
-      {currentSubscription && currentSubscription.currentPlan === 'free' && (
+      {/* Free/Listing plan — billing card */}
+      {currentSubscription && (currentSubscription.currentPlan === 'free' || currentSubscription.currentPlan === 'listing') && (
         <div className="mb-8 p-6 bg-gray-50 border border-gray-200 rounded-lg">
           <h3 className="text-lg font-semibold text-gray-800 mb-1 flex items-center gap-2">
             <CreditCard className="w-5 h-5 text-gray-500" />
             Billing
           </h3>
           <p className="text-sm text-gray-500 mb-4">
-            You're on the free plan. Upgrade to unlock unlimited products, price lists, team members, and more.
+            {currentSubscription.currentPlan === 'free'
+              ? "You're on the Starter plan (grandfathered). Upgrade to Standard or Premium to unlock more products, team members, and advanced tools."
+              : "You're on the Listing plan. Upgrade to Starter or above to unlock invoices, payments, order management, and customer tools."}
           </p>
           {currentSubscription.user?.subscriptionPeriodEnd && (
             <div className="mb-4 p-3 bg-white border border-gray-200 rounded-md flex items-start gap-2.5 text-sm text-gray-600">
@@ -601,7 +618,7 @@ export default function SubscriptionPricing() {
                 firstPaidPlan?.scrollIntoView({ behavior: 'smooth' });
               }}
             >
-              Start a paid plan
+              View plans
             </Button>
           )}
         </div>
@@ -683,36 +700,44 @@ export default function SubscriptionPricing() {
           >
             Annual
             <span className="bg-green-100 text-green-700 text-xs font-semibold px-2 py-0.5 rounded-full">
-              Save 17%
+              Save 16%
             </span>
           </button>
         </div>
       </div>
 
       {/* Pricing Plans */}
-      <div id="plan-grid" className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12 items-start">
+      <div id="plan-grid" className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5 mb-12 items-start">
         {visiblePlans.map((plan: SubscriptionPlan) => {
           const savings = getAnnualSavings(plan);
           const isAnnual = plan.billingInterval === 'yearly';
           const price = parseFloat(plan.monthlyPrice);
           const tier = getPlanBaseTier(plan.planId);
-          const isCurrent = isCurrentPlan(plan.planId);
-          const isMostPopular = !isCurrent && (plan.planId === 'standard' || plan.planId === 'standard_annual_intro');
-          const isIntro = (
-            ((plan.planId === 'standard' || plan.planId === 'premium') && plan.billingInterval !== 'yearly') ||
-            plan.planId === 'standard_annual_intro' ||
-            plan.planId === 'premium_annual_intro'
-          ) && new Date() < new Date('2027-05-01T00:00:00Z');
+          const isCurrent = isCurrentPlan(plan.planId) ||
+            (plan.planId === 'starter' && (currentSubscription?.currentPlan === 'free'));
+          const isMostPopular = !isCurrent && (plan.planId === 'standard' || plan.planId === 'standard_annual_intro' || plan.planId === 'standard_annual');
+          const isListingTier = tier === 'listing';
 
-          const futureFullPrice = (() => {
-            if (!isIntro) return null;
-            if (tier === 'standard') return isAnnual ? { amount: 599.99, per: 'year' } : { amount: 49.99, per: 'month' };
-            if (tier === 'premium') return isAnnual ? { amount: 999.99, per: 'year' } : { amount: 99.99, per: 'month' };
-            return null;
-          })();
-          const savingPct = futureFullPrice
-            ? Math.round((futureFullPrice.amount - price) / futureFullPrice.amount * 100)
-            : 0;
+          // Tier accent colours
+          const accentColor = isCurrent
+            ? 'bg-green-500'
+            : tier === 'listing'
+              ? 'bg-gray-300'
+              : tier === 'starter'
+                ? 'bg-blue-400'
+                : tier === 'standard'
+                  ? 'bg-emerald-500'
+                  : 'bg-amber-400';
+
+          const ctaColor = isCurrent
+            ? ''
+            : tier === 'listing'
+              ? 'bg-gray-700 hover:bg-gray-800 text-white'
+              : tier === 'starter'
+                ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                : tier === 'standard'
+                  ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                  : 'bg-amber-500 hover:bg-amber-600 text-white';
 
           return (
             <Card
@@ -721,115 +746,95 @@ export default function SubscriptionPricing() {
                 'relative flex flex-col border transition-all duration-200 overflow-hidden',
                 {
                   'border-green-400 shadow-md bg-green-50': isCurrent,
-                  'border-gray-200 hover:shadow-md': !isCurrent,
+                  'border-emerald-300 shadow-md': isMostPopular && !isCurrent,
+                  'border-gray-200 hover:shadow-md': !isCurrent && !isMostPopular,
                 }
               )}
             >
               {/* Coloured top accent bar */}
-              <div className={clsx('h-1 w-full', {
-                'bg-green-500': isCurrent,
-                'bg-green-400': !isCurrent && tier === 'standard',
-                'bg-amber-400': !isCurrent && tier === 'premium',
-                'bg-gray-200': !isCurrent && tier === 'free',
-              })} />
+              <div className={`h-1 w-full ${accentColor}`} />
 
               {/* Status / popularity ribbon */}
-              {(isCurrent || isMostPopular) && (
+              {(isCurrent || isMostPopular || isListingTier) && (
                 <div className="flex justify-center pt-3">
                   {isCurrent ? (
                     <Badge className="bg-green-600 text-white px-3 py-0.5 text-xs font-semibold">
                       ✅ Current Plan
                     </Badge>
-                  ) : (
-                    <Badge className="bg-green-100 text-green-800 border border-green-300 px-3 py-0.5 text-xs font-semibold">
+                  ) : isMostPopular ? (
+                    <Badge className="bg-emerald-100 text-emerald-800 border border-emerald-300 px-3 py-0.5 text-xs font-semibold">
                       Most Popular
                     </Badge>
-                  )}
+                  ) : isListingTier ? (
+                    <Badge className="bg-green-100 text-green-700 border border-green-200 px-3 py-0.5 text-xs font-semibold">
+                      🎉 Free for 3 months
+                    </Badge>
+                  ) : null}
                 </div>
               )}
 
-              <CardContent className={clsx('flex flex-col flex-1 px-6 pb-6', isCurrent || isMostPopular ? 'pt-3' : 'pt-6')}>
+              <CardContent className={clsx('flex flex-col flex-1 px-5 pb-6', isCurrent || isMostPopular || isListingTier ? 'pt-3' : 'pt-6')}>
                 {/* 1. Illustrated icon */}
-                <div className="mb-4">
+                <div className="mb-3">
                   {getPlanIcon(plan.planId)}
                 </div>
 
                 {/* 2. Plan name + description */}
-                <div className="mb-5">
-                  <h3 className="text-lg font-semibold text-gray-900">{plan.name}</h3>
-                  <p className="text-sm text-gray-500 mt-0.5 leading-snug">{plan.description}</p>
+                <div className="mb-4">
+                  <h3 className="text-base font-semibold text-gray-900">{plan.name}</h3>
+                  <p className="text-xs text-gray-500 mt-0.5 leading-snug">{plan.description}</p>
                 </div>
 
                 {/* 3. Price */}
-                <div className="mb-5">
+                <div className="mb-4">
                   <div className="flex items-baseline gap-1">
-                    <span className="text-4xl font-bold text-gray-900">
-                      {price === 0 ? '£0' : `£${price.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                    <span className="text-3xl font-bold text-gray-900">
+                      £{price.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </span>
-                    <span className="text-gray-400 text-sm ml-1">
-                      {price === 0 ? '' : isAnnual ? '/ year' : '/ month'}
+                    <span className="text-gray-400 text-xs ml-1">
+                      {isAnnual ? '/ year' : '/ month'}
                     </span>
                   </div>
                   <p className="text-xs text-gray-400 mt-1">
-                    {price === 0
-                      ? 'Free forever'
-                      : isAnnual && savings
-                        ? `Billed annually — save £${savings.amount.toFixed(0)} vs monthly`
+                    {isAnnual && savings
+                      ? `Save £${savings.amount.toFixed(0)} vs monthly`
+                      : isListingTier
+                        ? 'Free intro — then £19.99/mo'
                         : 'Billed monthly'}
                   </p>
                 </div>
 
-                {/* 4. Introductory notice */}
-                {isIntro && (
-                  <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800">
-                    <strong>Introductory Price</strong> — valid until 30 April 2027
-                    {futureFullPrice && (
-                      <>
-                        <div className="mt-1.5 text-amber-700">
-                          From 1 May 2027: £{futureFullPrice.amount.toFixed(2)}/{futureFullPrice.per}
-                        </div>
-                        <div className="mt-0.5 font-medium text-amber-700">
-                          You're saving {savingPct}%
-                        </div>
-                      </>
-                    )}
-                  </div>
-                )}
-
-                {/* 5. CTA Button */}
-                <div className="space-y-2">
+                {/* 4. CTA Button */}
+                <div className="space-y-2 mb-5">
                   <Button
                     onClick={() => handlePlanSelection(plan)}
                     disabled={processingPlanId === plan.planId || isCurrent}
-                    className={clsx('w-full whitespace-normal h-auto py-2 font-medium', {
-                      'bg-green-600 hover:bg-green-700 text-white': !isCurrent && tier !== 'free',
-                      'bg-gray-100 hover:bg-gray-200 text-gray-700': !isCurrent && tier === 'free',
-                    })}
+                    className={clsx('w-full whitespace-normal h-auto py-2 text-sm font-medium', ctaColor)}
                     variant={isCurrent ? 'outline' : 'default'}
                   >
                     {isCurrent
                       ? 'Current Plan'
                       : processingPlanId === plan.planId
                         ? 'Processing...'
-                        : tier === 'free'
-                          ? 'Get Started Free'
+                        : isListingTier
+                          ? 'Get Listed Free'
                           : `Upgrade to ${plan.name}`}
                   </Button>
 
                   {/* Cancel/Downgrade — only shown on the current paid plan card */}
-                  {isCurrent && plan.planId !== 'free' && (
+                  {isCurrent && plan.planId !== 'free' && plan.planId !== 'listing' && (
                     isCancellationScheduled ? (
                       <div className="space-y-1.5">
                         <Button
                           disabled
                           variant="outline"
-                          className="w-full text-amber-700 border-amber-300 bg-amber-50 cursor-not-allowed opacity-100"
+                          className="w-full text-amber-700 border-amber-300 bg-amber-50 cursor-not-allowed opacity-100 text-xs"
                         >
                           ✓ Cancellation Scheduled
                         </Button>
                         {cancellationEndDate && (
                           <p className="text-xs text-center text-amber-700 leading-snug">
-                            Free plan begins{' '}
+                            Listing plan begins{' '}
                             <strong>
                               {cancellationEndDate.toLocaleDateString('en-GB', {
                                 weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
@@ -841,12 +846,12 @@ export default function SubscriptionPricing() {
                     ) : (
                       <Button
                         onClick={() => {
-                          setTargetDowngradePlan('free');
+                          setTargetDowngradePlan('listing');
                           setShowDowngradeModal(true);
                         }}
                         disabled={cancelSubscriptionMutation.isPending}
                         variant="outline"
-                        className="w-full text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
+                        className="w-full text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700 text-xs"
                       >
                         {cancelSubscriptionMutation.isPending ? 'Processing...' : 'Cancel Subscription'}
                       </Button>
@@ -854,14 +859,14 @@ export default function SubscriptionPricing() {
                   )}
                 </div>
 
-                {/* 6. Feature list */}
-                <ul className="mt-6 space-y-2.5">
+                {/* 5. Feature list */}
+                <ul className="space-y-2">
                   {plan.features.map((feature, index) => (
-                    <li key={index} className="flex items-start gap-2.5">
-                      <svg className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                    <li key={index} className="flex items-start gap-2">
+                      <svg className="w-3.5 h-3.5 text-green-500 mt-0.5 flex-shrink-0" viewBox="0 0 16 16" fill="none" aria-hidden="true">
                         <path d="M3 8L6.5 11.5L13 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                       </svg>
-                      <span className="text-sm text-gray-600 leading-snug">{formatPlanFeature(feature)}</span>
+                      <span className="text-xs text-gray-600 leading-snug">{formatPlanFeature(feature)}</span>
                     </li>
                   ))}
                 </ul>

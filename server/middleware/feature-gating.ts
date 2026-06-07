@@ -3,7 +3,7 @@ import SubscriptionService from '../subscription-service';
 import { db } from '../db';
 import { teamMembers, priceLists } from '@shared/schema';
 import { eq, and, count as drizzleCount } from 'drizzle-orm';
-import { PLAN_LIMITS, getPlanLimits } from '../config/plan-limits';
+import { PLAN_LIMITS, PLAN_HIERARCHY, getPlanLimits } from '../config/plan-limits';
 
 /**
  * Feature gating middleware - checks if user has access to specific features
@@ -70,8 +70,7 @@ export async function checkFeatureLimits(userId: string, feature: string, curren
     // the tier is unrecognised, so this is always safe.
     const tierFromDb = user?.subscriptionTier || 'free';
     const tierFromPlan = currentPlan || 'free';
-    const planHierarchy: Record<string, number> = { free: 0, standard: 1, premium: 2 };
-    const resolvedTier = (planHierarchy[tierFromPlan] ?? 0) < (planHierarchy[tierFromDb] ?? 0)
+    const resolvedTier = (PLAN_HIERARCHY[tierFromPlan] ?? 0) < (PLAN_HIERARCHY[tierFromDb] ?? 0)
       ? tierFromPlan : tierFromDb;
     const planLimits = getPlanLimits(resolvedTier);
     const fallbackLimits = {
@@ -332,9 +331,8 @@ export async function getUserPlanLimits(userId: string) {
     let limits;
     const tierFromDb = user?.subscriptionTier || 'free';
     const tierFromPlan = currentPlan || 'free';
-    const planHierarchy: Record<string, number> = { free: 0, standard: 1, premium: 2 };
     const resolvedTier =
-      (planHierarchy[tierFromPlan] ?? 0) < (planHierarchy[tierFromDb] ?? 0)
+      (PLAN_HIERARCHY[tierFromPlan] ?? 0) < (PLAN_HIERARCHY[tierFromDb] ?? 0)
         ? tierFromPlan
         : tierFromDb;
     const userTier = resolvedTier;
