@@ -1017,6 +1017,83 @@ export function registerOrderLifecycleRoutes(app: Express): void {
         }
       }
 
+      // Partial offline payment with an existing Stripe link: expire the stale link and
+      // issue a fresh session for the updated outstanding amount so the customer can't
+      // accidentally overpay via the old link.
+      const OFFLINE_METHODS_LIST = ['cash', 'bank_transfer', 'cheque', 'pay_later', 'other'];
+      if (
+        paymentUpdate.newPaymentStatus !== 'paid' &&
+        OFFLINE_METHODS_LIST.includes(method) &&
+        order.stripePaymentLinkId
+      ) {
+        try {
+          await stripe.checkout.sessions.expire(order.stripePaymentLinkId).catch(() => {});
+
+          const wholesalerForLink = await storage.getUser(wholesalerId);
+          const newOutstanding = paymentUpdate.newAmountOutstanding;
+          const orderTotal = parseFloat(order.total || '0');
+
+          let useConnect = false;
+          if (wholesalerForLink?.stripeAccountId) {
+            try {
+              const acct = await stripe.accounts.retrieve(wholesalerForLink.stripeAccountId);
+              useConnect = !!(acct.charges_enabled && acct.details_submitted);
+            } catch {}
+          }
+
+          const wholesalerNet = parseFloat(order.subtotal || '0') - parseFloat(order.platformFee || '0');
+          const transferAmount = orderTotal > 0
+            ? Math.round(newOutstanding * (wholesalerNet / orderTotal) * 100)
+            : 0;
+
+          const appBase = process.env.APP_URL ||
+            (process.env.REPLIT_DOMAINS?.split(',')[0]
+              ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}`
+              : 'https://quikpik.app');
+
+          const newSession = await stripe.checkout.sessions.create({
+            payment_method_types: ['card'],
+            line_items: [{
+              price_data: {
+                currency: 'gbp',
+                product_data: {
+                  name: `Remaining Balance — Order ${order.orderNumber}`,
+                  description: `Remaining balance after partial payment. Original order total: £${orderTotal.toFixed(2)}`,
+                },
+                unit_amount: Math.round(newOutstanding * 100),
+              },
+              quantity: 1,
+            }],
+            mode: 'payment',
+            success_url: `${appBase}/customer/payment-success?order=${order.orderNumber}&wholesaler=${wholesalerId}&returning=true&session_id={CHECKOUT_SESSION_ID}`,
+            cancel_url: `${appBase}/store/${wholesalerId}`,
+            metadata: {
+              orderId: orderId.toString(),
+              orderNumber: order.orderNumber || '',
+              wholesalerId,
+              customerId: order.retailerId,
+              isQuote: 'true',
+              isBalancePayment: 'true',
+            },
+            expires_at: Math.floor(Date.now() / 1000) + (24 * 60 * 60),
+            ...(useConnect && transferAmount > 0 ? {
+              payment_intent_data: {
+                transfer_data: {
+                  destination: wholesalerForLink!.stripeAccountId!,
+                  amount: transferAmount,
+                },
+              },
+            } : {}),
+          });
+
+          updateData.stripePaymentLinkId = newSession.id;
+          updateData.stripePaymentLinkUrl = newSession.url || '';
+          console.log(`✅ Refreshed Stripe link for order ${order.orderNumber} — new outstanding: £${newOutstanding.toFixed(2)}`);
+        } catch (linkErr) {
+          console.warn(`⚠️ Could not refresh Stripe link for order ${order.orderNumber}:`, linkErr);
+        }
+      }
+
       await db.update(orders).set(updateData).where(eq(orders.id, orderId));
 
       const [updatedOrder] = await db.select().from(orders).where(eq(orders.id, orderId)).limit(1);
