@@ -844,19 +844,33 @@ export default function SubscriptionPricing() {
 
                 {/* 3. Price */}
                 <div className="mb-4">
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-3xl font-bold text-gray-900">
-                      £{price.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </span>
-                    <span className="text-gray-400 text-xs ml-1">
-                      {isAnnual ? '/ year' : '/ month'}
-                    </span>
-                  </div>
-                  <p className="text-xs text-gray-400 mt-1">
-                    {isAnnual && savings
-                      ? `Save £${savings.amount.toFixed(0)} vs monthly`
-                      : 'Billed monthly'}
-                  </p>
+                  {(tier === 'listing' && !isAnnual) ? (
+                    <>
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-3xl font-bold text-green-600">Free</span>
+                        <span className="text-gray-400 text-xs ml-1">for 3 months</span>
+                      </div>
+                      <p className="text-xs text-gray-400 mt-1">
+                        then £{price.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/mo · New subscribers only
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-3xl font-bold text-gray-900">
+                          £{price.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
+                        <span className="text-gray-400 text-xs ml-1">
+                          {isAnnual ? '/ year' : '/ month'}
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-400 mt-1">
+                        {isAnnual && savings
+                          ? `Save £${savings.amount.toFixed(0)} vs monthly`
+                          : 'Billed monthly'}
+                      </p>
+                    </>
+                  )}
                 </div>
 
                 {/* 4. CTA Button */}
