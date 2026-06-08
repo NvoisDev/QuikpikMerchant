@@ -58,6 +58,7 @@ export default function SubscriptionPricing() {
   const [pendingUpgrade, setPendingUpgrade] = useState<{ priceId: string; planName: string; planId: string } | null>(null);
   const [billingMode, setBillingMode] = useState<'monthly' | 'annual'>('monthly');
   const [isBillingPortalLoading, setIsBillingPortalLoading] = useState(false);
+  const [highlightListingPlan, setHighlightListingPlan] = useState(false);
 
   const openBillingPortal = async () => {
     setIsBillingPortalLoading(true);
@@ -630,16 +631,32 @@ export default function SubscriptionPricing() {
               Only the account owner can upgrade
             </div>
           ) : (
-            <Button
-              size="sm"
-              className="bg-green-600 hover:bg-green-700 text-white"
-              onClick={() => {
-                const firstPaidPlan = document.getElementById('plan-grid');
-                firstPaidPlan?.scrollIntoView({ behavior: 'smooth' });
-              }}
-            >
-              View plans
-            </Button>
+            <div className="flex items-center gap-3 flex-wrap">
+              {currentSubscription?.currentPlan === 'listing' && currentSubscription?.user?.subscriptionPeriodEnd && (
+                <Button
+                  size="sm"
+                  className="bg-gray-800 hover:bg-gray-900 text-white"
+                  onClick={() => {
+                    setHighlightListingPlan(true);
+                    const listingCard = document.getElementById('plan-card-listing');
+                    listingCard?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    setTimeout(() => setHighlightListingPlan(false), 3000);
+                  }}
+                >
+                  Reactivate Listing plan
+                </Button>
+              )}
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  const firstPaidPlan = document.getElementById('plan-grid');
+                  firstPaidPlan?.scrollIntoView({ behavior: 'smooth' });
+                }}
+              >
+                View plans
+              </Button>
+            </div>
           )}
         </div>
       )}
@@ -761,12 +778,14 @@ export default function SubscriptionPricing() {
           return (
             <Card
               key={plan.id}
+              id={tier === 'listing' && !isAnnual ? 'plan-card-listing' : undefined}
               className={clsx(
                 'relative flex flex-col border transition-all duration-200 overflow-hidden',
                 {
                   'border-green-400 shadow-md bg-green-50': isCurrent,
                   'border-emerald-300 shadow-md': isMostPopular && !isCurrent,
                   'border-gray-200 hover:shadow-md': !isCurrent && !isMostPopular,
+                  'ring-2 ring-gray-700 ring-offset-2 shadow-lg': highlightListingPlan && tier === 'listing',
                 }
               )}
             >
