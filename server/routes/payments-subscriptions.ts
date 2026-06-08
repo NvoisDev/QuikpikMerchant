@@ -297,9 +297,29 @@ export function registerSubscriptionRoutes(app: Express): void {
 
       const isTestAccount = Boolean(req.user.isTestAccount);
 
-      // Get current subscription
-      const currentSubscription = await SubscriptionService.getCurrentSubscription(userId, isTestAccount);
-      
+      // Get current subscription — primary path checks users.stripeSubscriptionId via Stripe
+      let currentSubscription = await SubscriptionService.getCurrentSubscription(userId, isTestAccount);
+
+      // Fallback: users.stripeSubscriptionId can be null when the checkout.session.completed
+      // handler already set currentPlan/subscriptionStatus, causing the subsequent
+      // customer.subscription.created webhook to early-return before writing the ID to users.
+      // In that case, userSubscriptions still has the correct stripeSubscriptionId.
+      if (!currentSubscription?.stripeSubscriptionId) {
+        const [userSub] = await db
+          .select({ stripeSubscriptionId: userSubscriptions.stripeSubscriptionId, planId: userSubscriptions.planId })
+          .from(userSubscriptions)
+          .where(eq(userSubscriptions.userId, userId));
+        if (userSub?.stripeSubscriptionId) {
+          currentSubscription = {
+            userId,
+            stripeSubscriptionId: userSub.stripeSubscriptionId,
+            currentPlan: userSub.planId ?? 'free',
+            subscriptionStatus: 'active',
+            stripeSubscription: null as any,
+          };
+        }
+      }
+
       if (!currentSubscription?.stripeSubscriptionId) {
         return res.status(400).json({ message: 'No active subscription found' });
       }

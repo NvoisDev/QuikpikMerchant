@@ -882,10 +882,16 @@ export function registerPaymentConnectRoutes(app: Express): void {
           return res.json({ received: true, type: event.type });
         }
 
-        // Only skip if BOTH the plan and the status are already in sync — a trialing → active
-        // transition must not be suppressed, so we compare against the incoming Stripe status.
+        // Only skip if BOTH the plan and the status are already in sync AND the subscription ID
+        // is already persisted — a trialing → active transition must not be suppressed.
+        // Do NOT short-circuit when stripeSubscriptionId is missing: checkout.session.completed
+        // may have set currentPlan/subscriptionStatus but missed writing the ID.
         const incomingStatus = subscription.status === 'trialing' ? 'trialing' : 'active';
-        if (subUser.currentPlan === subPlanId && subUser.subscriptionStatus === incomingStatus) {
+        if (
+          subUser.currentPlan === subPlanId &&
+          subUser.subscriptionStatus === incomingStatus &&
+          subUser.stripeSubscriptionId === subscription.id
+        ) {
           return res.json({ received: true, type: event.type });
         }
 
