@@ -547,7 +547,7 @@ export function registerCustomerRoutes(app: Express): void {
   });
 
   // PATCH /api/customer-groups/:groupId/members/:customerId
-  app.patch('/api/customer-groups/:groupId/members/:customerId', requireAuth, async (req: any, res) => {
+  app.patch('/api/customer-groups/:groupId/members/:customerId', requireAuth, requireBooleanFeature('customer_management'), requireNotViewer, requireMemberPermission('customers'), async (req: any, res) => {
     try {
       // Use parent company ID for team members to inherit data access
       const targetUserId = resolveWholesalerId(req);

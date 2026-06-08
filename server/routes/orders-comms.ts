@@ -657,7 +657,7 @@ export function registerOrderCommsRoutes(app: Express): void {
   });
 
   // POST /api/orders/:orderId/shipping
-  app.post('/api/orders/:orderId/shipping', requireAuth, requireNotViewer, requireMemberPermission('orders'), async (req: any, res) => {
+  app.post('/api/orders/:orderId/shipping', requireAuth, requireBooleanFeature('order_management'), requireNotViewer, requireMemberPermission('orders'), async (req: any, res) => {
     try {
       const userId = req.user.id;
       const { orderId } = req.params;
