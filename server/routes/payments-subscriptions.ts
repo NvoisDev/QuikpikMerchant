@@ -326,7 +326,7 @@ export function registerSubscriptionRoutes(app: Express): void {
         await storage.updateUser(userId, {
           currentPlan: targetPlan,
           subscriptionTier: targetPlan,
-          subscriptionStatus: targetPlan === 'free' || targetPlan === 'listing' ? 'free' : 'active',
+          subscriptionStatus: targetPlan === 'free' || targetPlan === 'listing' ? 'inactive' : 'active',
           productLimit: targetProductLimit,
         });
         const [existingUserSub] = await db.select().from(userSubscriptions).where(eq(userSubscriptions.userId, userId));
@@ -504,9 +504,9 @@ export function registerSubscriptionRoutes(app: Express): void {
           console.warn('⚠️ Stripe subscription not found — cleaning up stale ID for user:', userId, user.stripeSubscriptionId);
 
           await db.update(users).set({
-            subscriptionStatus: 'free',
-            currentPlan: 'free',
-            subscriptionTier: 'free',
+            subscriptionStatus: 'inactive',
+            currentPlan: 'listing',
+            subscriptionTier: 'listing',
             productLimit: 2,
             stripeSubscriptionId: null,
             subscriptionPeriodStart: null,
@@ -519,7 +519,7 @@ export function registerSubscriptionRoutes(app: Express): void {
 
           if (existingSub.length > 0) {
             await db.update(userSubscriptions).set({
-              planId: 'free',
+              planId: 'listing',
               stripeSubscriptionId: null,
               status: 'canceled',
               cancelAtPeriodEnd: null,
@@ -528,9 +528,9 @@ export function registerSubscriptionRoutes(app: Express): void {
           } else {
             await db.insert(userSubscriptions).values({
               userId,
-              planId: 'free',
+              planId: 'listing',
               stripeSubscriptionId: null,
-              status: 'free',
+              status: 'inactive',
               currentPeriodStart: null,
               currentPeriodEnd: null,
               cancelAtPeriodEnd: null
@@ -539,7 +539,7 @@ export function registerSubscriptionRoutes(app: Express): void {
 
           return res.json({
             success: true,
-            message: 'Subscription cancelled and plan reverted to Free'
+            message: 'Subscription cancelled and plan reverted to Listing'
           });
         }
 

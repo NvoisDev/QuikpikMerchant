@@ -65,6 +65,7 @@ const Blog = lazy(() => import("@/pages/blog"));
 const BlogPost = lazy(() => import("@/pages/blog-post"));
 
 import AppLayout from "@/components/layout/app-layout";
+import SubscriptionExpiredWall from "@/components/SubscriptionExpiredWall";
 
 // ---------------------------------------------------------------------------
 // Stable section-wrapped page components
@@ -235,6 +236,7 @@ function AuthenticatedRoutes() {
   }
 
   return (
+    <SubscriptionExpiredWall>
     <AppLayout>
       <Suspense fallback={<ContentLoader />}>
         <Switch>
@@ -279,6 +281,7 @@ function AuthenticatedRoutes() {
         </Switch>
       </Suspense>
     </AppLayout>
+    </SubscriptionExpiredWall>
   );
 }
 
