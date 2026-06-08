@@ -46,6 +46,7 @@ interface OrderItem {
     packQuantity?: number;
     unitSize?: string | null;
     unitOfMeasure?: string | null;
+    costPrice?: string | null;
   };
   appliedOfferLabel?: string | null;
   freeItems?: number;
@@ -1561,6 +1562,34 @@ export default function OrderDetail() {
                   </>
                 );
               })()}
+              {(() => {
+                const itemsWithCost = (order.items || []).filter(i => i.product?.costPrice && parseFloat(i.product.costPrice) > 0);
+                const itemsWithoutCost = (order.items || []).length - itemsWithCost.length;
+                if (itemsWithCost.length === 0) return null;
+                const totalCost = itemsWithCost.reduce((sum, i) => sum + parseFloat(i.product.costPrice!) * i.quantity, 0);
+                const revenueForCostedItems = itemsWithCost.reduce((sum, i) => sum + parseFloat(i.unitPrice) * i.quantity, 0);
+                const grossProfit = revenueForCostedItems - totalCost;
+                const marginPct = revenueForCostedItems > 0 ? (grossProfit / revenueForCostedItems) * 100 : 0;
+                const profitColor = grossProfit >= 0 ? 'text-emerald-700' : 'text-red-600';
+                return (
+                  <div className="border-t pt-2 mt-1 space-y-1">
+                    <div className="flex justify-between text-gray-500">
+                      <span>Cost of goods</span>
+                      <span>{formatMoney(totalCost)}</span>
+                    </div>
+                    <div className={`flex justify-between font-medium ${profitColor}`}>
+                      <span>Gross profit</span>
+                      <span>{grossProfit >= 0 ? '' : '-'}{formatMoney(Math.abs(grossProfit))} <span className="font-normal text-xs opacity-75">({marginPct.toFixed(1)}%)</span></span>
+                    </div>
+                    {itemsWithoutCost > 0 && (
+                      <div className="text-[10px] text-gray-400 italic">
+                        {itemsWithoutCost} item{itemsWithoutCost !== 1 ? 's' : ''} excluded — no cost price set
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
               <div className="border-t pt-2 mt-1">
                 <div className="flex justify-between font-semibold text-green-700 text-sm">
                   <span>Your Net Amount</span>
