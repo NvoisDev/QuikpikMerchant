@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import {
-  Search, Plus, Pencil, Trash2, MapPin, List, Check, Clock,
+  Search, Plus, Pencil, Trash2, MapPin, List, Check,
 } from "lucide-react";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import L from "leaflet";
@@ -84,6 +84,10 @@ function StoreFormModal({
   const [form, setForm] = useState<StoreFormState>(initial ?? EMPTY_FORM);
   const set = (k: keyof StoreFormState, v: any) => setForm(f => ({ ...f, [k]: v }));
 
+  useEffect(() => {
+    if (open) setForm(initial ?? EMPTY_FORM);
+  }, [open, initial]);
+
   if (!open) return null;
 
   return (
@@ -130,7 +134,7 @@ function StoreFormModal({
             <div>
               <label className="text-xs text-gray-500 font-medium">Assign to wholesalers</label>
               <div className="mt-1 max-h-32 overflow-y-auto border border-gray-200 rounded-lg divide-y divide-gray-100">
-                {wholesalers.slice(0, 50).map(w => {
+                {wholesalers.map(w => {
                   const checked = form.assignedWholesalerIds.includes(w.id);
                   return (
                     <label key={w.id} className="flex items-center gap-2 px-3 py-1.5 cursor-pointer hover:bg-gray-50">
@@ -423,7 +427,8 @@ export function ProspectStoresSection({
                         <TableHead className="text-xs px-4 w-8"></TableHead>
                         <TableHead className="text-xs px-4">Name</TableHead>
                         <TableHead className="text-xs px-4">Address</TableHead>
-                        <TableHead className="text-xs px-4">Hours</TableHead>
+                        <TableHead className="text-xs px-4">Opens</TableHead>
+                        <TableHead className="text-xs px-4">Closes</TableHead>
                         <TableHead className="text-xs px-4">Type</TableHead>
                         <TableHead className="text-xs px-4 w-48">Notes</TableHead>
                         <TableHead className="text-xs px-4 w-24"></TableHead>
@@ -453,12 +458,10 @@ export function ProspectStoresSection({
                             <p className="text-xs text-gray-600 max-w-[180px] truncate" title={store.address ?? ""}>{store.address || "—"}</p>
                           </TableCell>
                           <TableCell className="px-4">
-                            {(store.openingTime || store.closingTime) ? (
-                              <span className="text-xs text-gray-500 flex items-center gap-1">
-                                <Clock className="h-3 w-3" />
-                                {[store.openingTime, store.closingTime].filter(Boolean).join(" – ")}
-                              </span>
-                            ) : <span className="text-xs text-gray-300">—</span>}
+                            <span className="text-xs text-gray-600">{store.openingTime || <span className="text-gray-300">—</span>}</span>
+                          </TableCell>
+                          <TableCell className="px-4">
+                            <span className="text-xs text-gray-600">{store.closingTime || <span className="text-gray-300">—</span>}</span>
                           </TableCell>
                           <TableCell className="px-4">
                             <Badge variant="outline" className={`text-xs capitalize ${
