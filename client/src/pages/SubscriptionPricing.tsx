@@ -612,20 +612,25 @@ export default function SubscriptionPricing() {
               ? "You're on the Starter plan (grandfathered). Upgrade to Listing, Starter, Standard or Premium to unlock more products, team members, and advanced tools."
               : "You're on the Listing plan. Upgrade to Starter or above to unlock invoices, payments, order management, and customer tools."}
           </p>
-          {currentSubscription.user?.subscriptionPeriodEnd && (
-            <div className="mb-4 p-3 bg-white border border-gray-200 rounded-md flex items-start gap-2.5 text-sm text-gray-600">
-              <svg className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" /></svg>
-              <span>
-                Your paid subscription ended on{' '}
-                <strong>
-                  {new Date(currentSubscription.user.subscriptionPeriodEnd).toLocaleDateString('en-GB', {
-                    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
-                  })}
-                </strong>
-                . Upgrade any time to restore full access.
-              </span>
-            </div>
-          )}
+          {currentSubscription.user?.subscriptionPeriodEnd && (() => {
+            const periodEnd = new Date(currentSubscription.user!.subscriptionPeriodEnd!);
+            const isFuture = periodEnd > new Date();
+            const dateStr = periodEnd.toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+            const hadStripeSub = !!currentSubscription.subscription?.stripeSubscriptionId;
+            return (
+              <div className="mb-4 p-3 bg-white border border-gray-200 rounded-md flex items-start gap-2.5 text-sm text-gray-600">
+                <svg className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" /></svg>
+                <span>
+                  {isFuture
+                    ? <>Your free trial ends on <strong>{dateStr}</strong>. Subscribe before then to keep full access.</>
+                    : hadStripeSub
+                      ? <>Your paid subscription ended on <strong>{dateStr}</strong>. Upgrade any time to restore full access.</>
+                      : <>Your free trial ended on <strong>{dateStr}</strong>. Subscribe to restore full access.</>
+                  }
+                </span>
+              </div>
+            );
+          })()}
           {user?.role === 'team_member' ? (
             <div className="flex items-center gap-1.5 text-xs text-gray-400 border border-gray-200 rounded-md px-3 py-1.5 w-fit">
               <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" /></svg>
@@ -647,7 +652,7 @@ export default function SubscriptionPricing() {
                     setTimeout(() => setHighlightListingPlan(false), 3000);
                   }}
                 >
-                  Reactivate Listing plan
+                  Subscribe to Listing plan
                 </Button>
               )}
               {currentSubscription?.currentPlan === 'listing' && currentSubscription?.user?.subscriptionPeriodEnd &&
@@ -666,7 +671,7 @@ export default function SubscriptionPricing() {
                     setTimeout(() => setHighlightListingPlanAnnual(false), 3000);
                   }}
                 >
-                  Reactivate Listing plan (Annual)
+                  Subscribe to Listing plan (Annual)
                 </Button>
               )}
               <Button
