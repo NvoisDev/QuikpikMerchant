@@ -1,7 +1,9 @@
+import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { getBaseTier } from "@/lib/planUtils";
 import { useAuth } from "@/hooks/useAuth";
 import { useSidebarPermissions } from "@/hooks/useSidebarPermissions";
+import { SubscriptionUpgradeModal } from "@/components/subscription/SubscriptionUpgradeModal";
 import { Button } from "@/components/ui/button";
 import Logo from "@/components/ui/logo";
 import {
@@ -29,6 +31,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Inbox,
+  Lock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
@@ -44,20 +47,22 @@ interface NavigationItem {
   comingSoon?: boolean;
   soonBadge?: boolean;
   freeTrialBadge?: boolean;
+  lockedForListing?: boolean;
+  featureLabel?: string;
 }
 
 const navigation: NavigationItem[] = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard, onboardingId: "dashboard", tabName: "dashboard" },
-  { name: "Orders", href: "/orders", icon: ShoppingCart, onboardingId: "orders", tabName: "orders" },
+  { name: "Orders", href: "/orders", icon: ShoppingCart, onboardingId: "orders", tabName: "orders", lockedForListing: true, featureLabel: "order management" },
   { name: "Products", href: "/products", icon: Package, onboardingId: "products-list", tabName: "products" },
   { name: "Promotions", href: "/promotions", icon: Tag, tabName: "promotions" },
-  { name: "Customers", href: "/customers", icon: Users, onboardingId: "customer-groups", tabName: "customers" },
-  { name: "Leads", href: "/leads", icon: Inbox, tabName: "leads", freeTrialBadge: true },
-  { name: "Broadcast", href: "/campaigns", icon: MessageSquare, onboardingId: "campaigns", tabName: "campaigns", soonBadge: true },
+  { name: "Customers", href: "/customers", icon: Users, onboardingId: "customer-groups", tabName: "customers", lockedForListing: true, featureLabel: "customer management" },
+  { name: "Leads", href: "/leads", icon: Inbox, tabName: "leads", lockedForListing: true, featureLabel: "lead management" },
+  { name: "Broadcast", href: "/campaigns", icon: MessageSquare, onboardingId: "campaigns", tabName: "campaigns", lockedForListing: true, featureLabel: "broadcast campaigns", soonBadge: true },
   { name: "Marketplace", href: "/marketplace", icon: Store, tabName: "marketplace", soonBadge: true },
   { name: "Integrations", href: "/integrations", icon: Puzzle, tabName: "integrations" },
-  { name: "Team Management", href: "/team-management", icon: Contact, tabName: "team-management" },
-  { name: "Finance", href: "/financials", icon: Banknote, tabName: "finance" },
+  { name: "Team Management", href: "/team-management", icon: Contact, tabName: "team-management", lockedForListing: true, featureLabel: "team management" },
+  { name: "Finance", href: "/financials", icon: Banknote, tabName: "finance", lockedForListing: true, featureLabel: "invoices & payments" },
   { name: "Subscription", href: "/subscription-pricing", icon: Crown, tabName: "subscription" },
   { name: "Help Hub", href: "/help", icon: HelpCircle, tabName: "settings" },
 ];
@@ -68,6 +73,7 @@ export default function Sidebar() {
   const { isDesktopCollapsed, toggleDesktopCollapsed, isMobileOpen, closeMobileSidebar } = useSidebarContext();
   const { checkTabAccess, permissionsLoading } = useSidebarPermissions();
   const isTeamMember = user?.role === 'team_member';
+  const [upgradeModal, setUpgradeModal] = useState<{ open: boolean; feature: string }>({ open: false, feature: '' });
 
   const { data: subscriptionData } = useQuery({
     queryKey: ["/api/subscriptions/current"],
@@ -94,11 +100,13 @@ export default function Sidebar() {
   const isPremiumUser = planTier === "premium";
   const isStandardUser = planTier === "standard";
   const isFreeUser = planTier === "free";
+  const isListingTier = planTier === "listing";
 
   // collapsed = icon-rail only (desktop); "dc" is shorthand below
   const dc = isDesktopCollapsed;
 
   return (
+    <>
     <TooltipProvider delayDuration={400}>
       <>
         {/* Mobile backdrop — z-[48] sits above the top bar (z-[45]) so it dims correctly */}
@@ -190,53 +198,55 @@ export default function Sidebar() {
                 const IconComponent = item.icon;
                 const isActive = location === item.href && item.href !== "#";
                 const isLocked = item.premiumOnly && isFreeUser;
+                const isFeatureLocked = !!(item.lockedForListing && isListingTier);
                 const isComingSoon = item.comingSoon;
-                const showSoonBadge = item.comingSoon || item.soonBadge;
+                const showSoonBadge = (item.comingSoon || item.soonBadge) && !isFeatureLocked;
                 if (!checkTabAccess(item.tabName)) return null;
 
                 const isOrders = item.name === "Orders";
-                const showOrderBadge = isOrders && pendingOrderCount > 0;
-                const showStaleBadge = isOrders && staleOrderCount > 0;
+                const showOrderBadge = isOrders && pendingOrderCount > 0 && !isFeatureLocked;
+                const showStaleBadge = isOrders && staleOrderCount > 0 && !isFeatureLocked;
 
                 const itemContent = (
                   <Link
-                    href={isComingSoon ? "#" : isLocked ? "/subscription-pricing" : item.href}
+                    href={isComingSoon ? "#" : (isLocked || isFeatureLocked) ? "#" : item.href}
                   >
                     <div
                       className={cn(
                         "flex items-center rounded-lg text-sm font-medium transition-all cursor-pointer",
-                        // Centred icon rail on desktop when collapsed; normal row otherwise
                         dc ? "lg:justify-center lg:px-2 lg:py-2.5 px-3 py-2.5 justify-between" : "px-3 py-2.5 justify-between",
-                        isActive
+                        isActive && !isFeatureLocked
                           ? "bg-emerald-500/15 text-emerald-400 ring-1 ring-emerald-500/20"
                           : isComingSoon
                           ? "text-slate-600 cursor-default"
-                          : isLocked
-                          ? "text-slate-600"
+                          : (isLocked || isFeatureLocked)
+                          ? "text-slate-500 hover:text-slate-300 hover:bg-slate-800/40"
                           : "text-slate-400 hover:text-slate-100 hover:bg-slate-800/70"
                       )}
                       onClick={(e) => {
                         if (isComingSoon) { e.preventDefault(); return; }
+                        if (isFeatureLocked) {
+                          e.preventDefault();
+                          setUpgradeModal({ open: true, feature: item.featureLabel || item.name });
+                          return;
+                        }
                         closeMobileSidebar();
                       }}
                       data-onboarding={item.onboardingId}
                     >
                       <div className={cn("flex items-center min-w-0", !dc && "flex-1")}>
-                        {/* Icon — wrap in relative container for Orders dot indicator */}
                         <span className="relative flex-shrink-0">
                           <IconComponent
                             className={cn(
                               "h-4 w-4",
                               dc ? "lg:mr-0 mr-3" : "mr-3",
-                              isActive ? "text-emerald-400" : (isLocked || isComingSoon) ? "text-slate-600" : "text-slate-500"
+                              isActive && !isFeatureLocked ? "text-emerald-400" : (isLocked || isComingSoon || isFeatureLocked) ? "text-slate-600" : "text-slate-500"
                             )}
                           />
-                          {/* Dot indicator — collapsed mode (desktop icon-rail + mobile when sidebar is icon-only) */}
                           {(showOrderBadge || showStaleBadge) && dc && (
                             <span className={cn("absolute -top-1 -right-1 h-2 w-2 rounded-full", showStaleBadge ? "bg-orange-500" : "bg-amber-500")} />
                           )}
                         </span>
-                        {/* Label: always visible on mobile, hidden on desktop when collapsed */}
                         <span className={cn("flex-1 truncate", dc && "lg:hidden")}>
                           {item.name}
                         </span>
@@ -255,20 +265,21 @@ export default function Sidebar() {
                               {staleOrderCount > 15 ? "15d+" : `${staleOrderCount} old`}
                             </span>
                           )}
-                          {isLocked && <Crown className="h-3.5 w-3.5 text-amber-500 flex-shrink-0" />}
+                          {isFeatureLocked && <Lock className="h-3.5 w-3.5 text-slate-500 flex-shrink-0" />}
+                          {!isFeatureLocked && isLocked && <Crown className="h-3.5 w-3.5 text-amber-500 flex-shrink-0" />}
                           {showSoonBadge && (
                             <span className="text-[10px] bg-slate-800 text-slate-500 px-1.5 py-0.5 rounded font-medium border border-slate-700">
                               Soon
                             </span>
                           )}
-                          {item.freeTrialBadge && (
+                          {item.freeTrialBadge && !isFeatureLocked && (
                             <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded font-medium border border-emerald-500/30">
                               Free Trial
                             </span>
                           )}
                         </>
                       )}
-                      {/* On mobile when dc=true, still show badges */}
+                      {/* Mobile badges when dc=true */}
                       {dc && (
                         <span className="lg:hidden flex items-center gap-1.5">
                           {showOrderBadge && (
@@ -281,13 +292,14 @@ export default function Sidebar() {
                               {staleOrderCount > 15 ? "15d+" : `${staleOrderCount} old`}
                             </span>
                           )}
-                          {isLocked && <Crown className="h-3.5 w-3.5 text-amber-500 flex-shrink-0" />}
+                          {isFeatureLocked && <Lock className="h-3.5 w-3.5 text-slate-500 flex-shrink-0" />}
+                          {!isFeatureLocked && isLocked && <Crown className="h-3.5 w-3.5 text-amber-500 flex-shrink-0" />}
                           {showSoonBadge && (
                             <span className="text-[10px] bg-slate-800 text-slate-500 px-1.5 py-0.5 rounded font-medium border border-slate-700">
                               Soon
                             </span>
                           )}
-                          {item.freeTrialBadge && (
+                          {item.freeTrialBadge && !isFeatureLocked && (
                             <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded font-medium border border-emerald-500/30">
                               Free Trial
                             </span>
@@ -404,5 +416,13 @@ export default function Sidebar() {
         </div>
       </>
     </TooltipProvider>
+
+    <SubscriptionUpgradeModal
+      open={upgradeModal.open}
+      onOpenChange={(open) => setUpgradeModal((s) => ({ ...s, open }))}
+      feature={upgradeModal.feature}
+      currentPlan="Listing"
+    />
+    </>
   );
 }
