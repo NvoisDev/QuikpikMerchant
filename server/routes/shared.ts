@@ -63,7 +63,7 @@ import {
   generateWholesalerOrderNotificationEmail, generateReadyForCollectionEmail,
   wrapCustomerEmail, emailCard, emailButton, emailHeading, emailBadge, emailDivider,
   getEmailLogoUrl, buildItemisedRefundEmail, generateDowngradeScheduledEmail,
-  generateDowngradeEffectiveEmail, formatPackDescriptor,
+  generateDowngradeEffectiveEmail, generateListingLapseReEngagementEmail, formatPackDescriptor,
   type OrderEmailData, type ReadyForCollectionEmailData, type RefundLineItem,
 } from "../email-templates";
 import { sendWelcomeMessages } from "../services/welcomeMessageService.js";
