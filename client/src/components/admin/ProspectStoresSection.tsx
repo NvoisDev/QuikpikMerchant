@@ -1,7 +1,7 @@
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -18,14 +18,14 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import {
-  Search, Plus, Pencil, Trash2, MapPin, List, Check,
+  Search, Plus, Pencil, Trash2, MapPin, List, Check, ChevronsUpDown,
+  ChevronUp, ChevronDown,
 } from "lucide-react";
-import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
-import L from "leaflet";
-import "leaflet/dist/leaflet.css";
 import { useToast } from "@/hooks/use-toast";
 import { GREEN } from "./shared";
 import type { WholesalerRow } from "./types";
+
+declare const google: any;
 
 interface ProspectStore {
   id: number;
@@ -46,16 +46,6 @@ interface ProspectStore {
 const VISITED_GREEN = "#1a7a3d";
 const UNVISITED_GREY = "#9ca3af";
 
-function makePin(visited: boolean) {
-  const color = visited ? VISITED_GREEN : UNVISITED_GREY;
-  return L.divIcon({
-    className: "",
-    html: `<div style="width:14px;height:14px;border-radius:50%;background:${color};border:2px solid white;box-shadow:0 1px 4px rgba(0,0,0,0.35);"></div>`,
-    iconSize: [14, 14],
-    iconAnchor: [7, 7],
-  });
-}
-
 interface StoreFormState {
   name: string;
   address: string;
@@ -71,6 +61,26 @@ const EMPTY_FORM: StoreFormState = {
   type: "retail", notes: "", assignedWholesalerIds: [],
 };
 
+// ─── Google Maps loader (reuses SDK if already loaded by BusinessSearchInput) ─
+let gmSdkPromise: Promise<boolean> | null = null;
+function loadGoogleMapsSdk(apiKey: string): Promise<boolean> {
+  if (gmSdkPromise) return gmSdkPromise;
+  gmSdkPromise = new Promise((resolve) => {
+    if (typeof google !== "undefined" && google?.maps?.Map) {
+      resolve(true);
+      return;
+    }
+    const script = document.createElement("script");
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;
+    script.async = true;
+    script.onload = () => resolve(true);
+    script.onerror = () => { gmSdkPromise = null; resolve(false); };
+    document.head.appendChild(script);
+  });
+  return gmSdkPromise;
+}
+
+// ─── Store Form Modal ─────────────────────────────────────────────────────────
 function StoreFormModal({
   open, onOpenChange, initial, onSave, saving, wholesalers,
 }: {
@@ -92,7 +102,7 @@ function StoreFormModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{initial?.name ? "Edit Store" : "Add Prospect Store"}</DialogTitle>
         </DialogHeader>
@@ -166,9 +176,16 @@ function StoreFormModal({
   );
 }
 
-function MapTab({ stores }: { stores: ProspectStore[] }) {
+// ─── Google Maps Tab ───────────────────────────────────────────────────────────
+function GoogleMapTab({ stores }: { stores: ProspectStore[] }) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const mapRef = useRef<HTMLDivElement>(null);
+  const mapInstanceRef = useRef<any>(null);
+  const markersRef = useRef<any[]>([]);
+  const infoWindowRef = useRef<any>(null);
+  const [mapReady, setMapReady] = useState(false);
+  const [mapError, setMapError] = useState(false);
 
   const mapped = useMemo(
     () => stores.filter(s => s.latitude != null && s.longitude != null),
@@ -182,14 +199,121 @@ function MapTab({ stores }: { stores: ProspectStore[] }) {
     onError: () => toast({ title: "Failed to update", variant: "destructive" }),
   });
 
-  const ukCenter: [number, number] = [52.8, -1.8];
+  useEffect(() => {
+    let cancelled = false;
+    async function init() {
+      try {
+        const res = await fetch("/api/config/google-places-key", { credentials: "include" });
+        if (!res.ok || cancelled) { setMapError(true); return; }
+        const { apiKey } = await res.json();
+        if (!apiKey) { setMapError(true); return; }
+        const ok = await loadGoogleMapsSdk(apiKey);
+        if (!ok || cancelled) { setMapError(true); return; }
+        if (!cancelled) setMapReady(true);
+      } catch {
+        if (!cancelled) setMapError(true);
+      }
+    }
+    init();
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    if (!mapReady || !mapRef.current) return;
+    if (!mapInstanceRef.current) {
+      mapInstanceRef.current = new google.maps.Map(mapRef.current, {
+        center: { lat: 51.5, lng: 0.0 },
+        zoom: 10,
+        mapTypeControl: false,
+        streetViewControl: false,
+        fullscreenControl: false,
+      });
+      infoWindowRef.current = new google.maps.InfoWindow();
+    }
+  }, [mapReady]);
+
+  useEffect(() => {
+    if (!mapReady || !mapInstanceRef.current) return;
+    markersRef.current.forEach(m => m.setMap(null));
+    markersRef.current = [];
+
+    const bounds = new google.maps.LatLngBounds();
+    let hasBounds = false;
+
+    mapped.forEach(s => {
+      const lat = parseFloat(s.latitude!);
+      const lng = parseFloat(s.longitude!);
+      const pos = { lat, lng };
+
+      const marker = new google.maps.Marker({
+        position: pos,
+        map: mapInstanceRef.current,
+        title: s.name,
+        icon: {
+          path: google.maps.SymbolPath.CIRCLE,
+          scale: 8,
+          fillColor: s.visited ? VISITED_GREEN : UNVISITED_GREY,
+          fillOpacity: 1,
+          strokeColor: "white",
+          strokeWeight: 2,
+        },
+      });
+
+      marker.addListener("click", () => {
+        const hours = [s.openingTime, s.closingTime].filter(Boolean).join(" – ");
+        const content = `
+          <div style="min-width:180px;font-family:system-ui,sans-serif">
+            <p style="font-weight:700;font-size:13px;margin:0 0 4px">${s.name}</p>
+            <p style="font-size:11px;color:#4b5563;margin:0 0 2px">${s.address || "No address"}</p>
+            ${hours ? `<p style="font-size:11px;color:#6b7280;margin:0 0 4px">${hours}</p>` : ""}
+            <p style="font-size:11px;color:#9ca3af;margin:0 0 8px;text-transform:capitalize">${s.type}</p>
+            <button
+              id="toggle-visited-${s.id}"
+              style="width:100%;font-size:11px;padding:4px 0;border-radius:4px;border:none;cursor:pointer;background:${s.visited ? "#e5e7eb" : VISITED_GREEN};color:${s.visited ? "#374151" : "white"};font-weight:600"
+            >${s.visited ? "Mark unvisited" : "Mark visited"}</button>
+          </div>`;
+        infoWindowRef.current.setContent(content);
+        infoWindowRef.current.open(mapInstanceRef.current, marker);
+        setTimeout(() => {
+          const btn = document.getElementById(`toggle-visited-${s.id}`);
+          if (btn) {
+            btn.onclick = () => {
+              infoWindowRef.current.close();
+              toggleVisited.mutate({ id: s.id, visited: !s.visited });
+            };
+          }
+        }, 100);
+      });
+
+      markersRef.current.push(marker);
+      bounds.extend(pos);
+      hasBounds = true;
+    });
+
+    if (hasBounds && mapped.length > 1) {
+      mapInstanceRef.current.fitBounds(bounds, 40);
+    } else if (hasBounds) {
+      mapInstanceRef.current.setCenter(bounds.getCenter());
+      mapInstanceRef.current.setZoom(14);
+    }
+  }, [mapReady, mapped, toggleVisited]);
+
+  if (mapError) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-center text-gray-400 text-sm">
+        <MapPin className="h-8 w-8 mb-3 opacity-30" />
+        <p className="font-medium text-gray-500">Map unavailable</p>
+        <p className="text-xs mt-1">Google Maps could not be loaded. Check that the API key is configured.</p>
+      </div>
+    );
+  }
 
   if (mapped.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center text-gray-400 text-sm">
         <MapPin className="h-8 w-8 mb-3 opacity-30" />
         <p className="font-medium text-gray-500">No stores on the map yet</p>
-        <p className="text-xs mt-1">Add stores with addresses and they'll appear here automatically.</p>
+        <p className="text-xs mt-1">Add stores with addresses and they will appear here automatically.</p>
       </div>
     );
   }
@@ -207,48 +331,10 @@ function MapTab({ stores }: { stores: ProspectStore[] }) {
       </div>
       <Card className="border-gray-200 shadow-none rounded-xl overflow-hidden">
         <CardContent className="p-0">
-          <div style={{ height: 480 }}>
-            <MapContainer center={ukCenter} zoom={6} style={{ height: "100%", width: "100%" }} scrollWheelZoom={false}>
-              <TileLayer
-                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              />
-              {mapped.map(s => (
-                <Marker
-                  key={s.id}
-                  position={[parseFloat(s.latitude!), parseFloat(s.longitude!)]}
-                  icon={makePin(s.visited)}
-                >
-                  <Popup>
-                    <div style={{ minWidth: 180 }}>
-                      <p style={{ fontWeight: 700, fontSize: 13, marginBottom: 4 }}>{s.name}</p>
-                      <p style={{ fontSize: 11, color: "#4b5563", marginBottom: 2 }}>{s.address || "No address"}</p>
-                      {(s.openingTime || s.closingTime) && (
-                        <p style={{ fontSize: 11, color: "#6b7280", marginBottom: 4 }}>
-                          {[s.openingTime, s.closingTime].filter(Boolean).join(" – ")}
-                        </p>
-                      )}
-                      <p style={{ fontSize: 11, color: "#9ca3af", marginBottom: 8 }}>
-                        {s.type === "wholesale" ? "Wholesale" : "Retail"}
-                      </p>
-                      <button
-                        onClick={() => toggleVisited.mutate({ id: s.id, visited: !s.visited })}
-                        disabled={toggleVisited.isPending}
-                        style={{
-                          width: "100%", fontSize: 11, padding: "4px 0", borderRadius: 4,
-                          border: "none", cursor: "pointer",
-                          background: s.visited ? "#e5e7eb" : VISITED_GREEN,
-                          color: s.visited ? "#374151" : "white",
-                          fontWeight: 600,
-                        }}
-                      >
-                        {s.visited ? "Mark unvisited" : "Mark visited"}
-                      </button>
-                    </div>
-                  </Popup>
-                </Marker>
-              ))}
-            </MapContainer>
+          <div ref={mapRef} style={{ height: 480, background: "#f3f4f6" }}>
+            {!mapReady && (
+              <div className="h-full flex items-center justify-center text-sm text-gray-400">Loading map…</div>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -256,6 +342,29 @@ function MapTab({ stores }: { stores: ProspectStore[] }) {
   );
 }
 
+// ─── Sort helpers ─────────────────────────────────────────────────────────────
+type SortKey = "name" | "type" | "openingTime" | "closingTime" | "visited";
+type SortDir = "asc" | "desc";
+
+function SortIcon({ col, sortKey, sortDir }: { col: SortKey; sortKey: SortKey; sortDir: SortDir }) {
+  if (col !== sortKey) return <ChevronsUpDown className="h-3 w-3 text-gray-300 ml-1 inline" />;
+  return sortDir === "asc"
+    ? <ChevronUp className="h-3 w-3 text-gray-500 ml-1 inline" />
+    : <ChevronDown className="h-3 w-3 text-gray-500 ml-1 inline" />;
+}
+
+function sortStores(stores: ProspectStore[], key: SortKey, dir: SortDir): ProspectStore[] {
+  return [...stores].sort((a, b) => {
+    let av: any, bv: any;
+    if (key === "visited") { av = a.visited ? 1 : 0; bv = b.visited ? 1 : 0; }
+    else { av = (a[key] ?? "").toLowerCase(); bv = (b[key] ?? "").toLowerCase(); }
+    if (av < bv) return dir === "asc" ? -1 : 1;
+    if (av > bv) return dir === "asc" ? 1 : -1;
+    return 0;
+  });
+}
+
+// ─── Main Section ─────────────────────────────────────────────────────────────
 export function ProspectStoresSection({
   isAdmin, wholesalers,
 }: {
@@ -266,6 +375,8 @@ export function ProspectStoresSection({
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<"table" | "map">("table");
   const [searchQ, setSearchQ] = useState("");
+  const [sortKey, setSortKey] = useState<SortKey>("name");
+  const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [showForm, setShowForm] = useState(false);
   const [editStore, setEditStore] = useState<ProspectStore | null>(null);
   const [deleteStore, setDeleteStore] = useState<ProspectStore | null>(null);
@@ -288,7 +399,7 @@ export function ProspectStoresSection({
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, ...data }: Partial<StoreFormState> & { id: number; visited?: boolean; notes?: string }) =>
+    mutationFn: ({ id, ...data }: Partial<StoreFormState> & { id: number }) =>
       apiRequest("PATCH", `/api/admin/prospect-stores/${id}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/prospect-stores"] });
@@ -327,15 +438,19 @@ export function ProspectStoresSection({
     }
   }, [queryClient, toast]);
 
+  const handleSort = (key: SortKey) => {
+    if (sortKey === key) setSortDir(d => d === "asc" ? "desc" : "asc");
+    else { setSortKey(key); setSortDir("asc"); }
+  };
+
   const filtered = useMemo(() => {
-    if (!searchQ.trim()) return stores;
-    const q = searchQ.toLowerCase();
-    return stores.filter(s =>
-      s.name.toLowerCase().includes(q) ||
-      (s.address || "").toLowerCase().includes(q) ||
-      (s.notes || "").toLowerCase().includes(q),
-    );
-  }, [stores, searchQ]);
+    let list = stores;
+    if (searchQ.trim()) {
+      const q = searchQ.toLowerCase();
+      list = list.filter(s => s.name.toLowerCase().includes(q));
+    }
+    return sortStores(list, sortKey, sortDir);
+  }, [stores, searchQ, sortKey, sortDir]);
 
   const visitedCount = stores.filter(s => s.visited).length;
 
@@ -350,6 +465,15 @@ export function ProspectStoresSection({
         assignedWholesalerIds: editStore.assignedWholesalerIds ?? [],
       }
     : null;
+
+  const SortTh = ({ col, label }: { col: SortKey; label: string }) => (
+    <TableHead
+      className="text-xs px-4 cursor-pointer select-none hover:bg-gray-50"
+      onClick={() => handleSort(col)}
+    >
+      {label}<SortIcon col={col} sortKey={sortKey} sortDir={sortDir} />
+    </TableHead>
+  );
 
   return (
     <div className="space-y-4">
@@ -402,7 +526,7 @@ export function ProspectStoresSection({
           <div className="relative max-w-sm">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
             <Input
-              placeholder="Search by name, address…"
+              placeholder="Search by store name…"
               value={searchQ}
               onChange={e => setSearchQ(e.target.value)}
               className="pl-8 h-8 text-xs border-gray-200"
@@ -417,19 +541,23 @@ export function ProspectStoresSection({
               ) : filtered.length === 0 ? (
                 <div className="p-12 text-center text-gray-400">
                   <p className="font-medium text-gray-500 mb-1">{stores.length === 0 ? "No prospect stores yet" : "No results"}</p>
-                  <p className="text-xs">{stores.length === 0 ? 'Click \u201cAdd store\u201d to get started.' : "Try a different search."}</p>
+                  <p className="text-xs">{stores.length === 0 ? "Click \u201cAdd store\u201d to get started." : "Try a different search."}</p>
                 </div>
               ) : (
                 <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow className="border-gray-100 hover:bg-transparent">
-                        <TableHead className="text-xs px-4 w-8"></TableHead>
-                        <TableHead className="text-xs px-4">Name</TableHead>
+                        <TableHead className="text-xs px-4 w-8 cursor-pointer select-none hover:bg-gray-50"
+                          onClick={() => handleSort("visited")} title="Sort by visited">
+                          <Check className="h-3 w-3 text-gray-400" />
+                          <SortIcon col="visited" sortKey={sortKey} sortDir={sortDir} />
+                        </TableHead>
+                        <SortTh col="name" label="Name" />
                         <TableHead className="text-xs px-4">Address</TableHead>
-                        <TableHead className="text-xs px-4">Opens</TableHead>
-                        <TableHead className="text-xs px-4">Closes</TableHead>
-                        <TableHead className="text-xs px-4">Type</TableHead>
+                        <SortTh col="openingTime" label="Opens" />
+                        <SortTh col="closingTime" label="Closes" />
+                        <SortTh col="type" label="Type" />
                         <TableHead className="text-xs px-4 w-48">Notes</TableHead>
                         <TableHead className="text-xs px-4 w-24"></TableHead>
                       </TableRow>
@@ -437,7 +565,6 @@ export function ProspectStoresSection({
                     <TableBody>
                       {filtered.map(store => (
                         <TableRow key={store.id} className={`border-gray-50 hover:bg-gray-50/50 ${store.visited ? "opacity-70" : ""}`}>
-                          {/* Visited checkbox */}
                           <TableCell className="px-4">
                             <button
                               onClick={() => toggleVisited(store)}
@@ -508,7 +635,7 @@ export function ProspectStoresSection({
         </>
       )}
 
-      {activeTab === "map" && <MapTab stores={stores} />}
+      {activeTab === "map" && <GoogleMapTab stores={stores} />}
 
       {/* Add/Edit modal */}
       <StoreFormModal
