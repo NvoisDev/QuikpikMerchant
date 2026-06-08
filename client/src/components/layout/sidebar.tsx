@@ -57,7 +57,7 @@ const navigation: NavigationItem[] = [
   { name: "Products", href: "/products", icon: Package, onboardingId: "products-list", tabName: "products" },
   { name: "Promotions", href: "/promotions", icon: Tag, tabName: "promotions" },
   { name: "Customers", href: "/customers", icon: Users, onboardingId: "customer-groups", tabName: "customers", lockedForListing: true, featureLabel: "customer management" },
-  { name: "Leads", href: "/leads", icon: Inbox, tabName: "leads", lockedForListing: true, featureLabel: "lead management" },
+  { name: "Leads", href: "/leads", icon: Inbox, tabName: "leads" },
   { name: "Broadcast", href: "/campaigns", icon: MessageSquare, onboardingId: "campaigns", tabName: "campaigns", lockedForListing: true, featureLabel: "broadcast campaigns", soonBadge: true },
   { name: "Marketplace", href: "/marketplace", icon: Store, tabName: "marketplace", soonBadge: true },
   { name: "Integrations", href: "/integrations", icon: Puzzle, tabName: "integrations" },
