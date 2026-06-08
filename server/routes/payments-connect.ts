@@ -772,7 +772,7 @@ export function registerPaymentConnectRoutes(app: Express): void {
       // ── Subscription activated / updated (fallback for checkout.session.completed) ──
       if (event.type === 'customer.subscription.created' || event.type === 'customer.subscription.updated') {
         const subscription = event.data.object as Stripe.Subscription;
-        if (subscription.status !== 'active') {
+        if (subscription.status !== 'active' && subscription.status !== 'trialing') {
           return res.json({ received: true, type: event.type });
         }
         const subCustId = typeof subscription.customer === 'string'
@@ -809,7 +809,10 @@ export function registerPaymentConnectRoutes(app: Express): void {
           return res.json({ received: true, type: event.type });
         }
 
-        if (subUser.currentPlan === subPlanId && subUser.subscriptionStatus === 'active') {
+        // Only skip if BOTH the plan and the status are already in sync — a trialing → active
+        // transition must not be suppressed, so we compare against the incoming Stripe status.
+        const incomingStatus = subscription.status === 'trialing' ? 'trialing' : 'active';
+        if (subUser.currentPlan === subPlanId && subUser.subscriptionStatus === incomingStatus) {
           return res.json({ received: true, type: event.type });
         }
 
@@ -821,10 +824,18 @@ export function registerPaymentConnectRoutes(app: Express): void {
           ? new Date(subscription.current_period_start * 1000)
           : new Date();
 
+        // Map Stripe's trial timestamps (Unix) to Date objects for DB persistence
+        const subTrialStart = subscription.trial_start
+          ? new Date(subscription.trial_start * 1000)
+          : null;
+        const subTrialEnd = subscription.trial_end
+          ? new Date(subscription.trial_end * 1000)
+          : null;
+
         await storage.updateUser(subUser.id, {
           currentPlan: subPlanId,
           subscriptionTier: subPlanId,
-          subscriptionStatus: 'active',
+          subscriptionStatus: subscription.status === 'trialing' ? 'trialing' : 'active',
           productLimit: subProductLimit,
           stripeSubscriptionId: subscription.id,
           subscriptionEndsAt: subPeriodEnd,
@@ -844,10 +855,12 @@ export function registerPaymentConnectRoutes(app: Express): void {
           await db.update(userSubscriptions).set({
             planId: subPlanId,
             stripeSubscriptionId: subscription.id,
-            status: 'active',
+            status: subscription.status === 'trialing' ? 'trialing' : 'active',
             currentPeriodStart: subPeriodStart,
             currentPeriodEnd: subPeriodEnd,
             cancelAtPeriodEnd: subCancelAtPeriodEnd,
+            trialStart: subTrialStart,
+            trialEnd: subTrialEnd,
             updatedAt: new Date(),
           }).where(eq(userSubscriptions.userId, subUser.id));
         } else {
@@ -855,10 +868,12 @@ export function registerPaymentConnectRoutes(app: Express): void {
             userId: subUser.id,
             planId: subPlanId,
             stripeSubscriptionId: subscription.id,
-            status: 'active',
+            status: subscription.status === 'trialing' ? 'trialing' : 'active',
             currentPeriodStart: subPeriodStart,
             currentPeriodEnd: subPeriodEnd,
             cancelAtPeriodEnd: subCancelAtPeriodEnd,
+            trialStart: subTrialStart,
+            trialEnd: subTrialEnd,
           });
         }
 

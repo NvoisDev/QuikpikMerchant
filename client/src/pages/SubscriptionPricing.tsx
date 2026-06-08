@@ -435,26 +435,51 @@ export default function SubscriptionPricing() {
           </h3>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Next Billing Date */}
+            {/* Trial End / Next Billing Date */}
             {currentSubscription.user?.subscriptionPeriodEnd && !currentSubscription.subscription?.cancelAtPeriodEnd && (
               <div className="bg-white p-4 rounded-lg border border-blue-100">
-                <div className="text-sm text-blue-600 font-medium mb-1">Next Billing Date</div>
-                <div className="text-lg font-semibold text-gray-900">
-                  {new Date(currentSubscription.user.subscriptionPeriodEnd).toLocaleDateString('en-GB', {
-                    weekday: 'long',
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric'
-                  })}
-                </div>
-                <div className="text-sm text-gray-600 mt-1">
-                  {(() => {
-                    const nextBilling = new Date(currentSubscription.user.subscriptionPeriodEnd);
-                    const today = new Date();
-                    const daysUntil = Math.ceil((nextBilling.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-                    return daysUntil > 0 ? `${daysUntil} days away` : 'Today';
-                  })()}
-                </div>
+                {(() => {
+                  const trialEndRaw = currentSubscription.subscription?.trialEnd;
+                  const isTrialing = trialEndRaw && new Date(trialEndRaw) > new Date();
+                  if (isTrialing) {
+                    const trialEndDate = new Date(trialEndRaw);
+                    const daysLeft = Math.ceil((trialEndDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+                    return (
+                      <>
+                        <div className="text-sm text-amber-600 font-medium mb-1">Trial ends on</div>
+                        <div className="text-lg font-semibold text-gray-900">
+                          {trialEndDate.toLocaleDateString('en-GB', {
+                            weekday: 'long',
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric'
+                          })}
+                        </div>
+                        <div className="text-sm text-gray-600 mt-1">
+                          {daysLeft > 0 ? `${daysLeft} days remaining` : 'Ending today'}
+                        </div>
+                      </>
+                    );
+                  }
+                  const nextBilling = new Date(currentSubscription.user.subscriptionPeriodEnd);
+                  const daysUntil = Math.ceil((nextBilling.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+                  return (
+                    <>
+                      <div className="text-sm text-blue-600 font-medium mb-1">Next Billing Date</div>
+                      <div className="text-lg font-semibold text-gray-900">
+                        {nextBilling.toLocaleDateString('en-GB', {
+                          weekday: 'long',
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric'
+                        })}
+                      </div>
+                      <div className="text-sm text-gray-600 mt-1">
+                        {daysUntil > 0 ? `${daysUntil} days away` : 'Today'}
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
             )}
 

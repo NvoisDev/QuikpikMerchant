@@ -210,6 +210,26 @@ export function registerSubscriptionRoutes(app: Express): void {
         }
       } else {
         // NEW SUBSCRIPTION FLOW: User has no existing subscription - use checkout session
+
+        // Determine trial eligibility: Listing plan only, never-subscribed users only.
+        // We query Stripe directly for all subscriptions (including canceled) because our
+        // DB nulls stripeSubscriptionId on cancellation — making a local table check an
+        // unreliable "ever had paid subscription" test for returning users.
+        let trialPeriodDays: number | undefined;
+        if (targetPlan.planId.startsWith('listing')) {
+          try {
+            const allSubs = await stripe.subscriptions.list({
+              customer: stripeCustomerId,
+              status: 'all',
+              limit: 1,
+            });
+            if (allSubs.data.length === 0) {
+              trialPeriodDays = 90;
+            }
+          } catch (subCheckErr) {
+            console.warn('⚠️ Could not check prior subscriptions for trial eligibility — skipping trial:', subCheckErr);
+          }
+        }
         
         const sessionOptions: any = {
           customer: stripeCustomerId,
@@ -227,6 +247,10 @@ export function registerSubscriptionRoutes(app: Express): void {
             subscriptionType: 'new'
           }
         };
+
+        if (trialPeriodDays) {
+          sessionOptions.subscription_data = { trial_period_days: trialPeriodDays };
+        }
 
         // Create Stripe checkout session with correct API syntax
         const session = idempotencyKey 
