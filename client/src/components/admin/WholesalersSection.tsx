@@ -256,8 +256,8 @@ export function WholesalersSection({ wholesalers, wholesalersLoading, isAdmin }:
     if (!planFilter) return wholesalers;
     return wholesalers.filter(w => {
       const tier = w.subscriptionTier ?? "free";
-      if (planFilter === "starter") return tier === "starter" || tier === "free" || tier.startsWith("starter_");
-      if (planFilter === "listing") return tier === "listing" || tier.startsWith("listing_");
+      if (planFilter === "listing") return tier === "listing" || tier === "free" || tier.startsWith("listing_");
+      if (planFilter === "starter") return tier === "starter" || tier.startsWith("starter_");
       if (planFilter === "standard") return tier === "standard" || tier.startsWith("standard_");
       if (planFilter === "premium") return tier === "premium" || tier.startsWith("premium_");
       return tier === planFilter;

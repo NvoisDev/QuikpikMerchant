@@ -20,10 +20,10 @@ export const pct = (num: number, denom: number) =>
 export const toISODate = (d: Date) => d.toISOString().split("T")[0];
 
 export const planBadge = (tier: string | null) => {
-  if (!tier || tier === "free" || tier === "starter" || tier.startsWith("starter_"))
-    return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200">Starter</span>;
-  if (tier === "listing" || tier.startsWith("listing_"))
+  if (!tier || tier === "free" || tier === "listing" || tier.startsWith("listing_"))
     return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-500 border border-gray-200">Listing</span>;
+  if (tier === "starter" || tier.startsWith("starter_"))
+    return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200">Starter</span>;
   if (tier === "standard" || tier.startsWith("standard_"))
     return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">Standard</span>;
   if (tier === "premium" || tier.startsWith("premium_"))

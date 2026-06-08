@@ -52,8 +52,8 @@ export function registerAdminCoreRoutes(app: Express): void {
       const suspendedWholesalers = allWholesalers.filter(w => w.archived).length;
       const homepageFeaturedWholesalers = allWholesalers.filter(w => w.showOnHomepage).length;
       const wholesalersByPlan = {
-        starter:  allWholesalers.filter(w => !w.subscriptionTier || w.subscriptionTier === 'free' || w.subscriptionTier === 'starter' || w.subscriptionTier?.startsWith('starter_')).length,
-        listing:  allWholesalers.filter(w => w.subscriptionTier === 'listing' || w.subscriptionTier?.startsWith('listing_')).length,
+        listing:  allWholesalers.filter(w => !w.subscriptionTier || w.subscriptionTier === 'free' || w.subscriptionTier === 'listing' || w.subscriptionTier?.startsWith('listing_')).length,
+        starter:  allWholesalers.filter(w => w.subscriptionTier === 'starter' || w.subscriptionTier?.startsWith('starter_')).length,
         standard: allWholesalers.filter(w => w.subscriptionTier === 'standard' || w.subscriptionTier?.startsWith('standard_')).length,
         premium:  allWholesalers.filter(w => w.subscriptionTier === 'premium'  || w.subscriptionTier?.startsWith('premium_')).length,
       };
@@ -65,10 +65,10 @@ export function registerAdminCoreRoutes(app: Express): void {
         if (w.archived) continue;
         const tier = w.subscriptionTier || 'free';
         const mrrContrib = PLAN_MRR[tier] ?? 0;
-        if (!tier || tier === 'free' || tier === 'starter' || tier.startsWith('starter_')) {
-          starterCount++; starterMRR += mrrContrib;
-        } else if (tier === 'listing' || tier.startsWith('listing_')) {
+        if (!tier || tier === 'free' || tier === 'listing' || tier.startsWith('listing_')) {
           listingCount++; listingMRR += mrrContrib;
+        } else if (tier === 'starter' || tier.startsWith('starter_')) {
+          starterCount++; starterMRR += mrrContrib;
         } else if (tier === 'standard' || tier.startsWith('standard_')) {
           standardCount++; standardMRR += mrrContrib;
         } else if (tier === 'premium' || tier.startsWith('premium_')) {

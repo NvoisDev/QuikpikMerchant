@@ -8,7 +8,7 @@
  *
  * Tier order (ascending): listing → starter → standard → premium
  * Note: 'free' is kept for backwards compatibility with existing DB records;
- *       tier resolution logic maps 'free' → 'starter' access.
+ *       tier resolution logic maps 'free' → 'listing' access (the base tier).
  */
 export const PLAN_LIMITS = {
   listing: {
@@ -61,12 +61,11 @@ export type PlanTier = keyof typeof PLAN_LIMITS;
 /**
  * Canonical plan hierarchy — higher number = higher tier.
  * Import this everywhere instead of inlining { free: 0, standard: 1, premium: 2 }.
- * 'free' maps to the same level as 'starter' so existing free users are never
- * treated as lower access than Starter.
+ * 'free' maps to the same level as 'listing' — the base discovery tier.
  */
 export const PLAN_HIERARCHY: Record<string, number> = {
   listing: 0,
-  free: 1,
+  free: 0,
   starter: 1,
   standard: 2,
   // annual / intro variants
@@ -81,11 +80,11 @@ export const PLAN_HIERARCHY: Record<string, number> = {
   starter_annual: 1,
 };
 
-/** Returns the limits for the given tier, falling back to starter (free) if unknown. */
+/** Returns the limits for the given tier, falling back to listing if unknown. */
 export function getPlanLimits(tier: string): PlanLimitShape {
-  // 'free' resolves to starter limits so existing free users keep operational access
-  const resolved = tier === 'free' ? 'starter' : tier;
-  return (PLAN_LIMITS as Record<string, PlanLimitShape>)[resolved] ?? PLAN_LIMITS.starter;
+  // 'free' resolves to listing limits — it is the base discovery tier
+  const resolved = tier === 'free' ? 'listing' : tier;
+  return (PLAN_LIMITS as Record<string, PlanLimitShape>)[resolved] ?? PLAN_LIMITS.listing;
 }
 
 // ─── Boolean feature flags ────────────────────────────────────────────────────
@@ -131,7 +130,7 @@ export const FEATURE_FLAGS: Record<string, Record<BooleanFeature, boolean>> = {
   listing: LISTING_DISABLED,
   listing_annual_intro: LISTING_DISABLED,
   listing_annual: LISTING_DISABLED,
-  free: ALL_ENABLED,
+  free: LISTING_DISABLED,
   starter: ALL_ENABLED,
   starter_annual_intro: ALL_ENABLED,
   starter_annual: ALL_ENABLED,

@@ -22,7 +22,7 @@ const TIER_SUMMARY = [
     label: "Listing",
     price: "£19.99/mo",
     color: "gray",
-    note: "Free for first 3 months (intro pricing)",
+    note: null,
     limits: "Up to 10 products · 1 team seat · No broadcasts",
   },
   {
@@ -31,7 +31,7 @@ const TIER_SUMMARY = [
     price: "£29.99/mo",
     color: "blue",
     note: null,
-    limits: "Up to 25 products · 2 team seats · 5 broadcasts/mo",
+    limits: "Up to 20 products · 1 team seat · 10 broadcasts/mo",
   },
   {
     planId: "standard",
@@ -39,7 +39,7 @@ const TIER_SUMMARY = [
     price: "£49.99/mo",
     color: "emerald",
     note: null,
-    limits: "Up to 100 products · 5 team seats · 20 broadcasts/mo",
+    limits: "Up to 50 products · 3 team seats · 25 broadcasts/mo",
   },
   {
     planId: "premium",
