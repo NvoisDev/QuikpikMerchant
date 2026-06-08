@@ -1164,7 +1164,7 @@ export default function OrderDetail() {
                       Mark as Paid
                     </DropdownMenuItem>
                   )}
-                  {!['ready_for_collection', 'fulfilled', 'cancelled'].includes(order.status) && (
+                  {!['ready_for_collection', 'fulfilled', 'cancelled'].includes(order.status) && order.fulfillmentType === 'pickup' && (
                     <DropdownMenuItem
                       className="text-orange-600 focus:text-orange-600"
                       onClick={markReadyForCollection}
@@ -1279,7 +1279,7 @@ export default function OrderDetail() {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="h-8 px-2.5 text-xs gap-1.5 text-blue-700 border-blue-300 bg-blue-50 hover:bg-blue-100"
+                    className="h-8 px-2.5 text-xs gap-1.5 text-gray-600 border-gray-300"
                     onClick={() => setShowPickingMode(true)}
                   >
                     <ClipboardList className="h-3.5 w-3.5" />
