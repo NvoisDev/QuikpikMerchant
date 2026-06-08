@@ -429,10 +429,12 @@ async function runStartupMigrations() {
   console.log(`✅ Startup DB migrations applied successfully (${migrations.length} statements)`);
 }
 
-// Idempotent fix: ensures the Stripe Price objects for Standard and Premium match the
+// Idempotent fix: ensures the Stripe Price objects for all paid monthly plans match the
 // monthly_price stored in the subscription_plans table. Stripe prices are immutable —
 // if the unit_amount, currency, interval, or product is wrong a new price is created
 // and the old one is archived.
+// For listing/starter plans that have no Stripe product yet, the product+price are
+// created automatically on first run and the IDs are persisted to the DB.
 // Set env var STRIPE_PRICE_FIX_SKIP=true to disable after a successful production run.
 async function fixStripePricesIfNeeded() {
   if (process.env.STRIPE_PRICE_FIX_SKIP === 'true') {
@@ -450,12 +452,13 @@ async function fixStripePricesIfNeeded() {
 
   const plans = await db.select({
     planId: subscriptionPlans.planId,
+    name: subscriptionPlans.name,
     stripePriceId: subscriptionPlans.stripePriceId,
     stripeProductId: subscriptionPlans.stripeProductId,
     monthlyPrice: subscriptionPlans.monthlyPrice,
     currency: subscriptionPlans.currency,
     billingInterval: subscriptionPlans.billingInterval,
-  }).from(subscriptionPlans).where(inArray(subscriptionPlans.planId, ['standard', 'premium', 'standard_annual_intro', 'premium_annual_intro']));
+  }).from(subscriptionPlans).where(inArray(subscriptionPlans.planId, ['listing', 'starter', 'standard', 'premium', 'standard_annual_intro', 'premium_annual_intro']));
 
   let checked = 0, fixed = 0;
   for (const plan of plans) {
@@ -469,10 +472,27 @@ async function fixStripePricesIfNeeded() {
     checked++;
 
     try {
-      // No price ID yet — create one from scratch
+      // No price ID yet — create product+price from scratch
       if (!plan.stripePriceId) {
         if (!plan.stripeProductId) {
-          console.warn(`⚠️ No Stripe product ID in DB for ${plan.planId} — skipping price creation`);
+          // No Stripe product at all — create it now (happens for listing/starter on first run)
+          console.log(`🆕 No Stripe product/price recorded for ${plan.planId} — creating product and price`);
+          const product = await stripeClient.products.create({
+            name: plan.name ?? plan.planId,
+            metadata: { planId: plan.planId, platform: 'quikpik' },
+          });
+          const newPrice = await stripeClient.prices.create({
+            unit_amount: unitAmount,
+            currency,
+            recurring: { interval: stripeInterval },
+            product: product.id,
+            metadata: { planId: plan.planId, platform: 'quikpik' },
+          });
+          await db.update(subscriptionPlans)
+            .set({ stripeProductId: product.id, stripePriceId: newPrice.id })
+            .where(eq(subscriptionPlans.planId, plan.planId));
+          console.log(`✅ Created Stripe product+price for ${plan.planId}: product=${product.id}, price=${newPrice.id}`);
+          fixed++;
           continue;
         }
         console.log(`🆕 No Stripe price recorded for ${plan.planId} — creating one`);
