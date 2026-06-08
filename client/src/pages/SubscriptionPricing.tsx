@@ -871,7 +871,7 @@ export default function SubscriptionPricing() {
                       ? 'Current Plan'
                       : processingPlanId === plan.planId
                         ? 'Processing...'
-                        : isListingTier
+                        : (plan.planId === 'listing' || plan.planId.startsWith('listing_'))
                           ? 'Get Listed Free'
                           : (() => {
                               const currentPlanLevel = PLAN_HIERARCHY[currentSubscription?.currentPlan ?? 'listing'] ?? 0;
