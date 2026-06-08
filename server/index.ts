@@ -422,6 +422,24 @@ async function runStartupMigrations() {
     `ALTER TABLE store_enquiries ADD COLUMN IF NOT EXISTS preferred_contact VARCHAR(20)`,
     // Task #1221: Custom invoice message sign-off stored on the wholesaler's default business profile
     `ALTER TABLE business_profiles ADD COLUMN IF NOT EXISTS invoice_sign_off TEXT`,
+    // Task #1296: Prospect Stores — super-admin CRM for tracking prospective Quikpik customers
+    `CREATE TABLE IF NOT EXISTS prospect_stores (
+      id SERIAL PRIMARY KEY,
+      name VARCHAR(255) NOT NULL,
+      address TEXT,
+      latitude DECIMAL(10,7),
+      longitude DECIMAL(10,7),
+      opening_time VARCHAR(20),
+      closing_time VARCHAR(20),
+      type VARCHAR(20) NOT NULL DEFAULT 'retail',
+      visited BOOLEAN NOT NULL DEFAULT FALSE,
+      notes TEXT,
+      assigned_wholesaler_ids TEXT[],
+      created_at TIMESTAMP DEFAULT NOW(),
+      updated_at TIMESTAMP DEFAULT NOW()
+    )`,
+    `CREATE INDEX IF NOT EXISTS prospect_stores_visited_idx ON prospect_stores(visited)`,
+    `CREATE INDEX IF NOT EXISTS prospect_stores_type_idx ON prospect_stores(type)`,
   ];
   for (const stmt of migrations) {
     await db.execute(sql.raw(stmt));

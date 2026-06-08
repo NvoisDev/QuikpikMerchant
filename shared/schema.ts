@@ -1980,6 +1980,27 @@ export const insertStoreEnquirySchema = createInsertSchema(storeEnquiries).omit(
 export type InsertStoreEnquiry = z.infer<typeof insertStoreEnquirySchema>;
 export type StoreEnquiry = typeof storeEnquiries.$inferSelect;
 
+// Prospect stores — super-admin CRM for prospective Quikpik customers
+export const prospectStores = pgTable("prospect_stores", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  address: text("address"),
+  latitude: decimal("latitude", { precision: 10, scale: 7 }),
+  longitude: decimal("longitude", { precision: 10, scale: 7 }),
+  openingTime: varchar("opening_time", { length: 20 }),
+  closingTime: varchar("closing_time", { length: 20 }),
+  type: varchar("type", { length: 20 }).notNull().default("retail"),
+  visited: boolean("visited").notNull().default(false),
+  notes: text("notes"),
+  assignedWholesalerIds: text("assigned_wholesaler_ids").array(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertProspectStoreSchema = createInsertSchema(prospectStores).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertProspectStore = z.infer<typeof insertProspectStoreSchema>;
+export type ProspectStore = typeof prospectStores.$inferSelect;
+
 // User types
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
