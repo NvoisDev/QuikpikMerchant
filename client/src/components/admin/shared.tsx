@@ -20,11 +20,15 @@ export const pct = (num: number, denom: number) =>
 export const toISODate = (d: Date) => d.toISOString().split("T")[0];
 
 export const planBadge = (tier: string | null) => {
-  if (tier === "premium")
-    return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-50 text-green-800 border border-green-200">Premium</span>;
-  if (tier === "standard")
-    return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200">Standard</span>;
-  return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-500 border border-gray-200">Free</span>;
+  if (!tier || tier === "free" || tier === "starter" || tier.startsWith("starter_"))
+    return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200">Starter</span>;
+  if (tier === "listing" || tier.startsWith("listing_"))
+    return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-500 border border-gray-200">Listing</span>;
+  if (tier === "standard" || tier.startsWith("standard_"))
+    return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">Standard</span>;
+  if (tier === "premium" || tier.startsWith("premium_"))
+    return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-50 text-purple-700 border border-purple-200">Premium</span>;
+  return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-500 border border-gray-200">{tier}</span>;
 };
 
 export const customPriceDaysRemaining = (expiresAt: string | null | undefined): number | null => {

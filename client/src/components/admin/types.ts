@@ -2,13 +2,13 @@ export type SectionId = "overview" | "wholesalers" | "customers" | "orders" | "p
 
 export interface PlatformStats {
   activeWholesalers: number; totalWholesalers: number; suspendedWholesalers: number;
-  wholesalersByPlan: { free: number; standard: number; premium: number };
+  wholesalersByPlan: { listing?: number; starter?: number; free?: number; standard: number; premium: number };
   totalOrders: number; completedOrders: number; cancelledOrders: number;
   ordersThisMonth: number; completedOrdersThisMonth: number; cancelledOrdersThisMonth: number;
   todayOrders: number; todayRevenue: number;
   totalGMV: number; totalCustomerFees: number; totalPlatformFees: number; totalGrossRevenue: number;
   newWholesalersThisMonth: number; subscriptionRevenueMRR: number;
-  subscriptionBreakdown: { standard: { count: number; mrr: number }; premium: { count: number; mrr: number } };
+  subscriptionBreakdown: { listing?: { count: number; mrr: number }; starter?: { count: number; mrr: number }; standard: { count: number; mrr: number }; premium: { count: number; mrr: number } };
   homepageFeaturedWholesalers: number;
 }
 

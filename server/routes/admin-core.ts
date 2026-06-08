@@ -50,15 +50,22 @@ export function registerAdminCoreRoutes(app: Express): void {
       const suspendedWholesalers = allWholesalers.filter(w => w.archived).length;
       const homepageFeaturedWholesalers = allWholesalers.filter(w => w.showOnHomepage).length;
       const wholesalersByPlan = {
-        free: allWholesalers.filter(w => !w.subscriptionTier || w.subscriptionTier === 'free').length,
-        standard: allWholesalers.filter(w => w.subscriptionTier === 'standard').length,
-        premium: allWholesalers.filter(w => w.subscriptionTier === 'premium').length,
+        starter:  allWholesalers.filter(w => !w.subscriptionTier || w.subscriptionTier === 'free' || w.subscriptionTier === 'starter' || w.subscriptionTier?.startsWith('starter_')).length,
+        listing:  allWholesalers.filter(w => w.subscriptionTier === 'listing' || w.subscriptionTier?.startsWith('listing_')).length,
+        standard: allWholesalers.filter(w => w.subscriptionTier === 'standard' || w.subscriptionTier?.startsWith('standard_')).length,
+        premium:  allWholesalers.filter(w => w.subscriptionTier === 'premium'  || w.subscriptionTier?.startsWith('premium_')).length,
       };
 
-      const activeStandard = allWholesalers.filter(w => w.subscriptionTier === 'standard' && !w.archived).length;
-      const activePremium  = allWholesalers.filter(w => w.subscriptionTier === 'premium'  && !w.archived).length;
-      const subscriptionMRR = (activeStandard * PLAN_PRICES.standard) + (activePremium * PLAN_PRICES.premium);
+      const activeStarter  = allWholesalers.filter(w => (!w.subscriptionTier || w.subscriptionTier === 'free' || w.subscriptionTier === 'starter' || w.subscriptionTier?.startsWith('starter_')) && !w.archived).length;
+      const activeListing  = allWholesalers.filter(w => (w.subscriptionTier === 'listing' || w.subscriptionTier?.startsWith('listing_')) && !w.archived).length;
+      const activeStandard = allWholesalers.filter(w => (w.subscriptionTier === 'standard' || w.subscriptionTier?.startsWith('standard_')) && !w.archived).length;
+      const activePremium  = allWholesalers.filter(w => (w.subscriptionTier === 'premium'  || w.subscriptionTier?.startsWith('premium_'))  && !w.archived).length;
+      const starterPrice  = PLAN_PRICES['starter']  ?? 0;
+      const listingPrice  = PLAN_PRICES['listing']  ?? 0;
+      const subscriptionMRR = (activeStarter * starterPrice) + (activeListing * listingPrice) + (activeStandard * PLAN_PRICES.standard) + (activePremium * PLAN_PRICES.premium);
       const subscriptionBreakdown = {
+        starter:  { count: activeStarter,  mrr: activeStarter  * starterPrice  },
+        listing:  { count: activeListing,  mrr: activeListing  * listingPrice  },
         standard: { count: activeStandard, mrr: activeStandard * PLAN_PRICES.standard },
         premium:  { count: activePremium,  mrr: activePremium  * PLAN_PRICES.premium  },
       };
@@ -753,8 +760,8 @@ export function registerAdminCoreRoutes(app: Express): void {
       if (!stripeSubscriptionId) {
         return res.status(400).json({ error: 'stripeSubscriptionId is required' });
       }
-      if (overridePlanId !== undefined && !['standard', 'premium'].includes(overridePlanId)) {
-        return res.status(400).json({ error: 'planId override must be "standard" or "premium"' });
+      if (overridePlanId !== undefined && !['listing', 'starter', 'standard', 'premium'].includes(overridePlanId)) {
+        return res.status(400).json({ error: 'planId override must be one of: listing, starter, standard, premium' });
       }
 
       let stripeSub: Stripe.Subscription;
@@ -850,8 +857,8 @@ export function registerAdminCoreRoutes(app: Express): void {
       if (!email && !stripeCustomerId) {
         return res.status(400).json({ error: 'email or stripeCustomerId is required' });
       }
-      if (overridePlanId !== undefined && !['standard', 'premium'].includes(overridePlanId)) {
-        return res.status(400).json({ error: 'planId override must be "standard" or "premium"' });
+      if (overridePlanId !== undefined && !['listing', 'starter', 'standard', 'premium'].includes(overridePlanId)) {
+        return res.status(400).json({ error: 'planId override must be one of: listing, starter, standard, premium' });
       }
 
       const condition = email

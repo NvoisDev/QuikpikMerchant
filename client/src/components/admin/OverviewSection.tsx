@@ -15,7 +15,7 @@ export function OverviewSection({ stats, statsLoading, revenueData, revenueLoadi
   isAdmin: boolean; onNavigate: (section: SectionId) => void;
 }) {
   const subMRR: number = stats?.subscriptionRevenueMRR ?? 0;
-  const subBreakdown = stats?.subscriptionBreakdown ?? { standard: { count: 0, mrr: 0 }, premium: { count: 0, mrr: 0 } };
+  const subBreakdown = stats?.subscriptionBreakdown ?? { listing: { count: 0, mrr: 0 }, starter: { count: 0, mrr: 0 }, standard: { count: 0, mrr: 0 }, premium: { count: 0, mrr: 0 } };
   const revenueTotals = revenueData?.totals ?? ({} as RevenueTotals);
 
   const { data: alerts } = useQuery<AlertsData>({
@@ -74,18 +74,22 @@ export function OverviewSection({ stats, statsLoading, revenueData, revenueLoadi
       )}
 
       {/* Plan breakdown + revenue */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="rounded-xl border border-gray-200 p-4 text-center bg-gray-50">
-          <p className="text-2xl font-bold text-gray-500">{stats?.wholesalersByPlan?.free || 0}</p>
-          <p className="text-xs text-gray-500 mt-1">Free Plan</p>
+          <p className="text-2xl font-bold text-gray-500">{stats?.wholesalersByPlan?.listing || 0}</p>
+          <p className="text-xs text-gray-500 mt-1">Listing</p>
         </div>
         <div className="rounded-xl border border-blue-100 p-4 text-center bg-blue-50">
-          <p className="text-2xl font-bold text-blue-700">{stats?.wholesalersByPlan?.standard || 0}</p>
-          <p className="text-xs text-blue-600 mt-1">Standard Plan</p>
+          <p className="text-2xl font-bold text-blue-700">{stats?.wholesalersByPlan?.starter || 0}</p>
+          <p className="text-xs text-blue-600 mt-1">Starter</p>
         </div>
-        <div className="rounded-xl border border-green-100 p-4 text-center bg-green-50">
-          <p className="text-2xl font-bold" style={{ color: GREEN }}>{stats?.wholesalersByPlan?.premium || 0}</p>
-          <p className="text-xs mt-1" style={{ color: GREEN }}>Premium Plan</p>
+        <div className="rounded-xl border border-emerald-100 p-4 text-center bg-emerald-50">
+          <p className="text-2xl font-bold text-emerald-700">{stats?.wholesalersByPlan?.standard || 0}</p>
+          <p className="text-xs text-emerald-600 mt-1">Standard</p>
+        </div>
+        <div className="rounded-xl border border-purple-100 p-4 text-center bg-purple-50">
+          <p className="text-2xl font-bold text-purple-700">{stats?.wholesalersByPlan?.premium || 0}</p>
+          <p className="text-xs text-purple-600 mt-1">Premium</p>
         </div>
       </div>
 
@@ -116,21 +120,31 @@ export function OverviewSection({ stats, statsLoading, revenueData, revenueLoadi
       <Card className="border-gray-200 shadow-none rounded-xl">
         <CardHeader className="pb-2 pt-4 px-4"><CardTitle className="text-sm font-semibold text-gray-700">Subscription Revenue</CardTitle></CardHeader>
         <CardContent className="px-4 pb-4">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div className="rounded-xl border p-3 bg-blue-50 border-blue-100">
-              <p className="text-xs text-blue-600 font-medium mb-1">Standard Plan</p>
-              <p className="text-lg font-bold text-blue-700">{subBreakdown.standard.count} <span className="text-sm font-normal">active</span></p>
-              <p className="text-xs text-blue-500 mt-0.5">{fmt(subBreakdown.standard.mrr)}/mo</p>
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+            <div className="rounded-xl border p-3 bg-gray-50 border-gray-200">
+              <p className="text-xs text-gray-500 font-medium mb-1">Listing</p>
+              <p className="text-lg font-bold text-gray-600">{subBreakdown.listing?.count ?? 0} <span className="text-sm font-normal">active</span></p>
+              <p className="text-xs text-gray-400 mt-0.5">{fmt(subBreakdown.listing?.mrr ?? 0)}/mo</p>
             </div>
-            <div className="rounded-xl border p-3 bg-green-50 border-green-100">
-              <p className="text-xs font-medium mb-1" style={{ color: GREEN }}>Premium Plan</p>
-              <p className="text-lg font-bold" style={{ color: GREEN }}>{subBreakdown.premium.count} <span className="text-sm font-normal">active</span></p>
-              <p className="text-xs mt-0.5" style={{ color: GREEN }}>{fmt(subBreakdown.premium.mrr)}/mo</p>
+            <div className="rounded-xl border p-3 bg-blue-50 border-blue-100">
+              <p className="text-xs text-blue-600 font-medium mb-1">Starter</p>
+              <p className="text-lg font-bold text-blue-700">{subBreakdown.starter?.count ?? 0} <span className="text-sm font-normal">active</span></p>
+              <p className="text-xs text-blue-500 mt-0.5">{fmt(subBreakdown.starter?.mrr ?? 0)}/mo</p>
+            </div>
+            <div className="rounded-xl border p-3 bg-emerald-50 border-emerald-100">
+              <p className="text-xs text-emerald-600 font-medium mb-1">Standard</p>
+              <p className="text-lg font-bold text-emerald-700">{subBreakdown.standard.count} <span className="text-sm font-normal">active</span></p>
+              <p className="text-xs text-emerald-500 mt-0.5">{fmt(subBreakdown.standard.mrr)}/mo</p>
             </div>
             <div className="rounded-xl border p-3 bg-purple-50 border-purple-100">
-              <p className="text-xs text-purple-600 font-medium mb-1">Total MRR</p>
-              <p className="text-lg font-bold text-purple-700">{fmt(subMRR)}<span className="text-sm font-normal">/mo</span></p>
-              <p className="text-xs text-purple-500 mt-0.5">{fmt(subMRR * 12)}/yr est.</p>
+              <p className="text-xs text-purple-600 font-medium mb-1">Premium</p>
+              <p className="text-lg font-bold text-purple-700">{subBreakdown.premium.count} <span className="text-sm font-normal">active</span></p>
+              <p className="text-xs text-purple-500 mt-0.5">{fmt(subBreakdown.premium.mrr)}/mo</p>
+            </div>
+            <div className="rounded-xl border p-3 bg-gray-900 border-gray-800 col-span-2 sm:col-span-1">
+              <p className="text-xs text-gray-400 font-medium mb-1">Total MRR</p>
+              <p className="text-lg font-bold text-white">{fmt(subMRR)}<span className="text-sm font-normal">/mo</span></p>
+              <p className="text-xs text-gray-400 mt-0.5">{fmt(subMRR * 12)}/yr est.</p>
             </div>
           </div>
         </CardContent>

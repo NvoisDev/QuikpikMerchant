@@ -254,7 +254,14 @@ export function WholesalersSection({ wholesalers, wholesalersLoading, isAdmin }:
 
   const filtered = useMemo(() => {
     if (!planFilter) return wholesalers;
-    return wholesalers.filter(w => (w.subscriptionTier ?? "free") === planFilter);
+    return wholesalers.filter(w => {
+      const tier = w.subscriptionTier ?? "free";
+      if (planFilter === "starter") return tier === "starter" || tier === "free" || tier.startsWith("starter_");
+      if (planFilter === "listing") return tier === "listing" || tier.startsWith("listing_");
+      if (planFilter === "standard") return tier === "standard" || tier.startsWith("standard_");
+      if (planFilter === "premium") return tier === "premium" || tier.startsWith("premium_");
+      return tier === planFilter;
+    });
   }, [wholesalers, planFilter]);
 
   const openDrawer = (w: WholesalerRow) => {
@@ -285,7 +292,8 @@ export function WholesalersSection({ wholesalers, wholesalersLoading, isAdmin }:
           <select value={planFilter} onChange={e => setPlanFilter(e.target.value)}
             className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 h-8 text-gray-600 focus:outline-none focus:border-gray-400 bg-white">
             <option value="">All plans</option>
-            <option value="free">Free</option>
+            <option value="listing">Listing</option>
+            <option value="starter">Starter</option>
             <option value="standard">Standard</option>
             <option value="premium">Premium</option>
           </select>
@@ -825,7 +833,7 @@ export function WholesalersSection({ wholesalers, wholesalersLoading, isAdmin }:
           </DialogHeader>
           <div className="py-2 space-y-3">
             <p className="text-sm text-gray-700">
-              Change <strong>{selectedWholesaler?.businessName || selectedWholesaler?.email}</strong> from <strong>{selectedWholesaler?.currentPlan || "free"}</strong> to <strong>{changePlanId}</strong>?
+              Change <strong>{selectedWholesaler?.businessName || selectedWholesaler?.email}</strong> from <strong>{selectedWholesaler?.currentPlan && selectedWholesaler.currentPlan !== "free" ? selectedWholesaler.currentPlan : "starter"}</strong> to <strong>{changePlanId}</strong>?
             </p>
             {selectedWholesaler?.stripeSubscriptionId ? (
               <div className="bg-blue-50 border border-blue-100 rounded-lg p-3 text-xs text-blue-700">
