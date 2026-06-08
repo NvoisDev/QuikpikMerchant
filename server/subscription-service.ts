@@ -384,25 +384,72 @@ export class SubscriptionService {
    */
   static async getCurrentSubscription(userId: string, isTestAccount: boolean) {
     const stripe = requireStripe(isTestAccount);
+    const activeStatuses = ['active', 'trialing', 'past_due'];
     try {
       const [user] = await db.select().from(users).where(eq(users.id, userId));
-      if (!user) {
-        return null;
+      if (!user) return null;
+
+      // 1. Try the subscription ID stored directly on the user row
+      if (user.stripeSubscriptionId) {
+        try {
+          const stripeSubscription = await stripe.subscriptions.retrieve(user.stripeSubscriptionId);
+          if (activeStatuses.includes(stripeSubscription.status)) {
+            return {
+              userId: user.id,
+              stripeSubscriptionId: user.stripeSubscriptionId,
+              currentPlan: user.currentPlan,
+              subscriptionStatus: user.subscriptionStatus,
+              stripeSubscription,
+            };
+          }
+        } catch { /* fall through to next lookup */ }
       }
 
-      if (user.stripeSubscriptionId) {
-        // Verify subscription is still active in Stripe
-        const stripeSubscription = await stripe.subscriptions.retrieve(user.stripeSubscriptionId);
-        const activeStatuses = ['active', 'trialing', 'past_due'];
-        if (activeStatuses.includes(stripeSubscription.status)) {
-          return {
-            userId: user.id,
-            stripeSubscriptionId: user.stripeSubscriptionId,
-            currentPlan: user.currentPlan,
-            subscriptionStatus: user.subscriptionStatus,
-            stripeSubscription
-          };
-        }
+      // 2. Try the userSubscriptions table (written by the subscription.created/updated webhook)
+      const [userSub] = await db
+        .select({ stripeSubscriptionId: userSubscriptions.stripeSubscriptionId })
+        .from(userSubscriptions)
+        .where(eq(userSubscriptions.userId, userId));
+      if (userSub?.stripeSubscriptionId) {
+        try {
+          const stripeSubscription = await stripe.subscriptions.retrieve(userSub.stripeSubscriptionId);
+          if (activeStatuses.includes(stripeSubscription.status)) {
+            // Backfill the users table so future lookups skip this fallback
+            await db.update(users).set({ stripeSubscriptionId: userSub.stripeSubscriptionId }).where(eq(users.id, userId));
+            return {
+              userId: user.id,
+              stripeSubscriptionId: userSub.stripeSubscriptionId,
+              currentPlan: user.currentPlan,
+              subscriptionStatus: user.subscriptionStatus,
+              stripeSubscription,
+            };
+          }
+        } catch { /* fall through */ }
+      }
+
+      // 3. Last resort: look up by Stripe customer ID (handles IDs known to Stripe but not persisted in DB)
+      if (user.stripeCustomerId) {
+        try {
+          const subscriptions = await stripe.subscriptions.list({
+            customer: user.stripeCustomerId,
+            status: 'active',
+            limit: 1,
+          });
+          const stripeSubscription = subscriptions.data[0];
+          if (stripeSubscription && activeStatuses.includes(stripeSubscription.status)) {
+            // Backfill both tables so subsequent calls don't need this fallback
+            await db.update(users).set({ stripeSubscriptionId: stripeSubscription.id }).where(eq(users.id, userId));
+            await db.update(userSubscriptions).set({ stripeSubscriptionId: stripeSubscription.id })
+              .where(eq(userSubscriptions.userId, userId));
+            return {
+              userId: user.id,
+              stripeSubscriptionId: stripeSubscription.id,
+              currentPlan: user.currentPlan,
+              subscriptionStatus: user.subscriptionStatus,
+              stripeSubscription,
+            };
+          }
+        } catch { /* fall through */ }
       }
 
       return null;
