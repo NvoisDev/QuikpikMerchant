@@ -11,6 +11,7 @@ interface PlanInfo {
   planId: string;
   name: string;
   monthlyPrice: string;
+  productLimit?: number;
   features: string[];
 }
 
@@ -37,6 +38,7 @@ const FALLBACK_PLAN_FEATURES: Record<string, PlanInfo> = {
     planId: "premium",
     name: "Premium",
     monthlyPrice: "99.99",
+    productLimit: -1,
     features: [
       "Unlimited products",
       "Unlimited price lists",
@@ -50,6 +52,7 @@ const FALLBACK_PLAN_FEATURES: Record<string, PlanInfo> = {
     planId: "standard",
     name: "Standard",
     monthlyPrice: "49.99",
+    productLimit: 50,
     features: [
       "Up to 50 products",
       "Up to 10 price lists",
@@ -63,6 +66,7 @@ const FALLBACK_PLAN_FEATURES: Record<string, PlanInfo> = {
     planId: "starter",
     name: "Starter",
     monthlyPrice: "29.99",
+    productLimit: 20,
     features: [
       "Up to 20 products",
       "Up to 5 price lists",
@@ -76,6 +80,7 @@ const FALLBACK_PLAN_FEATURES: Record<string, PlanInfo> = {
     planId: "listing",
     name: "Listing",
     monthlyPrice: "19.99",
+    productLimit: 10,
     features: [
       "Up to 10 products",
       "Up to 2 price lists",
@@ -88,6 +93,7 @@ const FALLBACK_PLAN_FEATURES: Record<string, PlanInfo> = {
     planId: "free",
     name: "Free",
     monthlyPrice: "0.00",
+    productLimit: 20,
     features: [
       "Up to 20 products",
       "Up to 5 price lists",
@@ -247,9 +253,9 @@ export function DowngradeConfirmationModal({
               <CardContent className="p-4">
                 <h3 className="font-semibold text-amber-900 mb-2">⚠️ Data Impact</h3>
                 <p className="text-amber-800 text-sm">
-                  If you currently have more products than the {targetFeatures.name} plan allows,
-                  your extra products will be locked but preserved. You can unlock them by removing
-                  other products or upgrading again.
+                  {targetFeatures.productLimit === -1
+                    ? "No products will be affected — the new plan has no product limit."
+                    : `If you have more than ${targetFeatures.productLimit} products, your newest products will be locked but preserved. You can unlock them by deleting other products or upgrading again.`}
                 </p>
               </CardContent>
             </Card>

@@ -804,7 +804,13 @@ export default function SubscriptionPricing() {
                       ? 'Current Plan'
                       : processingPlanId === plan.planId
                         ? 'Processing...'
-                        : `Get ${plan.name}`}
+                        : isListingTier
+                          ? 'Get Listed Free'
+                          : (() => {
+                              const currentPlanLevel = PLAN_HIERARCHY[currentSubscription?.currentPlan ?? 'listing'] ?? 0;
+                              const targetPlanLevel = PLAN_HIERARCHY[plan.planId] ?? 0;
+                              return targetPlanLevel < currentPlanLevel ? `Downgrade to ${plan.name}` : `Upgrade to ${plan.name}`;
+                            })()}
                   </Button>
 
                   {/* Cancel/Downgrade — shown on the current paid plan card when there's an active Stripe subscription */}
