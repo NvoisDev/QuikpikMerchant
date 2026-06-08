@@ -1,6 +1,6 @@
 import type { Express } from "express";
 import { db } from "../db";
-import { eq, desc, ilike } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 import { prospectStores } from "@shared/schema";
 import { requireAuth } from "../googleAuth";
 import { ADMIN_EMAILS } from "../config";
@@ -36,6 +36,53 @@ async function geocodeAddress(address: string): Promise<{ lat: number; lng: numb
   }
 }
 
+// Infer retail vs wholesale from Google place types
+function inferType(types: string[]): "retail" | "wholesale" {
+  const wholesale = ["storage", "food", "wholesale_store"];
+  if (types?.some(t => wholesale.includes(t))) return "wholesale";
+  return "retail";
+}
+
+// Parse opening hours from Google Places period array into HH:MM strings
+function parseHours(openingHours: any): { openingTime: string | null; closingTime: string | null } {
+  if (!openingHours?.periods?.length) return { openingTime: null, closingTime: null };
+  // Use Monday (day=1) as representative; fall back to first available day
+  const period = openingHours.periods.find((p: any) => p.open?.day === 1) ?? openingHours.periods[0];
+  if (!period) return { openingTime: null, closingTime: null };
+  const fmt = (t: string) => t ? `${t.slice(0, 2)}:${t.slice(2)}` : null;
+  return {
+    openingTime: fmt(period.open?.time),
+    closingTime: fmt(period.close?.time),
+  };
+}
+
+// Single Google Places Text Search call
+async function textSearch(query: string, apiKey: string): Promise<any[]> {
+  try {
+    const url = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(query)}&key=${apiKey}`;
+    const res = await fetch(url);
+    if (!res.ok) return [];
+    const data = await res.json() as any;
+    return data.results ?? [];
+  } catch {
+    return [];
+  }
+}
+
+// Fetch full place details (phone + hours)
+async function placeDetails(placeId: string, apiKey: string): Promise<any | null> {
+  try {
+    const fields = "formatted_phone_number,opening_hours,types";
+    const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=${fields}&key=${apiKey}`;
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const data = await res.json() as any;
+    return data.result ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export function registerProspectStoreRoutes(app: Express): void {
   // GET /api/admin/prospect-stores
   app.get("/api/admin/prospect-stores", requireAuth, requireSuperAdmin, async (req: any, res) => {
@@ -51,18 +98,97 @@ export function registerProspectStoreRoutes(app: Express): void {
     }
   });
 
+  // POST /api/admin/prospect-stores/sweep  — discover stores via Google Places
+  app.post("/api/admin/prospect-stores/sweep", requireAuth, requireSuperAdmin, async (req: any, res) => {
+    const apiKey = process.env.GOOGLE_PLACES_API_KEY;
+    if (!apiKey) {
+      return res.status(503).json({ error: "Google Places API key not configured" });
+    }
+
+    const QUERIES = [
+      "Nigerian grocery store London",
+      "African food store South East London",
+      "Nigerian supermarket London",
+      "African supermarket South East London",
+      "Nigerian cash and carry London",
+      "African cash and carry London",
+      "West African food store London",
+      "Afro-Caribbean grocery London",
+      "Nigerian provisions store London",
+      "African market South East London",
+    ];
+
+    // Run all text searches in parallel
+    const rawResults = await Promise.all(QUERIES.map(q => textSearch(q, apiKey)));
+
+    // Deduplicate by placeId
+    const seen = new Set<string>();
+    const candidates: Array<{
+      placeId: string;
+      name: string;
+      address: string;
+      lat: number | null;
+      lng: number | null;
+      types: string[];
+    }> = [];
+
+    for (const batch of rawResults) {
+      for (const place of batch) {
+        if (!place.place_id || seen.has(place.place_id)) continue;
+        seen.add(place.place_id);
+        candidates.push({
+          placeId: place.place_id,
+          name: place.name ?? "",
+          address: place.formatted_address ?? "",
+          lat: place.geometry?.location?.lat ?? null,
+          lng: place.geometry?.location?.lng ?? null,
+          types: place.types ?? [],
+        });
+      }
+    }
+
+    // Fetch place details in parallel (phone + hours) — cap at 100 to avoid quota abuse
+    const toDetail = candidates.slice(0, 100);
+    const details = await Promise.all(toDetail.map(c => placeDetails(c.placeId, apiKey)));
+
+    // Check which placeIds are already saved
+    const existing = await db
+      .select({ placeId: prospectStores.placeId })
+      .from(prospectStores);
+    const savedPlaceIds = new Set(existing.map(e => e.placeId).filter(Boolean));
+
+    const results = toDetail.map((c, i) => {
+      const det = details[i];
+      const { openingTime, closingTime } = parseHours(det?.opening_hours);
+      return {
+        placeId: c.placeId,
+        name: c.name,
+        address: c.address,
+        lat: c.lat,
+        lng: c.lng,
+        phone: det?.formatted_phone_number ?? null,
+        openingTime,
+        closingTime,
+        type: inferType(det?.types ?? c.types),
+        alreadyAdded: savedPlaceIds.has(c.placeId),
+      };
+    });
+
+    res.json({ results, total: results.length });
+  });
+
   // POST /api/admin/prospect-stores
   app.post("/api/admin/prospect-stores", requireAuth, requireSuperAdmin, async (req: any, res) => {
     try {
       const {
         name, address, openingTime, closingTime, type, notes,
         assignedWholesalerIds, visited, latitude, longitude,
-        contactName, contactPhone,
+        contactName, contactPhone, placeId,
       } = req.body as {
         name: string; address?: string; openingTime?: string; closingTime?: string;
         type?: string; notes?: string; assignedWholesalerIds?: string[];
         visited?: boolean; latitude?: number | null; longitude?: number | null;
-        contactName?: string; contactPhone?: string;
+        contactName?: string; contactPhone?: string; placeId?: string;
       };
 
       if (!name?.trim()) {
@@ -87,6 +213,7 @@ export function registerProspectStoreRoutes(app: Express): void {
         notes: notes?.trim() || null,
         contactName: contactName?.trim() || null,
         contactPhone: contactPhone?.trim() || null,
+        placeId: placeId?.trim() || null,
         assignedWholesalerIds: assignedWholesalerIds ?? [],
         latitude: lat !== null ? String(lat) : null,
         longitude: lng !== null ? String(lng) : null,
@@ -171,7 +298,7 @@ export function registerProspectStoreRoutes(app: Express): void {
       res.json({ ok: true });
     } catch (err) {
       console.error("prospect-stores DELETE error:", err);
-      res.status(500).json({ error: "Failed to delete prospect store" });
+      res.status(500).json({ error: "Failed to delete store" });
     }
   });
 }

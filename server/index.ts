@@ -442,6 +442,7 @@ async function runStartupMigrations() {
     `CREATE INDEX IF NOT EXISTS prospect_stores_type_idx ON prospect_stores(type)`,
     `ALTER TABLE prospect_stores ADD COLUMN IF NOT EXISTS contact_name VARCHAR(255)`,
     `ALTER TABLE prospect_stores ADD COLUMN IF NOT EXISTS contact_phone VARCHAR(50)`,
+    `ALTER TABLE prospect_stores ADD COLUMN IF NOT EXISTS place_id VARCHAR(255)`,
   ];
   for (const stmt of migrations) {
     await db.execute(sql.raw(stmt));
