@@ -905,6 +905,7 @@ export default function SubscriptionPricing() {
           }
         }}
         isLoading={cancelSubscriptionMutation.isPending || downgradeSubscriptionMutation.isPending}
+        plans={plans}
         billingInfo={{
           currentPeriodEnd: currentSubscription?.subscription?.current_period_end,
           daysRemaining: currentSubscription?.subscription?.current_period_end 

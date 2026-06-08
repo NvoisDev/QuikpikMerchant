@@ -7,6 +7,13 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { AlertTriangleIcon, X, CheckIcon, CrownIcon } from 'lucide-react';
 
+interface PlanInfo {
+  planId: string;
+  name: string;
+  monthlyPrice: string;
+  features: string[];
+}
+
 interface DowngradeConfirmationModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -14,6 +21,7 @@ interface DowngradeConfirmationModalProps {
   targetPlan: string;
   onConfirmDowngrade: () => void;
   isLoading?: boolean;
+  plans?: PlanInfo[];
   billingInfo?: {
     currentPeriodEnd?: number;
     daysRemaining?: number;
@@ -24,69 +32,79 @@ interface DowngradeConfirmationModalProps {
   };
 }
 
-const getPlanFeatures = (plan: string) => {
-  const features = {
-    premium: {
-      name: "Premium",
-      price: "£99.99",
-      features: [
-        "Unlimited products",
-        "Unlimited price lists",
-        "Unlimited team members",
-        "Broadcast & marketing tools",
-        "Advanced permissions & reporting",
-        "Priority support",
-      ],
-    },
-    standard: {
-      name: "Standard",
-      price: "£49.99",
-      features: [
-        "Up to 50 products",
-        "Up to 10 price lists",
-        "Up to 3 team members",
-        "Advanced analytics",
-        "Picking & checklists",
-        "Priority support",
-      ],
-    },
-    starter: {
-      name: "Starter",
-      price: "£29.99",
-      features: [
-        "Up to 20 products",
-        "Up to 5 price lists",
-        "Invoices & payments",
-        "Customer & order management",
-        "Customer portal",
-        "Stock tracking",
-      ],
-    },
-    listing: {
-      name: "Listing",
-      price: "£19.99",
-      features: [
-        "Up to 10 products",
-        "Up to 2 price lists",
-        "Public supplier profile",
-        "Marketplace & search visibility",
-        "Retailer enquiries & leads",
-      ],
-    },
-    free: {
-      name: "Free",
-      price: "£0",
-      features: [
-        "Up to 20 products",
-        "Up to 5 price lists",
-        "Invoices & payments",
-        "Customer management",
-        "Order management",
-      ],
-    },
-  };
-  return features[plan as keyof typeof features] || features.free;
+const FALLBACK_PLAN_FEATURES: Record<string, PlanInfo> = {
+  premium: {
+    planId: "premium",
+    name: "Premium",
+    monthlyPrice: "99.99",
+    features: [
+      "Unlimited products",
+      "Unlimited price lists",
+      "Unlimited team members",
+      "Broadcast & marketing tools",
+      "Advanced permissions & reporting",
+      "Priority support",
+    ],
+  },
+  standard: {
+    planId: "standard",
+    name: "Standard",
+    monthlyPrice: "49.99",
+    features: [
+      "Up to 50 products",
+      "Up to 10 price lists",
+      "Up to 3 team members",
+      "Advanced analytics",
+      "Picking & checklists",
+      "Priority support",
+    ],
+  },
+  starter: {
+    planId: "starter",
+    name: "Starter",
+    monthlyPrice: "29.99",
+    features: [
+      "Up to 20 products",
+      "Up to 5 price lists",
+      "Invoices & payments",
+      "Customer & order management",
+      "Customer portal",
+      "Stock tracking",
+    ],
+  },
+  listing: {
+    planId: "listing",
+    name: "Listing",
+    monthlyPrice: "19.99",
+    features: [
+      "Up to 10 products",
+      "Up to 2 price lists",
+      "Public supplier profile",
+      "Marketplace & search visibility",
+      "Retailer enquiries & leads",
+    ],
+  },
+  free: {
+    planId: "free",
+    name: "Free",
+    monthlyPrice: "0.00",
+    features: [
+      "Up to 20 products",
+      "Up to 5 price lists",
+      "Invoices & payments",
+      "Customer management",
+      "Order management",
+    ],
+  },
 };
+
+function resolvePlan(planId: string, plans?: PlanInfo[]): PlanInfo {
+  if (plans && plans.length > 0) {
+    const match = plans.find(p => p.planId === planId);
+    if (match) return match;
+  }
+  return FALLBACK_PLAN_FEATURES[planId] ?? FALLBACK_PLAN_FEATURES.free;
+}
 
 export function DowngradeConfirmationModal({
   open,
@@ -95,19 +113,18 @@ export function DowngradeConfirmationModal({
   targetPlan,
   onConfirmDowngrade,
   isLoading = false,
+  plans,
   billingInfo
 }: DowngradeConfirmationModalProps) {
   const [confirmationChecked, setConfirmationChecked] = useState(false);
   
-  const currentFeatures = getPlanFeatures(currentPlan);
-  const targetFeatures = getPlanFeatures(targetPlan);
+  const currentFeatures = resolvePlan(currentPlan, plans);
+  const targetFeatures = resolvePlan(targetPlan, plans);
   
-  // Features that will be lost
   const lostFeatures = currentFeatures.features.filter(
     feature => !targetFeatures.features.includes(feature)
   );
   
-  // Features that will be retained
   const retainedFeatures = currentFeatures.features.filter(
     feature => targetFeatures.features.includes(feature)
   );
@@ -124,7 +141,6 @@ export function DowngradeConfirmationModal({
   };
 
   const handleConfirm = () => {
-    // Only proceed if user has explicitly confirmed by checking the checkbox
     if (!confirmationChecked) {
       return;
     }
@@ -163,7 +179,6 @@ export function DowngradeConfirmationModal({
                   </p>
                 </div>
 
-                {/* Pro-rated Credit Information */}
                 {billingInfo?.proratedCredit && billingInfo.proratedCredit > 0 && (
                   <div className="bg-green-100 p-3 rounded-md border border-green-200">
                     <p className="text-green-800 text-sm font-medium">
@@ -175,10 +190,9 @@ export function DowngradeConfirmationModal({
                   </div>
                 )}
 
-                {/* Next Billing Information */}
                 <div className="bg-gray-100 p-3 rounded-md">
                   <p className="text-gray-800 text-sm">
-                    <strong>Next Billing:</strong> Your next charge will be <strong>{formatCurrency(billingInfo?.nextBillingAmount || parseFloat(targetFeatures.price.replace('£', '')))}/month</strong> for the {targetFeatures.name} plan
+                    <strong>Next Billing:</strong> Your next charge will be <strong>{formatCurrency(billingInfo?.nextBillingAmount ?? parseFloat(targetFeatures.monthlyPrice))}/month</strong> for the {targetFeatures.name} plan
                   </p>
                   {billingInfo?.currentPlanPrice && billingInfo?.targetPlanPrice && (
                     <p className="text-gray-600 text-xs mt-1">
