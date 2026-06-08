@@ -1513,12 +1513,6 @@ export default function OrderDetail() {
                   </div>
                 );
               })()}
-              {parseFloat(order.platformFee || '0') > 0 && !isOfflinePayment && (
-                <div className="flex justify-between text-red-600">
-                  <span>Less platform fee</span>
-                  <span>-{formatMoney(parseFloat(order.platformFee || '0'))}</span>
-                </div>
-              )}
               {order.paymentMethod && (
                 <div className="flex justify-between text-gray-500">
                   <span>Method</span>
@@ -1589,6 +1583,13 @@ export default function OrderDetail() {
                   </div>
                 );
               })()}
+
+              {parseFloat(order.platformFee || '0') > 0 && !isOfflinePayment && (
+                <div className="flex justify-between text-red-600">
+                  <span>Less platform fee</span>
+                  <span>-{formatMoney(parseFloat(order.platformFee || '0'))}</span>
+                </div>
+              )}
 
               <div className="border-t pt-2 mt-1">
                 <div className="flex justify-between font-semibold text-green-700 text-sm">
