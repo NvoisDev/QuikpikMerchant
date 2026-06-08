@@ -59,6 +59,7 @@ export default function SubscriptionPricing() {
   const [billingMode, setBillingMode] = useState<'monthly' | 'annual'>('monthly');
   const [isBillingPortalLoading, setIsBillingPortalLoading] = useState(false);
   const [highlightListingPlan, setHighlightListingPlan] = useState(false);
+  const [highlightListingPlanAnnual, setHighlightListingPlanAnnual] = useState(false);
 
   const openBillingPortal = async () => {
     setIsBillingPortalLoading(true);
@@ -637,13 +638,35 @@ export default function SubscriptionPricing() {
                   size="sm"
                   className="bg-gray-800 hover:bg-gray-900 text-white"
                   onClick={() => {
+                    setBillingMode('monthly');
                     setHighlightListingPlan(true);
-                    const listingCard = document.getElementById('plan-card-listing');
-                    listingCard?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    setTimeout(() => {
+                      const listingCard = document.getElementById('plan-card-listing');
+                      listingCard?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }, 50);
                     setTimeout(() => setHighlightListingPlan(false), 3000);
                   }}
                 >
                   Reactivate Listing plan
+                </Button>
+              )}
+              {currentSubscription?.currentPlan === 'listing' && currentSubscription?.user?.subscriptionPeriodEnd &&
+                (currentSubscription?.subscription?.planId === 'listing_annual' ||
+                  currentSubscription?.subscription?.planId === 'listing_annual_intro') && (
+                <Button
+                  size="sm"
+                  className="bg-gray-800 hover:bg-gray-900 text-white"
+                  onClick={() => {
+                    setBillingMode('annual');
+                    setHighlightListingPlanAnnual(true);
+                    setTimeout(() => {
+                      const annualListingCard = document.getElementById('plan-card-listing-annual');
+                      annualListingCard?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }, 50);
+                    setTimeout(() => setHighlightListingPlanAnnual(false), 3000);
+                  }}
+                >
+                  Reactivate Listing plan (Annual)
                 </Button>
               )}
               <Button
@@ -778,14 +801,14 @@ export default function SubscriptionPricing() {
           return (
             <Card
               key={plan.id}
-              id={tier === 'listing' && !isAnnual ? 'plan-card-listing' : undefined}
+              id={tier === 'listing' ? (isAnnual ? 'plan-card-listing-annual' : 'plan-card-listing') : undefined}
               className={clsx(
                 'relative flex flex-col border transition-all duration-200 overflow-hidden',
                 {
                   'border-green-400 shadow-md bg-green-50': isCurrent,
                   'border-emerald-300 shadow-md': isMostPopular && !isCurrent,
                   'border-gray-200 hover:shadow-md': !isCurrent && !isMostPopular,
-                  'ring-2 ring-gray-700 ring-offset-2 shadow-lg': highlightListingPlan && tier === 'listing',
+                  'ring-2 ring-gray-700 ring-offset-2 shadow-lg': (highlightListingPlan && tier === 'listing' && !isAnnual) || (highlightListingPlanAnnual && tier === 'listing' && isAnnual),
                 }
               )}
             >
