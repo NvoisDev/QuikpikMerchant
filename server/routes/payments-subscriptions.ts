@@ -71,11 +71,12 @@ export function registerSubscriptionRoutes(app: Express): void {
     try {
       const userId = req.user.id;
 
-      // Only active paid subscribers may open the portal
+      // Only users with an active Stripe subscription may open the portal
+      // (this includes Listing-plan users who subscribed via Stripe, not just higher tiers)
       const subscription = await SubscriptionService.getUserSubscription(userId);
-      const activePaidPlan = subscription?.currentPlan && subscription.currentPlan !== 'free';
-      if (!activePaidPlan) {
-        return res.status(400).json({ message: 'No active paid subscription — upgrade first to manage billing.' });
+      const stripeSubId = subscription?.subscription?.stripeSubscriptionId;
+      if (!stripeSubId) {
+        return res.status(400).json({ message: 'No active Stripe subscription found — upgrade first to manage billing.' });
       }
 
       const stripeCustomerId = await SubscriptionService.getOrCreateStripeCustomer(userId, false);
