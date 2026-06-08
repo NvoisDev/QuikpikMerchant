@@ -36,13 +36,15 @@ export function registerAdminCoreRoutes(app: Express): void {
           .where(and(eq(users.isTestAccount, false), eq(users.isInactive, false))),
         db.select({ count: count() }).from(users)
           .where(and(eq(users.role, 'wholesaler'), gte(users.createdAt, monthStart), eq(users.isTestAccount, false), eq(users.isInactive, false))),
-        db.select({ planId: subscriptionPlans.planId, monthlyPrice: subscriptionPlans.monthlyPrice })
+        db.select({ planId: subscriptionPlans.planId, monthlyPrice: subscriptionPlans.monthlyPrice, billingInterval: subscriptionPlans.billingInterval })
           .from(subscriptionPlans),
       ]);
 
-      const PLAN_PRICES: Record<string, number> = { free: 0 };
+      // Effective monthly revenue per plan — annual plans divided by 12 for MRR
+      const PLAN_MRR: Record<string, number> = { free: 0 };
       for (const p of planRows) {
-        PLAN_PRICES[p.planId] = parseFloat(p.monthlyPrice as string) || 0;
+        const price = parseFloat(p.monthlyPrice as string) || 0;
+        PLAN_MRR[p.planId] = p.billingInterval === 'yearly' ? price / 12 : price;
       }
 
       const totalWholesalers = allWholesalers.length;
@@ -56,18 +58,29 @@ export function registerAdminCoreRoutes(app: Express): void {
         premium:  allWholesalers.filter(w => w.subscriptionTier === 'premium'  || w.subscriptionTier?.startsWith('premium_')).length,
       };
 
-      const activeStarter  = allWholesalers.filter(w => (!w.subscriptionTier || w.subscriptionTier === 'free' || w.subscriptionTier === 'starter' || w.subscriptionTier?.startsWith('starter_')) && !w.archived).length;
-      const activeListing  = allWholesalers.filter(w => (w.subscriptionTier === 'listing' || w.subscriptionTier?.startsWith('listing_')) && !w.archived).length;
-      const activeStandard = allWholesalers.filter(w => (w.subscriptionTier === 'standard' || w.subscriptionTier?.startsWith('standard_')) && !w.archived).length;
-      const activePremium  = allWholesalers.filter(w => (w.subscriptionTier === 'premium'  || w.subscriptionTier?.startsWith('premium_'))  && !w.archived).length;
-      const starterPrice  = PLAN_PRICES['starter']  ?? 0;
-      const listingPrice  = PLAN_PRICES['listing']  ?? 0;
-      const subscriptionMRR = (activeStarter * starterPrice) + (activeListing * listingPrice) + (activeStandard * PLAN_PRICES.standard) + (activePremium * PLAN_PRICES.premium);
+      // Sum MRR using each wholesaler's exact planId price to handle annual variants correctly
+      let starterCount = 0, listingCount = 0, standardCount = 0, premiumCount = 0;
+      let starterMRR = 0, listingMRR = 0, standardMRR = 0, premiumMRR = 0;
+      for (const w of allWholesalers) {
+        if (w.archived) continue;
+        const tier = w.subscriptionTier || 'free';
+        const mrrContrib = PLAN_MRR[tier] ?? 0;
+        if (!tier || tier === 'free' || tier === 'starter' || tier.startsWith('starter_')) {
+          starterCount++; starterMRR += mrrContrib;
+        } else if (tier === 'listing' || tier.startsWith('listing_')) {
+          listingCount++; listingMRR += mrrContrib;
+        } else if (tier === 'standard' || tier.startsWith('standard_')) {
+          standardCount++; standardMRR += mrrContrib;
+        } else if (tier === 'premium' || tier.startsWith('premium_')) {
+          premiumCount++; premiumMRR += mrrContrib;
+        }
+      }
+      const subscriptionMRR = starterMRR + listingMRR + standardMRR + premiumMRR;
       const subscriptionBreakdown = {
-        starter:  { count: activeStarter,  mrr: activeStarter  * starterPrice  },
-        listing:  { count: activeListing,  mrr: activeListing  * listingPrice  },
-        standard: { count: activeStandard, mrr: activeStandard * PLAN_PRICES.standard },
-        premium:  { count: activePremium,  mrr: activePremium  * PLAN_PRICES.premium  },
+        starter:  { count: starterCount,  mrr: starterMRR  },
+        listing:  { count: listingCount,  mrr: listingMRR  },
+        standard: { count: standardCount, mrr: standardMRR },
+        premium:  { count: premiumCount,  mrr: premiumMRR  },
       };
 
       let totalGMV = 0, totalCustomerFees = 0, totalPlatformFees = 0;

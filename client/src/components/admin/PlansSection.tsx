@@ -11,10 +11,45 @@ import {
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
-import { PlusCircle, Archive, AlertTriangle, BadgeCheck } from "lucide-react";
+import { PlusCircle, Archive, AlertTriangle, BadgeCheck, Info } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { GREEN, fmt, planBadge } from "./shared";
 import type { AdminPlanRow } from "./types";
+
+const TIER_SUMMARY = [
+  {
+    planId: "listing",
+    label: "Listing",
+    price: "£19.99/mo",
+    color: "gray",
+    note: "Free for first 3 months (intro pricing)",
+    limits: "Up to 10 products · 1 team seat · No broadcasts",
+  },
+  {
+    planId: "starter",
+    label: "Starter",
+    price: "£29.99/mo",
+    color: "blue",
+    note: null,
+    limits: "Up to 25 products · 2 team seats · 5 broadcasts/mo",
+  },
+  {
+    planId: "standard",
+    label: "Standard",
+    price: "£49.99/mo",
+    color: "emerald",
+    note: null,
+    limits: "Up to 100 products · 5 team seats · 20 broadcasts/mo",
+  },
+  {
+    planId: "premium",
+    label: "Premium",
+    price: "£99.99/mo",
+    color: "purple",
+    note: null,
+    limits: "Unlimited products · Unlimited seats · Unlimited broadcasts",
+  },
+] as const;
 
 export function PlansSection({ isAdmin }: { isAdmin: boolean }) {
   const { toast } = useToast();
@@ -74,6 +109,13 @@ export function PlansSection({ isAdmin }: { isAdmin: boolean }) {
     createPlan.mutate({ name: form.name, price: form.price, billingInterval: form.billingInterval, description: form.description, features: featuresList, limits });
   };
 
+  const colorMap = {
+    gray:    { card: "bg-gray-50 border-gray-200", badge: "bg-gray-100 text-gray-600", price: "text-gray-700", limits: "text-gray-500" },
+    blue:    { card: "bg-blue-50 border-blue-100",   badge: "bg-blue-100 text-blue-700", price: "text-blue-700", limits: "text-blue-500" },
+    emerald: { card: "bg-emerald-50 border-emerald-100", badge: "bg-emerald-100 text-emerald-700", price: "text-emerald-700", limits: "text-emerald-500" },
+    purple:  { card: "bg-purple-50 border-purple-100", badge: "bg-purple-100 text-purple-700", price: "text-purple-700", limits: "text-purple-500" },
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-3 flex-wrap">
@@ -84,6 +126,28 @@ export function PlansSection({ isAdmin }: { isAdmin: boolean }) {
         <Button size="sm" className="text-white text-xs gap-1.5" style={{ background: GREEN }} onClick={() => setNewPlanOpen(true)}>
           <PlusCircle className="h-3.5 w-3.5" />New Plan
         </Button>
+      </div>
+
+      {/* Four-tier reference overview */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {TIER_SUMMARY.map(tier => {
+          const c = colorMap[tier.color];
+          return (
+            <div key={tier.planId} className={`rounded-xl border p-4 ${c.card}`}>
+              <div className="flex items-center justify-between mb-2">
+                <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold ${c.badge}`}>{tier.label}</span>
+                <span className={`text-sm font-bold ${c.price}`}>{tier.price}</span>
+              </div>
+              <p className={`text-xs mt-1 ${c.limits}`}>{tier.limits}</p>
+              {tier.note && (
+                <div className="flex items-start gap-1 mt-2 bg-white/70 rounded-md px-2 py-1.5">
+                  <Info className="h-3 w-3 text-amber-500 flex-shrink-0 mt-0.5" />
+                  <p className="text-xs text-amber-700 font-medium">{tier.note}</p>
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
 
       <Card className="border-gray-200 shadow-none rounded-xl overflow-hidden">
