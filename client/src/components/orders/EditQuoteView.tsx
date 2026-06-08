@@ -78,9 +78,12 @@ export function EditQuoteView({
   const [editSaveError, setEditSaveError] = useState<string | null>(null);
   const [packMode, setPackMode] = useState<Record<string, boolean>>({});
   const [packInputs, setPackInputs] = useState<Record<string, string>>({});
+  const [editDeliveryCost, setEditDeliveryCost] = useState(
+    parseFloat(order.deliveryCost || '0').toFixed(2)
+  );
 
   const editSubtotal = editItems.reduce((sum, item) => sum + item.customPrice * item.quantity, 0);
-  const deliveryCostVal = parseFloat(order.deliveryCost || '0');
+  const deliveryCostVal = parseFloat(editDeliveryCost) || 0;
   const filteredEditProducts = editProducts.filter(p =>
     p.name.toLowerCase().includes(editProductSearch.toLowerCase())
   );
@@ -182,6 +185,7 @@ export function EditQuoteView({
             sellingType: item.sellingType,
           })),
           paymentMethod: editPaymentMethod,
+          deliveryCost: deliveryCostVal,
         }),
       });
       const data = await response.json();
@@ -380,6 +384,26 @@ export function EditQuoteView({
             <Plus className="h-4 w-4 mr-2" />
             Add Product
           </Button>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Delivery Cost</label>
+            <div className="flex items-center gap-2">
+              <span className="text-gray-500 text-sm">£</span>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={editDeliveryCost}
+                onChange={(e) => setEditDeliveryCost(e.target.value)}
+                onBlur={(e) => {
+                  const val = parseFloat(e.target.value);
+                  setEditDeliveryCost(isFinite(val) && val >= 0 ? val.toFixed(2) : '0.00');
+                }}
+                onFocus={(e) => e.target.select()}
+                className="w-28 border border-gray-300 rounded-md px-2 py-1.5 text-sm text-right focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              />
+            </div>
+          </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Method of Payment</label>

@@ -936,6 +936,13 @@ export function registerQuoteRoutes(app: Express): void {
         return res.status(400).json({ error: 'Invalid paymentMethod value', errorType: 'VALIDATION_ERROR' });
       }
 
+      const incomingDeliveryCost: number | undefined = req.body.deliveryCost !== undefined
+        ? parseFloat(req.body.deliveryCost)
+        : undefined;
+      if (incomingDeliveryCost !== undefined && (!isFinite(incomingDeliveryCost) || incomingDeliveryCost < 0)) {
+        return res.status(400).json({ error: 'deliveryCost must be a non-negative number', errorType: 'VALIDATION_ERROR' });
+      }
+
       // Server-side input validation for each item
       for (const item of items) {
         if (!Number.isInteger(item.productId) || item.productId <= 0) {
@@ -980,7 +987,7 @@ export function registerQuoteRoutes(app: Express): void {
 
       // ── Step 3: Recalculate totals (read-only) ────────────────────────────
       const productSubtotal = items.reduce((sum: number, item: any) => sum + (item.customPrice * item.quantity), 0);
-      const quoteDeliveryCharge = parseFloat(existingOrder.deliveryCost || '0');
+      const quoteDeliveryCharge = incomingDeliveryCost !== undefined ? incomingDeliveryCost : parseFloat(existingOrder.deliveryCost || '0');
       const subtotal = productSubtotal + quoteDeliveryCharge;
       const OFFLINE_METHODS = ['cash', 'bank_transfer', 'cheque', 'other', 'pay_later'];
       // Use the incoming payment method (if changed) to determine offline status — not the old one
@@ -1416,6 +1423,7 @@ export function registerQuoteRoutes(app: Express): void {
         // 7d. Update order totals and payment link
         await trx.update(orders).set({
           subtotal: productSubtotal.toFixed(2),
+          deliveryCost: quoteDeliveryCharge.toFixed(2),
           platformFee: platformFee.toFixed(2),
           customerTransactionFee: customerTransactionFee.toFixed(2),
           feePercentageUsed: isOfflineEdit ? '0.0000' : feeConfigEdit.percentage.toFixed(4),
