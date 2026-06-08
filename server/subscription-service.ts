@@ -305,9 +305,12 @@ export class SubscriptionService {
       // Get the current subscription
       const subscription = await stripe.subscriptions.retrieve(subscriptionId);
       
-      // Update subscription with immediate proration (creates credit for unused time)
+      // Update subscription with no proration — user simply pays the new (lower) rate
+      // from the next billing date. Using 'create_prorations' caused duplicate proration
+      // items if the endpoint was retried (e.g. stripeSubscriptionId missing from DB on
+      // first attempt), stacking credits/debits and inflating the next invoice.
       const updatedSubscription = await stripe.subscriptions.update(subscriptionId, {
-        proration_behavior: 'create_prorations', // Create prorations for immediate billing/credit
+        proration_behavior: 'none',
         billing_cycle_anchor: 'unchanged', // Keep the same billing cycle
         cancel_at_period_end: false, // Clear any scheduled cancellation so downgrade can proceed
         items: [{
