@@ -936,6 +936,7 @@ export default function SubscriptionPricing() {
           }
         }}
         isLoading={cancelSubscriptionMutation.isPending || downgradeSubscriptionMutation.isPending}
+        isCancelAtPeriodEnd={targetDowngradePlan === 'listing' || targetDowngradePlan === 'free'}
         plans={plans}
         billingInfo={{
           currentPeriodEnd: currentSubscription?.subscription?.current_period_end,

@@ -23,6 +23,7 @@ interface DowngradeConfirmationModalProps {
   onConfirmDowngrade: () => void;
   isLoading?: boolean;
   plans?: PlanInfo[];
+  isCancelAtPeriodEnd?: boolean;
   billingInfo?: {
     currentPeriodEnd?: number;
     daysRemaining?: number;
@@ -120,6 +121,7 @@ export function DowngradeConfirmationModal({
   onConfirmDowngrade,
   isLoading = false,
   plans,
+  isCancelAtPeriodEnd = false,
   billingInfo
 }: DowngradeConfirmationModalProps) {
   const [confirmationChecked, setConfirmationChecked] = useState(false);
@@ -176,16 +178,29 @@ export function DowngradeConfirmationModal({
               <h3 className="font-semibold text-blue-900 mb-3">📅 Billing & Timeline Information</h3>
               
               <div className="space-y-3">
-                <div>
-                  <p className="text-blue-800 text-sm">
-                    <strong>Effective Date:</strong> Immediately upon confirmation
-                  </p>
-                  <p className="text-blue-700 text-xs mt-1">
-                    Your plan will change to {targetFeatures.name} right away, and you'll receive a pro-rated credit for any unused time from your {currentFeatures.name} plan.
-                  </p>
-                </div>
+                {isCancelAtPeriodEnd ? (
+                  <div>
+                    <p className="text-blue-800 text-sm">
+                      <strong>Effective Date:</strong> {formatEndDate(billingInfo?.currentPeriodEnd)}
+                    </p>
+                    <p className="text-blue-700 text-xs mt-1">
+                      You'll keep all your current {currentFeatures.name} features until your billing period ends
+                      {billingInfo?.daysRemaining !== undefined ? ` (${billingInfo.daysRemaining} day${billingInfo.daysRemaining !== 1 ? 's' : ''} remaining)` : ''}.
+                      After that, your plan switches to {targetFeatures.name} and no further charges will be made for the {currentFeatures.name} plan.
+                    </p>
+                  </div>
+                ) : (
+                  <div>
+                    <p className="text-blue-800 text-sm">
+                      <strong>Effective Date:</strong> Immediately upon confirmation
+                    </p>
+                    <p className="text-blue-700 text-xs mt-1">
+                      Your plan will change to {targetFeatures.name} right away, and you'll receive a pro-rated credit for any unused time from your {currentFeatures.name} plan.
+                    </p>
+                  </div>
+                )}
 
-                {billingInfo?.proratedCredit && billingInfo.proratedCredit > 0 && (
+                {!isCancelAtPeriodEnd && billingInfo?.proratedCredit && billingInfo.proratedCredit > 0 && (
                   <div className="bg-green-100 p-3 rounded-md border border-green-200">
                     <p className="text-green-800 text-sm font-medium">
                       💰 You'll receive a pro-rated credit of <strong>{formatCurrency(billingInfo.proratedCredit)}</strong>
@@ -197,10 +212,16 @@ export function DowngradeConfirmationModal({
                 )}
 
                 <div className="bg-gray-100 p-3 rounded-md">
-                  <p className="text-gray-800 text-sm">
-                    <strong>Next Billing:</strong> Your next charge will be <strong>{formatCurrency(billingInfo?.nextBillingAmount ?? parseFloat(targetFeatures.monthlyPrice))}/month</strong> for the {targetFeatures.name} plan
-                  </p>
-                  {billingInfo?.currentPlanPrice && billingInfo?.targetPlanPrice && (
+                  {isCancelAtPeriodEnd ? (
+                    <p className="text-gray-800 text-sm">
+                      <strong>No charge until renewal:</strong> You won't be billed again for {currentFeatures.name}. After the switch, your {targetFeatures.name} plan will be <strong>{formatCurrency(parseFloat(targetFeatures.monthlyPrice))}/month</strong>.
+                    </p>
+                  ) : (
+                    <p className="text-gray-800 text-sm">
+                      <strong>Next Billing:</strong> Your next charge will be <strong>{formatCurrency(billingInfo?.nextBillingAmount ?? parseFloat(targetFeatures.monthlyPrice))}/month</strong> for the {targetFeatures.name} plan
+                    </p>
+                  )}
+                  {!isCancelAtPeriodEnd && billingInfo?.currentPlanPrice && billingInfo?.targetPlanPrice && (
                     <p className="text-gray-600 text-xs mt-1">
                       Monthly savings: {formatCurrency(billingInfo.currentPlanPrice - billingInfo.targetPlanPrice)}
                     </p>
@@ -275,10 +296,21 @@ export function DowngradeConfirmationModal({
               <label htmlFor="confirm-downgrade" className="text-sm text-gray-700 cursor-pointer leading-relaxed">
                 <span className="font-medium">I understand and confirm that:</span>
                 <ul className="mt-2 space-y-1 text-xs text-gray-600">
-                  <li>• I will lose access to the {lostFeatures.length} premium features listed above immediately</li>
-                  <li>• This change takes effect immediately upon confirmation</li>
-                  <li>• I can upgrade again at any time to restore full functionality</li>
-                  <li>• I will receive a pro-rated credit for any unused time on my current plan</li>
+                  {isCancelAtPeriodEnd ? (
+                    <>
+                      <li>• I will keep my {currentFeatures.name} features until my billing period ends on {formatEndDate(billingInfo?.currentPeriodEnd)}</li>
+                      <li>• My plan will switch to {targetFeatures.name} at the end of the billing period</li>
+                      <li>• I will not be charged again for {currentFeatures.name}</li>
+                      <li>• I can upgrade again at any time to restore full functionality</li>
+                    </>
+                  ) : (
+                    <>
+                      <li>• I will lose access to the {lostFeatures.length} premium features listed above immediately</li>
+                      <li>• This change takes effect immediately upon confirmation</li>
+                      <li>• I can upgrade again at any time to restore full functionality</li>
+                      <li>• I will receive a pro-rated credit for any unused time on my current plan</li>
+                    </>
+                  )}
                 </ul>
               </label>
             </div>
