@@ -3,7 +3,7 @@ import rateLimit from "express-rate-limit";
 import Stripe from "stripe";
 import {
   ADMIN_EMAILS, db, enforceNewPlanLimits, eq, or, sql, ne, inArray,
-  orders, requireAuth, requireOwner, sendEmail, sendStripeVerifiedEmail,
+  orders, requireAuth, requireBooleanFeature, requireOwner, sendEmail, sendStripeVerifiedEmail,
   sendCustomerInvoiceEmail, storage, subscriptionAuditLogs, subscriptionPlans,
   unlockForUpgrade, userSubscriptions, users, generateDowngradeEffectiveEmail,
   formatPackDescriptor, systemErrorLogs,
@@ -1185,7 +1185,7 @@ export function registerPaymentConnectRoutes(app: Express): void {
   });
 
   // POST /api/create-payment-intent
-  app.post("/api/create-payment-intent", paymentLimiter, requireAuth, async (req: any, res) => {
+  app.post("/api/create-payment-intent", paymentLimiter, requireAuth, requireBooleanFeature('payments'), async (req: any, res) => {
     try {
       const { orderId } = req.body;
       const userId = req.user.id;

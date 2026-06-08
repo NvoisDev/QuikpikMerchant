@@ -9,23 +9,42 @@ import { PLAN_LIMITS, PLAN_HIERARCHY, getPlanLimits, hasFeatureFlag, type Boolea
  * Boolean feature gate middleware.
  * Blocks requests from Listing-tier users (and any future tiers where the flag is disabled).
  * Returns 403 with code: 'FEATURE_NOT_IN_PLAN' so the frontend can show an upgrade prompt.
+ *
+ * Team members inherit the wholesaler owner's subscription plan, matching the pattern
+ * used by requireFeatureAccess and requireTeamMemberLimits.
  */
 export function requireBooleanFeature(feature: BooleanFeature) {
-  return (req: Request, res: Response, next: NextFunction) => {
-    if (!req.user) {
-      return res.status(401).json({ error: 'Authentication required', code: 'AUTH_REQUIRED' });
+  return async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ error: 'Authentication required', code: 'AUTH_REQUIRED' });
+      }
+
+      // Team members inherit their wholesaler's subscription plan
+      const userId = (req.user.role === 'team_member' && req.user.wholesalerId)
+        ? req.user.wholesalerId
+        : req.user.id;
+
+      const { currentPlan, user } = await SubscriptionService.getUserSubscription(userId);
+      const tierFromDb = user?.subscriptionTier || 'free';
+      const tierFromPlan = currentPlan || 'free';
+      const tier = (PLAN_HIERARCHY[tierFromPlan] ?? 0) < (PLAN_HIERARCHY[tierFromDb] ?? 0)
+        ? tierFromPlan : tierFromDb;
+
+      if (!hasFeatureFlag(tier, feature)) {
+        return res.status(403).json({
+          error: 'This feature is not available on your current plan. Upgrade to Starter or above to unlock it.',
+          feature,
+          currentPlan: tier,
+          code: 'FEATURE_NOT_IN_PLAN',
+          upgradeUrl: '/subscription/pricing',
+        });
+      }
+      next();
+    } catch (error) {
+      console.error('❌ Boolean feature gate error:', error);
+      res.status(500).json({ error: 'Failed to check feature access', feature, code: 'FEATURE_CHECK_FAILED' });
     }
-    const tier: string = req.user.subscriptionTier || 'free';
-    if (!hasFeatureFlag(tier, feature)) {
-      return res.status(403).json({
-        error: 'This feature is not available on your current plan. Upgrade to Starter or above to unlock it.',
-        feature,
-        currentPlan: tier,
-        code: 'FEATURE_NOT_IN_PLAN',
-        upgradeUrl: '/subscription/pricing',
-      });
-    }
-    next();
   };
 }
 
