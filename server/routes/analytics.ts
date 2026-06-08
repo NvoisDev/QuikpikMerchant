@@ -728,7 +728,7 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
   });
 
   // PATCH /api/stock-alerts/:alertId/read
-  app.patch('/api/stock-alerts/:alertId/read', requireAuth, requireNotViewer, async (req: any, res) => {
+  app.patch('/api/stock-alerts/:alertId/read', requireAuth, requireBooleanFeature('analytics'), requireNotViewer, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const { alertId } = req.params;
@@ -741,7 +741,7 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
   });
 
   // PATCH /api/stock-alerts/:alertId/resolve
-  app.patch('/api/stock-alerts/:alertId/resolve', requireAuth, requireNotViewer, async (req: any, res) => {
+  app.patch('/api/stock-alerts/:alertId/resolve', requireAuth, requireBooleanFeature('analytics'), requireNotViewer, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const { alertId } = req.params;

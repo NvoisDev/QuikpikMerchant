@@ -17,7 +17,7 @@ import { resolveInvoiceWholesaler } from "./orders-read";
 export function registerOrderCommsRoutes(app: Express): void {
 
   // POST /api/orders/:id/resend-ready-notification
-  app.post("/api/orders/:id/resend-ready-notification", requireAuth, requireNotViewer, requireMemberPermission('orders'), async (req, res) => {
+  app.post("/api/orders/:id/resend-ready-notification", requireAuth, requireBooleanFeature('order_management'), requireNotViewer, requireMemberPermission('orders'), async (req, res) => {
     try {
       const orderId = parseInt(req.params.id);
       if (isNaN(orderId)) return res.status(400).json({ error: 'Invalid order ID' });
@@ -109,7 +109,7 @@ export function registerOrderCommsRoutes(app: Express): void {
   });
 
   // POST /api/orders/:orderId/upload-image
-  app.post('/api/orders/:orderId/upload-image', requireAuth, requireNotViewer, requireMemberPermission('orders'), async (req: any, res) => {
+  app.post('/api/orders/:orderId/upload-image', requireAuth, requireBooleanFeature('order_management'), requireNotViewer, requireMemberPermission('orders'), async (req: any, res) => {
     try {
       const { orderId } = req.params;
       
@@ -135,7 +135,7 @@ export function registerOrderCommsRoutes(app: Express): void {
   });
 
   // POST /api/orders/:orderId/save-image
-  app.post('/api/orders/:orderId/save-image', requireAuth, requireNotViewer, requireMemberPermission('orders'), async (req: any, res) => {
+  app.post('/api/orders/:orderId/save-image', requireAuth, requireBooleanFeature('order_management'), requireNotViewer, requireMemberPermission('orders'), async (req: any, res) => {
     try {
       const { orderId } = req.params;
       const { imageUrl, filename, description } = req.body;
@@ -205,7 +205,7 @@ export function registerOrderCommsRoutes(app: Express): void {
   });
 
   // POST /api/orders/:orderId/upload-photo
-  app.post('/api/orders/:orderId/upload-photo', requireAuth, requireNotViewer, (req: any, res: any, next: any) => {
+  app.post('/api/orders/:orderId/upload-photo', requireAuth, requireBooleanFeature('order_management'), requireNotViewer, (req: any, res: any, next: any) => {
     // Run multer middleware so its errors (LIMIT_FILE_SIZE, bad mimetype) can be
     // converted to JSON responses before reaching the async handler below.
     orderPhotoUpload.single('photo')(req, res, (multerErr: any) => {
@@ -283,7 +283,7 @@ export function registerOrderCommsRoutes(app: Express): void {
   });
 
   // DELETE /api/orders/:orderId/delete-image/:imageId
-  app.delete('/api/orders/:orderId/delete-image/:imageId', requireAuth, requireNotViewer, requireMemberPermission('orders'), async (req: any, res) => {
+  app.delete('/api/orders/:orderId/delete-image/:imageId', requireAuth, requireBooleanFeature('order_management'), requireNotViewer, requireMemberPermission('orders'), async (req: any, res) => {
     try {
       const { orderId, imageId } = req.params;
       
