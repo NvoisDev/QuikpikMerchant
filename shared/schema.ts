@@ -1992,6 +1992,8 @@ export const prospectStores = pgTable("prospect_stores", {
   type: varchar("type", { length: 20 }).notNull().default("retail"),
   visited: boolean("visited").notNull().default(false),
   notes: text("notes"),
+  contactName: varchar("contact_name", { length: 255 }),
+  contactPhone: varchar("contact_phone", { length: 50 }),
   assignedWholesalerIds: text("assigned_wholesaler_ids").array(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),

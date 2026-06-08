@@ -38,6 +38,8 @@ interface ProspectStore {
   type: string;
   visited: boolean;
   notes: string | null;
+  contactName: string | null;
+  contactPhone: string | null;
   assignedWholesalerIds: string[] | null;
   createdAt: string | null;
   updatedAt: string | null;
@@ -53,12 +55,14 @@ interface StoreFormState {
   closingTime: string;
   type: "retail" | "wholesale";
   notes: string;
+  contactName: string;
+  contactPhone: string;
   assignedWholesalerIds: string[];
 }
 
 const EMPTY_FORM: StoreFormState = {
   name: "", address: "", openingTime: "", closingTime: "",
-  type: "retail", notes: "", assignedWholesalerIds: [],
+  type: "retail", notes: "", contactName: "", contactPhone: "", assignedWholesalerIds: [],
 };
 
 // ─── Google Maps loader (reuses SDK if already loaded by BusinessSearchInput) ─
@@ -134,6 +138,16 @@ function StoreFormModal({
                   <span className="text-sm capitalize">{t}</span>
                 </label>
               ))}
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs text-gray-500 font-medium">Contact name</label>
+              <Input className="mt-1 text-sm" value={form.contactName} onChange={e => set("contactName", e.target.value)} placeholder="e.g. Mohammed Ali" />
+            </div>
+            <div>
+              <label className="text-xs text-gray-500 font-medium">Contact phone</label>
+              <Input className="mt-1 text-sm" value={form.contactPhone} onChange={e => set("contactPhone", e.target.value)} placeholder="e.g. 07700 900123" />
             </div>
           </div>
           <div>
@@ -462,6 +476,8 @@ export function ProspectStoresSection({
         closingTime: editStore.closingTime ?? "",
         type: (editStore.type === "wholesale" ? "wholesale" : "retail") as "retail" | "wholesale",
         notes: editStore.notes ?? "",
+        contactName: editStore.contactName ?? "",
+        contactPhone: editStore.contactPhone ?? "",
         assignedWholesalerIds: editStore.assignedWholesalerIds ?? [],
       }
     : null;
@@ -558,13 +574,14 @@ export function ProspectStoresSection({
                         <SortTh col="openingTime" label="Opens" />
                         <SortTh col="closingTime" label="Closes" />
                         <SortTh col="type" label="Type" />
+                        <TableHead className="text-xs px-4 text-gray-300">Contact</TableHead>
                         <TableHead className="text-xs px-4 w-48">Notes</TableHead>
                         <TableHead className="text-xs px-4 w-24"></TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {filtered.map(store => (
-                        <TableRow key={store.id} className={`border-gray-50 hover:bg-gray-50/50 ${store.visited ? "opacity-70" : ""}`}>
+                        <TableRow key={store.id} className={`group border-gray-50 hover:bg-gray-50/50 ${store.visited ? "opacity-70" : ""}`}>
                           <TableCell className="px-4">
                             <button
                               onClick={() => toggleVisited(store)}
@@ -598,6 +615,22 @@ export function ProspectStoresSection({
                             }`}>
                               {store.type}
                             </Badge>
+                          </TableCell>
+                          <TableCell className="px-4">
+                            <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+                              {(store.contactName || store.contactPhone) ? (
+                                <div className="space-y-0.5">
+                                  {store.contactName && (
+                                    <p className="text-xs text-gray-700 font-medium truncate max-w-[140px]" title={store.contactName}>{store.contactName}</p>
+                                  )}
+                                  {store.contactPhone && (
+                                    <p className="text-xs text-gray-500 truncate max-w-[140px]" title={store.contactPhone}>{store.contactPhone}</p>
+                                  )}
+                                </div>
+                              ) : (
+                                <span className="text-gray-300 text-xs">—</span>
+                              )}
+                            </div>
                           </TableCell>
                           <TableCell className="px-4">
                             <Textarea

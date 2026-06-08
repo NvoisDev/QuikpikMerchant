@@ -57,10 +57,12 @@ export function registerProspectStoreRoutes(app: Express): void {
       const {
         name, address, openingTime, closingTime, type, notes,
         assignedWholesalerIds, visited, latitude, longitude,
+        contactName, contactPhone,
       } = req.body as {
         name: string; address?: string; openingTime?: string; closingTime?: string;
         type?: string; notes?: string; assignedWholesalerIds?: string[];
         visited?: boolean; latitude?: number | null; longitude?: number | null;
+        contactName?: string; contactPhone?: string;
       };
 
       if (!name?.trim()) {
@@ -83,6 +85,8 @@ export function registerProspectStoreRoutes(app: Express): void {
         type: (type === "wholesale" ? "wholesale" : "retail"),
         visited: visited ?? false,
         notes: notes?.trim() || null,
+        contactName: contactName?.trim() || null,
+        contactPhone: contactPhone?.trim() || null,
         assignedWholesalerIds: assignedWholesalerIds ?? [],
         latitude: lat !== null ? String(lat) : null,
         longitude: lng !== null ? String(lng) : null,
@@ -111,6 +115,7 @@ export function registerProspectStoreRoutes(app: Express): void {
       const {
         name, address, openingTime, closingTime, type, notes,
         assignedWholesalerIds, visited, latitude, longitude,
+        contactName, contactPhone,
       } = req.body as Record<string, any>;
 
       const patch: Record<string, any> = { updatedAt: new Date() };
@@ -121,6 +126,8 @@ export function registerProspectStoreRoutes(app: Express): void {
       if (notes !== undefined) patch.notes = notes?.trim() || null;
       if (visited !== undefined) patch.visited = !!visited;
       if (assignedWholesalerIds !== undefined) patch.assignedWholesalerIds = assignedWholesalerIds;
+      if (contactName !== undefined) patch.contactName = contactName?.trim() || null;
+      if (contactPhone !== undefined) patch.contactPhone = contactPhone?.trim() || null;
 
       if (address !== undefined) {
         patch.address = address?.trim() || null;
