@@ -1,6 +1,6 @@
 import type { Express } from "express";
 import {
-  SubscriptionService, db, eq, enforceNewPlanLimits, getUserPlanLimits,
+  SubscriptionService, db, eq, enforceNewPlanLimits, getUserPlanLimits, getPlanLimits,
   generateDowngradeScheduledEmail, generateDowngradeEffectiveEmail,
   getProjectedDowngradeImpact, requireAuth, requireOwner, sendEmail,
   storage, subscriptionPlans, unlockForUpgrade, userSubscriptions, users, z,
@@ -320,8 +320,22 @@ export function registerSubscriptionRoutes(app: Express): void {
         }
       }
 
+      // No Stripe subscription at all (admin-assigned plan) — DB-only downgrade path
       if (!currentSubscription?.stripeSubscriptionId) {
-        return res.status(400).json({ message: 'No active subscription found' });
+        const targetProductLimit = getPlanLimits(targetPlan).products;
+        await storage.updateUser(userId, {
+          currentPlan: targetPlan,
+          subscriptionTier: targetPlan,
+          subscriptionStatus: targetPlan === 'free' || targetPlan === 'listing' ? 'free' : 'active',
+          productLimit: targetProductLimit,
+        });
+        const [existingUserSub] = await db.select().from(userSubscriptions).where(eq(userSubscriptions.userId, userId));
+        if (existingUserSub) {
+          await db.update(userSubscriptions).set({ planId: targetPlan, updatedAt: new Date() })
+            .where(eq(userSubscriptions.userId, userId));
+        }
+        await enforceNewPlanLimits(userId, targetPlan);
+        return res.json({ success: true, type: 'downgrade_db_only', targetPlan, message: 'Plan updated (no Stripe subscription)' });
       }
 
       // Get target plan details to get the price ID
