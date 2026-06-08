@@ -78,7 +78,7 @@ Quikpik Merchant is a comprehensive B2B platform designed for small-scale wholes
 
 - **Free Plan**: Up to 2 products (£0/month)
 - **Standard Plan**: Up to 5 products, unlimited editing (£19.99/month)
-- **Premium Plan**: Unlimited products, unlimited editing (£49.99/month)
+- **Premium Plan**: Unlimited products, unlimited editing (£99.99/month)
 
 All plans include a platform service fee on eligible online card orders. Offline, cash, and Pay Later orders have no platform fee unless an online payment is taken later.
         `
@@ -1486,7 +1486,7 @@ Accurate cost prices make the Margin Overview a reliable tool for pricing decisi
   - Help Hub access
 
 #### Premium Plan
-- **Cost**: £49.99/month
+- **Cost**: £99.99/month
 - **Products**: Unlimited products
 - **Features**:
   - Broadcast tools coming soon

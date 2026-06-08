@@ -62,8 +62,8 @@ async function runStartupMigrations() {
     `ALTER TABLE products ADD COLUMN IF NOT EXISTS unit_weight DECIMAL(10, 2)`,
     // Task #88: Add payment method to orders for display in order detail
     `ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_method varchar`,
-    // Task #154: Update Premium plan display price to £49.99
-    `UPDATE subscription_plans SET monthly_price = '49.99' WHERE plan_id = 'premium' AND monthly_price != '49.99'`,
+    // Task #154: Update Premium plan display price (corrected to £99.99)
+    `UPDATE subscription_plans SET monthly_price = '99.99' WHERE plan_id = 'premium' AND monthly_price != '99.99'`,
     // Task #160: Customer-owned addresses — deduplicate rows that differ only by wholesaler,
     // keep lowest-id winner per customer+address combination, then drop the wholesaler_id column.
     // Step 1: Remap any orders that reference a non-canonical (duplicate) address to the min-id canonical address
