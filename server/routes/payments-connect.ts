@@ -6,7 +6,7 @@ import {
   orders, requireAuth, requireBooleanFeature, requireOwner, sendEmail, sendStripeVerifiedEmail,
   sendCustomerInvoiceEmail, storage, subscriptionAuditLogs, subscriptionPlans,
   unlockForUpgrade, userSubscriptions, users, generateDowngradeEffectiveEmail,
-  formatPackDescriptor, systemErrorLogs,
+  generateListingLapseReEngagementEmail, formatPackDescriptor, systemErrorLogs,
 } from "./shared";
 import { getStripeClient, getPublishableKey, getWebhookSecretsWithLabels, isLiveMode, STRIPE_ENVIRONMENT } from "../stripeConfig";
 import { businessProfiles, stripeProcessedEvents } from "@shared/schema";
@@ -752,17 +752,47 @@ export function registerPaymentConnectRoutes(app: Express): void {
 
         if (!wasAlreadyFree && affectedUser.email) {
           try {
-            const { subject, html, text } = generateDowngradeEffectiveEmail({
-              firstName: affectedUser.firstName || '',
-              email: affectedUser.email,
-              businessName: affectedUser.businessName || 'Quikpik',
-              productsLocked: enforcementResult.productsLocked || undefined,
-              teamMembersSuspended: enforcementResult.teamMembersSuspended || undefined,
-              groupsArchived: enforcementResult.groupsArchived || undefined,
-            });
-            await sendEmail({ to: affectedUser.email, from: 'hello@quikpik.co', subject, html, text });
+            const wasListingPlan = affectedUser.currentPlan === 'listing';
+            if (wasListingPlan) {
+              // Check deduplication: only send re-engagement email once per subscription
+              const [existingReEngagement] = await db.select().from(subscriptionAuditLogs)
+                .where(
+                  sql`${subscriptionAuditLogs.userId} = ${affectedUser.id}
+                    AND ${subscriptionAuditLogs.eventType} = 'listing_lapse_email'
+                    AND ${subscriptionAuditLogs.stripeSubscriptionId} = ${stripeSubscriptionId}`
+                );
+              if (!existingReEngagement) {
+                const { subject, html, text } = generateListingLapseReEngagementEmail({
+                  firstName: affectedUser.firstName || '',
+                  email: affectedUser.email,
+                  businessName: affectedUser.businessName || 'Quikpik',
+                  isPastDue: false,
+                });
+                await sendEmail({ to: affectedUser.email, from: 'hello@quikpik.co', subject, html, text });
+                await db.insert(subscriptionAuditLogs).values({
+                  userId: affectedUser.id,
+                  eventType: 'listing_lapse_email',
+                  fromTier: 'listing',
+                  toTier: 'free',
+                  stripeSubscriptionId,
+                  stripeCustomerId: typeof stripeCustomerId === 'string' ? stripeCustomerId : null,
+                  reason: 'Re-engagement email sent after Listing plan subscription canceled',
+                });
+                console.log(`📧 Listing lapse re-engagement email sent to ${affectedUser.email}`);
+              }
+            } else {
+              const { subject, html, text } = generateDowngradeEffectiveEmail({
+                firstName: affectedUser.firstName || '',
+                email: affectedUser.email,
+                businessName: affectedUser.businessName || 'Quikpik',
+                productsLocked: enforcementResult.productsLocked || undefined,
+                teamMembersSuspended: enforcementResult.teamMembersSuspended || undefined,
+                groupsArchived: enforcementResult.groupsArchived || undefined,
+              });
+              await sendEmail({ to: affectedUser.email, from: 'hello@quikpik.co', subject, html, text });
+            }
           } catch (emailErr) {
-            console.error('❌ Failed to send downgrade effective email:', emailErr);
+            console.error('❌ Failed to send downgrade/lapse email:', emailErr);
           }
         }
 
@@ -772,6 +802,49 @@ export function registerPaymentConnectRoutes(app: Express): void {
       // ── Subscription activated / updated (fallback for checkout.session.completed) ──
       if (event.type === 'customer.subscription.created' || event.type === 'customer.subscription.updated') {
         const subscription = event.data.object as Stripe.Subscription;
+
+        // ── Past-due re-engagement for Listing plan ──
+        if (event.type === 'customer.subscription.updated' && subscription.status === 'past_due') {
+          const pastDueCustId = typeof subscription.customer === 'string'
+            ? subscription.customer : subscription.customer.id;
+          const pastDuePriceId = subscription.items?.data?.[0]?.price?.id;
+          if (pastDueCustId && pastDuePriceId) {
+            const [pastDueUser] = await db.select().from(users).where(eq(users.stripeCustomerId, pastDueCustId));
+            if (pastDueUser?.email && pastDueUser.currentPlan === 'listing') {
+              try {
+                const [existingPastDueEmail] = await db.select().from(subscriptionAuditLogs)
+                  .where(
+                    sql`${subscriptionAuditLogs.userId} = ${pastDueUser.id}
+                      AND ${subscriptionAuditLogs.eventType} = 'listing_lapse_email'
+                      AND ${subscriptionAuditLogs.stripeSubscriptionId} = ${subscription.id}`
+                  );
+                if (!existingPastDueEmail) {
+                  const { subject, html, text } = generateListingLapseReEngagementEmail({
+                    firstName: pastDueUser.firstName || '',
+                    email: pastDueUser.email,
+                    businessName: pastDueUser.businessName || 'Quikpik',
+                    isPastDue: true,
+                  });
+                  await sendEmail({ to: pastDueUser.email, from: 'hello@quikpik.co', subject, html, text });
+                  await db.insert(subscriptionAuditLogs).values({
+                    userId: pastDueUser.id,
+                    eventType: 'listing_lapse_email',
+                    fromTier: 'listing',
+                    toTier: 'listing',
+                    stripeSubscriptionId: subscription.id,
+                    stripeCustomerId: pastDueCustId,
+                    reason: 'Re-engagement email sent after Listing plan payment failed (past_due)',
+                  });
+                  console.log(`📧 Listing past_due re-engagement email sent to ${pastDueUser.email}`);
+                }
+              } catch (pastDueEmailErr) {
+                console.error('❌ Failed to send listing past_due re-engagement email:', pastDueEmailErr);
+              }
+            }
+          }
+          return res.json({ received: true, type: event.type });
+        }
+
         if (subscription.status !== 'active' && subscription.status !== 'trialing') {
           return res.json({ received: true, type: event.type });
         }

@@ -119,7 +119,7 @@ export {
   generateWholesalerOrderNotificationEmail, generateReadyForCollectionEmail,
   wrapCustomerEmail, emailCard, emailButton, emailHeading, emailBadge, emailDivider,
   getEmailLogoUrl, buildItemisedRefundEmail, generateDowngradeScheduledEmail,
-  generateDowngradeEffectiveEmail, formatPackDescriptor,
+  generateDowngradeEffectiveEmail, generateListingLapseReEngagementEmail, formatPackDescriptor,
   sendWelcomeMessages,
   orderNotificationService,
   sendOrderStatusNotification,

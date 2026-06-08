@@ -676,3 +676,70 @@ export function generateDowngradeEffectiveEmail(data: DowngradeEffectiveEmailDat
 
   return { subject, html, text };
 }
+
+export interface ListingLapseReEngagementEmailData {
+  firstName: string;
+  email: string;
+  businessName: string;
+  isPastDue?: boolean;
+}
+
+export function generateListingLapseReEngagementEmail(data: ListingLapseReEngagementEmailData): { subject: string; html: string; text: string } {
+  const subject = data.isPastDue
+    ? 'Action needed: your Quikpik Listing subscription payment failed'
+    : 'We miss you — reactivate your Quikpik Listing today';
+
+  const listingFeaturesCard = emailCard(
+    emailHeading('What you had with Listing', { size: '15px', color: '#065f46' }) +
+    '<table width="100%" cellpadding="0" cellspacing="0"><tbody>' +
+    '<tr><td style="padding:5px 0;font-size:14px;color:#374151">✓</td><td style="padding:5px 0 5px 8px;font-size:14px;color:#374151">Public supplier profile — get discovered by retailers</td></tr>' +
+    '<tr><td style="padding:5px 0;font-size:14px;color:#374151">✓</td><td style="padding:5px 0 5px 8px;font-size:14px;color:#374151">Up to 10 product listings on the marketplace</td></tr>' +
+    '<tr><td style="padding:5px 0;font-size:14px;color:#374151">✓</td><td style="padding:5px 0 5px 8px;font-size:14px;color:#374151">Up to 2 price lists for your customers</td></tr>' +
+    '<tr><td style="padding:5px 0;font-size:14px;color:#374151">✓</td><td style="padding:5px 0 5px 8px;font-size:14px;color:#374151">Marketplace & search visibility</td></tr>' +
+    '<tr><td style="padding:5px 0;font-size:14px;color:#374151">✓</td><td style="padding:5px 0 5px 8px;font-size:14px;color:#374151">Retailer enquiries & leads direct to you</td></tr>' +
+    '</tbody></table>',
+    { borderColor: '#a7f3d0', bgColor: '#ecfdf5' }
+  );
+
+  const mainMessage = data.isPastDue
+    ? '<p style="margin:0 0 16px">Hi ' + (data.firstName || 'there') + ',</p>' +
+      '<p style="margin:0 0 20px">We weren\'t able to process the payment for your <b>Listing plan</b>. ' +
+      'To keep your supplier profile live and stay visible to retailers, please update your payment details.</p>'
+    : '<p style="margin:0 0 16px">Hi ' + (data.firstName || 'there') + ',</p>' +
+      '<p style="margin:0 0 20px">Your <b>Listing plan</b> subscription has ended and your supplier profile is no longer visible on the Quikpik marketplace. ' +
+      'Reactivating takes just a minute — and at <b>\u00A319.99&nbsp;/&nbsp;month</b> it\'s the easiest way to keep retailers finding you.</p>';
+
+  const ctaText = data.isPastDue ? 'Update Payment & Stay Listed' : 'Reactivate My Listing — \u00A319.99/mo';
+
+  const body =
+    emailHeading(data.isPastDue ? 'Payment failed — keep your listing live' : 'Your supplier listing has ended', { size: '22px', color: '#065f46' }) +
+    mainMessage +
+    listingFeaturesCard +
+    emailDivider() +
+    '<p style="margin:0 0 6px;color:#6b7280;font-size:13px;text-align:center">Reactivate now and your profile goes live immediately.</p>' +
+    emailButton(ctaText, UPGRADE_URL, '#10b981');
+
+  const html = wrapCustomerEmail(body, QUIKPIK_BRANDING, {
+    preheader: data.isPastDue
+      ? 'Update your payment to keep your Quikpik listing active'
+      : 'Your Quikpik Listing has ended — reactivate for \u00A319.99/month',
+  });
+
+  const text =
+    (data.isPastDue ? 'Payment failed — keep your Quikpik listing live\n\n' : 'Your Quikpik Listing has ended — come back anytime\n\n') +
+    'Hi ' + (data.firstName || 'there') + ',\n\n' +
+    (data.isPastDue
+      ? 'We couldn\'t process the payment for your Listing plan. Please update your payment details to keep your supplier profile visible to retailers.\n\n'
+      : 'Your Listing plan subscription has ended and your supplier profile is no longer visible on the Quikpik marketplace.\n\n' +
+        'Reactivating is quick and easy — just \u00A319.99/month.\n\n') +
+    'What you had with Listing:\n' +
+    '• Public supplier profile visible to retailers\n' +
+    '• Up to 10 product listings\n' +
+    '• Up to 2 price lists\n' +
+    '• Marketplace & search visibility\n' +
+    '• Retailer enquiries & leads\n\n' +
+    (data.isPastDue ? 'Update your payment: ' : 'Reactivate your listing: ') + UPGRADE_URL + '\n\n' +
+    'Powered by Quikpik Merchant';
+
+  return { subject, html, text };
+}
