@@ -28,36 +28,62 @@ const getPlanFeatures = (plan: string) => {
   const features = {
     premium: {
       name: "Premium",
-      price: "£39.99",
+      price: "£99.99",
       features: [
         "Unlimited products",
-        "Broadcast tools coming soon",
-        "Custom reports and insights",
-        "Priority email and phone support",
-        "B2B Marketplace access"
-      ]
+        "Unlimited price lists",
+        "Unlimited team members",
+        "Broadcast & marketing tools",
+        "Advanced permissions & reporting",
+        "Priority support",
+      ],
     },
     standard: {
-      name: "Standard", 
+      name: "Standard",
+      price: "£49.99",
+      features: [
+        "Up to 50 products",
+        "Up to 10 price lists",
+        "Up to 3 team members",
+        "Advanced analytics",
+        "Picking & checklists",
+        "Priority support",
+      ],
+    },
+    starter: {
+      name: "Starter",
+      price: "£29.99",
+      features: [
+        "Up to 20 products",
+        "Up to 5 price lists",
+        "Invoices & payments",
+        "Customer & order management",
+        "Customer portal",
+        "Stock tracking",
+      ],
+    },
+    listing: {
+      name: "Listing",
       price: "£19.99",
       features: [
-        "Up to 5 products",
-        "Broadcast tools coming soon",
-        "Basic dashboard analytics",
-        "Priority email support",
-        "Team management (3 members)"
-      ]
+        "Up to 10 products",
+        "Up to 2 price lists",
+        "Public supplier profile",
+        "Marketplace & search visibility",
+        "Retailer enquiries & leads",
+      ],
     },
     free: {
       name: "Free",
       price: "£0",
       features: [
-        "Up to 2 products",
-        "Broadcast tools coming soon",
-        "Basic dashboard analytics",
-        "Standard email support"
-      ]
-    }
+        "Up to 20 products",
+        "Up to 5 price lists",
+        "Invoices & payments",
+        "Customer management",
+        "Order management",
+      ],
+    },
   };
   return features[plan as keyof typeof features] || features.free;
 };
@@ -207,8 +233,8 @@ export function DowngradeConfirmationModal({
               <CardContent className="p-4">
                 <h3 className="font-semibold text-amber-900 mb-2">⚠️ Data Impact</h3>
                 <p className="text-amber-800 text-sm">
-                  If you have more than {targetPlan === 'free' ? '2 products' : '5 products'}, 
-                  your newest products will be locked but preserved. You can unlock them by deleting 
+                  If you currently have more products than the {targetFeatures.name} plan allows,
+                  your extra products will be locked but preserved. You can unlock them by removing
                   other products or upgrading again.
                 </p>
               </CardContent>

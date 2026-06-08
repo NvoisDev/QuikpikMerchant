@@ -424,8 +424,8 @@ export default function SubscriptionPricing() {
         </div>
       )}
 
-      {/* Billing Information Section — shown for paid plans */}
-      {currentSubscription && currentSubscription.currentPlan !== 'free' && currentSubscription.currentPlan !== 'listing' && (
+      {/* Billing Information Section — shown when there is an active Stripe subscription */}
+      {currentSubscription && currentSubscription.subscription?.stripeSubscriptionId && (
         <div className="mb-8 p-6 bg-blue-50 border border-blue-200 rounded-lg">
           <h3 className="text-lg font-semibold text-blue-900 mb-4 flex items-center gap-2">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -573,8 +573,8 @@ export default function SubscriptionPricing() {
         </div>
       )}
 
-      {/* Free/Listing plan — billing card */}
-      {currentSubscription && (currentSubscription.currentPlan === 'free' || currentSubscription.currentPlan === 'listing') && (
+      {/* Free/Listing plan — billing card — shown only when there is no active Stripe subscription */}
+      {currentSubscription && !currentSubscription.subscription?.stripeSubscriptionId && (currentSubscription.currentPlan === 'free' || currentSubscription.currentPlan === 'listing') && (
         <div className="mb-8 p-6 bg-gray-50 border border-gray-200 rounded-lg">
           <h3 className="text-lg font-semibold text-gray-800 mb-1 flex items-center gap-2">
             <CreditCard className="w-5 h-5 text-gray-500" />
@@ -582,7 +582,7 @@ export default function SubscriptionPricing() {
           </h3>
           <p className="text-sm text-gray-500 mb-4">
             {currentSubscription.currentPlan === 'free'
-              ? "You're on the Starter plan (grandfathered). Upgrade to Standard or Premium to unlock more products, team members, and advanced tools."
+              ? "You're on the Starter plan (grandfathered). Upgrade to Listing, Starter, Standard or Premium to unlock more products, team members, and advanced tools."
               : "You're on the Listing plan. Upgrade to Starter or above to unlock invoices, payments, order management, and customer tools."}
           </p>
           {currentSubscription.user?.subscriptionPeriodEnd && (
@@ -711,7 +711,6 @@ export default function SubscriptionPricing() {
           const isCurrent = isCurrentPlan(plan.planId) ||
             (plan.planId === 'starter' && (currentSubscription?.currentPlan === 'free'));
           const isMostPopular = !isCurrent && (plan.planId === 'standard' || plan.planId === 'standard_annual_intro' || plan.planId === 'standard_annual');
-          const isListingTier = tier === 'listing';
 
           // Tier accent colours
           const accentColor = isCurrent
@@ -750,7 +749,7 @@ export default function SubscriptionPricing() {
               <div className={`h-1 w-full ${accentColor}`} />
 
               {/* Status / popularity ribbon */}
-              {(isCurrent || isMostPopular || isListingTier) && (
+              {(isCurrent || isMostPopular) && (
                 <div className="flex justify-center pt-3">
                   {isCurrent ? (
                     <Badge className="bg-green-600 text-white px-3 py-0.5 text-xs font-semibold">
@@ -760,15 +759,11 @@ export default function SubscriptionPricing() {
                     <Badge className="bg-emerald-100 text-emerald-800 border border-emerald-300 px-3 py-0.5 text-xs font-semibold">
                       Most Popular
                     </Badge>
-                  ) : isListingTier ? (
-                    <Badge className="bg-green-100 text-green-700 border border-green-200 px-3 py-0.5 text-xs font-semibold">
-                      🎉 Free for 3 months
-                    </Badge>
                   ) : null}
                 </div>
               )}
 
-              <CardContent className={clsx('flex flex-col flex-1 px-5 pb-6', isCurrent || isMostPopular || isListingTier ? 'pt-3' : 'pt-6')}>
+              <CardContent className={clsx('flex flex-col flex-1 px-5 pb-6', isCurrent || isMostPopular ? 'pt-3' : 'pt-6')}>
                 {/* 1. Illustrated icon */}
                 <div className="mb-3">
                   {getPlanIcon(plan.planId)}
@@ -793,9 +788,7 @@ export default function SubscriptionPricing() {
                   <p className="text-xs text-gray-400 mt-1">
                     {isAnnual && savings
                       ? `Save £${savings.amount.toFixed(0)} vs monthly`
-                      : isListingTier
-                        ? 'Free intro — then £19.99/mo'
-                        : 'Billed monthly'}
+                      : 'Billed monthly'}
                   </p>
                 </div>
 
@@ -811,13 +804,11 @@ export default function SubscriptionPricing() {
                       ? 'Current Plan'
                       : processingPlanId === plan.planId
                         ? 'Processing...'
-                        : isListingTier
-                          ? 'Get Listed Free'
-                          : `Upgrade to ${plan.name}`}
+                        : `Get ${plan.name}`}
                   </Button>
 
-                  {/* Cancel/Downgrade — only shown on the current paid plan card */}
-                  {isCurrent && plan.planId !== 'free' && plan.planId !== 'listing' && (
+                  {/* Cancel/Downgrade — shown on the current paid plan card when there's an active Stripe subscription */}
+                  {isCurrent && plan.planId !== 'free' && currentSubscription?.subscription?.stripeSubscriptionId && (
                     isCancellationScheduled ? (
                       <div className="space-y-1.5">
                         <Button
@@ -829,7 +820,7 @@ export default function SubscriptionPricing() {
                         </Button>
                         {cancellationEndDate && (
                           <p className="text-xs text-center text-amber-700 leading-snug">
-                            Listing plan begins{' '}
+                            Access ends{' '}
                             <strong>
                               {cancellationEndDate.toLocaleDateString('en-GB', {
                                 weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
@@ -841,7 +832,7 @@ export default function SubscriptionPricing() {
                     ) : (
                       <Button
                         onClick={() => {
-                          setTargetDowngradePlan('listing');
+                          setTargetDowngradePlan(plan.planId === 'listing' ? 'free' : 'listing');
                           setShowDowngradeModal(true);
                         }}
                         disabled={cancelSubscriptionMutation.isPending}
