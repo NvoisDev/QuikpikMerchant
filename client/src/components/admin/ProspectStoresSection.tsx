@@ -327,7 +327,9 @@ function GoogleMapTab({ stores }: { stores: ProspectStore[] }) {
 // ─── Discover Tab ──────────────────────────────────────────────────────────────
 function DiscoverTab({ onAdded }: { onAdded: () => void }) {
   const { toast } = useToast();
+  const [location, setLocation] = useState("South East London");
   const [results, setResults] = useState<SweepResult[]>([]);
+  const [lastLocation, setLastLocation] = useState("");
   const [loading, setLoading] = useState(false);
   const [addingIds, setAddingIds] = useState<Set<string>>(new Set());
   const [addedIds, setAddedIds] = useState<Set<string>>(new Set());
@@ -335,13 +337,16 @@ function DiscoverTab({ onAdded }: { onAdded: () => void }) {
   const [hasRun, setHasRun] = useState(false);
 
   async function runSweep() {
+    if (!location.trim()) return;
     setLoading(true);
     setResults([]);
     setAddedIds(new Set());
+    setFilterQ("");
     try {
-      const res = await apiRequest("POST", "/api/admin/prospect-stores/sweep", {});
+      const res = await apiRequest("POST", "/api/admin/prospect-stores/sweep", { location: location.trim() });
       const data = await res.json();
       setResults(data.results ?? []);
+      setLastLocation(location.trim());
       setHasRun(true);
     } catch {
       toast({ title: "Sweep failed", description: "Could not connect to Google Places. Check that the API key is configured.", variant: "destructive" });
@@ -399,27 +404,39 @@ function DiscoverTab({ onAdded }: { onAdded: () => void }) {
           <div>
             <p className="text-sm font-semibold text-green-800">Auto-discover Nigerian &amp; African stores</p>
             <p className="text-xs text-green-700 mt-0.5">
-              Searches Google Places for Nigerian and African grocery shops, supermarkets, and cash-and-carries across South East London — then adds them to your prospect list in one click.
+              Searches Google Places for Nigerian and African grocery shops, supermarkets, and cash-and-carries — then adds them to your prospect list in one click.
             </p>
           </div>
         </div>
-        <Button
-          className="mt-3 text-white gap-2"
-          style={{ background: GREEN }}
-          size="sm"
-          onClick={runSweep}
-          disabled={loading}
-        >
-          <Sparkles className="h-3.5 w-3.5" />
-          {loading ? "Searching Google Places…" : hasRun ? "Search again" : "Find stores now"}
-        </Button>
+        <div className="mt-3 flex items-center gap-2">
+          <div className="relative flex-1 max-w-xs">
+            <MapPin className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-green-600" />
+            <Input
+              className="pl-8 h-8 text-xs bg-white border-green-200 focus:border-green-400"
+              placeholder="Postcode or area e.g. SE18, Woolwich"
+              value={location}
+              onChange={e => setLocation(e.target.value)}
+              onKeyDown={e => { if (e.key === "Enter" && location.trim() && !loading) runSweep(); }}
+            />
+          </div>
+          <Button
+            className="text-white gap-2 flex-shrink-0"
+            style={{ background: GREEN }}
+            size="sm"
+            onClick={runSweep}
+            disabled={loading || !location.trim()}
+          >
+            <Sparkles className="h-3.5 w-3.5" />
+            {loading ? "Searching…" : hasRun ? "Search again" : "Find stores"}
+          </Button>
+        </div>
       </div>
 
       {/* Loading */}
       {loading && (
         <div className="flex flex-col items-center py-12 text-sm text-gray-400 gap-2">
           <div className="w-6 h-6 border-2 border-green-600 border-t-transparent rounded-full animate-spin" />
-          <p>Scanning Google Places across South East London…</p>
+          <p>Scanning Google Places near <strong className="text-gray-500">{location}</strong>…</p>
           <p className="text-xs">This takes about 10–15 seconds</p>
         </div>
       )}
@@ -429,7 +446,7 @@ function DiscoverTab({ onAdded }: { onAdded: () => void }) {
         <>
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <p className="text-sm text-gray-600">
-              Found <strong>{results.length}</strong> stores —{" "}
+              Found <strong>{results.length}</strong> stores near <strong>{lastLocation}</strong> —{" "}
               <span className="text-green-700 font-medium">{newCount} new</span>
               {results.length - newCount > 0 && <span className="text-gray-400">, {results.length - newCount} already added</span>}
             </p>

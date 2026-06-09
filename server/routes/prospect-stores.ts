@@ -56,10 +56,13 @@ function parseHours(openingHours: any): { openingTime: string | null; closingTim
   };
 }
 
-// Single Google Places Text Search call
-async function textSearch(query: string, apiKey: string): Promise<any[]> {
+// Single Google Places Text Search call, optionally biased to a lat/lng
+async function textSearch(query: string, apiKey: string, bias?: { lat: number; lng: number; radius?: number }): Promise<any[]> {
   try {
-    const url = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(query)}&key=${apiKey}`;
+    let url = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(query)}&key=${apiKey}`;
+    if (bias) {
+      url += `&location=${bias.lat},${bias.lng}&radius=${bias.radius ?? 5000}`;
+    }
     const res = await fetch(url);
     if (!res.ok) return [];
     const data = await res.json() as any;
@@ -105,21 +108,36 @@ export function registerProspectStoreRoutes(app: Express): void {
       return res.status(503).json({ error: "Google Places API key not configured" });
     }
 
-    const QUERIES = [
-      "Nigerian grocery store London",
-      "African food store South East London",
-      "Nigerian supermarket London",
-      "African supermarket South East London",
-      "Nigerian cash and carry London",
-      "African cash and carry London",
-      "West African food store London",
-      "Afro-Caribbean grocery London",
-      "Nigerian provisions store London",
-      "African market South East London",
+    // Accept a location string (postcode or area name); default to South East London
+    const location: string = (req.body?.location ?? "South East London").trim() || "South East London";
+
+    // If it looks like a UK postcode (e.g. "SE18", "SE18 6HE"), try to geocode it
+    // for a tighter 5 km geographic bias; otherwise just append to query text
+    const UK_POSTCODE_RE = /^[A-Z]{1,2}[0-9][0-9A-Z]?(\s*[0-9][A-Z]{2})?$/i;
+    let bias: { lat: number; lng: number; radius: number } | undefined;
+    if (UK_POSTCODE_RE.test(location)) {
+      const coords = await geocodeAddress(location);
+      if (coords) bias = { lat: coords.lat, lng: coords.lng, radius: 5000 };
+    }
+
+    const BASE_QUERIES = [
+      "Nigerian grocery store",
+      "African food store",
+      "Nigerian supermarket",
+      "African supermarket",
+      "Nigerian cash and carry",
+      "African cash and carry",
+      "West African food store",
+      "Afro-Caribbean grocery",
+      "Nigerian provisions store",
+      "African market",
     ];
 
-    // Run all text searches in parallel
-    const rawResults = await Promise.all(QUERIES.map(q => textSearch(q, apiKey)));
+    // Append location to each query (provides text context even when bias is set)
+    const QUERIES = BASE_QUERIES.map(q => `${q} ${location}`);
+
+    // Run all text searches in parallel, passing geographic bias if available
+    const rawResults = await Promise.all(QUERIES.map(q => textSearch(q, apiKey, bias)));
 
     // Deduplicate by placeId
     const seen = new Set<string>();
