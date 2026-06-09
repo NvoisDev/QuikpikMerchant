@@ -81,6 +81,7 @@ interface Customer {
 interface GroupMember {
   id?: string;
   customerId?: string;
+  businessName?: string;
   firstName?: string;
   lastName?: string;
   name?: string;
@@ -443,7 +444,7 @@ export function CustomerGroupsTab({
   };
 
   const getInitials = (member: GroupMember) => {
-    return (member.firstName || member.name || (member.phoneNumber || member.phone_number || '').replace(/\D/g, '').slice(-2) || '?').charAt(0);
+    return (member.businessName || member.firstName || member.name || (member.phoneNumber || member.phone_number || '').replace(/\D/g, '').slice(-2) || '?').charAt(0);
   };
 
   const getDisplayName = (c: Customer | null | undefined) =>
@@ -774,7 +775,7 @@ export function CustomerGroupsTab({
                       </Avatar>
                       <div>
                         <p className="font-medium text-xs">
-                          {`${member.firstName || ''} ${member.lastName || ''}`.trim() || member.name || member.phoneNumber || member.phone_number || 'Unknown'}
+                          {member.businessName || `${member.firstName || ''} ${member.lastName || ''}`.trim() || member.name || member.phoneNumber || member.phone_number || 'Unknown'}
                         </p>
                         <p className="text-xs text-gray-500">{member.phoneNumber || member.phone_number}</p>
                       </div>
