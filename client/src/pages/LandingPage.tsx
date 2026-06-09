@@ -558,7 +558,7 @@ export default function LandingPage() {
                 <div className="flex-1 max-w-xl">
                   <div className="inline-flex items-center gap-2 bg-green-50 text-green-700 text-xs font-semibold px-4 py-1.5 rounded-full mb-7 border border-green-100 tracking-wide uppercase">
                     <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" />
-                    Find African wholesale suppliers
+                    Source products from verified African wholesale suppliers
                   </div>
 
                   <h1 className="text-4xl sm:text-5xl lg:text-[3.25rem] font-extrabold text-gray-950 leading-[1.15] tracking-tight mb-5">
