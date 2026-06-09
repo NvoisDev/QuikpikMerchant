@@ -277,8 +277,8 @@ function MarketplaceSearch() {
       <div className="absolute inset-0 bg-black/55" />
       <div className="relative max-w-3xl mx-auto px-4 sm:px-6">
         <div className="text-center mb-8">
-          <h2 className="text-4xl sm:text-5xl font-extrabold text-white tracking-tight mb-2 drop-shadow-sm">Find African wholesale suppliers</h2>
-          <p className="text-base text-white/80 mb-4">Search products from verified African wholesalers</p>
+          <h2 className="text-4xl sm:text-5xl font-extrabold text-white tracking-tight mb-2 drop-shadow-sm">Garri, beans, spices &amp; more</h2>
+          <p className="text-base text-white/80 mb-4">Source products from verified African wholesale suppliers</p>
           {/* Trust badges */}
           <div className="inline-flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 text-xs text-white/70">
             <span className="flex items-center gap-1.5">
