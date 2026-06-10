@@ -839,6 +839,10 @@ export function registerAuthCoreRoutes(app: Express): void {
         return res.status(401).json({ message: "Invalid email or password" });
       }
 
+      if (authenticatedUser.archived && authenticatedUser.role === 'wholesaler') {
+        return res.status(403).json({ message: "Your account has been suspended. Please contact hello@quikpik.co for assistance." });
+      }
+
       {
         const now = new Date();
         await db.update(users).set({ lastLoginAt: now, lastSeenAt: now, lastRealUserActivityAt: now }).where(eq(users.id, authenticatedUser.id));

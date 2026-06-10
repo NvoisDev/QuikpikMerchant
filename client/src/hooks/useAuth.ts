@@ -47,11 +47,15 @@ export function useAuth() {
         }
         
         if (res.status === 403) {
-          // Access denied - likely a customer trying to access wholesaler dashboard
+          // Access denied — parse error code to decide how to handle it
           const data = await res.json().catch(() => ({}));
           if (data.userType === 'retailer' || data.userType === 'customer') {
             window.location.href = '/customer-login';
             return null;
+          }
+          if (data.error === 'account_suspended') {
+            // Return a minimal user object so AccountSuspendedWall can render
+            return { archived: true } as AuthUser;
           }
         }
         

@@ -87,7 +87,7 @@ export async function verifyGoogleToken(code: string): Promise<GoogleUser> {
 }
 
 export class GoogleAuthBlockedError extends Error {
-  constructor(public readonly code: 'pending_team_invitation' | 'team_member_use_tab') {
+  constructor(public readonly code: 'pending_team_invitation' | 'team_member_use_tab' | 'account_suspended') {
     super(code);
     this.name = 'GoogleAuthBlockedError';
   }
@@ -124,6 +124,11 @@ export async function createOrUpdateUser(googleUser: GoogleUser) {
         return newUser;
       }
 
+      // Block suspended wholesalers from signing in
+      if (user.archived && user.role === 'wholesaler') {
+        throw new GoogleAuthBlockedError('account_suspended');
+      }
+
       // Returning wholesaler/admin already linked to this Google account — update profile and sign in
       user = await storage.updateUser(user.id, {
         firstName: googleUser.given_name || googleUser.name.split(' ')[0],
@@ -149,6 +154,11 @@ export async function createOrUpdateUser(googleUser: GoogleUser) {
       );
 
       if (linkable) {
+        // Block suspended wholesalers from signing in
+        if (linkable.archived && linkable.role === 'wholesaler') {
+          throw new GoogleAuthBlockedError('account_suspended');
+        }
+
         // Existing wholesaler/admin — link Google account and sign in
         user = await storage.updateUser(linkable.id, {
           firstName: googleUser.given_name || googleUser.name.split(' ')[0],
@@ -302,6 +312,13 @@ export const requireAuth = async (req: Request, res: Response, next: NextFunctio
           }
         }
         
+        // SECURITY: Block suspended wholesalers from all API access
+        // (Admin impersonation bypasses this check via the early return above)
+        if (user.archived && user.role === 'wholesaler') {
+          console.log(`🚫 SECURITY: Blocked suspended wholesaler (${user.email}) from ${req.method} ${req.url}`);
+          return res.status(403).json({ error: 'account_suspended' });
+        }
+
         req.user = user;
         // Enrich team members with their role from the teamMembers table so
         // downstream endpoints can use req.user.teamMemberRole directly.

@@ -39,6 +39,14 @@ export default function Login() {
       setTeamMemberNotice(true);
       setDefaultTab('team');
     }
+    if (error === 'account_suspended') {
+      toast({
+        title: "Account Suspended",
+        description: "Your account has been suspended. Please contact hello@quikpik.co for assistance.",
+        variant: "destructive",
+        duration: 10000,
+      });
+    }
     // Clean up the URL
     if (expired || error) {
       window.history.replaceState({}, document.title, window.location.pathname);
