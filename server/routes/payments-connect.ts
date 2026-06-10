@@ -1041,13 +1041,24 @@ export function registerPaymentConnectRoutes(app: Express): void {
           }).catch(err => console.error('Failed to log payment_success:', err));
         }
 
-        if (invUser.currentPlan === invPlanId && invUser.subscriptionStatus === 'active') {
+        // Calculate period dates FIRST so the early-exit guard can check them.
+        // Moving this above the guard is the critical fix: the old code would skip
+        // updating period dates on renewals where the plan and status are unchanged
+        // (which is exactly what happens every month on auto-renew).
+        const invPeriodEnd = new Date(invSub.current_period_end * 1000);
+        const invPeriodStart = new Date(invSub.current_period_start * 1000);
+        const storedInvPeriodEnd = invUser.subscriptionPeriodEnd ?? invUser.subscriptionEndsAt;
+        const invPeriodEndUnchanged = storedInvPeriodEnd
+          ? Math.abs(storedInvPeriodEnd.getTime() - invPeriodEnd.getTime()) < 60_000
+          : false;
+
+        // Only skip when plan, status, AND billing period are all already in sync.
+        // Do NOT skip when the period end has advanced — that is the renewal scenario.
+        if (invUser.currentPlan === invPlanId && invUser.subscriptionStatus === 'active' && invPeriodEndUnchanged) {
           return res.json({ received: true, type: event.type });
         }
 
         const invProductLimit = invPlanId === 'premium' ? -1 : (invPlanId === 'standard' ? 5 : 2);
-        const invPeriodEnd = new Date(invSub.current_period_end * 1000);
-        const invPeriodStart = new Date(invSub.current_period_start * 1000);
 
         await storage.updateUser(invUser.id, {
           currentPlan: invPlanId,

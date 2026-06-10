@@ -526,7 +526,7 @@ export class SubscriptionService {
    */
   static async getUserSubscription(userId: string) {
     try {
-      const [user] = await db.select().from(users).where(eq(users.id, userId));
+      let [user] = await db.select().from(users).where(eq(users.id, userId));
       if (!user) {
         throw new Error('User not found');
       }
@@ -541,6 +541,51 @@ export class SubscriptionService {
         .leftJoin(subscriptionPlans, eq(userSubscriptions.planId, subscriptionPlans.planId))
         .where(eq(userSubscriptions.userId, userId))
         .orderBy(userSubscriptions.createdAt);
+
+      // ── Live-sync fallback ───────────────────────────────────────────────────
+      // If the stored period end is in the past but the user has an active paid
+      // subscription, a webhook was missed for the most recent renewal.  Fetch the
+      // live subscription from Stripe and write the correct period dates to the DB
+      // so the billing card is accurate on the very next page load.
+      const storedPeriodEnd = user.subscriptionPeriodEnd ?? user.subscriptionEndsAt;
+      const isActivePaidPlan = user.stripeSubscriptionId &&
+        (user.subscriptionStatus === 'active' || user.subscriptionStatus === 'trialing') &&
+        user.currentPlan && user.currentPlan !== 'free';
+      const isPeriodStale = storedPeriodEnd && storedPeriodEnd < new Date();
+
+      if (isActivePaidPlan && isPeriodStale) {
+        try {
+          const stripe = getStripeClient(Boolean(user.isTestAccount));
+          const liveSub = await stripe.subscriptions.retrieve(user.stripeSubscriptionId!);
+          if (liveSub.status === 'active' || liveSub.status === 'trialing') {
+            const livePeriodEnd = new Date(liveSub.current_period_end * 1000);
+            const livePeriodStart = new Date(liveSub.current_period_start * 1000);
+            // Only write back if the live period is actually newer (it should always be)
+            if (!storedPeriodEnd || livePeriodEnd > storedPeriodEnd) {
+              await db.update(users).set({
+                subscriptionPeriodStart: livePeriodStart,
+                subscriptionPeriodEnd: livePeriodEnd,
+                subscriptionEndsAt: livePeriodEnd,
+                updatedAt: new Date(),
+              }).where(eq(users.id, userId));
+              // Update userSubscriptions table too
+              await db.update(userSubscriptions).set({
+                currentPeriodStart: livePeriodStart,
+                currentPeriodEnd: livePeriodEnd,
+                updatedAt: new Date(),
+              }).where(eq(userSubscriptions.userId, userId));
+              console.log(`🔄 Live-synced stale billing period for user ${userId}: ${livePeriodStart.toISOString()} – ${livePeriodEnd.toISOString()}`);
+              // Re-read the updated user so the returned object has correct dates
+              const [refreshed] = await db.select().from(users).where(eq(users.id, userId));
+              if (refreshed) user = refreshed;
+            }
+          }
+        } catch (syncErr) {
+          // Non-fatal — log and continue with stale data rather than failing the request
+          console.warn(`⚠️ Billing period live-sync failed for user ${userId}:`, syncErr);
+        }
+      }
+      // ────────────────────────────────────────────────────────────────────────
 
       // Strip admin-only fields from the subscription before returning to the client
       let publicSubscription: Record<string, unknown> | null = null;
