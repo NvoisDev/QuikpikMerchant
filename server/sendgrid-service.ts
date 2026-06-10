@@ -340,4 +340,68 @@ ${emailButton('View Unfulfilled Orders', ordersLink, '#10b981')}
   });
 }
 
+export async function sendTrialReminderEmail(data: {
+  wholesalerEmail: string;
+  wholesalerName: string;
+  daysRemaining: number;
+  trialEndDate: Date;
+}): Promise<boolean> {
+  const { wrapCustomerEmail, emailCard, emailButton, emailHeading, emailBadge } = await import('./email-templates');
+
+  const formattedDate = data.trialEndDate.toLocaleDateString('en-GB', {
+    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+  });
+
+  const urgencyColor = data.daysRemaining <= 3 ? '#dc2626' : '#d97706';
+  const urgencyBg = data.daysRemaining <= 3 ? '#fef2f2' : '#fffbeb';
+  const urgencyBorder = data.daysRemaining <= 3 ? '#fca5a5' : '#fcd34d';
+
+  const featuresLost = [
+    'Full product catalogue (limited to 2 products on free)',
+    'Customer portal & online ordering',
+    'Invoice & payment processing',
+    'WhatsApp marketing & broadcasts',
+    'Stock management & low-stock alerts',
+    'Order history & business reports',
+  ];
+
+  const featureRows = featuresLost.map(f =>
+    `<li style="padding:4px 0;color:#374151;font-size:14px">✓ ${f}</li>`
+  ).join('');
+
+  const body = `
+    <p style="font-size:16px;margin:0 0 8px">Hi ${data.wholesalerName},</p>
+    <p style="margin:0 0 20px">Your free 90-day trial is coming to an end. We wanted to give you a heads-up so you're not caught off guard.</p>
+    ${emailCard(
+      `${emailHeading(`Your trial ends in ${data.daysRemaining} day${data.daysRemaining === 1 ? '' : 's'}`, { color: urgencyColor })}
+      <p style="margin:0;font-size:15px;color:${urgencyColor}"><strong>Expiry date:</strong> ${formattedDate}</p>`,
+      { borderColor: urgencyBorder, bgColor: urgencyBg }
+    )}
+    <p style="margin:16px 0 8px;font-weight:600;color:#1f2937">What you'll lose access to after your trial ends:</p>
+    <ul style="margin:0 0 20px;padding-left:20px">${featureRows}</ul>
+    <p style="margin:0 0 16px;color:#6b7280;font-size:14px">To keep your store running smoothly, choose a plan before your trial expires. Plans start from just <strong>£29.99/month</strong>.</p>
+    ${emailButton('View Subscription Plans', 'https://app.quikpik.co/settings/subscription', '#10b981')}
+    ${emailCard(
+      `<p style="margin:0;font-size:13px;color:#6b7280">After your trial ends your account reverts to the free tier — your data is safe and you can upgrade at any time, but order-taking and customer access will be restricted until you subscribe.</p>`,
+      { borderColor: '#e5e7eb', bgColor: '#f9fafb' }
+    )}
+    <p style="margin:20px 0 0;font-size:14px;color:#6b7280">Questions? Reply to this email or visit <a href="https://quikpik.co" style="color:#10b981">quikpik.co</a> — we're happy to help.</p>
+  `;
+
+  const html = wrapCustomerEmail(body, {
+    businessName: 'Quikpik Merchant',
+  }, { preheader: `Your free trial ends in ${data.daysRemaining} day${data.daysRemaining === 1 ? '' : 's'} — don't lose access` });
+
+  const subject = data.daysRemaining <= 3
+    ? `⏰ ${data.daysRemaining} day${data.daysRemaining === 1 ? '' : 's'} left on your Quikpik trial`
+    : `Your Quikpik free trial ends in ${data.daysRemaining} days`;
+
+  return await sendEmail({
+    to: data.wholesalerEmail,
+    from: 'hello@quikpik.co',
+    subject,
+    html,
+  });
+}
+
 export default { sendEmail, sendOrderConfirmationEmail, sendOrderPhotoNotificationEmail, sendWholesalerOrderNotification, sendPaymentReminderEmail, sendStripeVerifiedEmail, sendWeeklyOrderDigestEmail };

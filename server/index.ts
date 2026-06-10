@@ -18,6 +18,7 @@ import { validateDatabaseConnection } from "./health";
 import { startDatabaseMaintenance } from "./database-maintenance";
 import { checkAndSendPaymentReminders } from "./payment-reminders";
 import { checkAndSendWeeklyOrderDigests } from "./services/weeklyOrderDigestService";
+import { checkAndSendTrialReminders } from "./services/trialReminderService";
 import cron from 'node-cron';
 import { db } from "./db";
 import { sql, eq, inArray } from "drizzle-orm";
@@ -456,6 +457,9 @@ async function runStartupMigrations() {
        AND subscription_period_end IS NULL
        AND (subscription_status IS NULL OR subscription_status IN ('free', 'inactive'))
        AND created_at > NOW() - INTERVAL '1 year'`,
+    // Task #1327: Trial expiry reminder tracking columns
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS trial_14day_reminder_sent_at TIMESTAMP`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS trial_3day_reminder_sent_at TIMESTAMP`,
   ];
   for (const stmt of migrations) {
     await db.execute(sql.raw(stmt));
@@ -826,6 +830,17 @@ httpServer.listen({ port, host: '0.0.0.0', reusePort: true }, () => {
       }
     });
     console.log(`📧 Payment reminder system enabled (daily at 9 AM)`);
+
+    cron.schedule('0 9 * * *', async () => {
+      console.log('⏳ Running trial expiry reminder check...');
+      try {
+        const sent = await checkAndSendTrialReminders();
+        if (sent > 0) console.log(`⏳ Trial reminders: ${sent} email(s) sent`);
+      } catch (error) {
+        console.error('❌ Trial reminder check failed:', error);
+      }
+    });
+    console.log(`⏳ Trial expiry reminder system enabled (daily at 9 AM)`);
 
     const { promotionNotificationService } = await import("./services/promotionNotificationService");
     cron.schedule('0 10 * * *', async () => {

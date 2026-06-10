@@ -324,6 +324,10 @@ export const users = pgTable("users", {
   customPricePlanIdAnnual: varchar("custom_price_plan_id_annual"),
   customPricePlanIdMonthly: varchar("custom_price_plan_id_monthly"),
 
+  // Trial expiry reminder tracking — prevents duplicate sends
+  trial14DayReminderSentAt: timestamp("trial_14day_reminder_sent_at"),
+  trial3DayReminderSentAt: timestamp("trial_3day_reminder_sent_at"),
+
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => ({
