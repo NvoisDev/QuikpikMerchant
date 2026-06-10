@@ -314,6 +314,11 @@ export const users = pgTable("users", {
   customerFeePercentage: decimal("customer_fee_percentage", { precision: 6, scale: 4 }),
   customerFixedFee: decimal("customer_fixed_fee", { precision: 6, scale: 2 }),
 
+  // Custom subscription price overrides (admin-set per wholesaler, null = use standard plan price)
+  // Stored as the actual price in GBP, e.g. 499.99
+  customMonthlyPrice: decimal("custom_monthly_price", { precision: 10, scale: 2 }),
+  customAnnualPrice: decimal("custom_annual_price", { precision: 10, scale: 2 }),
+
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => ({

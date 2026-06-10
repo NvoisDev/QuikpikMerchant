@@ -239,8 +239,8 @@ export function registerAdminCoreRoutes(app: Express): void {
           internalNote: subscriptionByWholesaler[w.id]?.internalNote ?? null,
           customPriceExpiresAt: subscriptionByWholesaler[w.id]?.customPriceExpiresAt ?? null,
           logoUrl: w.logoUrl ?? null,
-          customAnnualPrice: w.customAnnualPrice !== null && w.customAnnualPrice !== undefined ? parseFloat(w.customAnnualPrice) : null,
           customMonthlyPrice: w.customMonthlyPrice !== null && w.customMonthlyPrice !== undefined ? parseFloat(w.customMonthlyPrice) : null,
+          customAnnualPrice: w.customAnnualPrice !== null && w.customAnnualPrice !== undefined ? parseFloat(w.customAnnualPrice) : null,
         };
       }).sort((a, b) => {
         if (a.isTestAccount !== b.isTestAccount) return a.isTestAccount ? 1 : -1;
@@ -403,6 +403,77 @@ export function registerAdminCoreRoutes(app: Express): void {
     } catch (error) {
       console.error('Admin customer-fee-override error:', error);
       res.status(500).json({ error: 'Failed to update customer fee override' });
+    }
+  });
+
+  // PATCH /api/admin/wholesalers/:id/custom-pricing
+  // Sets or clears per-wholesaler custom subscription prices.
+  // Body: { customMonthlyPrice: number | null, customAnnualPrice: number | null }
+  app.patch('/api/admin/wholesalers/:id/custom-pricing', requireAuth, async (req: any, res) => {
+    try {
+      if (!ADMIN_EMAILS.includes(getAdminEmail(req) || "")) return res.status(403).json({ error: 'Forbidden' });
+
+      const [targetUser] = await db.select({ id: users.id, role: users.role })
+        .from(users).where(eq(users.id, req.params.id)).limit(1);
+      if (!targetUser || targetUser.role !== 'wholesaler') return res.status(404).json({ error: 'Wholesaler not found' });
+
+      const body = req.body as Record<string, unknown>;
+
+      // True partial patch — only update fields explicitly present in the request body.
+      // A field set to null means "clear the override"; an absent field means "leave unchanged".
+      let newMonthly: string | null | undefined = undefined; // undefined = not in body (no change)
+      let newAnnual: string | null | undefined = undefined;
+
+      if ('customMonthlyPrice' in body) {
+        const val = body.customMonthlyPrice;
+        if (val !== null) {
+          if (typeof val !== 'number' || val < 0 || val > 99999) {
+            return res.status(400).json({ error: 'customMonthlyPrice must be a number between 0 and 99999' });
+          }
+          newMonthly = (val as number).toFixed(2);
+        } else {
+          newMonthly = null;
+        }
+      }
+
+      if ('customAnnualPrice' in body) {
+        const val = body.customAnnualPrice;
+        if (val !== null) {
+          if (typeof val !== 'number' || val < 0 || val > 99999) {
+            return res.status(400).json({ error: 'customAnnualPrice must be a number between 0 and 99999' });
+          }
+          newAnnual = (val as number).toFixed(2);
+        } else {
+          newAnnual = null;
+        }
+      }
+
+      if (newMonthly === undefined && newAnnual === undefined) {
+        return res.status(400).json({ error: 'No fields provided to update' });
+      }
+
+      // Build a typed Drizzle update object using schema camelCase keys
+      const setPayload: Partial<typeof users.$inferInsert> = {};
+      if (newMonthly !== undefined) (setPayload as any).customMonthlyPrice = newMonthly;
+      if (newAnnual !== undefined) (setPayload as any).customAnnualPrice = newAnnual;
+
+      await db.update(users)
+        .set(setPayload)
+        .where(eq(users.id, req.params.id));
+
+      // Re-fetch the updated row to return current state
+      const [updatedRow] = await db.select().from(users).where(eq(users.id, req.params.id)).limit(1);
+
+      res.json({
+        id: req.params.id,
+        customMonthlyPrice: (updatedRow as any)?.customMonthlyPrice !== null && (updatedRow as any)?.customMonthlyPrice !== undefined
+          ? parseFloat((updatedRow as any).customMonthlyPrice) : null,
+        customAnnualPrice: (updatedRow as any)?.customAnnualPrice !== null && (updatedRow as any)?.customAnnualPrice !== undefined
+          ? parseFloat((updatedRow as any).customAnnualPrice) : null,
+      });
+    } catch (error) {
+      console.error('Admin custom-pricing error:', error);
+      res.status(500).json({ error: 'Failed to update custom subscription pricing' });
     }
   });
 

@@ -45,8 +45,8 @@ export function WholesalersSection({ wholesalers, wholesalersLoading, isAdmin }:
   const [customPriceNote, setCustomPriceNote] = useState("");
   const [customPriceExpiry, setCustomPriceExpiry] = useState("");
   const [customFeeInput, setCustomFeeInput] = useState("");
-  const [customSubPriceInput, setCustomSubPriceInput] = useState({ annual: "", monthly: "" });
   const [customerFeeInput, setCustomerFeeInput] = useState({ percentage: "", fixed: "" });
+  const [customSubPriceInput, setCustomSubPriceInput] = useState({ monthly: "", annual: "" });
   const [legalInfoInput, setLegalInfoInput] = useState({ legalBusinessName: "", vatNumber: "", companyRegistrationNumber: "" });
   const [createTesterOpen, setCreateTesterOpen] = useState(false);
   const [testerForm, setTesterForm] = useState({ firstName: "", lastName: "", email: "", password: "" });
@@ -170,26 +170,6 @@ export function WholesalersSection({ wholesalers, wholesalersLoading, isAdmin }:
     onError: (e: Error) => toast({ title: e.message, variant: "destructive" }),
   });
 
-  const customSubPricingMutation = useMutation({
-    mutationFn: async ({ id, annual, monthly }: { id: string; annual: number | null; monthly: number | null }) => {
-      const r = await apiRequest("PATCH", `/api/admin/wholesalers/${id}/custom-subscription-pricing`, {
-        customAnnualPrice: annual,
-        customMonthlyPrice: monthly,
-      });
-      if (!r.ok) { const e = await r.json(); throw new Error(e.error || "Failed"); }
-      return r.json();
-    },
-    onSuccess: async (_data, variables) => {
-      await queryClient.refetchQueries({ queryKey: ["/api/admin/wholesalers"] });
-      const updated = queryClient.getQueryData<WholesalerRow[]>(["/api/admin/wholesalers"]);
-      if (updated) {
-        const fresh = updated.find(w => w.id === variables.id);
-        if (fresh) setSelectedWholesaler(fresh);
-      }
-      toast({ title: variables.annual === null && variables.monthly === null ? "Negotiated prices cleared" : "Negotiated prices saved" });
-    },
-    onError: (e: Error) => toast({ title: e.message, variant: "destructive" }),
-  });
 
   const customFeeMutation = useMutation({
     mutationFn: async ({ id, fee }: { id: string; fee: number | null }) => {
@@ -286,6 +266,28 @@ export function WholesalersSection({ wholesalers, wholesalersLoading, isAdmin }:
     });
   }, [wholesalers, planFilter]);
 
+  const customSubPriceMutation = useMutation({
+    mutationFn: async ({ id, monthly, annual }: { id: string; monthly: number | null; annual: number | null }) => {
+      const r = await apiRequest("PATCH", `/api/admin/wholesalers/${id}/custom-pricing`, {
+        customMonthlyPrice: monthly,
+        customAnnualPrice: annual,
+      });
+      if (!r.ok) { const e = await r.json(); throw new Error(e.error || "Failed"); }
+      return r.json();
+    },
+    onSuccess: async (_data, variables) => {
+      await queryClient.refetchQueries({ queryKey: ["/api/admin/wholesalers"] });
+      const updated = queryClient.getQueryData<WholesalerRow[]>(["/api/admin/wholesalers"]);
+      if (updated) {
+        const fresh = updated.find(w => w.id === variables.id);
+        if (fresh) setSelectedWholesaler(fresh);
+      }
+      const isClearing = variables.monthly === null && variables.annual === null;
+      toast({ title: isClearing ? "Custom subscription pricing cleared" : "Custom subscription pricing saved" });
+    },
+    onError: (e: Error) => toast({ title: e.message, variant: "destructive" }),
+  });
+
   const openDrawer = (w: WholesalerRow) => {
     setSelectedWholesaler(w);
     setCustomFeeInput(w.customFeePercentage !== null && w.customFeePercentage !== undefined ? String(w.customFeePercentage) : "");
@@ -294,6 +296,10 @@ export function WholesalersSection({ wholesalers, wholesalersLoading, isAdmin }:
         ? (w.customerFeePercentage * 100).toFixed(2) : "",
       fixed: w.customerFixedFee !== null && w.customerFixedFee !== undefined
         ? String(w.customerFixedFee) : "",
+    });
+    setCustomSubPriceInput({
+      monthly: w.customMonthlyPrice !== null && w.customMonthlyPrice !== undefined ? String(w.customMonthlyPrice) : "",
+      annual: w.customAnnualPrice !== null && w.customAnnualPrice !== undefined ? String(w.customAnnualPrice) : "",
     });
     setLegalInfoInput({ legalBusinessName: w.legalBusinessName || "", vatNumber: w.vatNumber || "", companyRegistrationNumber: w.companyRegistrationNumber || "" });
     setChangePlanId("");
@@ -405,6 +411,19 @@ export function WholesalersSection({ wholesalers, wholesalersLoading, isAdmin }:
                       <TableCell onClick={e => e.stopPropagation()}>
                         <div className="flex items-center gap-1.5 flex-wrap">
                           {planBadge(w.subscriptionTier)}
+                          {(w.customMonthlyPrice !== null && w.customMonthlyPrice !== undefined) || (w.customAnnualPrice !== null && w.customAnnualPrice !== undefined) ? (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-violet-50 text-violet-700 border border-violet-200 cursor-default">£ Custom</span>
+                              </TooltipTrigger>
+                              <TooltipContent side="top" className="max-w-xs text-xs">
+                                {[
+                                  w.customMonthlyPrice !== null && w.customMonthlyPrice !== undefined ? `Monthly: £${Number(w.customMonthlyPrice).toFixed(2)}` : null,
+                                  w.customAnnualPrice !== null && w.customAnnualPrice !== undefined ? `Annual: £${Number(w.customAnnualPrice).toFixed(2)}` : null,
+                                ].filter(Boolean).join(" · ")}
+                              </TooltipContent>
+                            </Tooltip>
+                          ) : null}
                           {w.isCustomPricing && (
                             <Tooltip>
                               <TooltipTrigger asChild>
@@ -640,53 +659,62 @@ export function WholesalersSection({ wholesalers, wholesalersLoading, isAdmin }:
                 <p className="text-xs text-gray-400 mt-1.5">Leave a field blank to keep the platform default for that component.</p>
               </div>
 
-              {/* Negotiated Subscription Price */}
+              {/* Custom Subscription Pricing */}
               <div className="border-t border-gray-100 pt-3">
                 <p className="text-xs font-semibold text-gray-700 mb-1 flex items-center gap-1.5">
-                  <CreditCard className="h-3.5 w-3.5 text-indigo-500" />Negotiated Subscription Price
+                  <CreditCard className="h-3.5 w-3.5 text-violet-500" />Custom Subscription Pricing
                 </p>
                 <p className="text-xs text-gray-400 mb-2">
-                  {(selectedWholesaler.customAnnualPrice || selectedWholesaler.customMonthlyPrice)
-                    ? `${selectedWholesaler.customAnnualPrice ? `Annual: £${selectedWholesaler.customAnnualPrice.toFixed(2)}/yr` : "Annual: standard"}  ${selectedWholesaler.customMonthlyPrice ? `Monthly: £${selectedWholesaler.customMonthlyPrice.toFixed(2)}/mo` : "Monthly: standard"}`
-                    : "No override — standard plan prices apply"}
+                  Set negotiated prices for this wholesaler. When set, these override the standard plan price at checkout. Leave blank to use the standard rate.
                 </p>
-                <div className="flex gap-2 items-center mb-2">
+                {(selectedWholesaler.customMonthlyPrice !== null && selectedWholesaler.customMonthlyPrice !== undefined) || (selectedWholesaler.customAnnualPrice !== null && selectedWholesaler.customAnnualPrice !== undefined) ? (
+                  <p className="text-xs text-violet-700 font-medium mb-2">
+                    Currently: {[
+                      selectedWholesaler.customMonthlyPrice !== null && selectedWholesaler.customMonthlyPrice !== undefined ? `Monthly £${Number(selectedWholesaler.customMonthlyPrice).toFixed(2)}` : null,
+                      selectedWholesaler.customAnnualPrice !== null && selectedWholesaler.customAnnualPrice !== undefined ? `Annual £${Number(selectedWholesaler.customAnnualPrice).toFixed(2)}` : null,
+                    ].filter(Boolean).join(" · ")}
+                  </p>
+                ) : (
+                  <p className="text-xs text-gray-400 mb-2">Currently: standard plan rates (no override)</p>
+                )}
+                <div className="flex gap-2 items-center">
                   <div className="relative flex-1">
                     <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-gray-400">£</span>
-                    <input type="number" min="0" step="0.01" placeholder="Annual price"
-                      value={customSubPriceInput.annual}
-                      onChange={e => setCustomSubPriceInput(p => ({ ...p, annual: e.target.value }))}
-                      className="w-full h-8 text-xs border border-gray-200 rounded-md pl-5 pr-2 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-400"
-                    />
-                  </div>
-                  <div className="relative flex-1">
-                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-gray-400">£</span>
-                    <input type="number" min="0" step="0.01" placeholder="Monthly price"
+                    <input type="number" min="0" max="99999" step="0.01" placeholder="Monthly price"
                       value={customSubPriceInput.monthly}
                       onChange={e => setCustomSubPriceInput(p => ({ ...p, monthly: e.target.value }))}
-                      className="w-full h-8 text-xs border border-gray-200 rounded-md pl-5 pr-2 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                      className="w-full h-8 text-xs border border-gray-200 rounded-md pl-5 pr-2 bg-white focus:outline-none focus:ring-1 focus:ring-violet-400"
                     />
                   </div>
-                  <Button size="sm" className="h-8 text-xs bg-indigo-600 hover:bg-indigo-700 text-white"
-                    disabled={customSubPricingMutation.isPending || (customSubPriceInput.annual === "" && customSubPriceInput.monthly === "")}
+                  <div className="relative flex-1">
+                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-gray-400">£</span>
+                    <input type="number" min="0" max="99999" step="0.01" placeholder="Annual price"
+                      value={customSubPriceInput.annual}
+                      onChange={e => setCustomSubPriceInput(p => ({ ...p, annual: e.target.value }))}
+                      className="w-full h-8 text-xs border border-gray-200 rounded-md pl-5 pr-2 bg-white focus:outline-none focus:ring-1 focus:ring-violet-400"
+                    />
+                  </div>
+                  <Button size="sm" className="h-8 text-xs bg-violet-600 hover:bg-violet-700 text-white gap-1"
+                    disabled={customSubPriceMutation.isPending || (customSubPriceInput.monthly === "" && customSubPriceInput.annual === "")}
                     onClick={() => {
-                      const annual = customSubPriceInput.annual !== "" ? parseFloat(customSubPriceInput.annual) : null;
                       const monthly = customSubPriceInput.monthly !== "" ? parseFloat(customSubPriceInput.monthly) : null;
-                      if (annual !== null && (isNaN(annual) || annual <= 0)) { toast({ title: "Enter a valid annual price", variant: "destructive" }); return; }
-                      if (monthly !== null && (isNaN(monthly) || monthly <= 0)) { toast({ title: "Enter a valid monthly price", variant: "destructive" }); return; }
-                      customSubPricingMutation.mutate({ id: selectedWholesaler.id, annual, monthly });
-                      setCustomSubPriceInput({ annual: "", monthly: "" });
+                      const annual = customSubPriceInput.annual !== "" ? parseFloat(customSubPriceInput.annual) : null;
+                      if (monthly !== null && (isNaN(monthly) || monthly < 0)) { toast({ title: "Enter a valid monthly price", variant: "destructive" }); return; }
+                      if (annual !== null && (isNaN(annual) || annual < 0)) { toast({ title: "Enter a valid annual price", variant: "destructive" }); return; }
+                      customSubPriceMutation.mutate({ id: selectedWholesaler.id, monthly, annual });
                     }}>Save</Button>
-                  {(selectedWholesaler.customAnnualPrice || selectedWholesaler.customMonthlyPrice) && (
+                  {((selectedWholesaler.customMonthlyPrice !== null && selectedWholesaler.customMonthlyPrice !== undefined) || (selectedWholesaler.customAnnualPrice !== null && selectedWholesaler.customAnnualPrice !== undefined)) && (
                     <Button size="sm" variant="outline" className="h-8 text-xs border-gray-200"
-                      disabled={customSubPricingMutation.isPending}
+                      disabled={customSubPriceMutation.isPending}
                       onClick={() => {
-                        customSubPricingMutation.mutate({ id: selectedWholesaler.id, annual: null, monthly: null });
-                        setCustomSubPriceInput({ annual: "", monthly: "" });
-                      }}>Clear</Button>
+                        customSubPriceMutation.mutate({ id: selectedWholesaler.id, monthly: null, annual: null });
+                        setCustomSubPriceInput({ monthly: "", annual: "" });
+                      }}>
+                      Clear
+                    </Button>
                   )}
                 </div>
-                <p className="text-xs text-gray-400">Leave a field blank to keep standard pricing for that interval.</p>
+                <p className="text-xs text-gray-400 mt-1.5">Leave a field blank to keep the standard rate for that billing interval.</p>
               </div>
 
               {/* Wholesaler Platform Fee */}

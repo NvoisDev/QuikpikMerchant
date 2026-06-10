@@ -258,12 +258,45 @@ export function registerSubscriptionRoutes(app: Express): void {
             console.warn('⚠️ Could not check prior subscriptions for trial eligibility — skipping trial:', subCheckErr);
           }
         }
-        
+
+        // Check whether this wholesaler has a custom subscription price override.
+        // If so, create an ad-hoc Stripe Price tied to the plan's product and use it
+        // instead of the standard plan price ID.
+        const [wholesalerRow] = await db.select({
+          customMonthlyPrice: (users as any).customMonthlyPrice,
+          customAnnualPrice: (users as any).customAnnualPrice,
+        }).from(users).where(eq(users.id, userId)).limit(1);
+
+        const isAnnualPlan = targetPlan.billingInterval === 'yearly';
+        const customPriceGBP = isAnnualPlan
+          ? wholesalerRow?.customAnnualPrice
+          : wholesalerRow?.customMonthlyPrice;
+
+        let resolvedPriceId = priceId;
+        if (customPriceGBP !== null && customPriceGBP !== undefined && targetPlan.stripeProductId) {
+          const customAmountPence = Math.round(parseFloat(String(customPriceGBP)) * 100);
+          console.log(`[subscriptions] Using custom price override for user ${userId}: £${customPriceGBP} (${customAmountPence}p) on plan ${targetPlan.planId}`);
+          const adHocPrice = await stripe.prices.create({
+            unit_amount: customAmountPence,
+            currency: 'gbp',
+            recurring: {
+              interval: isAnnualPlan ? 'year' : 'month',
+            },
+            product: targetPlan.stripeProductId,
+            metadata: {
+              userId,
+              planId: targetPlan.planId,
+              customPrice: 'true',
+            },
+          });
+          resolvedPriceId = adHocPrice.id;
+        }
+
         const sessionOptions: any = {
           customer: stripeCustomerId,
           payment_method_types: ['card'],
           line_items: [{
-            price: effectivePriceId,
+            price: resolvedPriceId,
             quantity: 1,
           }],
           mode: 'subscription',

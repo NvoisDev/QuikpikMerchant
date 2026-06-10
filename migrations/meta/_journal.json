@@ -29,6 +29,13 @@
       "when": 1778161686467,
       "tag": "0003_sudden_doctor_spectrum",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1749549600000,
+      "tag": "0008_custom_subscription_pricing",
+      "breakpoints": true
     }
   ]
 }
