@@ -10,6 +10,27 @@ import { resolveWholesalerId } from "../utils/resolveWholesalerId";
 import { getProductLimit } from "../utils/plan-tier";
 import { paymentLimiter } from "./payments-connect";
 
+/**
+ * If a wholesaler has a custom price tied to a specific plan and they switch to a
+ * different plan, clear the stale override so the pricing page no longer shows a
+ * "Your price" badge that no longer applies.
+ */
+async function clearCustomPriceIfPlanChanged(userId: number, newPlanId: string): Promise<void> {
+  const [user] = await db
+    .select({ customPricePlanId: (users as any).customPricePlanId })
+    .from(users)
+    .where(eq(users.id, userId));
+  const existingCustomPlanId = user?.customPricePlanId as string | null | undefined;
+  if (existingCustomPlanId && existingCustomPlanId !== newPlanId) {
+    await db.update(users).set({
+      customPricePlanId: null,
+      customMonthlyPrice: null,
+      customAnnualPrice: null,
+    } as any).where(eq(users.id, userId));
+    console.log(`💰 Cleared stale custom price for user ${userId} (was tied to plan "${existingCustomPlanId}", now on "${newPlanId}")`);
+  }
+}
+
 export function registerSubscriptionRoutes(app: Express): void {
   // GET /api/subscriptions/plans
   app.get('/api/subscriptions/plans', async (req, res) => {
@@ -180,6 +201,10 @@ export function registerSubscriptionRoutes(app: Express): void {
             productLimit: getProductLimit(targetPlan.planId),
             subscriptionEndsAt: new Date(updatedSubscription.current_period_end * 1000)
           });
+
+          // Auto-clear any custom price tied to a different plan so the pricing page
+          // never shows a stale "Your price" badge after the wholesaler switches plans.
+          await clearCustomPriceIfPlanChanged(userId, targetPlan.planId);
 
           // Clear the scheduled cancellation flag on userSubscriptions so that the
           // "Cancellation Scheduled" badge disappears immediately after upgrade.
@@ -409,6 +434,7 @@ export function registerSubscriptionRoutes(app: Express): void {
             .where(eq(userSubscriptions.userId, userId));
         }
         await enforceNewPlanLimits(userId, targetPlan);
+        await clearCustomPriceIfPlanChanged(userId, targetPlan);
         return res.json({ success: true, type: 'downgrade_db_only', targetPlan, message: 'Plan updated (no Stripe subscription)' });
       }
 
@@ -434,6 +460,9 @@ export function registerSubscriptionRoutes(app: Express): void {
           isTestAccount,
           effectiveCancelPlan,
         );
+
+        // Auto-clear stale custom price if it was tied to a different plan.
+        await clearCustomPriceIfPlanChanged(userId, effectiveCancelPlan);
 
         // Enforce limits immediately (immediate downgrade path)
         const enforcedNow = await enforceNewPlanLimits(userId, effectiveCancelPlan);
@@ -481,6 +510,9 @@ export function registerSubscriptionRoutes(app: Express): void {
         targetPlan,
         isTestAccount,
       );
+
+      // Auto-clear stale custom price if it was tied to a different plan.
+      await clearCustomPriceIfPlanChanged(userId, targetPlan);
 
       // Enforce paid→paid downgrade limits (e.g. Premium→Standard: lock products >50)
       await enforceNewPlanLimits(userId, targetPlan);
