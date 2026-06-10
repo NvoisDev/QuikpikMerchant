@@ -789,6 +789,17 @@ export default function SubscriptionPricing() {
                 : currentSubscription?.user?.customMonthlyPrice)
             : null;
           const customPrice = rawCustomPrice ? parseFloat(rawCustomPrice) : null;
+          const customPriceExpiresAt = planHasCustomPrice
+            ? (currentSubscription?.user?.customPriceExpiresAt ?? null)
+            : null;
+          const customPriceExpiryLabel = (() => {
+            if (!customPriceExpiresAt) return null;
+            const expiry = new Date(customPriceExpiresAt);
+            const now = new Date();
+            const diffDays = Math.ceil((expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+            if (diffDays < 0 || diffDays > 60) return null;
+            return expiry.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+          })();
           const isCurrent = isCurrentPlan(plan.planId) ||
             (plan.planId === 'starter' && (currentSubscription?.currentPlan === 'free'));
           const isMostPopular = !isCurrent && (plan.planId === 'standard' || plan.planId === 'standard_annual_intro' || plan.planId === 'standard_annual');
@@ -885,7 +896,9 @@ export default function SubscriptionPricing() {
                           £{price.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </span>
                         <span className="inline-flex items-center bg-violet-100 text-violet-700 text-[10px] font-semibold px-1.5 py-0.5 rounded-full leading-none">
-                          Your price
+                          {customPriceExpiryLabel
+                            ? `Your price · expires ${customPriceExpiryLabel}`
+                            : 'Your price'}
                         </span>
                       </div>
                     </>
