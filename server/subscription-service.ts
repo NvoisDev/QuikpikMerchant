@@ -759,7 +759,7 @@ export class SubscriptionService {
       {
         planId: 'standard_annual_intro',
         name: 'Standard Annual (Intro)',
-        price: 499.99,
+        price: 399.99,
         description: 'Annual plan — introductory rate until May 2027',
         features: [
           'Up to 50 products',
@@ -791,7 +791,7 @@ export class SubscriptionService {
       {
         planId: 'standard_annual',
         name: 'Standard Annual',
-        price: 599.99,
+        price: 499.99,
         description: 'Full-rate annual Standard plan (from May 2027)',
         features: [
           'Up to 50 products',
