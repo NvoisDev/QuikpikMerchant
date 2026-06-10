@@ -895,6 +895,15 @@ httpServer.listen({ port, host: '0.0.0.0', reusePort: true }, () => {
       console.error('❌ Startup billing period backfill failed:', err);
     }
 
+    // Startup tier sync: cross-check each paid subscriber's DB subscription_tier
+    // against their live Stripe product and correct any drift.
+    try {
+      const { SubscriptionService: SS3 } = await import("./subscription-service");
+      await SS3.backfillSubscriptionTiers();
+    } catch (err) {
+      console.error('❌ Startup subscription tier sync failed:', err);
+    }
+
   } catch (error) {
     console.error("❌ Server initialisation error:", error);
     // Keep process alive — port is already open, 503 gate protects routes

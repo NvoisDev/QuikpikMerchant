@@ -1246,6 +1246,91 @@ export class SubscriptionService {
    * Stripe subscription and write the correct period dates to both tables.
    * Idempotent — safe to call on every startup; only does work when needed.
    */
+  static async backfillSubscriptionTiers(): Promise<void> {
+    const result = await db.execute(sql`
+      SELECT id, business_name, stripe_subscription_id, subscription_tier, current_plan, is_test_account
+      FROM users
+      WHERE role = 'wholesaler'
+        AND subscription_status IN ('active', 'trialing')
+        AND current_plan != 'free'
+        AND stripe_subscription_id IS NOT NULL
+    `);
+
+    const rows = result.rows as {
+      id: string;
+      business_name: string | null;
+      stripe_subscription_id: string;
+      subscription_tier: string | null;
+      current_plan: string | null;
+      is_test_account: boolean | null;
+    }[];
+
+    if (rows.length === 0) {
+      console.log('✅ Subscription tier sync: no paid subscribers to check.');
+      return;
+    }
+
+    let fixed = 0;
+    let failed = 0;
+
+    for (const row of rows) {
+      try {
+        const stripe = getStripeClient(Boolean(row.is_test_account));
+        const liveSub = await stripe.subscriptions.retrieve(row.stripe_subscription_id, {
+          expand: ['items.data.price.product'],
+        });
+
+        // Derive tier from the Stripe product name (lowercase, e.g. "Starter" → "starter")
+        const item = liveSub.items?.data?.[0];
+        const product = item?.price?.product;
+        const productName: string | null =
+          product && typeof product === 'object' && 'name' in product
+            ? (product as Stripe.Product).name
+            : null;
+
+        if (!productName) {
+          console.warn(`  ⚠️ No product name for subscription ${row.stripe_subscription_id} — skipping tier sync`);
+          continue;
+        }
+
+        const stripeTier = productName.toLowerCase().trim();
+        const dbTier = (row.subscription_tier ?? '').toLowerCase().trim();
+
+        if (stripeTier === dbTier) continue; // Already in sync
+
+        const name = row.business_name ?? row.id;
+        console.log(`  🔄 Tier mismatch for ${name}: DB="${dbTier}" → Stripe="${stripeTier}"`);
+
+        await db.execute(sql`
+          UPDATE users SET
+            subscription_tier = ${stripeTier},
+            current_plan      = ${stripeTier},
+            updated_at        = NOW()
+          WHERE id = ${row.id}
+        `);
+
+        await db.execute(sql`
+          UPDATE user_subscriptions SET
+            plan_id    = ${stripeTier},
+            updated_at = NOW()
+          WHERE user_id = ${row.id}
+        `);
+
+        console.log(`  ✅ Corrected tier for ${name}: "${dbTier}" → "${stripeTier}"`);
+        fixed++;
+      } catch (err) {
+        console.error(`  ❌ Tier sync failed for user ${row.id}:`, err);
+        failed++;
+      }
+    }
+
+    if (fixed === 0 && failed === 0) {
+      console.log('✅ Subscription tier sync: all subscribers already up to date.');
+    } else {
+      console.log(`✅ Subscription tier sync complete: ${fixed} corrected, ${failed} failed.`);
+    }
+  }
+
   static async backfillMissingBillingPeriods(): Promise<void> {
     const result = await db.execute(sql`
       SELECT id, stripe_subscription_id, is_test_account, subscription_period_end
