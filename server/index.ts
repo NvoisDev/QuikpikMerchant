@@ -439,6 +439,23 @@ async function runStartupMigrations() {
     // Backfill: migrate existing single customPricePlanId into the correct split column
     `UPDATE users SET custom_price_plan_id_annual = custom_price_plan_id FROM subscription_plans WHERE subscription_plans.plan_id = users.custom_price_plan_id AND subscription_plans.billing_interval = 'yearly' AND users.custom_price_plan_id IS NOT NULL AND users.custom_price_plan_id_annual IS NULL`,
     `UPDATE users SET custom_price_plan_id_monthly = custom_price_plan_id FROM subscription_plans WHERE subscription_plans.plan_id = users.custom_price_plan_id AND subscription_plans.billing_interval != 'yearly' AND users.custom_price_plan_id IS NOT NULL AND users.custom_price_plan_id_monthly IS NULL`,
+    // Backfill 90-day trial for wholesalers who signed up before the auto-grant change.
+    // Targets accounts that: are wholesalers, never had a Stripe subscription, have no
+    // period end set, are still on the default free/inactive status, and signed up within
+    // the last year (recency guard — avoids over-granting to long-dormant accounts).
+    // Trial end is derived from created_at so accounts get the trial window they were
+    // entitled to at signup, not a fresh 90 days from migration run time.
+    // Idempotent — the subscription_period_end IS NULL guard makes this a no-op once applied.
+    `UPDATE users
+     SET
+       current_plan            = 'listing',
+       subscription_status     = 'trialing',
+       subscription_period_end = created_at + INTERVAL '90 days'
+     WHERE role = 'wholesaler'
+       AND stripe_subscription_id IS NULL
+       AND subscription_period_end IS NULL
+       AND (subscription_status IS NULL OR subscription_status IN ('free', 'inactive'))
+       AND created_at > NOW() - INTERVAL '1 year'`,
   ];
   for (const stmt of migrations) {
     await db.execute(sql.raw(stmt));
