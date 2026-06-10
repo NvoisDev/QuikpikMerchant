@@ -778,6 +778,12 @@ export default function SubscriptionPricing() {
           const isAnnual = plan.billingInterval === 'yearly';
           const price = parseFloat(plan.monthlyPrice);
           const tier = getPlanBaseTier(plan.planId);
+
+          // Negotiated custom price for this wholesaler (if set by admin)
+          const rawCustomPrice = isAnnual
+            ? currentSubscription?.user?.customAnnualPrice
+            : currentSubscription?.user?.customMonthlyPrice;
+          const customPrice = rawCustomPrice ? parseFloat(rawCustomPrice) : null;
           const isCurrent = isCurrentPlan(plan.planId) ||
             (plan.planId === 'starter' && (currentSubscription?.currentPlan === 'free'));
           const isMostPopular = !isCurrent && (plan.planId === 'standard' || plan.planId === 'standard_annual_intro' || plan.planId === 'standard_annual');
@@ -858,6 +864,25 @@ export default function SubscriptionPricing() {
                       <p className="text-xs text-gray-400 mt-1">
                         then £{price.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/mo · New subscribers only
                       </p>
+                    </>
+                  ) : customPrice !== null ? (
+                    <>
+                      <div className="flex items-baseline gap-1.5">
+                        <span className="text-3xl font-bold text-gray-900">
+                          £{customPrice.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
+                        <span className="text-gray-400 text-xs ml-1">
+                          {isAnnual ? '/ year' : '/ month'}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                        <span className="text-xs text-gray-400 line-through">
+                          £{price.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
+                        <span className="inline-flex items-center bg-violet-100 text-violet-700 text-[10px] font-semibold px-1.5 py-0.5 rounded-full leading-none">
+                          Your price
+                        </span>
+                      </div>
                     </>
                   ) : (
                     <>
