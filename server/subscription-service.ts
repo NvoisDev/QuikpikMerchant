@@ -73,6 +73,23 @@ function computePeriodFromAnchor(sub: Stripe.Subscription): { start: number; end
 }
 
 /**
+ * Maps a Stripe product name to a canonical internal tier slug.
+ *
+ * Uses keyword matching so variants like "Starter Annual", "Standard Annual (Intro)",
+ * or "Premium Plan" all resolve to the base tier. Returns null for unrecognised names
+ * so callers can skip rather than writing garbage to the DB.
+ */
+function mapStripeProductNameToTier(productName: string): 'listing' | 'starter' | 'standard' | 'premium' | 'free' | null {
+  const lower = productName.toLowerCase();
+  if (lower.includes('premium')) return 'premium';
+  if (lower.includes('standard')) return 'standard';
+  if (lower.includes('starter')) return 'starter';
+  if (lower.includes('listing')) return 'listing';
+  if (lower.includes('free')) return 'free';
+  return null;
+}
+
+/**
  * Returns true while we are within the introductory pricing window
  * (now → 30 April 2027 inclusive). On 1 May 2027 UTC this returns false
  * and the system reverts to the original prices automatically.
@@ -1280,7 +1297,9 @@ export class SubscriptionService {
           expand: ['items.data.price.product'],
         });
 
-        // Derive tier from the Stripe product name (lowercase, e.g. "Starter" → "starter")
+        // Map Stripe product name → canonical tier slug.
+        // Uses keyword matching so names like "Starter Annual" or
+        // "Standard Annual (Intro)" still resolve to "starter"/"standard".
         const item = liveSub.items?.data?.[0];
         const product = item?.price?.product;
         const productName: string | null =
@@ -1293,14 +1312,20 @@ export class SubscriptionService {
           continue;
         }
 
-        const stripeTier = productName.toLowerCase().trim();
+        const stripeTier = mapStripeProductNameToTier(productName);
+        if (!stripeTier) {
+          console.warn(`  ⚠️ Unrecognised Stripe product name "${productName}" for subscription ${row.stripe_subscription_id} — skipping`);
+          continue;
+        }
+
         const dbTier = (row.subscription_tier ?? '').toLowerCase().trim();
 
         if (stripeTier === dbTier) continue; // Already in sync
 
         const name = row.business_name ?? row.id;
-        console.log(`  🔄 Tier mismatch for ${name}: DB="${dbTier}" → Stripe="${stripeTier}"`);
+        console.log(`  🔄 Tier mismatch for ${name}: DB="${dbTier}" → Stripe="${stripeTier}" (product: "${productName}")`);
 
+        // Update users table — subscription_tier and current_plan are both tier-level fields
         await db.execute(sql`
           UPDATE users SET
             subscription_tier = ${stripeTier},
@@ -1309,11 +1334,14 @@ export class SubscriptionService {
           WHERE id = ${row.id}
         `);
 
+        // Update user_subscriptions.plan_id only if the canonical tier matches a known plan_id
+        // (FK: subscription_plans.plan_id). stripeTier is already validated above so this is safe.
         await db.execute(sql`
           UPDATE user_subscriptions SET
             plan_id    = ${stripeTier},
             updated_at = NOW()
           WHERE user_id = ${row.id}
+            AND EXISTS (SELECT 1 FROM subscription_plans WHERE plan_id = ${stripeTier})
         `);
 
         console.log(`  ✅ Corrected tier for ${name}: "${dbTier}" → "${stripeTier}"`);
