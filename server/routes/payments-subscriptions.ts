@@ -113,11 +113,38 @@ export function registerSubscriptionRoutes(app: Express): void {
 
       const targetPlan = validPlans[0];
 
+      // Check for a negotiated custom price override on this wholesaler's account.
+      // If set for the plan's billing interval, create an ad-hoc Stripe price so the
+      // wholesaler is charged their negotiated amount instead of the standard rate.
+      const [wholesalerRecord] = await db.select({
+        customAnnualPrice: users.customAnnualPrice,
+        customMonthlyPrice: users.customMonthlyPrice,
+      }).from(users).where(eq(users.id, userId));
+
+      const isAnnualPlan = (targetPlan.billingInterval ?? 'monthly') === 'yearly';
+      const customPriceAmount = isAnnualPlan
+        ? (wholesalerRecord?.customAnnualPrice ? parseFloat(wholesalerRecord.customAnnualPrice) : null)
+        : (wholesalerRecord?.customMonthlyPrice ? parseFloat(wholesalerRecord.customMonthlyPrice) : null);
+
       // All subscription plan price IDs are live-mode prices. Even if an account is
       // flagged is_test_account, we must use the live Stripe client for checkout —
       // test-mode Stripe keys cannot see live-mode prices and will return a 404.
       const isTestAccount = false;
       const stripe = getStripeClient(false);
+
+      // Create ad-hoc Stripe price for this wholesaler if a custom amount is set.
+      let effectivePriceId = priceId;
+      if (customPriceAmount !== null && targetPlan.stripeProductId) {
+        const adHocPrice = await stripe.prices.create({
+          unit_amount: Math.round(customPriceAmount * 100),
+          currency: 'gbp',
+          recurring: { interval: isAnnualPlan ? 'year' : 'month' },
+          product: targetPlan.stripeProductId,
+          metadata: { customPrice: 'true', userId, planId: targetPlan.planId },
+        });
+        effectivePriceId = adHocPrice.id;
+        console.log(`💰 Custom subscription price applied for user ${userId}: £${customPriceAmount} → ${effectivePriceId}`);
+      }
 
       // Get or create Stripe customer.
       // Any mode-mismatch (live customer ID used against a test client, or vice-versa)
@@ -133,7 +160,7 @@ export function registerSubscriptionRoutes(app: Express): void {
         try {
           const updatedSubscription = await SubscriptionService.upgradeSubscriptionWithProration(
             existingSubscription.stripeSubscriptionId,
-            priceId,
+            effectivePriceId,
             targetPlan.planId,
             isTestAccount,
           );
@@ -236,7 +263,7 @@ export function registerSubscriptionRoutes(app: Express): void {
           customer: stripeCustomerId,
           payment_method_types: ['card'],
           line_items: [{
-            price: priceId,
+            price: effectivePriceId,
             quantity: 1,
           }],
           mode: 'subscription',

@@ -239,6 +239,8 @@ export function registerAdminCoreRoutes(app: Express): void {
           internalNote: subscriptionByWholesaler[w.id]?.internalNote ?? null,
           customPriceExpiresAt: subscriptionByWholesaler[w.id]?.customPriceExpiresAt ?? null,
           logoUrl: w.logoUrl ?? null,
+          customAnnualPrice: w.customAnnualPrice !== null && w.customAnnualPrice !== undefined ? parseFloat(w.customAnnualPrice) : null,
+          customMonthlyPrice: w.customMonthlyPrice !== null && w.customMonthlyPrice !== undefined ? parseFloat(w.customMonthlyPrice) : null,
         };
       }).sort((a, b) => {
         if (a.isTestAccount !== b.isTestAccount) return a.isTestAccount ? 1 : -1;
@@ -472,6 +474,41 @@ export function registerAdminCoreRoutes(app: Express): void {
     } catch (error) {
       console.error('Admin toggle-show-on-homepage error:', error);
       res.status(500).json({ error: 'Failed to toggle homepage visibility' });
+    }
+  });
+
+  // PATCH /api/admin/wholesalers/:id/custom-subscription-pricing
+  app.patch('/api/admin/wholesalers/:id/custom-subscription-pricing', requireAuth, async (req: any, res) => {
+    try {
+      if (!ADMIN_EMAILS.includes(getAdminEmail(req) || "")) return res.status(403).json({ error: 'Forbidden' });
+      const { customAnnualPrice, customMonthlyPrice } = req.body as { customAnnualPrice: number | null; customMonthlyPrice: number | null };
+      if (customAnnualPrice !== null && customAnnualPrice !== undefined) {
+        if (typeof customAnnualPrice !== 'number' || customAnnualPrice <= 0) {
+          return res.status(400).json({ error: 'Annual price must be a positive number' });
+        }
+      }
+      if (customMonthlyPrice !== null && customMonthlyPrice !== undefined) {
+        if (typeof customMonthlyPrice !== 'number' || customMonthlyPrice <= 0) {
+          return res.status(400).json({ error: 'Monthly price must be a positive number' });
+        }
+      }
+      const [updated] = await db
+        .update(users)
+        .set({
+          customAnnualPrice: customAnnualPrice !== null && customAnnualPrice !== undefined ? customAnnualPrice.toFixed(2) : null,
+          customMonthlyPrice: customMonthlyPrice !== null && customMonthlyPrice !== undefined ? customMonthlyPrice.toFixed(2) : null,
+        })
+        .where(and(eq(users.id, req.params.id), eq(users.role, 'wholesaler')))
+        .returning({ id: users.id, customAnnualPrice: users.customAnnualPrice, customMonthlyPrice: users.customMonthlyPrice });
+      if (!updated) return res.status(404).json({ error: 'Wholesaler not found' });
+      res.json({
+        id: updated.id,
+        customAnnualPrice: updated.customAnnualPrice !== null ? parseFloat(updated.customAnnualPrice) : null,
+        customMonthlyPrice: updated.customMonthlyPrice !== null ? parseFloat(updated.customMonthlyPrice) : null,
+      });
+    } catch (error) {
+      console.error('Admin set-custom-subscription-pricing error:', error);
+      res.status(500).json({ error: 'Failed to update custom subscription pricing' });
     }
   });
 

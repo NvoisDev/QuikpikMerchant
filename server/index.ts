@@ -430,6 +430,8 @@ async function runStartupMigrations() {
     `ALTER TABLE prospect_stores ADD COLUMN IF NOT EXISTS contact_name VARCHAR(255)`,
     `ALTER TABLE prospect_stores ADD COLUMN IF NOT EXISTS contact_phone VARCHAR(50)`,
     `ALTER TABLE prospect_stores ADD COLUMN IF NOT EXISTS place_id VARCHAR(255)`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS custom_annual_price DECIMAL(10,2)`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS custom_monthly_price DECIMAL(10,2)`,
   ];
   for (const stmt of migrations) {
     await db.execute(sql.raw(stmt));

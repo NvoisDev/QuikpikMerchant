@@ -125,6 +125,8 @@ export const users = pgTable("users", {
   googleId: varchar("google_id").unique(),
   role: varchar("role").notNull().default("wholesaler"), // 'wholesaler' | 'customer' | 'team_member'
   customFeePercentage: decimal("custom_fee_percentage", { precision: 5, scale: 2 }), // Per-wholesaler platform fee override (admin-set)
+  customAnnualPrice: decimal("custom_annual_price", { precision: 10, scale: 2 }), // Negotiated annual subscription price override (admin-set)
+  customMonthlyPrice: decimal("custom_monthly_price", { precision: 10, scale: 2 }), // Negotiated monthly subscription price override (admin-set)
   wholesalerId: varchar("wholesaler_id"), // For customers/retailers: which wholesaler they belong to
   businessName: varchar("business_name"),
   businessAddress: varchar("business_address"),

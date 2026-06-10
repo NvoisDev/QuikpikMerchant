@@ -45,6 +45,7 @@ export function WholesalersSection({ wholesalers, wholesalersLoading, isAdmin }:
   const [customPriceNote, setCustomPriceNote] = useState("");
   const [customPriceExpiry, setCustomPriceExpiry] = useState("");
   const [customFeeInput, setCustomFeeInput] = useState("");
+  const [customSubPriceInput, setCustomSubPriceInput] = useState({ annual: "", monthly: "" });
   const [customerFeeInput, setCustomerFeeInput] = useState({ percentage: "", fixed: "" });
   const [legalInfoInput, setLegalInfoInput] = useState({ legalBusinessName: "", vatNumber: "", companyRegistrationNumber: "" });
   const [createTesterOpen, setCreateTesterOpen] = useState(false);
@@ -165,6 +166,27 @@ export function WholesalersSection({ wholesalers, wholesalersLoading, isAdmin }:
         if (fresh) setSelectedWholesaler(fresh);
       }
       toast({ title: variables.percentage === null && variables.fixed === null ? "Customer fee override removed" : "Customer fee override saved" });
+    },
+    onError: (e: Error) => toast({ title: e.message, variant: "destructive" }),
+  });
+
+  const customSubPricingMutation = useMutation({
+    mutationFn: async ({ id, annual, monthly }: { id: string; annual: number | null; monthly: number | null }) => {
+      const r = await apiRequest("PATCH", `/api/admin/wholesalers/${id}/custom-subscription-pricing`, {
+        customAnnualPrice: annual,
+        customMonthlyPrice: monthly,
+      });
+      if (!r.ok) { const e = await r.json(); throw new Error(e.error || "Failed"); }
+      return r.json();
+    },
+    onSuccess: async (_data, variables) => {
+      await queryClient.refetchQueries({ queryKey: ["/api/admin/wholesalers"] });
+      const updated = queryClient.getQueryData<WholesalerRow[]>(["/api/admin/wholesalers"]);
+      if (updated) {
+        const fresh = updated.find(w => w.id === variables.id);
+        if (fresh) setSelectedWholesaler(fresh);
+      }
+      toast({ title: variables.annual === null && variables.monthly === null ? "Negotiated prices cleared" : "Negotiated prices saved" });
     },
     onError: (e: Error) => toast({ title: e.message, variant: "destructive" }),
   });
@@ -393,6 +415,16 @@ export function WholesalersSection({ wholesalers, wholesalersLoading, isAdmin }:
                               </TooltipContent>
                             </Tooltip>
                           )}
+                          {(w.customAnnualPrice || w.customMonthlyPrice) && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-200 cursor-default">Deal</span>
+                              </TooltipTrigger>
+                              <TooltipContent side="top" className="max-w-xs text-xs">
+                                {[w.customAnnualPrice ? `Annual: £${w.customAnnualPrice.toFixed(2)}/yr` : null, w.customMonthlyPrice ? `Monthly: £${w.customMonthlyPrice.toFixed(2)}/mo` : null].filter(Boolean).join(" · ")}
+                              </TooltipContent>
+                            </Tooltip>
+                          )}
                           {w.isCustomPricing && (() => {
                             const days = customPriceDaysRemaining(w.customPriceExpiresAt);
                             if (days === null || days > 30) return null;
@@ -606,6 +638,55 @@ export function WholesalersSection({ wholesalers, wholesalersLoading, isAdmin }:
                   )}
                 </div>
                 <p className="text-xs text-gray-400 mt-1.5">Leave a field blank to keep the platform default for that component.</p>
+              </div>
+
+              {/* Negotiated Subscription Price */}
+              <div className="border-t border-gray-100 pt-3">
+                <p className="text-xs font-semibold text-gray-700 mb-1 flex items-center gap-1.5">
+                  <CreditCard className="h-3.5 w-3.5 text-indigo-500" />Negotiated Subscription Price
+                </p>
+                <p className="text-xs text-gray-400 mb-2">
+                  {(selectedWholesaler.customAnnualPrice || selectedWholesaler.customMonthlyPrice)
+                    ? `${selectedWholesaler.customAnnualPrice ? `Annual: £${selectedWholesaler.customAnnualPrice.toFixed(2)}/yr` : "Annual: standard"}  ${selectedWholesaler.customMonthlyPrice ? `Monthly: £${selectedWholesaler.customMonthlyPrice.toFixed(2)}/mo` : "Monthly: standard"}`
+                    : "No override — standard plan prices apply"}
+                </p>
+                <div className="flex gap-2 items-center mb-2">
+                  <div className="relative flex-1">
+                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-gray-400">£</span>
+                    <input type="number" min="0" step="0.01" placeholder="Annual price"
+                      value={customSubPriceInput.annual}
+                      onChange={e => setCustomSubPriceInput(p => ({ ...p, annual: e.target.value }))}
+                      className="w-full h-8 text-xs border border-gray-200 rounded-md pl-5 pr-2 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                    />
+                  </div>
+                  <div className="relative flex-1">
+                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-gray-400">£</span>
+                    <input type="number" min="0" step="0.01" placeholder="Monthly price"
+                      value={customSubPriceInput.monthly}
+                      onChange={e => setCustomSubPriceInput(p => ({ ...p, monthly: e.target.value }))}
+                      className="w-full h-8 text-xs border border-gray-200 rounded-md pl-5 pr-2 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                    />
+                  </div>
+                  <Button size="sm" className="h-8 text-xs bg-indigo-600 hover:bg-indigo-700 text-white"
+                    disabled={customSubPricingMutation.isPending || (customSubPriceInput.annual === "" && customSubPriceInput.monthly === "")}
+                    onClick={() => {
+                      const annual = customSubPriceInput.annual !== "" ? parseFloat(customSubPriceInput.annual) : null;
+                      const monthly = customSubPriceInput.monthly !== "" ? parseFloat(customSubPriceInput.monthly) : null;
+                      if (annual !== null && (isNaN(annual) || annual <= 0)) { toast({ title: "Enter a valid annual price", variant: "destructive" }); return; }
+                      if (monthly !== null && (isNaN(monthly) || monthly <= 0)) { toast({ title: "Enter a valid monthly price", variant: "destructive" }); return; }
+                      customSubPricingMutation.mutate({ id: selectedWholesaler.id, annual, monthly });
+                      setCustomSubPriceInput({ annual: "", monthly: "" });
+                    }}>Save</Button>
+                  {(selectedWholesaler.customAnnualPrice || selectedWholesaler.customMonthlyPrice) && (
+                    <Button size="sm" variant="outline" className="h-8 text-xs border-gray-200"
+                      disabled={customSubPricingMutation.isPending}
+                      onClick={() => {
+                        customSubPricingMutation.mutate({ id: selectedWholesaler.id, annual: null, monthly: null });
+                        setCustomSubPriceInput({ annual: "", monthly: "" });
+                      }}>Clear</Button>
+                  )}
+                </div>
+                <p className="text-xs text-gray-400">Leave a field blank to keep standard pricing for that interval.</p>
               </div>
 
               {/* Wholesaler Platform Fee */}
