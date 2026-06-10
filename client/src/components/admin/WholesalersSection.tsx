@@ -818,6 +818,11 @@ export function WholesalersSection({ wholesalers, wholesalersLoading, isAdmin }:
                 {changePlanId && changePlanId === (selectedWholesaler.currentPlan || "free") && (
                   <p className="text-xs text-amber-600 mt-1">This is already their current plan.</p>
                 )}
+                {changePlanId && changePlanId !== (selectedWholesaler.currentPlan || "free") && selectedWholesaler.customPricePlanId && changePlanId !== selectedWholesaler.customPricePlanId && (
+                  <p className="text-xs text-amber-600 mt-1">
+                    ⚠ This wholesaler has a custom price tied to the <strong>{activePlans.find(p => p.planId === selectedWholesaler.customPricePlanId)?.name ?? selectedWholesaler.customPricePlanId}</strong> plan. Applying this change will clear that custom price automatically.
+                  </p>
+                )}
                 <div className="mt-2 space-y-1.5">
                   <div>
                     <label className="text-xs text-gray-500 block mb-0.5">Custom Stripe Price ID <span className="text-gray-400">(optional)</span></label>

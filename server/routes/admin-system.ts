@@ -234,6 +234,18 @@ export function registerAdminSystemRoutes(app: Express): void {
         }
       }
 
+      // If the wholesaler had a custom price tied to a specific plan and the new plan
+      // is different, clear the custom price plan binding (and its tied price overrides)
+      // so the pricing page no longer shows a stale "Your price" badge.
+      const existingCustomPricePlanId = (targetUser as any).customPricePlanId as string | null | undefined;
+      if (existingCustomPricePlanId && existingCustomPricePlanId !== newPlanId) {
+        await db.update(users).set({
+          customPricePlanId: null,
+          customMonthlyPrice: null,
+          customAnnualPrice: null,
+        } as any).where(eq(users.id, targetUser.id));
+      }
+
       res.json({ success: true, userId: targetUser.id, newPlanId });
     } catch (error) {
       console.error('Admin change-plan error:', error);
