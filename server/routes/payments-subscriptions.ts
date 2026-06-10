@@ -17,17 +17,33 @@ import { paymentLimiter } from "./payments-connect";
  */
 async function clearCustomPriceIfPlanChanged(userId: number, newPlanId: string): Promise<void> {
   const [user] = await db
-    .select({ customPricePlanId: (users as any).customPricePlanId })
+    .select({
+      customPricePlanId: (users as any).customPricePlanId,
+      customPricePlanIdAnnual: (users as any).customPricePlanIdAnnual,
+      customPricePlanIdMonthly: (users as any).customPricePlanIdMonthly,
+    })
     .from(users)
     .where(eq(users.id, userId));
+  const clearFields: Record<string, null> = {};
   const existingCustomPlanId = user?.customPricePlanId as string | null | undefined;
   if (existingCustomPlanId && existingCustomPlanId !== newPlanId) {
-    await db.update(users).set({
-      customPricePlanId: null,
-      customMonthlyPrice: null,
-      customAnnualPrice: null,
-    } as any).where(eq(users.id, userId));
-    console.log(`💰 Cleared stale custom price for user ${userId} (was tied to plan "${existingCustomPlanId}", now on "${newPlanId}")`);
+    clearFields.customPricePlanId = null;
+    clearFields.customMonthlyPrice = null;
+    clearFields.customAnnualPrice = null;
+  }
+  const existingAnnualPlanId = user?.customPricePlanIdAnnual as string | null | undefined;
+  if (existingAnnualPlanId && existingAnnualPlanId !== newPlanId) {
+    clearFields.customPricePlanIdAnnual = null;
+    clearFields.customAnnualPrice = null;
+  }
+  const existingMonthlyPlanId = user?.customPricePlanIdMonthly as string | null | undefined;
+  if (existingMonthlyPlanId && existingMonthlyPlanId !== newPlanId) {
+    clearFields.customPricePlanIdMonthly = null;
+    clearFields.customMonthlyPrice = null;
+  }
+  if (Object.keys(clearFields).length > 0) {
+    await db.update(users).set(clearFields as any).where(eq(users.id, userId));
+    console.log(`💰 Cleared stale custom price for user ${userId} (plan changed to "${newPlanId}")`);
   }
 }
 
@@ -141,14 +157,19 @@ export function registerSubscriptionRoutes(app: Express): void {
         customAnnualPrice: users.customAnnualPrice,
         customMonthlyPrice: users.customMonthlyPrice,
         customPricePlanId: (users as any).customPricePlanId,
+        customPricePlanIdAnnual: (users as any).customPricePlanIdAnnual,
+        customPricePlanIdMonthly: (users as any).customPricePlanIdMonthly,
       }).from(users).where(eq(users.id, userId));
 
       const isAnnualPlan = (targetPlan.billingInterval ?? 'monthly') === 'yearly';
-      // Only apply the custom price when the plan being purchased exactly matches the tied plan ID.
-      // If customPricePlanId is null (legacy record), no override is applied.
-      const planMatches = wholesalerRecord?.customPricePlanId !== null &&
-        wholesalerRecord?.customPricePlanId !== undefined &&
-        wholesalerRecord.customPricePlanId === targetPlan.planId;
+      // Use the split fields first, fall back to legacy single field for backward compat.
+      const annualPlanMatches = wholesalerRecord?.customPricePlanIdAnnual === targetPlan.planId;
+      const monthlyPlanMatches = wholesalerRecord?.customPricePlanIdMonthly === targetPlan.planId;
+      const legacyPlanMatches = !annualPlanMatches && !monthlyPlanMatches &&
+        wholesalerRecord?.customPricePlanId === targetPlan.planId;
+      const planMatches = isAnnualPlan
+        ? (annualPlanMatches || (legacyPlanMatches && isAnnualPlan))
+        : (monthlyPlanMatches || (legacyPlanMatches && !isAnnualPlan));
       const customPriceAmount = planMatches
         ? (isAnnualPlan
             ? (wholesalerRecord?.customAnnualPrice ? parseFloat(wholesalerRecord.customAnnualPrice) : null)
@@ -299,14 +320,19 @@ export function registerSubscriptionRoutes(app: Express): void {
           customMonthlyPrice: (users as any).customMonthlyPrice,
           customAnnualPrice: (users as any).customAnnualPrice,
           customPricePlanId: (users as any).customPricePlanId,
+          customPricePlanIdAnnual: (users as any).customPricePlanIdAnnual,
+          customPricePlanIdMonthly: (users as any).customPricePlanIdMonthly,
         }).from(users).where(eq(users.id, userId)).limit(1);
 
         const isAnnualPlan = targetPlan.billingInterval === 'yearly';
-        // Only apply the custom price when the plan being purchased exactly matches the tied plan ID.
-        // If customPricePlanId is null (legacy record), no override is applied.
-        const rowPlanMatches = wholesalerRow?.customPricePlanId !== null &&
-          wholesalerRow?.customPricePlanId !== undefined &&
-          wholesalerRow.customPricePlanId === targetPlan.planId;
+        // Use split fields first, fall back to legacy single field for backward compat.
+        const rowAnnualMatches = wholesalerRow?.customPricePlanIdAnnual === targetPlan.planId;
+        const rowMonthlyMatches = wholesalerRow?.customPricePlanIdMonthly === targetPlan.planId;
+        const rowLegacyMatches = !rowAnnualMatches && !rowMonthlyMatches &&
+          wholesalerRow?.customPricePlanId === targetPlan.planId;
+        const rowPlanMatches = isAnnualPlan
+          ? (rowAnnualMatches || (rowLegacyMatches && isAnnualPlan))
+          : (rowMonthlyMatches || (rowLegacyMatches && !isAnnualPlan));
         const customPriceGBP = rowPlanMatches
           ? (isAnnualPlan ? wholesalerRow?.customAnnualPrice : wholesalerRow?.customMonthlyPrice)
           : null;

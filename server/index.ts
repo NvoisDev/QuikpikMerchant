@@ -433,6 +433,12 @@ async function runStartupMigrations() {
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS custom_annual_price DECIMAL(10,2)`,
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS custom_monthly_price DECIMAL(10,2)`,
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS custom_price_plan_id VARCHAR`,
+    // Task #1322: Split custom price plan binding into separate annual and monthly fields
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS custom_price_plan_id_annual VARCHAR`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS custom_price_plan_id_monthly VARCHAR`,
+    // Backfill: migrate existing single customPricePlanId into the correct split column
+    `UPDATE users SET custom_price_plan_id_annual = custom_price_plan_id FROM subscription_plans WHERE subscription_plans.plan_id = users.custom_price_plan_id AND subscription_plans.billing_interval = 'yearly' AND users.custom_price_plan_id IS NOT NULL AND users.custom_price_plan_id_annual IS NULL`,
+    `UPDATE users SET custom_price_plan_id_monthly = custom_price_plan_id FROM subscription_plans WHERE subscription_plans.plan_id = users.custom_price_plan_id AND subscription_plans.billing_interval != 'yearly' AND users.custom_price_plan_id IS NOT NULL AND users.custom_price_plan_id_monthly IS NULL`,
   ];
   for (const stmt of migrations) {
     await db.execute(sql.raw(stmt));

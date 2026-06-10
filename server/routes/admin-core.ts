@@ -242,6 +242,8 @@ export function registerAdminCoreRoutes(app: Express): void {
           customMonthlyPrice: w.customMonthlyPrice !== null && w.customMonthlyPrice !== undefined ? parseFloat(w.customMonthlyPrice) : null,
           customAnnualPrice: w.customAnnualPrice !== null && w.customAnnualPrice !== undefined ? parseFloat(w.customAnnualPrice) : null,
           customPricePlanId: (w as any).customPricePlanId ?? null,
+          customPricePlanIdAnnual: (w as any).customPricePlanIdAnnual ?? null,
+          customPricePlanIdMonthly: (w as any).customPricePlanIdMonthly ?? null,
         };
       }).sort((a, b) => {
         if (a.isTestAccount !== b.isTestAccount) return a.isTestAccount ? 1 : -1;
@@ -409,7 +411,9 @@ export function registerAdminCoreRoutes(app: Express): void {
 
   // PATCH /api/admin/wholesalers/:id/custom-pricing
   // Sets or clears per-wholesaler custom subscription prices.
-  // Body: { customMonthlyPrice: number | null, customAnnualPrice: number | null, customPricePlanId: string | null }
+  // Body: { customMonthlyPrice: number | null, customAnnualPrice: number | null,
+  //         customPricePlanIdAnnual: string | null, customPricePlanIdMonthly: string | null }
+  // Legacy field customPricePlanId still accepted for backward compat.
   app.patch('/api/admin/wholesalers/:id/custom-pricing', requireAuth, async (req: any, res) => {
     try {
       if (!ADMIN_EMAILS.includes(getAdminEmail(req) || "")) return res.status(403).json({ error: 'Forbidden' });
@@ -421,10 +425,10 @@ export function registerAdminCoreRoutes(app: Express): void {
       const body = req.body as Record<string, unknown>;
 
       // True partial patch — only update fields explicitly present in the request body.
-      // A field set to null means "clear the override"; an absent field means "leave unchanged".
-      let newMonthly: string | null | undefined = undefined; // undefined = not in body (no change)
+      let newMonthly: string | null | undefined = undefined;
       let newAnnual: string | null | undefined = undefined;
-      let newPlanId: string | null | undefined = undefined;
+      let newPlanIdAnnual: string | null | undefined = undefined;
+      let newPlanIdMonthly: string | null | undefined = undefined;
 
       if ('customMonthlyPrice' in body) {
         const val = body.customMonthlyPrice;
@@ -450,37 +454,42 @@ export function registerAdminCoreRoutes(app: Express): void {
         }
       }
 
-      if ('customPricePlanId' in body) {
-        const val = body.customPricePlanId;
-        newPlanId = (val === null || val === '') ? null : String(val);
+      if ('customPricePlanIdAnnual' in body) {
+        const val = body.customPricePlanIdAnnual;
+        newPlanIdAnnual = (val === null || val === '') ? null : String(val);
       }
 
-      if (newMonthly === undefined && newAnnual === undefined && newPlanId === undefined) {
+      if ('customPricePlanIdMonthly' in body) {
+        const val = body.customPricePlanIdMonthly;
+        newPlanIdMonthly = (val === null || val === '') ? null : String(val);
+      }
+
+      if (newMonthly === undefined && newAnnual === undefined && newPlanIdAnnual === undefined && newPlanIdMonthly === undefined) {
         return res.status(400).json({ error: 'No fields provided to update' });
       }
 
-      // Enforce plan binding: if a custom price is being set, a plan ID must be provided.
-      // Determine the effective planId after this update (combine new value with any existing).
       const [currentRow] = await db.select().from(users).where(eq(users.id, req.params.id)).limit(1);
-      const effectivePlanId = newPlanId !== undefined ? newPlanId : (currentRow as any)?.customPricePlanId ?? null;
-      const effectiveMonthly = newMonthly !== undefined ? newMonthly : (currentRow as any)?.customMonthlyPrice ?? null;
+
+      // Validate plan bindings: if a price is being set it must have a plan tied to it
+      const effectiveAnnualPlanId = newPlanIdAnnual !== undefined ? newPlanIdAnnual : (currentRow as any)?.customPricePlanIdAnnual ?? null;
+      const effectiveMonthlyPlanId = newPlanIdMonthly !== undefined ? newPlanIdMonthly : (currentRow as any)?.customPricePlanIdMonthly ?? null;
       const effectiveAnnual = newAnnual !== undefined ? newAnnual : (currentRow as any)?.customAnnualPrice ?? null;
-      const hasPriceSet = effectiveMonthly !== null || effectiveAnnual !== null;
-      if (hasPriceSet && !effectivePlanId) {
-        return res.status(400).json({ error: 'A plan must be selected when setting a custom subscription price' });
+      const effectiveMonthly = newMonthly !== undefined ? newMonthly : (currentRow as any)?.customMonthlyPrice ?? null;
+      if (effectiveAnnual !== null && !effectiveAnnualPlanId) {
+        return res.status(400).json({ error: 'An annual plan must be selected when setting a custom annual price' });
+      }
+      if (effectiveMonthly !== null && !effectiveMonthlyPlanId) {
+        return res.status(400).json({ error: 'A monthly plan must be selected when setting a custom monthly price' });
       }
 
-      // Build a typed Drizzle update object using schema camelCase keys
       const setPayload: Partial<typeof users.$inferInsert> = {};
       if (newMonthly !== undefined) (setPayload as any).customMonthlyPrice = newMonthly;
       if (newAnnual !== undefined) (setPayload as any).customAnnualPrice = newAnnual;
-      if (newPlanId !== undefined) (setPayload as any).customPricePlanId = newPlanId;
+      if (newPlanIdAnnual !== undefined) (setPayload as any).customPricePlanIdAnnual = newPlanIdAnnual;
+      if (newPlanIdMonthly !== undefined) (setPayload as any).customPricePlanIdMonthly = newPlanIdMonthly;
 
-      await db.update(users)
-        .set(setPayload)
-        .where(eq(users.id, req.params.id));
+      await db.update(users).set(setPayload).where(eq(users.id, req.params.id));
 
-      // Re-fetch the updated row to return current state
       const [updatedRow] = await db.select().from(users).where(eq(users.id, req.params.id)).limit(1);
 
       res.json({
@@ -489,7 +498,8 @@ export function registerAdminCoreRoutes(app: Express): void {
           ? parseFloat((updatedRow as any).customMonthlyPrice) : null,
         customAnnualPrice: (updatedRow as any)?.customAnnualPrice !== null && (updatedRow as any)?.customAnnualPrice !== undefined
           ? parseFloat((updatedRow as any).customAnnualPrice) : null,
-        customPricePlanId: (updatedRow as any)?.customPricePlanId ?? null,
+        customPricePlanIdAnnual: (updatedRow as any)?.customPricePlanIdAnnual ?? null,
+        customPricePlanIdMonthly: (updatedRow as any)?.customPricePlanIdMonthly ?? null,
       });
     } catch (error) {
       console.error('Admin custom-pricing error:', error);

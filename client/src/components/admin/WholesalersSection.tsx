@@ -46,7 +46,7 @@ export function WholesalersSection({ wholesalers, wholesalersLoading, isAdmin }:
   const [customPriceExpiry, setCustomPriceExpiry] = useState("");
   const [customFeeInput, setCustomFeeInput] = useState("");
   const [customerFeeInput, setCustomerFeeInput] = useState({ percentage: "", fixed: "" });
-  const [customSubPriceInput, setCustomSubPriceInput] = useState({ monthly: "", annual: "", planId: "" });
+  const [customSubPriceInput, setCustomSubPriceInput] = useState({ monthly: "", annual: "", annualPlanId: "", monthlyPlanId: "" });
   const [legalInfoInput, setLegalInfoInput] = useState({ legalBusinessName: "", vatNumber: "", companyRegistrationNumber: "" });
   const [createTesterOpen, setCreateTesterOpen] = useState(false);
   const [testerForm, setTesterForm] = useState({ firstName: "", lastName: "", email: "", password: "" });
@@ -267,11 +267,12 @@ export function WholesalersSection({ wholesalers, wholesalersLoading, isAdmin }:
   }, [wholesalers, planFilter]);
 
   const customSubPriceMutation = useMutation({
-    mutationFn: async ({ id, monthly, annual, planId }: { id: string; monthly: number | null; annual: number | null; planId: string | null }) => {
+    mutationFn: async ({ id, monthly, annual, annualPlanId, monthlyPlanId }: { id: string; monthly: number | null; annual: number | null; annualPlanId: string | null; monthlyPlanId: string | null }) => {
       const r = await apiRequest("PATCH", `/api/admin/wholesalers/${id}/custom-pricing`, {
         customMonthlyPrice: monthly,
         customAnnualPrice: annual,
-        customPricePlanId: planId,
+        customPricePlanIdAnnual: annualPlanId,
+        customPricePlanIdMonthly: monthlyPlanId,
       });
       if (!r.ok) { const e = await r.json(); throw new Error(e.error || "Failed"); }
       return r.json();
@@ -301,7 +302,8 @@ export function WholesalersSection({ wholesalers, wholesalersLoading, isAdmin }:
     setCustomSubPriceInput({
       monthly: w.customMonthlyPrice !== null && w.customMonthlyPrice !== undefined ? String(w.customMonthlyPrice) : "",
       annual: w.customAnnualPrice !== null && w.customAnnualPrice !== undefined ? String(w.customAnnualPrice) : "",
-      planId: w.customPricePlanId ?? "",
+      annualPlanId: w.customPricePlanIdAnnual ?? "",
+      monthlyPlanId: w.customPricePlanIdMonthly ?? "",
     });
     setLegalInfoInput({ legalBusinessName: w.legalBusinessName || "", vatNumber: w.vatNumber || "", companyRegistrationNumber: w.companyRegistrationNumber || "" });
     setChangePlanId("");
@@ -667,57 +669,74 @@ export function WholesalersSection({ wholesalers, wholesalersLoading, isAdmin }:
                   <CreditCard className="h-3.5 w-3.5 text-violet-500" />Custom Subscription Pricing
                 </p>
                 <p className="text-xs text-gray-400 mb-2">
-                  Set a negotiated price for a specific plan. The "Your price" badge and checkout override only apply to the chosen plan.
+                  Set negotiated prices per billing interval. Each deal is tied to a specific plan — the wholesaler will see a "Your price" badge and get the override at checkout only for that plan.
                 </p>
                 {(selectedWholesaler.customMonthlyPrice !== null && selectedWholesaler.customMonthlyPrice !== undefined) || (selectedWholesaler.customAnnualPrice !== null && selectedWholesaler.customAnnualPrice !== undefined) ? (
-                  <>
-                    <p className="text-xs text-violet-700 font-medium mb-1">
-                      Currently: {[
-                        selectedWholesaler.customMonthlyPrice !== null && selectedWholesaler.customMonthlyPrice !== undefined ? `Monthly £${Number(selectedWholesaler.customMonthlyPrice).toFixed(2)}` : null,
-                        selectedWholesaler.customAnnualPrice !== null && selectedWholesaler.customAnnualPrice !== undefined ? `Annual £${Number(selectedWholesaler.customAnnualPrice).toFixed(2)}` : null,
-                      ].filter(Boolean).join(" · ")}
-                      {selectedWholesaler.customPricePlanId ? ` · Plan: ${activePlans.find(p => p.planId === selectedWholesaler.customPricePlanId)?.name ?? selectedWholesaler.customPricePlanId}` : " · (all plans)"}
-                    </p>
-                    {selectedWholesaler.customPricePlanId && selectedWholesaler.customPricePlanId !== selectedWholesaler.currentPlan && (
-                      <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded px-2 py-1 mb-2">
-                        ⚠ Tied to <span className="font-medium">{activePlans.find(p => p.planId === selectedWholesaler.customPricePlanId)?.name ?? selectedWholesaler.customPricePlanId}</span> but wholesaler is on <span className="font-medium">{selectedWholesaler.currentPlan ?? "no active plan"}</span>
-                      </p>
-                    )}
-                  </>
+                  <p className="text-xs text-violet-700 font-medium mb-2">
+                    Currently: {[
+                      selectedWholesaler.customMonthlyPrice !== null && selectedWholesaler.customMonthlyPrice !== undefined
+                        ? `Monthly £${Number(selectedWholesaler.customMonthlyPrice).toFixed(2)}${selectedWholesaler.customPricePlanIdMonthly ? ` (${activePlans.find(p => p.planId === selectedWholesaler.customPricePlanIdMonthly)?.name ?? selectedWholesaler.customPricePlanIdMonthly})` : ""}`
+                        : null,
+                      selectedWholesaler.customAnnualPrice !== null && selectedWholesaler.customAnnualPrice !== undefined
+                        ? `Annual £${Number(selectedWholesaler.customAnnualPrice).toFixed(2)}${selectedWholesaler.customPricePlanIdAnnual ? ` (${activePlans.find(p => p.planId === selectedWholesaler.customPricePlanIdAnnual)?.name ?? selectedWholesaler.customPricePlanIdAnnual})` : ""}`
+                        : null,
+                    ].filter(Boolean).join(" · ")}
+                  </p>
                 ) : (
                   <p className="text-xs text-gray-400 mb-2">Currently: standard plan rates (no override)</p>
                 )}
-                <div className="mb-2">
+
+                {/* Monthly deal */}
+                <div className="mb-3 space-y-1.5">
+                  <p className="text-xs font-medium text-gray-600">Monthly deal</p>
                   <select
-                    value={customSubPriceInput.planId}
-                    onChange={e => setCustomSubPriceInput(p => ({ ...p, planId: e.target.value }))}
+                    value={customSubPriceInput.monthlyPlanId}
+                    onChange={e => setCustomSubPriceInput(p => ({ ...p, monthlyPlanId: e.target.value }))}
                     className="w-full h-8 text-xs border border-gray-200 rounded-md px-2 bg-white focus:outline-none focus:ring-1 focus:ring-violet-400"
                   >
-                    <option value="">— Select plan this price applies to —</option>
-                    {activePlans.map(p => (
+                    <option value="">— Monthly plan —</option>
+                    {activePlans.filter(p => p.billingInterval !== 'yearly').map(p => (
                       <option key={p.planId} value={p.planId}>
-                        {p.name} {parseFloat(p.monthlyPrice) > 0 ? `(£${parseFloat(p.monthlyPrice).toFixed(2)}/${p.billingInterval || "mo"})` : "(Free)"}
+                        {p.name} {parseFloat(p.monthlyPrice) > 0 ? `(£${parseFloat(p.monthlyPrice).toFixed(2)}/mo)` : "(Free)"}
                       </option>
                     ))}
                   </select>
-                </div>
-                <div className="flex gap-2 items-center">
-                  <div className="relative flex-1">
+                  <div className="relative">
                     <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-gray-400">£</span>
-                    <input type="number" min="0" max="99999" step="0.01" placeholder="Monthly price"
+                    <input type="number" min="0" max="99999" step="0.01" placeholder="Negotiated monthly price"
                       value={customSubPriceInput.monthly}
                       onChange={e => setCustomSubPriceInput(p => ({ ...p, monthly: e.target.value }))}
                       className="w-full h-8 text-xs border border-gray-200 rounded-md pl-5 pr-2 bg-white focus:outline-none focus:ring-1 focus:ring-violet-400"
                     />
                   </div>
-                  <div className="relative flex-1">
+                </div>
+
+                {/* Annual deal */}
+                <div className="mb-3 space-y-1.5">
+                  <p className="text-xs font-medium text-gray-600">Annual deal</p>
+                  <select
+                    value={customSubPriceInput.annualPlanId}
+                    onChange={e => setCustomSubPriceInput(p => ({ ...p, annualPlanId: e.target.value }))}
+                    className="w-full h-8 text-xs border border-gray-200 rounded-md px-2 bg-white focus:outline-none focus:ring-1 focus:ring-violet-400"
+                  >
+                    <option value="">— Annual plan —</option>
+                    {activePlans.filter(p => p.billingInterval === 'yearly').map(p => (
+                      <option key={p.planId} value={p.planId}>
+                        {p.name} {parseFloat(p.monthlyPrice) > 0 ? `(£${parseFloat(p.monthlyPrice).toFixed(2)}/yr)` : "(Free)"}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="relative">
                     <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-gray-400">£</span>
-                    <input type="number" min="0" max="99999" step="0.01" placeholder="Annual price"
+                    <input type="number" min="0" max="99999" step="0.01" placeholder="Negotiated annual price"
                       value={customSubPriceInput.annual}
                       onChange={e => setCustomSubPriceInput(p => ({ ...p, annual: e.target.value }))}
                       className="w-full h-8 text-xs border border-gray-200 rounded-md pl-5 pr-2 bg-white focus:outline-none focus:ring-1 focus:ring-violet-400"
                     />
                   </div>
+                </div>
+
+                <div className="flex gap-2 items-center">
                   <Button size="sm" className="h-8 text-xs bg-violet-600 hover:bg-violet-700 text-white gap-1"
                     disabled={customSubPriceMutation.isPending || (customSubPriceInput.monthly === "" && customSubPriceInput.annual === "")}
                     onClick={() => {
@@ -725,25 +744,30 @@ export function WholesalersSection({ wholesalers, wholesalersLoading, isAdmin }:
                       const annual = customSubPriceInput.annual !== "" ? parseFloat(customSubPriceInput.annual) : null;
                       if (monthly !== null && (isNaN(monthly) || monthly < 0)) { toast({ title: "Enter a valid monthly price", variant: "destructive" }); return; }
                       if (annual !== null && (isNaN(annual) || annual < 0)) { toast({ title: "Enter a valid annual price", variant: "destructive" }); return; }
-                      const planId = customSubPriceInput.planId || null;
-                      if ((monthly !== null || annual !== null) && !planId) {
-                        toast({ title: "Select a plan for this custom price", description: "The negotiated price must be tied to a specific plan.", variant: "destructive" });
+                      const monthlyPlanId = customSubPriceInput.monthlyPlanId || null;
+                      const annualPlanId = customSubPriceInput.annualPlanId || null;
+                      if (monthly !== null && !monthlyPlanId) {
+                        toast({ title: "Select a monthly plan for this custom price", description: "The monthly negotiated price must be tied to a specific monthly plan.", variant: "destructive" });
                         return;
                       }
-                      customSubPriceMutation.mutate({ id: selectedWholesaler.id, monthly, annual, planId });
+                      if (annual !== null && !annualPlanId) {
+                        toast({ title: "Select an annual plan for this custom price", description: "The annual negotiated price must be tied to a specific annual plan.", variant: "destructive" });
+                        return;
+                      }
+                      customSubPriceMutation.mutate({ id: selectedWholesaler.id, monthly, annual, annualPlanId, monthlyPlanId });
                     }}>Save</Button>
                   {((selectedWholesaler.customMonthlyPrice !== null && selectedWholesaler.customMonthlyPrice !== undefined) || (selectedWholesaler.customAnnualPrice !== null && selectedWholesaler.customAnnualPrice !== undefined)) && (
                     <Button size="sm" variant="outline" className="h-8 text-xs border-gray-200"
                       disabled={customSubPriceMutation.isPending}
                       onClick={() => {
-                        customSubPriceMutation.mutate({ id: selectedWholesaler.id, monthly: null, annual: null, planId: null });
-                        setCustomSubPriceInput({ monthly: "", annual: "", planId: "" });
+                        customSubPriceMutation.mutate({ id: selectedWholesaler.id, monthly: null, annual: null, annualPlanId: null, monthlyPlanId: null });
+                        setCustomSubPriceInput({ monthly: "", annual: "", annualPlanId: "", monthlyPlanId: "" });
                       }}>
-                      Clear
+                      Clear all
                     </Button>
                   )}
                 </div>
-                <p className="text-xs text-gray-400 mt-1.5">Leave a price field blank to keep the standard rate for that billing interval.</p>
+                <p className="text-xs text-gray-400 mt-1.5">Leave a price field blank to keep the standard rate for that interval. Each deal requires a plan selection.</p>
               </div>
 
               {/* Wholesaler Platform Fee */}

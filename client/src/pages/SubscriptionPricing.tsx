@@ -771,6 +771,63 @@ export default function SubscriptionPricing() {
         </div>
       </div>
 
+      {/* Negotiated deal notice banner */}
+      {(() => {
+        const annualDealPlanId = currentSubscription?.user?.customPricePlanIdAnnual ?? null;
+        const monthlyDealPlanId = currentSubscription?.user?.customPricePlanIdMonthly ?? null;
+        const legacyDealPlanId = !annualDealPlanId && !monthlyDealPlanId
+          ? (currentSubscription?.user?.customPricePlanId ?? null)
+          : null;
+        const hasAnyDeal = annualDealPlanId || monthlyDealPlanId || legacyDealPlanId;
+        if (!hasAnyDeal) return null;
+        const annualDealPlan = annualDealPlanId ? plans.find((p: SubscriptionPlan) => p.planId === annualDealPlanId) : null;
+        const monthlyDealPlan = monthlyDealPlanId ? plans.find((p: SubscriptionPlan) => p.planId === monthlyDealPlanId) : null;
+        const annualPrice = currentSubscription?.user?.customAnnualPrice ? parseFloat(currentSubscription.user.customAnnualPrice) : null;
+        const monthlyPrice = currentSubscription?.user?.customMonthlyPrice ? parseFloat(currentSubscription.user.customMonthlyPrice) : null;
+        const expiresAt = currentSubscription?.user?.customPriceExpiresAt ?? null;
+        const expiryLabel = expiresAt
+          ? (() => {
+              const expiry = new Date(expiresAt);
+              const diffDays = Math.ceil((expiry.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+              return diffDays >= 0 && diffDays <= 60
+                ? expiry.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+                : null;
+            })()
+          : null;
+        const dealLines: string[] = [];
+        if (annualDealPlan && annualPrice !== null) {
+          dealLines.push(`${annualDealPlan.name} annual at £${annualPrice.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/yr`);
+        }
+        if (monthlyDealPlan && monthlyPrice !== null) {
+          dealLines.push(`${monthlyDealPlan.name} monthly at £${monthlyPrice.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/mo`);
+        }
+        if (dealLines.length === 0 && legacyDealPlanId) {
+          const legacyPlan = plans.find((p: SubscriptionPlan) => p.planId === legacyDealPlanId);
+          if (legacyPlan) {
+            if (annualPrice !== null) dealLines.push(`${legacyPlan.name} annual at £${annualPrice.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/yr`);
+            if (monthlyPrice !== null) dealLines.push(`${legacyPlan.name} monthly at £${monthlyPrice.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/mo`);
+          }
+        }
+        return (
+          <div className="mb-6 rounded-xl border border-violet-200 bg-violet-50 px-4 py-3 flex items-start gap-3">
+            <div className="mt-0.5 flex-shrink-0 w-7 h-7 rounded-full bg-violet-100 flex items-center justify-center">
+              <span className="text-violet-600 text-base leading-none">🏷</span>
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-violet-800">You have a negotiated pricing deal</p>
+              <p className="text-xs text-violet-700 mt-0.5">
+                {dealLines.length > 0
+                  ? dealLines.join(' · ')
+                  : 'A custom price has been set for your account — look for the "Your price" badge on the plan cards below.'}
+              </p>
+              {expiryLabel && (
+                <p className="text-xs text-violet-500 mt-1">Offer expires {expiryLabel}</p>
+              )}
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Pricing Plans */}
       <div id="plan-grid" className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5 mb-12 items-start">
         {visiblePlans.map((plan: SubscriptionPlan) => {
@@ -780,9 +837,17 @@ export default function SubscriptionPricing() {
           const tier = getPlanBaseTier(plan.planId);
 
           // Negotiated custom price for this wholesaler (if set by admin).
-          // Only show on the exact plan the price was negotiated for — no fallback.
-          const customPricePlanId = currentSubscription?.user?.customPricePlanId ?? null;
-          const planHasCustomPrice = customPricePlanId !== null && customPricePlanId === plan.planId;
+          // Uses the split annual/monthly plan binding fields; falls back to legacy single field.
+          const customPricePlanIdAnnual = currentSubscription?.user?.customPricePlanIdAnnual ?? null;
+          const customPricePlanIdMonthly = currentSubscription?.user?.customPricePlanIdMonthly ?? null;
+          const legacyCustomPricePlanId = !customPricePlanIdAnnual && !customPricePlanIdMonthly
+            ? (currentSubscription?.user?.customPricePlanId ?? null)
+            : null;
+          const planHasCustomPrice = isAnnual
+            ? (customPricePlanIdAnnual !== null && customPricePlanIdAnnual === plan.planId) ||
+              (legacyCustomPricePlanId !== null && legacyCustomPricePlanId === plan.planId)
+            : (customPricePlanIdMonthly !== null && customPricePlanIdMonthly === plan.planId) ||
+              (legacyCustomPricePlanId !== null && legacyCustomPricePlanId === plan.planId);
           const rawCustomPrice = planHasCustomPrice
             ? (isAnnual
                 ? currentSubscription?.user?.customAnnualPrice

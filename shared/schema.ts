@@ -320,6 +320,9 @@ export const users = pgTable("users", {
   customAnnualPrice: decimal("custom_annual_price", { precision: 10, scale: 2 }),
   // Which plan the custom price is tied to — only that plan card shows "Your price" and gets the override at checkout
   customPricePlanId: varchar("custom_price_plan_id"),
+  // Split plan bindings: annual deal tied to a specific annual plan, monthly deal to a specific monthly plan
+  customPricePlanIdAnnual: varchar("custom_price_plan_id_annual"),
+  customPricePlanIdMonthly: varchar("custom_price_plan_id_monthly"),
 
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),

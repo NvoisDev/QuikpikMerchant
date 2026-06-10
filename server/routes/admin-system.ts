@@ -238,12 +238,24 @@ export function registerAdminSystemRoutes(app: Express): void {
       // is different, clear the custom price plan binding (and its tied price overrides)
       // so the pricing page no longer shows a stale "Your price" badge.
       const existingCustomPricePlanId = (targetUser as any).customPricePlanId as string | null | undefined;
+      const existingAnnualPlanId = (targetUser as any).customPricePlanIdAnnual as string | null | undefined;
+      const existingMonthlyPlanId = (targetUser as any).customPricePlanIdMonthly as string | null | undefined;
+      const clearFields: Record<string, null> = {};
       if (existingCustomPricePlanId && existingCustomPricePlanId !== newPlanId) {
-        await db.update(users).set({
-          customPricePlanId: null,
-          customMonthlyPrice: null,
-          customAnnualPrice: null,
-        } as any).where(eq(users.id, targetUser.id));
+        clearFields.customPricePlanId = null;
+        clearFields.customMonthlyPrice = null;
+        clearFields.customAnnualPrice = null;
+      }
+      if (existingAnnualPlanId && existingAnnualPlanId !== newPlanId) {
+        clearFields.customPricePlanIdAnnual = null;
+        clearFields.customAnnualPrice = null;
+      }
+      if (existingMonthlyPlanId && existingMonthlyPlanId !== newPlanId) {
+        clearFields.customPricePlanIdMonthly = null;
+        clearFields.customMonthlyPrice = null;
+      }
+      if (Object.keys(clearFields).length > 0) {
+        await db.update(users).set(clearFields as any).where(eq(users.id, targetUser.id));
       }
 
       res.json({ success: true, userId: targetUser.id, newPlanId });

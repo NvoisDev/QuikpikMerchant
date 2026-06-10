@@ -49,6 +49,8 @@ export interface WholesalerRow {
   customMonthlyPrice?: number | null;
   customAnnualPrice?: number | null;
   customPricePlanId?: string | null;
+  customPricePlanIdAnnual?: string | null;
+  customPricePlanIdMonthly?: string | null;
 }
 
 export interface RevenueTotals {
