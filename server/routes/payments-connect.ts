@@ -886,22 +886,31 @@ export function registerPaymentConnectRoutes(app: Express): void {
         // is already persisted — a trialing → active transition must not be suppressed.
         // Do NOT short-circuit when stripeSubscriptionId is missing: checkout.session.completed
         // may have set currentPlan/subscriptionStatus but missed writing the ID.
+        // Also do NOT short-circuit when the period end has advanced — this catches renewals where
+        // the plan/status are unchanged but the billing window has moved forward.
         const incomingStatus = subscription.status === 'trialing' ? 'trialing' : 'active';
-        if (
-          subUser.currentPlan === subPlanId &&
-          subUser.subscriptionStatus === incomingStatus &&
-          subUser.stripeSubscriptionId === subscription.id
-        ) {
-          return res.json({ received: true, type: event.type });
-        }
-
-        const subProductLimit = subPlanId === 'premium' ? -1 : (subPlanId === 'standard' ? 5 : 2);
         const subPeriodEnd = subscription.current_period_end
           ? new Date(subscription.current_period_end * 1000)
           : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
         const subPeriodStart = subscription.current_period_start
           ? new Date(subscription.current_period_start * 1000)
           : new Date();
+
+        const storedPeriodEnd = subUser.subscriptionPeriodEnd ?? subUser.subscriptionEndsAt;
+        const periodEndUnchanged = storedPeriodEnd
+          ? Math.abs(storedPeriodEnd.getTime() - subPeriodEnd.getTime()) < 60_000
+          : false;
+
+        if (
+          subUser.currentPlan === subPlanId &&
+          subUser.subscriptionStatus === incomingStatus &&
+          subUser.stripeSubscriptionId === subscription.id &&
+          periodEndUnchanged
+        ) {
+          return res.json({ received: true, type: event.type });
+        }
+
+        const subProductLimit = subPlanId === 'premium' ? -1 : (subPlanId === 'standard' ? 5 : 2);
 
         // Map Stripe's trial timestamps (Unix) to Date objects for DB persistence
         const subTrialStart = subscription.trial_start
