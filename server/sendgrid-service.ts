@@ -404,4 +404,66 @@ export async function sendTrialReminderEmail(data: {
   });
 }
 
-export default { sendEmail, sendOrderConfirmationEmail, sendOrderPhotoNotificationEmail, sendWholesalerOrderNotification, sendPaymentReminderEmail, sendStripeVerifiedEmail, sendWeeklyOrderDigestEmail };
+export async function sendWholesalerSuspendedEmail(data: {
+  wholesalerEmail: string;
+  wholesalerName: string;
+}): Promise<boolean> {
+  const { wrapCustomerEmail, emailCard, emailHeading } = await import('./email-templates');
+
+  const body = `
+    <p style="font-size:16px;margin:0 0 8px">Hi ${data.wholesalerName},</p>
+    <p style="margin:0 0 20px">We are writing to let you know that your Quikpik account has been <strong>suspended</strong> by the platform administrator.</p>
+    ${emailCard(
+      `${emailHeading('What this means', { color: '#dc2626', size: '16px' })}
+      <p style="margin:0 0 8px;color:#92400e">While your account is suspended:</p>
+      <ul style="margin:0;padding-left:20px;color:#92400e">
+        <li style="margin-bottom:6px">You will not be able to log in to your Quikpik dashboard</li>
+        <li style="margin-bottom:6px">Your customer-facing store will be inaccessible</li>
+        <li style="margin-bottom:6px">Your data is safe and will be retained</li>
+      </ul>`,
+      { borderColor: '#fca5a5', bgColor: '#fef2f2' }
+    )}
+    <p style="margin:20px 0 8px">If you believe this is a mistake or would like to discuss your account, please get in touch with us at <a href="mailto:hello@quikpik.co" style="color:#10b981;text-decoration:none">hello@quikpik.co</a>.</p>
+    <p style="margin:0 0 0;font-weight:600">The Quikpik Team</p>
+  `;
+
+  const html = wrapCustomerEmail(body, { businessName: 'Quikpik' }, { preheader: 'Your Quikpik account has been suspended — contact hello@quikpik.co for help' });
+
+  return await sendEmail({
+    to: data.wholesalerEmail,
+    from: 'hello@quikpik.co',
+    subject: 'Your Quikpik account has been suspended',
+    html,
+  });
+}
+
+export async function sendWholesalerReinstatedEmail(data: {
+  wholesalerEmail: string;
+  wholesalerName: string;
+}): Promise<boolean> {
+  const { wrapCustomerEmail, emailCard, emailButton, emailHeading } = await import('./email-templates');
+
+  const body = `
+    <p style="font-size:16px;margin:0 0 8px">Hi ${data.wholesalerName},</p>
+    <p style="margin:0 0 20px">Great news — your Quikpik account has been <strong>reinstated</strong>. You now have full access to your dashboard and store again.</p>
+    ${emailCard(
+      `${emailHeading('Welcome back!', { color: '#10b981', size: '16px' })}
+      <p style="margin:0;color:#0f766e">Everything is back to normal — your customers can place orders and your store is live again. Log in whenever you're ready to pick up where you left off.</p>`,
+      { borderColor: '#a7f3d0', bgColor: '#ecfdf5' }
+    )}
+    ${emailButton('Go to your Dashboard', 'https://quikpik.co/dashboard', '#10b981')}
+    <p style="margin:20px 0 8px">If you have any questions, feel free to reach out at <a href="mailto:hello@quikpik.co" style="color:#10b981;text-decoration:none">hello@quikpik.co</a>.</p>
+    <p style="margin:0 0 0;font-weight:600">The Quikpik Team</p>
+  `;
+
+  const html = wrapCustomerEmail(body, { businessName: 'Quikpik' }, { preheader: 'Your Quikpik account is active again — welcome back!' });
+
+  return await sendEmail({
+    to: data.wholesalerEmail,
+    from: 'hello@quikpik.co',
+    subject: 'Your Quikpik account has been reinstated',
+    html,
+  });
+}
+
+export default { sendEmail, sendOrderConfirmationEmail, sendOrderPhotoNotificationEmail, sendWholesalerOrderNotification, sendPaymentReminderEmail, sendStripeVerifiedEmail, sendWeeklyOrderDigestEmail, sendWholesalerSuspendedEmail, sendWholesalerReinstatedEmail };

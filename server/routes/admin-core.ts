@@ -7,6 +7,7 @@ import {
   subscriptionAuditLogs, subscriptionPlans, SubscriptionService, teamMembers, unlockForUpgrade, userSubscriptions, users,
 } from "./shared";
 import { getProductLimit } from "../utils/plan-tier";
+import { sendWholesalerSuspendedEmail, sendWholesalerReinstatedEmail } from "../sendgrid-service";
 
 function getAdminEmail(req: any): string | undefined {
   return req._adminEmail || req.user?.email;
@@ -537,6 +538,19 @@ export function registerAdminCoreRoutes(app: Express): void {
       }
       const newArchived = !targetUser[0].archived;
       await db.update(users).set({ archived: newArchived }).where(eq(users.id, req.params.id));
+      const wholesalerEmail = targetUser[0].email;
+      const wholesalerName = targetUser[0].businessName || targetUser[0].email || 'Wholesaler';
+      if (wholesalerEmail) {
+        if (newArchived) {
+          sendWholesalerSuspendedEmail({ wholesalerEmail, wholesalerName }).catch((err: any) =>
+            console.error('[admin] Failed to send suspension email:', err)
+          );
+        } else {
+          sendWholesalerReinstatedEmail({ wholesalerEmail, wholesalerName }).catch((err: any) =>
+            console.error('[admin] Failed to send reinstatement email:', err)
+          );
+        }
+      }
       res.json({ id: req.params.id, archived: newArchived, businessName: targetUser[0].businessName });
     } catch (error) {
       console.error('Admin toggle-status error:', error);
