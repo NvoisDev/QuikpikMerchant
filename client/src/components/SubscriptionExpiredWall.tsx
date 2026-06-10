@@ -26,7 +26,7 @@ function isTrialExpired(data: SubscriptionData | undefined): boolean {
   if (status === "active") return false;
   if (data.subscription?.stripeSubscriptionId) return false;
 
-  if (!periodEnd) return true;
+  if (!periodEnd) return false;
   return new Date(periodEnd) < new Date();
 }
 
