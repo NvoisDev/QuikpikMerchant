@@ -503,7 +503,9 @@ export default function SubscriptionPricing() {
                   {new Date(currentSubscription.user.subscriptionPeriodStart).toLocaleDateString('en-GB', {
                     month: 'short',
                     day: 'numeric'
-                  })} – {new Date(currentSubscription.user.subscriptionPeriodEnd).toLocaleDateString('en-GB', {
+                  })} – {new Date(
+                    (currentSubscription.user.subscriptionPeriodEnd ?? currentSubscription.user.subscriptionEndsAt)!
+                  ).toLocaleDateString('en-GB', {
                     month: 'short',
                     day: 'numeric',
                     year: 'numeric'

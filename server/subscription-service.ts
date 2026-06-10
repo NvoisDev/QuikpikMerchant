@@ -637,8 +637,11 @@ export class SubscriptionService {
             if (livePeriodEndTs && livePeriodStartTs) {
               const livePeriodEnd = new Date(livePeriodEndTs * 1000);
               const livePeriodStart = new Date(livePeriodStartTs * 1000);
-              // Only write back if the live period is actually newer (it should always be)
-              if (!storedPeriodEnd || livePeriodEnd > storedPeriodEnd) {
+              // Write when subscriptionPeriodEnd is null (never populated) OR when the
+              // live end is genuinely newer.  Do NOT gate on subscriptionEndsAt — that
+              // field can match the live value even while subscriptionPeriodEnd is null,
+              // which would prevent the null from ever being healed.
+              if (!user.subscriptionPeriodEnd || livePeriodEnd > user.subscriptionPeriodEnd) {
                 await db.update(users).set({
                   subscriptionPeriodStart: livePeriodStart,
                   subscriptionPeriodEnd: livePeriodEnd,
