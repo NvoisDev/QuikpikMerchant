@@ -726,7 +726,7 @@ export class SubscriptionService {
       {
         planId: 'listing_annual',
         name: 'Listing Annual',
-        price: 199.90,
+        price: 199.99,
         description: 'Annual Listing plan — save 16% vs monthly',
         features: [
           'Up to 10 products',
@@ -742,7 +742,7 @@ export class SubscriptionService {
       {
         planId: 'starter_annual',
         name: 'Starter Annual',
-        price: 299.90,
+        price: 299.99,
         description: 'Annual Starter plan — save 16% vs monthly',
         features: [
           'Up to 20 products',
