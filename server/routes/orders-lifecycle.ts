@@ -718,7 +718,7 @@ export function registerOrderLifecycleRoutes(app: Express): void {
   app.put('/api/orders/:id/switch-to-delivery', requireAuth, requireBooleanFeature('order_management'), requireNotViewer, requireMemberPermission('orders'), async (req: any, res) => {
     try {
       const orderId = parseInt(req.params.id);
-      const wholesalerId = req.user?.claims?.sub;
+      const wholesalerId = req.user.id;
       const { deliveryAddress } = req.body;
 
       if (!deliveryAddress?.trim()) {
