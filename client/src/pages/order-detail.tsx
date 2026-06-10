@@ -322,6 +322,9 @@ export default function OrderDetail() {
   const [editProductSearch, setEditProductSearch] = useState('');
   const [isGeneratingPaymentLink, setIsGeneratingPaymentLink] = useState(false);
   const [showPickingMode, setShowPickingMode] = useState(false);
+  const [isSwitchToDeliveryOpen, setIsSwitchToDeliveryOpen] = useState(false);
+  const [switchToDeliveryAddress, setSwitchToDeliveryAddress] = useState('');
+  const [isSwitchingToDelivery, setIsSwitchingToDelivery] = useState(false);
 
   const swipeTouchStartX = useRef<number | null>(null);
   const swipeTouchStartY = useRef<number | null>(null);
@@ -794,6 +797,32 @@ export default function OrderDetail() {
     }
   };
 
+  const handleSwitchToDelivery = async () => {
+    if (!order || !switchToDeliveryAddress.trim()) return;
+    setIsSwitchingToDelivery(true);
+    try {
+      const response = await fetch(`/api/orders/${order.id}/switch-to-delivery`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ deliveryAddress: switchToDeliveryAddress.trim() }),
+      });
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.error || 'Failed to switch to delivery');
+      }
+      const data = await response.json();
+      setOrder({ ...order, fulfillmentType: 'delivery', deliveryAddress: switchToDeliveryAddress.trim(), deliveryAddressId: data.order?.deliveryAddressId ?? null });
+      setIsSwitchToDeliveryOpen(false);
+      setSwitchToDeliveryAddress('');
+      toast({ title: 'Switched to delivery', description: 'Delivery address saved successfully.' });
+    } catch (error) {
+      toast({ title: 'Failed to switch', description: error instanceof Error ? error.message : 'Please try again.', variant: 'destructive' });
+    } finally {
+      setIsSwitchingToDelivery(false);
+    }
+  };
+
   const generateAndCopyPaymentLink = async () => {
     if (!order) return;
     setIsGeneratingPaymentLink(true);
@@ -1171,6 +1200,15 @@ export default function OrderDetail() {
                     >
                       <CheckCircle className="h-4 w-4 mr-2" />
                       Mark Ready
+                    </DropdownMenuItem>
+                  )}
+                  {isPickup && !['cancelled', 'fulfilled'].includes(order.status) && (
+                    <DropdownMenuItem
+                      className="text-blue-600 focus:text-blue-600"
+                      onClick={() => setIsSwitchToDeliveryOpen(true)}
+                    >
+                      <Truck className="h-4 w-4 mr-2" />
+                      Switch to Delivery
                     </DropdownMenuItem>
                   )}
                   {order.status !== 'fulfilled' && (
@@ -2200,6 +2238,45 @@ export default function OrderDetail() {
               </Button>
               <Button className="flex-1 bg-green-600 hover:bg-green-700" onClick={handleMarkAsPaid} disabled={isMarkingPaid || !markAsPaidAmount}>
                 {isMarkingPaid ? 'Recording...' : 'Record Payment'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Switch to Delivery dialog ───────────────────────────────────────── */}
+      <Dialog open={isSwitchToDeliveryOpen} onOpenChange={(open) => { setIsSwitchToDeliveryOpen(open); if (!open) setSwitchToDeliveryAddress(''); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Truck className="h-4 w-4 text-blue-600" />
+              Switch to Delivery
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-1">
+            <p className="text-sm text-gray-500">
+              Enter the delivery address for order {order.orderNumber || `#${order.id}`}. This will change the fulfilment type from collection to delivery.
+            </p>
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">Delivery address</label>
+              <textarea
+                value={switchToDeliveryAddress}
+                onChange={(e) => setSwitchToDeliveryAddress(e.target.value)}
+                placeholder="e.g. 12 High Street, London, SW1A 1AA"
+                className="w-full p-2 border rounded-md text-sm min-h-[80px] resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" className="flex-1" onClick={() => setIsSwitchToDeliveryOpen(false)} disabled={isSwitchingToDelivery}>
+                Cancel
+              </Button>
+              <Button
+                className="flex-1 bg-blue-600 hover:bg-blue-700"
+                onClick={handleSwitchToDelivery}
+                disabled={isSwitchingToDelivery || !switchToDeliveryAddress.trim()}
+              >
+                {isSwitchingToDelivery ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
+                {isSwitchingToDelivery ? 'Saving...' : 'Save Delivery Address'}
               </Button>
             </div>
           </div>

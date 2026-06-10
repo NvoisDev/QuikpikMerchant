@@ -714,6 +714,32 @@ export function registerOrderLifecycleRoutes(app: Express): void {
 
   // ── End Draft Invoice Endpoints ──────────────────────────────────────────────
 
+  // PUT /api/orders/:id/switch-to-delivery — wholesaler only, any non-cancelled status
+  app.put('/api/orders/:id/switch-to-delivery', requireAuth, requireBooleanFeature('order_management'), requireNotViewer, requireMemberPermission('orders'), async (req: any, res) => {
+    try {
+      const orderId = parseInt(req.params.id);
+      const wholesalerId = req.user?.claims?.sub;
+      const { deliveryAddress } = req.body;
+
+      if (!deliveryAddress?.trim()) {
+        return res.status(400).json({ error: 'Delivery address is required' });
+      }
+
+      const order = await storage.getOrder(orderId);
+      if (!order) return res.status(404).json({ error: 'Order not found' });
+      if (order.wholesalerId !== wholesalerId) return res.status(403).json({ error: 'Not authorized' });
+      if (order.status === 'cancelled') return res.status(400).json({ error: 'Cannot modify a cancelled order' });
+      if (order.status === 'fulfilled') return res.status(400).json({ error: 'Cannot modify a fulfilled order' });
+      if (order.fulfillmentType === 'delivery') return res.status(400).json({ error: 'Order is already set to delivery' });
+
+      const updated = await storage.switchOrderToDelivery(orderId, deliveryAddress.trim());
+      return res.json({ success: true, order: updated });
+    } catch (error) {
+      console.error('❌ switch-to-delivery error:', error);
+      return res.status(500).json({ error: 'Failed to switch order to delivery' });
+    }
+  });
+
   // PUT /api/orders/:orderId/change-delivery-address
   app.put('/api/orders/:orderId/change-delivery-address', async (req, res) => {
     try {

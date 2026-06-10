@@ -471,6 +471,20 @@ export class OrderStorage extends ProductStorage {
     return updatedOrder;
   }
 
+  async switchOrderToDelivery(orderId: number, deliveryAddress: string): Promise<Order> {
+    const [updatedOrder] = await db
+      .update(orders)
+      .set({
+        fulfillmentType: 'delivery',
+        deliveryAddress,
+        deliveryAddressId: null,
+        updatedAt: new Date(),
+      })
+      .where(eq(orders.id, orderId))
+      .returning();
+    return updatedOrder;
+  }
+
   async updateOrderDeliveryAddress(orderId: number, deliveryAddressId: number, formattedAddress: string): Promise<Order> {
     const [updatedOrder] = await db
       .update(orders)
