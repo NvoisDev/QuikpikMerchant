@@ -237,25 +237,23 @@ export function registerAdminSystemRoutes(app: Express): void {
       // If the wholesaler had a custom price tied to a specific plan and the new plan
       // is different, clear the custom price plan binding (and its tied price overrides)
       // so the pricing page no longer shows a stale "Your price" badge.
-      const existingCustomPricePlanId = (targetUser as any).customPricePlanId as string | null | undefined;
-      const existingAnnualPlanId = (targetUser as any).customPricePlanIdAnnual as string | null | undefined;
-      const existingMonthlyPlanId = (targetUser as any).customPricePlanIdMonthly as string | null | undefined;
-      const clearFields: Record<string, null> = {};
-      if (existingCustomPricePlanId && existingCustomPricePlanId !== newPlanId) {
-        clearFields.customPricePlanId = null;
-        clearFields.customMonthlyPrice = null;
-        clearFields.customAnnualPrice = null;
-      }
-      if (existingAnnualPlanId && existingAnnualPlanId !== newPlanId) {
-        clearFields.customPricePlanIdAnnual = null;
-        clearFields.customAnnualPrice = null;
-      }
-      if (existingMonthlyPlanId && existingMonthlyPlanId !== newPlanId) {
-        clearFields.customPricePlanIdMonthly = null;
-        clearFields.customMonthlyPrice = null;
-      }
-      if (Object.keys(clearFields).length > 0) {
-        await db.update(users).set(clearFields as any).where(eq(users.id, targetUser.id));
+      // If split bindings (customPricePlanIdAnnual / customPricePlanIdMonthly) are present,
+      // do NOT auto-clear them on plan change — the admin explicitly set separate deals per
+      // billing interval and they must persist when the wholesaler switches monthly↔annual.
+      // Only clear the legacy single-field system when no split bindings exist.
+      const hasSplitBindings = !!(
+        (targetUser as any).customPricePlanIdAnnual ||
+        (targetUser as any).customPricePlanIdMonthly
+      );
+      if (!hasSplitBindings) {
+        const existingCustomPricePlanId = (targetUser as any).customPricePlanId as string | null | undefined;
+        if (existingCustomPricePlanId && existingCustomPricePlanId !== newPlanId) {
+          await db.update(users).set({
+            customPricePlanId: null,
+            customMonthlyPrice: null,
+            customAnnualPrice: null,
+          } as any).where(eq(users.id, targetUser.id));
+        }
       }
 
       res.json({ success: true, userId: targetUser.id, newPlanId });

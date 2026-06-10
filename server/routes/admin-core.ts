@@ -464,6 +464,26 @@ export function registerAdminCoreRoutes(app: Express): void {
         newPlanIdMonthly = (val === null || val === '') ? null : String(val);
       }
 
+      // Legacy backward-compat: accept the old single customPricePlanId field and map it
+      // to the correct split field based on the plan's billing_interval.
+      if ('customPricePlanId' in body && newPlanIdAnnual === undefined && newPlanIdMonthly === undefined) {
+        const val = body.customPricePlanId;
+        const legacyPlanId = (val === null || val === '') ? null : String(val);
+        if (legacyPlanId) {
+          const [planRow] = await db.select({ billingInterval: subscriptionPlans.billingInterval })
+            .from(subscriptionPlans).where(eq(subscriptionPlans.planId, legacyPlanId)).limit(1);
+          if (planRow?.billingInterval === 'yearly') {
+            newPlanIdAnnual = legacyPlanId;
+          } else {
+            newPlanIdMonthly = legacyPlanId;
+          }
+        } else {
+          // Clearing legacy field — clear both split fields
+          newPlanIdAnnual = newPlanIdAnnual ?? null;
+          newPlanIdMonthly = newPlanIdMonthly ?? null;
+        }
+      }
+
       if (newMonthly === undefined && newAnnual === undefined && newPlanIdAnnual === undefined && newPlanIdMonthly === undefined) {
         return res.status(400).json({ error: 'No fields provided to update' });
       }

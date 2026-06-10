@@ -24,26 +24,21 @@ async function clearCustomPriceIfPlanChanged(userId: number, newPlanId: string):
     })
     .from(users)
     .where(eq(users.id, userId));
-  const clearFields: Record<string, null> = {};
+
+  // If the wholesaler has separate monthly/annual bindings, those deals are intentionally
+  // persistent across plan switches (e.g., switching monthly↔annual keeps both deals intact).
+  // Only auto-clear the legacy single-field system when no split bindings are present.
+  const hasSplitBindings = !!(user?.customPricePlanIdAnnual || user?.customPricePlanIdMonthly);
+  if (hasSplitBindings) return;
+
   const existingCustomPlanId = user?.customPricePlanId as string | null | undefined;
   if (existingCustomPlanId && existingCustomPlanId !== newPlanId) {
-    clearFields.customPricePlanId = null;
-    clearFields.customMonthlyPrice = null;
-    clearFields.customAnnualPrice = null;
-  }
-  const existingAnnualPlanId = user?.customPricePlanIdAnnual as string | null | undefined;
-  if (existingAnnualPlanId && existingAnnualPlanId !== newPlanId) {
-    clearFields.customPricePlanIdAnnual = null;
-    clearFields.customAnnualPrice = null;
-  }
-  const existingMonthlyPlanId = user?.customPricePlanIdMonthly as string | null | undefined;
-  if (existingMonthlyPlanId && existingMonthlyPlanId !== newPlanId) {
-    clearFields.customPricePlanIdMonthly = null;
-    clearFields.customMonthlyPrice = null;
-  }
-  if (Object.keys(clearFields).length > 0) {
-    await db.update(users).set(clearFields as any).where(eq(users.id, userId));
-    console.log(`💰 Cleared stale custom price for user ${userId} (plan changed to "${newPlanId}")`);
+    await db.update(users).set({
+      customPricePlanId: null,
+      customMonthlyPrice: null,
+      customAnnualPrice: null,
+    } as any).where(eq(users.id, userId));
+    console.log(`💰 Cleared stale custom price for user ${userId} (was tied to plan "${existingCustomPlanId}", now on "${newPlanId}")`);
   }
 }
 
