@@ -397,6 +397,13 @@ export default function SubscriptionPricing() {
     ? new Date(currentSubscription.user.subscriptionPeriodEnd)
     : null;
 
+  const isActiveTrial = (
+    currentSubscription?.user?.subscriptionStatus === 'trialing' &&
+    !currentSubscription?.subscription?.stripeSubscriptionId &&
+    !!currentSubscription?.user?.subscriptionPeriodEnd &&
+    new Date(currentSubscription.user.subscriptionPeriodEnd) > new Date()
+  );
+
   if (plansLoading || subscriptionLoading) {
     return (
       <div className="bg-white min-h-screen">
@@ -600,6 +607,29 @@ export default function SubscriptionPricing() {
         </div>
       )}
 
+      {/* Free trial active banner */}
+      {isActiveTrial && currentSubscription?.user?.subscriptionPeriodEnd && (
+        <div className="mb-8 p-5 bg-emerald-50 border border-emerald-200 rounded-lg flex items-start gap-4">
+          <div className="w-9 h-9 rounded-full bg-emerald-100 flex items-center justify-center shrink-0 mt-0.5">
+            <CheckIcon className="w-5 h-5 text-emerald-600" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="font-semibold text-emerald-900 mb-0.5">You're on a free 90-day trial</div>
+            <div className="text-sm text-emerald-700">
+              Full access until{' '}
+              <strong>
+                {new Date(currentSubscription.user.subscriptionPeriodEnd).toLocaleDateString('en-GB', {
+                  weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+                })}
+              </strong>
+              {' '}—{' '}
+              {Math.ceil((new Date(currentSubscription.user.subscriptionPeriodEnd).getTime() - Date.now()) / (1000 * 60 * 60 * 24))} days remaining.
+              No payment needed until then.
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Free/Listing plan — billing card — shown only when there is no active Stripe subscription */}
       {currentSubscription && !currentSubscription.subscription?.stripeSubscriptionId && (currentSubscription.currentPlan === 'free' || currentSubscription.currentPlan === 'listing') && (
         <div className="mb-8 p-6 bg-gray-50 border border-gray-200 rounded-lg">
@@ -610,7 +640,9 @@ export default function SubscriptionPricing() {
           <p className="text-sm text-gray-500 mb-4">
             {currentSubscription.currentPlan === 'free'
               ? "You're on the Starter plan (grandfathered). Upgrade to Listing, Starter, Standard or Premium to unlock more products, team members, and advanced tools."
-              : "You're on the Listing plan. Upgrade to Starter or above to unlock invoices, payments, order management, and customer tools."}
+              : isActiveTrial
+                ? "You're on the Listing plan with a free trial. Upgrade to Starter or above any time to unlock invoices, payments, order management, and customer tools."
+                : "You're on the Listing plan. Upgrade to Starter or above to unlock invoices, payments, order management, and customer tools."}
           </p>
           {currentSubscription.user?.subscriptionPeriodEnd && (() => {
             const periodEnd = new Date(currentSubscription.user!.subscriptionPeriodEnd!);
@@ -638,7 +670,7 @@ export default function SubscriptionPricing() {
             </div>
           ) : (
             <div className="flex items-center gap-3 flex-wrap">
-              {currentSubscription?.currentPlan === 'listing' && currentSubscription?.user?.subscriptionPeriodEnd && (
+              {!isActiveTrial && currentSubscription?.currentPlan === 'listing' && currentSubscription?.user?.subscriptionPeriodEnd && (
                 <Button
                   size="sm"
                   className="bg-gray-800 hover:bg-gray-900 text-white"
@@ -655,7 +687,7 @@ export default function SubscriptionPricing() {
                   Subscribe to Listing plan
                 </Button>
               )}
-              {currentSubscription?.currentPlan === 'listing' && currentSubscription?.user?.subscriptionPeriodEnd &&
+              {!isActiveTrial && currentSubscription?.currentPlan === 'listing' && currentSubscription?.user?.subscriptionPeriodEnd &&
                 (currentSubscription?.subscription?.planId === 'listing_annual' ||
                   currentSubscription?.subscription?.planId === 'listing_annual_intro') && (
                 <Button
@@ -682,7 +714,7 @@ export default function SubscriptionPricing() {
                   firstPaidPlan?.scrollIntoView({ behavior: 'smooth' });
                 }}
               >
-                View plans
+                {isActiveTrial ? 'Explore paid plans' : 'View plans'}
               </Button>
             </div>
           )}

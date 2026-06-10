@@ -907,7 +907,10 @@ export function registerAuthCoreRoutes(app: Express): void {
         businessAddress, preferredCurrency: defaultCurrency, defaultCurrency,
         businessType, estimatedMonthlyVolume,
         onboardingCompleted: false, onboardingStep: 0, onboardingSkipped: false,
-        isFirstLogin: true, productLimit: 2
+        isFirstLogin: true, productLimit: 2,
+        currentPlan: 'listing',
+        subscriptionStatus: 'trialing',
+        subscriptionPeriodEnd: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
       };
 
       const newUser = await storage.createUserWithPassword(userData, password);

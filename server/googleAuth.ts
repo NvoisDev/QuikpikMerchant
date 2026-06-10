@@ -116,7 +116,10 @@ export async function createOrUpdateUser(googleUser: GoogleUser) {
           role: 'wholesaler',
           businessName: `${googleUser.name}'s Business`,
           defaultCurrency: 'GBP',
-          isFirstLogin: true
+          isFirstLogin: true,
+          currentPlan: 'listing',
+          subscriptionStatus: 'trialing',
+          subscriptionPeriodEnd: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
         });
         return newUser;
       }
@@ -177,7 +180,10 @@ export async function createOrUpdateUser(googleUser: GoogleUser) {
         role: 'wholesaler',
         businessName: `${googleUser.name}'s Business`,
         defaultCurrency: 'GBP',
-        isFirstLogin: true
+        isFirstLogin: true,
+        currentPlan: 'listing',
+        subscriptionStatus: 'trialing',
+        subscriptionPeriodEnd: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
       });
       return user;
     }
@@ -195,7 +201,10 @@ export async function createOrUpdateUser(googleUser: GoogleUser) {
       role: 'wholesaler',
       businessName: `${googleUser.name}'s Business`,
       defaultCurrency: 'GBP',
-      isFirstLogin: true
+      isFirstLogin: true,
+      currentPlan: 'listing',
+      subscriptionStatus: 'trialing',
+      subscriptionPeriodEnd: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
     });
 
     return user;
