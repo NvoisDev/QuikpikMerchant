@@ -48,6 +48,7 @@ export interface WholesalerRow {
   logoUrl?: string | null;
   customMonthlyPrice?: number | null;
   customAnnualPrice?: number | null;
+  customPricePlanId?: string | null;
 }
 
 export interface RevenueTotals {

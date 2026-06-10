@@ -779,10 +779,15 @@ export default function SubscriptionPricing() {
           const price = parseFloat(plan.monthlyPrice);
           const tier = getPlanBaseTier(plan.planId);
 
-          // Negotiated custom price for this wholesaler (if set by admin)
-          const rawCustomPrice = isAnnual
-            ? currentSubscription?.user?.customAnnualPrice
-            : currentSubscription?.user?.customMonthlyPrice;
+          // Negotiated custom price for this wholesaler (if set by admin).
+          // Only show on the exact plan the price was negotiated for — no fallback.
+          const customPricePlanId = currentSubscription?.user?.customPricePlanId ?? null;
+          const planHasCustomPrice = customPricePlanId !== null && customPricePlanId === plan.planId;
+          const rawCustomPrice = planHasCustomPrice
+            ? (isAnnual
+                ? currentSubscription?.user?.customAnnualPrice
+                : currentSubscription?.user?.customMonthlyPrice)
+            : null;
           const customPrice = rawCustomPrice ? parseFloat(rawCustomPrice) : null;
           const isCurrent = isCurrentPlan(plan.planId) ||
             (plan.planId === 'starter' && (currentSubscription?.currentPlan === 'free'));

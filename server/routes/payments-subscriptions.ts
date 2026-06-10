@@ -114,17 +114,25 @@ export function registerSubscriptionRoutes(app: Express): void {
       const targetPlan = validPlans[0];
 
       // Check for a negotiated custom price override on this wholesaler's account.
-      // If set for the plan's billing interval, create an ad-hoc Stripe price so the
-      // wholesaler is charged their negotiated amount instead of the standard rate.
+      // If set for the plan's billing interval AND tied to this specific plan, create an
+      // ad-hoc Stripe price so the wholesaler is charged their negotiated amount instead of the standard rate.
       const [wholesalerRecord] = await db.select({
         customAnnualPrice: users.customAnnualPrice,
         customMonthlyPrice: users.customMonthlyPrice,
+        customPricePlanId: (users as any).customPricePlanId,
       }).from(users).where(eq(users.id, userId));
 
       const isAnnualPlan = (targetPlan.billingInterval ?? 'monthly') === 'yearly';
-      const customPriceAmount = isAnnualPlan
-        ? (wholesalerRecord?.customAnnualPrice ? parseFloat(wholesalerRecord.customAnnualPrice) : null)
-        : (wholesalerRecord?.customMonthlyPrice ? parseFloat(wholesalerRecord.customMonthlyPrice) : null);
+      // Only apply the custom price when the plan being purchased exactly matches the tied plan ID.
+      // If customPricePlanId is null (legacy record), no override is applied.
+      const planMatches = wholesalerRecord?.customPricePlanId !== null &&
+        wholesalerRecord?.customPricePlanId !== undefined &&
+        wholesalerRecord.customPricePlanId === targetPlan.planId;
+      const customPriceAmount = planMatches
+        ? (isAnnualPlan
+            ? (wholesalerRecord?.customAnnualPrice ? parseFloat(wholesalerRecord.customAnnualPrice) : null)
+            : (wholesalerRecord?.customMonthlyPrice ? parseFloat(wholesalerRecord.customMonthlyPrice) : null))
+        : null;
 
       // All subscription plan price IDs are live-mode prices. Even if an account is
       // flagged is_test_account, we must use the live Stripe client for checkout —
@@ -260,17 +268,23 @@ export function registerSubscriptionRoutes(app: Express): void {
         }
 
         // Check whether this wholesaler has a custom subscription price override.
-        // If so, create an ad-hoc Stripe Price tied to the plan's product and use it
-        // instead of the standard plan price ID.
+        // If so, and it is tied to this specific plan, create an ad-hoc Stripe Price
+        // tied to the plan's product and use it instead of the standard plan price ID.
         const [wholesalerRow] = await db.select({
           customMonthlyPrice: (users as any).customMonthlyPrice,
           customAnnualPrice: (users as any).customAnnualPrice,
+          customPricePlanId: (users as any).customPricePlanId,
         }).from(users).where(eq(users.id, userId)).limit(1);
 
         const isAnnualPlan = targetPlan.billingInterval === 'yearly';
-        const customPriceGBP = isAnnualPlan
-          ? wholesalerRow?.customAnnualPrice
-          : wholesalerRow?.customMonthlyPrice;
+        // Only apply the custom price when the plan being purchased exactly matches the tied plan ID.
+        // If customPricePlanId is null (legacy record), no override is applied.
+        const rowPlanMatches = wholesalerRow?.customPricePlanId !== null &&
+          wholesalerRow?.customPricePlanId !== undefined &&
+          wholesalerRow.customPricePlanId === targetPlan.planId;
+        const customPriceGBP = rowPlanMatches
+          ? (isAnnualPlan ? wholesalerRow?.customAnnualPrice : wholesalerRow?.customMonthlyPrice)
+          : null;
 
         let resolvedPriceId = priceId;
         if (customPriceGBP !== null && customPriceGBP !== undefined && targetPlan.stripeProductId) {

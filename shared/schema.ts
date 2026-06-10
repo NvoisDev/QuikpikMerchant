@@ -318,6 +318,8 @@ export const users = pgTable("users", {
   // Stored as the actual price in GBP, e.g. 499.99
   customMonthlyPrice: decimal("custom_monthly_price", { precision: 10, scale: 2 }),
   customAnnualPrice: decimal("custom_annual_price", { precision: 10, scale: 2 }),
+  // Which plan the custom price is tied to — only that plan card shows "Your price" and gets the override at checkout
+  customPricePlanId: varchar("custom_price_plan_id"),
 
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
