@@ -12,6 +12,67 @@ function requireStripe(isTestAccount: boolean | null | undefined) {
 }
 
 /**
+ * Computes the current billing period (start/end Unix timestamps) from a
+ * Stripe subscription's billing_cycle_anchor + price interval.
+ *
+ * Stripe API 2025+ may return null for current_period_end on certain billing
+ * models, so this is used as a reliable fallback.  The billing_cycle_anchor is
+ * a known past billing date; we walk forward by interval_count until we find
+ * the most recent billing date that is still ≤ now.
+ */
+function computePeriodFromAnchor(sub: Stripe.Subscription): { start: number; end: number } | null {
+  const anchor = sub.billing_cycle_anchor;
+  if (!anchor) return null;
+
+  const item = sub.items?.data?.[0];
+  // plan fields are deprecated but still populated; fall back to price.recurring
+  const interval = (item?.plan?.interval ?? item?.price?.recurring?.interval) as 'month' | 'year' | 'week' | 'day' | undefined;
+  const intervalCount = item?.plan?.interval_count ?? item?.price?.recurring?.interval_count ?? 1;
+
+  if (!interval || (interval !== 'month' && interval !== 'year')) return null;
+
+  const anchorDate = new Date(anchor * 1000);
+  const now = new Date();
+
+  // Build the candidate periodStart: same day/time as anchor, adjusted to current cycle
+  let periodStart: Date;
+
+  if (interval === 'month') {
+    // Place anchor day in the current month
+    periodStart = new Date(
+      now.getFullYear(), now.getMonth(), anchorDate.getDate(),
+      anchorDate.getHours(), anchorDate.getMinutes(), anchorDate.getSeconds(),
+    );
+    // If that date is in the future, step back one interval
+    if (periodStart > now) {
+      periodStart = new Date(periodStart);
+      periodStart.setMonth(periodStart.getMonth() - intervalCount);
+    }
+  } else {
+    // 'year' — place anchor month+day in the current year
+    periodStart = new Date(
+      now.getFullYear(), anchorDate.getMonth(), anchorDate.getDate(),
+      anchorDate.getHours(), anchorDate.getMinutes(), anchorDate.getSeconds(),
+    );
+    if (periodStart > now) {
+      periodStart.setFullYear(periodStart.getFullYear() - intervalCount);
+    }
+  }
+
+  const periodEnd = new Date(periodStart);
+  if (interval === 'month') {
+    periodEnd.setMonth(periodEnd.getMonth() + intervalCount);
+  } else {
+    periodEnd.setFullYear(periodEnd.getFullYear() + intervalCount);
+  }
+
+  return {
+    start: Math.floor(periodStart.getTime() / 1000),
+    end: Math.floor(periodEnd.getTime() / 1000),
+  };
+}
+
+/**
  * Returns true while we are within the introductory pricing window
  * (now → 30 April 2027 inclusive). On 1 May 2027 UTC this returns false
  * and the system reverts to the original prices automatically.
@@ -543,41 +604,58 @@ export class SubscriptionService {
         .orderBy(userSubscriptions.createdAt);
 
       // ── Live-sync fallback ───────────────────────────────────────────────────
-      // If the stored period end is in the past but the user has an active paid
-      // subscription, a webhook was missed for the most recent renewal.  Fetch the
-      // live subscription from Stripe and write the correct period dates to the DB
-      // so the billing card is accurate on the very next page load.
+      // If subscriptionPeriodEnd is missing or in the past but the user has an
+      // active paid subscription, a webhook was missed.  Fetch the live period
+      // from Stripe and write it to the DB so the billing card is correct on the
+      // very next page load.
+      // Trigger when subscriptionPeriodEnd is null (never populated) OR stale (past).
+      // Do NOT fall back to subscriptionEndsAt for the trigger — that field may be
+      // set to a future date by checkout even when period start/end are missing.
       const storedPeriodEnd = user.subscriptionPeriodEnd ?? user.subscriptionEndsAt;
       const isActivePaidPlan = user.stripeSubscriptionId &&
         (user.subscriptionStatus === 'active' || user.subscriptionStatus === 'trialing') &&
         user.currentPlan && user.currentPlan !== 'free';
-      const isPeriodStale = storedPeriodEnd && storedPeriodEnd < new Date();
+      const isPeriodStale = !user.subscriptionPeriodEnd || user.subscriptionPeriodEnd < new Date();
 
       if (isActivePaidPlan && isPeriodStale) {
         try {
           const stripe = getStripeClient(Boolean(user.isTestAccount));
           const liveSub = await stripe.subscriptions.retrieve(user.stripeSubscriptionId!);
           if (liveSub.status === 'active' || liveSub.status === 'trialing') {
-            const livePeriodEnd = new Date(liveSub.current_period_end * 1000);
-            const livePeriodStart = new Date(liveSub.current_period_start * 1000);
-            // Only write back if the live period is actually newer (it should always be)
-            if (!storedPeriodEnd || livePeriodEnd > storedPeriodEnd) {
-              await db.update(users).set({
-                subscriptionPeriodStart: livePeriodStart,
-                subscriptionPeriodEnd: livePeriodEnd,
-                subscriptionEndsAt: livePeriodEnd,
-                updatedAt: new Date(),
-              }).where(eq(users.id, userId));
-              // Update userSubscriptions table too
-              await db.update(userSubscriptions).set({
-                currentPeriodStart: livePeriodStart,
-                currentPeriodEnd: livePeriodEnd,
-                updatedAt: new Date(),
-              }).where(eq(userSubscriptions.userId, userId));
-              console.log(`🔄 Live-synced stale billing period for user ${userId}: ${livePeriodStart.toISOString()} – ${livePeriodEnd.toISOString()}`);
-              // Re-read the updated user so the returned object has correct dates
-              const [refreshed] = await db.select().from(users).where(eq(users.id, userId));
-              if (refreshed) user = refreshed;
+            // Some Stripe API versions (2025+) return null for current_period_end on
+            // certain billing models.  Fall back to computing the period from the
+            // subscription's billing_cycle_anchor + price interval, which is always set.
+            let livePeriodEndTs = liveSub.current_period_end;
+            let livePeriodStartTs = liveSub.current_period_start;
+            if (!livePeriodEndTs || !livePeriodStartTs) {
+              const computed = computePeriodFromAnchor(liveSub);
+              if (computed) {
+                livePeriodStartTs = computed.start;
+                livePeriodEndTs = computed.end;
+              }
+            }
+            if (livePeriodEndTs && livePeriodStartTs) {
+              const livePeriodEnd = new Date(livePeriodEndTs * 1000);
+              const livePeriodStart = new Date(livePeriodStartTs * 1000);
+              // Only write back if the live period is actually newer (it should always be)
+              if (!storedPeriodEnd || livePeriodEnd > storedPeriodEnd) {
+                await db.update(users).set({
+                  subscriptionPeriodStart: livePeriodStart,
+                  subscriptionPeriodEnd: livePeriodEnd,
+                  subscriptionEndsAt: livePeriodEnd,
+                  updatedAt: new Date(),
+                }).where(eq(users.id, userId));
+                // Update userSubscriptions table too
+                await db.update(userSubscriptions).set({
+                  currentPeriodStart: livePeriodStart,
+                  currentPeriodEnd: livePeriodEnd,
+                  updatedAt: new Date(),
+                }).where(eq(userSubscriptions.userId, userId));
+                console.log(`🔄 Live-synced stale billing period for user ${userId}: ${livePeriodStart.toISOString()} – ${livePeriodEnd.toISOString()}`);
+                // Re-read the updated user so the returned object has correct dates
+                const [refreshed] = await db.select().from(users).where(eq(users.id, userId));
+                if (refreshed) user = refreshed;
+              }
             }
           }
         } catch (syncErr) {
@@ -1157,6 +1235,98 @@ export class SubscriptionService {
         console.error(`❌ Failed to downgrade user ${user.id}:`, err);
       }
     }
+  }
+
+  /**
+   * One-time startup backfill: for every active paid subscriber whose
+   * subscriptionPeriodEnd is null or already in the past, fetch the live
+   * Stripe subscription and write the correct period dates to both tables.
+   * Idempotent — safe to call on every startup; only does work when needed.
+   */
+  static async backfillMissingBillingPeriods(): Promise<void> {
+    const result = await db.execute(sql`
+      SELECT id, stripe_subscription_id, is_test_account, subscription_period_end
+      FROM users
+      WHERE subscription_status IN ('active', 'trialing')
+        AND current_plan != 'free'
+        AND stripe_subscription_id IS NOT NULL
+        AND (subscription_period_end IS NULL OR subscription_period_end < NOW())
+    `);
+
+    const affected = result.rows as {
+      id: string;
+      stripe_subscription_id: string;
+      is_test_account: boolean | null;
+      subscription_period_end: string | null;
+    }[];
+
+    if (affected.length === 0) {
+      console.log('✅ Billing period backfill: all subscribers already up to date.');
+      return;
+    }
+
+    console.log(`🔄 Billing period backfill: ${affected.length} subscriber(s) with missing/stale period dates — syncing from Stripe…`);
+
+    let fixed = 0;
+    let failed = 0;
+
+    for (const row of affected) {
+      try {
+        const stripe = getStripeClient(Boolean(row.is_test_account));
+        const liveSub = await stripe.subscriptions.retrieve(row.stripe_subscription_id);
+
+        if (liveSub.status !== 'active' && liveSub.status !== 'trialing') {
+          // Stripe says the subscription is not active — skip; webhook or downgrade check will handle it
+          continue;
+        }
+
+        // Some Stripe API versions (2025+) return null for current_period_end on
+        // certain billing models.  Fall back to computing the period from the
+        // subscription's billing_cycle_anchor + price interval, which is always set.
+        let periodEndTs = liveSub.current_period_end;
+        let periodStartTs = liveSub.current_period_start;
+        if (!periodEndTs || !periodStartTs) {
+          const computed = computePeriodFromAnchor(liveSub);
+          if (computed) {
+            periodStartTs = computed.start;
+            periodEndTs = computed.end;
+          }
+        }
+
+        if (!periodEndTs || !periodStartTs) {
+          console.warn(`  ⚠️ No period timestamps available for subscription ${row.stripe_subscription_id} — skipping`);
+          continue;
+        }
+
+        const livePeriodEnd = new Date(periodEndTs * 1000);
+        const livePeriodStart = new Date(periodStartTs * 1000);
+
+        await db.execute(sql`
+          UPDATE users SET
+            subscription_period_start = ${livePeriodStart},
+            subscription_period_end   = ${livePeriodEnd},
+            subscription_ends_at      = ${livePeriodEnd},
+            updated_at                = NOW()
+          WHERE id = ${row.id}
+        `);
+
+        await db.execute(sql`
+          UPDATE user_subscriptions SET
+            current_period_start = ${livePeriodStart},
+            current_period_end   = ${livePeriodEnd},
+            updated_at           = NOW()
+          WHERE user_id = ${row.id}
+        `);
+
+        console.log(`  ✅ Backfilled ${row.id}: ${livePeriodStart.toISOString().slice(0, 10)} – ${livePeriodEnd.toISOString().slice(0, 10)}`);
+        fixed++;
+      } catch (err) {
+        console.error(`  ❌ Backfill failed for user ${row.id}:`, err);
+        failed++;
+      }
+    }
+
+    console.log(`✅ Billing period backfill complete: ${fixed} fixed, ${failed} failed.`);
   }
 }
 

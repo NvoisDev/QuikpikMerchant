@@ -885,6 +885,16 @@ httpServer.listen({ port, host: '0.0.0.0', reusePort: true }, () => {
       console.error('❌ Startup expired subscription check failed:', err);
     }
 
+    // One-time backfill: populate missing/stale subscription period dates for all
+    // active paid subscribers by fetching their live Stripe subscription.
+    // Guarded — only runs if there are affected rows; becomes a no-op once complete.
+    try {
+      const { SubscriptionService: SS2 } = await import("./subscription-service");
+      await SS2.backfillMissingBillingPeriods();
+    } catch (err) {
+      console.error('❌ Startup billing period backfill failed:', err);
+    }
+
   } catch (error) {
     console.error("❌ Server initialisation error:", error);
     // Keep process alive — port is already open, 503 gate protects routes

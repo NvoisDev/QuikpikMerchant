@@ -445,7 +445,7 @@ export default function SubscriptionPricing() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Trial End / Next Billing Date */}
-            {currentSubscription.user?.subscriptionPeriodEnd && !currentSubscription.subscription?.cancelAtPeriodEnd && (
+            {(currentSubscription.user?.subscriptionPeriodEnd || currentSubscription.user?.subscriptionEndsAt) && !currentSubscription.subscription?.cancelAtPeriodEnd && (
               <div className="bg-white p-4 rounded-lg border border-blue-100">
                 {(() => {
                   const trialEndRaw = currentSubscription.subscription?.trialEnd;
@@ -470,7 +470,10 @@ export default function SubscriptionPricing() {
                       </>
                     );
                   }
-                  const nextBilling = new Date(currentSubscription.user.subscriptionPeriodEnd);
+                  // Fall back to subscriptionEndsAt if subscriptionPeriodEnd hasn't been
+                  // populated yet (live-sync will correct it on the same page load)
+                  const nextBillingRaw = currentSubscription.user.subscriptionPeriodEnd ?? currentSubscription.user.subscriptionEndsAt;
+                  const nextBilling = new Date(nextBillingRaw!);
                   const daysUntil = Math.ceil((nextBilling.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
                   return (
                     <>
@@ -484,7 +487,7 @@ export default function SubscriptionPricing() {
                         })}
                       </div>
                       <div className="text-sm text-gray-600 mt-1">
-                        {daysUntil > 0 ? `${daysUntil} days away` : 'Today'}
+                        {daysUntil > 0 ? `${daysUntil} days away` : daysUntil === 0 ? 'Today' : 'Upcoming'}
                       </div>
                     </>
                   );
@@ -493,7 +496,7 @@ export default function SubscriptionPricing() {
             )}
 
             {/* Current Period */}
-            {currentSubscription.user?.subscriptionPeriodStart && currentSubscription.user?.subscriptionPeriodEnd && (
+            {currentSubscription.user?.subscriptionPeriodStart && (currentSubscription.user?.subscriptionPeriodEnd || currentSubscription.user?.subscriptionEndsAt) && (
               <div className="bg-white p-4 rounded-lg border border-blue-100">
                 <div className="text-sm text-blue-600 font-medium mb-1">Current Billing Period</div>
                 <div className="text-sm text-gray-700">
