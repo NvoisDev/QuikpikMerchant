@@ -670,13 +670,20 @@ export function WholesalersSection({ wholesalers, wholesalersLoading, isAdmin }:
                   Set a negotiated price for a specific plan. The "Your price" badge and checkout override only apply to the chosen plan.
                 </p>
                 {(selectedWholesaler.customMonthlyPrice !== null && selectedWholesaler.customMonthlyPrice !== undefined) || (selectedWholesaler.customAnnualPrice !== null && selectedWholesaler.customAnnualPrice !== undefined) ? (
-                  <p className="text-xs text-violet-700 font-medium mb-2">
-                    Currently: {[
-                      selectedWholesaler.customMonthlyPrice !== null && selectedWholesaler.customMonthlyPrice !== undefined ? `Monthly £${Number(selectedWholesaler.customMonthlyPrice).toFixed(2)}` : null,
-                      selectedWholesaler.customAnnualPrice !== null && selectedWholesaler.customAnnualPrice !== undefined ? `Annual £${Number(selectedWholesaler.customAnnualPrice).toFixed(2)}` : null,
-                    ].filter(Boolean).join(" · ")}
-                    {selectedWholesaler.customPricePlanId ? ` · Plan: ${activePlans.find(p => p.planId === selectedWholesaler.customPricePlanId)?.name ?? selectedWholesaler.customPricePlanId}` : " · (all plans)"}
-                  </p>
+                  <>
+                    <p className="text-xs text-violet-700 font-medium mb-1">
+                      Currently: {[
+                        selectedWholesaler.customMonthlyPrice !== null && selectedWholesaler.customMonthlyPrice !== undefined ? `Monthly £${Number(selectedWholesaler.customMonthlyPrice).toFixed(2)}` : null,
+                        selectedWholesaler.customAnnualPrice !== null && selectedWholesaler.customAnnualPrice !== undefined ? `Annual £${Number(selectedWholesaler.customAnnualPrice).toFixed(2)}` : null,
+                      ].filter(Boolean).join(" · ")}
+                      {selectedWholesaler.customPricePlanId ? ` · Plan: ${activePlans.find(p => p.planId === selectedWholesaler.customPricePlanId)?.name ?? selectedWholesaler.customPricePlanId}` : " · (all plans)"}
+                    </p>
+                    {selectedWholesaler.customPricePlanId && selectedWholesaler.customPricePlanId !== selectedWholesaler.currentPlan && (
+                      <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded px-2 py-1 mb-2">
+                        ⚠ Tied to <span className="font-medium">{activePlans.find(p => p.planId === selectedWholesaler.customPricePlanId)?.name ?? selectedWholesaler.customPricePlanId}</span> but wholesaler is on <span className="font-medium">{selectedWholesaler.currentPlan ?? "no active plan"}</span>
+                      </p>
+                    )}
+                  </>
                 ) : (
                   <p className="text-xs text-gray-400 mb-2">Currently: standard plan rates (no override)</p>
                 )}
