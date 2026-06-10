@@ -368,7 +368,13 @@ export const requireAuth = async (req: Request, res: Response, next: NextFunctio
             return next();
           }
         }
-        
+
+        // SECURITY: Block suspended wholesalers from all API access (legacy session path)
+        if (user.archived && user.role === 'wholesaler') {
+          console.log(`🚫 SECURITY: Blocked suspended wholesaler (${user.email}) from ${req.method} ${req.url} [legacy]`);
+          return res.status(403).json({ error: 'account_suspended' });
+        }
+
         req.user = user;
         // Enrich team members with their role from the teamMembers table
         if (user.role === 'team_member' && user.wholesalerId) {
@@ -398,6 +404,12 @@ export const requireAuth = async (req: Request, res: Response, next: NextFunctio
           userType: user.role,
           redirectUrl: '/customer-login'
         });
+      }
+
+      // SECURITY: Block suspended wholesalers from all API access (passport path)
+      if (user.archived && user.role === 'wholesaler') {
+        console.log(`🚫 SECURITY: Blocked suspended wholesaler (${user.email}) from ${req.method} ${req.url} [passport]`);
+        return res.status(403).json({ error: 'account_suspended' });
       }
       
       return next();

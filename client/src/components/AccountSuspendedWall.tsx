@@ -1,11 +1,19 @@
 import { useAuth } from "@/hooks/useAuth";
+import { useImpersonation } from "@/contexts/impersonation-context";
+import { useLocation } from "wouter";
 import { Shield, Mail, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function AccountSuspendedWall({ children }: { children: React.ReactNode }) {
   const { user, isLoading, logout } = useAuth();
+  const { impersonation } = useImpersonation();
+  const [location] = useLocation();
 
-  if (isLoading || !(user as any)?.archived) {
+  const isSuspended = !isLoading && (user as any)?.archived === true;
+  const isImpersonating = !!impersonation.wholesalerId;
+  const isAllowedPath = location === "/logout" || location === "/login";
+
+  if (!isSuspended || isImpersonating || isAllowedPath) {
     return <>{children}</>;
   }
 
