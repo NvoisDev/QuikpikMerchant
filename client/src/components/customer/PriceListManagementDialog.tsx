@@ -19,8 +19,9 @@ import { ContextualHelpBubble } from "@/components/ContextualHelpBubble";
 import { helpContent } from "@/data/whatsapp-help-content";
 import {
   Plus, Tag, Package, Users, Edit3, Calendar, Lock, ChevronDown, ChevronUp,
-  Check, X, Share2, Download, Trash2, MoreHorizontal, AlertTriangle,
+  Check, X, Share2, Download, Trash2, MoreHorizontal, AlertTriangle, AlertCircle,
 } from "lucide-react";
+import { SubscriptionUpgradeModal } from "@/components/subscription/SubscriptionUpgradeModal";
 
 interface PriceListSummary {
   id: number;
@@ -136,6 +137,17 @@ export function PriceListManagementDialog({
   const [expandedPriceLists, setExpandedPriceLists] = useState<Record<number, boolean>>({});
   const [priceListDetailCache, setPriceListDetailCache] = useState<Record<number, PriceListDetail>>({});
   const [sharingListId, setSharingListId] = useState<number | null>(null);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+
+  const handleCreatePriceListClick = () => {
+    if (planLimits && planLimits.limits.priceLists !== -1 && (planLimits.usage.priceLists ?? 0) >= planLimits.limits.priceLists) {
+      setShowUpgradeModal(true);
+      return;
+    }
+    setEditingPriceList(null);
+    setPriceListForm({ name: "", description: "", startDate: "", endDate: "", isActive: true });
+    setIsPriceListModalOpen(true);
+  };
   const autoExpandedRef = useRef(false);
 
   const { data: fetchedPriceLists = [], isLoading: isLoadingPriceLists } = useQuery<PriceListSummary[]>({
@@ -399,40 +411,74 @@ export function PriceListManagementDialog({
             <p className="text-sm text-muted-foreground">Create custom prices for specific customers or groups</p>
           </div>
           <div className="flex items-center gap-2">
-            {planLimits && planLimits.limits.priceLists !== -1 && (
-              <span className="text-sm text-muted-foreground whitespace-nowrap">
-                {planLimits.usage.priceLists ?? 0} / {planLimits.limits.priceLists} price lists
-              </span>
-            )}
             <ContextualHelpBubble
               topic="Price Lists"
               title="Managing Price Lists"
               steps={helpContent.priceLists.steps}
             />
-            {planLimits && planLimits.limits.priceLists !== -1 && (planLimits.usage.priceLists ?? 0) >= planLimits.limits.priceLists ? (
-              <Button
-                disabled
-                className="w-full sm:w-auto bg-green-600 hover:bg-green-700 opacity-50 cursor-not-allowed"
-                title="Upgrade your plan to create more price lists"
-              >
-                <Lock className="h-4 w-4 mr-2" />
-                New Price List
-              </Button>
-            ) : (
-              <Button
-                onClick={() => {
-                  setEditingPriceList(null);
-                  setPriceListForm({ name: "", description: "", startDate: "", endDate: "", isActive: true });
-                  setIsPriceListModalOpen(true);
-                }}
-                className="w-full sm:w-auto bg-green-600 hover:bg-green-700"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                New Price List
-              </Button>
-            )}
+            <Button
+              onClick={handleCreatePriceListClick}
+              className={`w-full sm:w-auto ${planLimits && planLimits.limits.priceLists !== -1 && (planLimits.usage.priceLists ?? 0) >= planLimits.limits.priceLists ? 'bg-amber-600 hover:bg-amber-700' : 'bg-green-600 hover:bg-green-700'}`}
+            >
+              {planLimits && planLimits.limits.priceLists !== -1 && (planLimits.usage.priceLists ?? 0) >= planLimits.limits.priceLists
+                ? <><Lock className="h-4 w-4 mr-2" />New Price List</>
+                : <><Plus className="h-4 w-4 mr-2" />New Price List</>
+              }
+            </Button>
           </div>
         </div>
+
+        {/* Usage bar — shown when there is a finite plan limit */}
+        {planLimits && planLimits.limits.priceLists !== -1 && (() => {
+          const used = planLimits.usage.priceLists ?? 0;
+          const limit = planLimits.limits.priceLists;
+          const pct = Math.min((used / limit) * 100, 100);
+          const atLimit = used >= limit;
+          const nearLimit = !atLimit && pct >= 80;
+          return (
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <span className={`text-sm font-semibold tabular-nums ${
+                  atLimit ? 'text-red-600' : nearLimit ? 'text-amber-600' : 'text-gray-700'
+                }`}>
+                  {used} / {limit} price lists used
+                </span>
+                {atLimit && (
+                  <span className="text-xs text-red-600 flex items-center gap-1">
+                    <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                    Limit reached
+                  </span>
+                )}
+                {nearLimit && (
+                  <span className="text-xs text-amber-700 flex items-center gap-1">
+                    <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                    {limit - used} remaining
+                  </span>
+                )}
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                <div
+                  className={`h-2 rounded-full transition-all duration-300 ${
+                    atLimit ? 'bg-red-500' : nearLimit ? 'bg-amber-500' : 'bg-emerald-500'
+                  }`}
+                  style={{ width: `${pct}%` }}
+                />
+              </div>
+              {atLimit && (
+                <p className="text-xs text-red-600 flex items-center gap-1">
+                  <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                  You've reached your plan limit. Upgrade to create more price lists.
+                </p>
+              )}
+              {nearLimit && (
+                <p className="text-xs text-amber-700 flex items-center gap-1">
+                  <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                  You're almost at your limit — consider upgrading your plan.
+                </p>
+              )}
+            </div>
+          );
+        })()}
 
         {filterCustomer && (
           <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800">
@@ -468,7 +514,7 @@ export function PriceListManagementDialog({
                     </Button>
                     <Button
                       size="sm"
-                      onClick={() => { setEditingPriceList(null); setPriceListForm({ name: "", description: "", startDate: "", endDate: "", isActive: true }); setIsPriceListModalOpen(true); }}
+                      onClick={handleCreatePriceListClick}
                       className="bg-green-600 hover:bg-green-700"
                     >
                       <Plus className="h-4 w-4 mr-2" /> Create price list
@@ -489,7 +535,7 @@ export function PriceListManagementDialog({
                     Create a price list to offer custom prices or discounts to specific customers or groups.
                   </p>
                   <Button
-                    onClick={() => { setEditingPriceList(null); setPriceListForm({ name: "", description: "", startDate: "", endDate: "", isActive: true }); setIsPriceListModalOpen(true); }}
+                    onClick={handleCreatePriceListClick}
                     className="bg-green-600 hover:bg-green-700"
                   >
                     <Plus className="h-4 w-4 mr-2" /> Create First Price List
@@ -1122,6 +1168,13 @@ export function PriceListManagementDialog({
           </Tabs>
         </DialogContent>
       </Dialog>
+
+      <SubscriptionUpgradeModal
+        open={showUpgradeModal}
+        onOpenChange={setShowUpgradeModal}
+        feature="price lists"
+        currentPlan={planLimits?.plan ?? "Free"}
+      />
     </>
   );
 }
