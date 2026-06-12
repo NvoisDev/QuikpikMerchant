@@ -84,7 +84,7 @@ export default function PaymentSuccess() {
               )}
             </div>
             <CardTitle className="text-2xl text-green-600">
-              {isReturning ? 'Order Confirmed!' : (sellerName ? `Welcome to ${sellerName}!` : 'Order Confirmed!')}
+              {(isReturning || orderNumber) ? 'Order Confirmed!' : (sellerName ? `Welcome to ${sellerName}!` : 'Order Confirmed!')}
             </CardTitle>
             {orderNumber && (
               <p className="text-sm text-gray-500 mt-2">
