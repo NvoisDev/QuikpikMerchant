@@ -2297,7 +2297,7 @@ export default function OrderDetail() {
 
       {/* ── Payment send modal ───────────────────────────────────────────────── */}
       <Dialog open={showPaymentSendModal} onOpenChange={setShowPaymentSendModal}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-sm">
           <DialogHeader>
             <DialogTitle>Send Payment Request</DialogTitle>
           </DialogHeader>
@@ -2309,7 +2309,7 @@ export default function OrderDetail() {
             <div className="grid grid-cols-2 gap-2">
               <button
                 onClick={() => setPaymentSendChannel('whatsapp')}
-                className={`flex items-center justify-center gap-2 p-3 rounded-lg border-2 text-sm font-medium transition-colors ${
+                className={`flex items-center justify-center gap-2 px-3 py-4 rounded-lg border-2 text-sm font-medium transition-colors ${
                   paymentSendChannel === 'whatsapp'
                     ? 'border-green-500 bg-green-50 text-green-700'
                     : 'border-gray-200 text-gray-500 hover:border-gray-300'
@@ -2320,7 +2320,7 @@ export default function OrderDetail() {
               </button>
               <button
                 onClick={() => setPaymentSendChannel('sms')}
-                className={`flex items-center justify-center gap-2 p-3 rounded-lg border-2 text-sm font-medium transition-colors ${
+                className={`flex items-center justify-center gap-2 px-3 py-4 rounded-lg border-2 text-sm font-medium transition-colors ${
                   paymentSendChannel === 'sms'
                     ? 'border-blue-500 bg-blue-50 text-blue-700'
                     : 'border-gray-200 text-gray-500 hover:border-gray-300'
@@ -2334,8 +2334,8 @@ export default function OrderDetail() {
             {paymentSendMessage && (
               <div className="space-y-1">
                 <textarea
-                  className="w-full bg-gray-50 border border-gray-200 rounded-lg p-3 text-xs text-gray-700 resize-none max-h-44 overflow-y-auto focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent"
-                  rows={6}
+                  className="w-full bg-gray-50 border border-gray-200 rounded-lg p-3 text-xs text-gray-700 resize-none max-h-28 sm:max-h-44 overflow-y-auto focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent"
+                  rows={4}
                   value={paymentSendMessage}
                   onChange={(e) => setPaymentSendMessage(e.target.value)}
                 />
@@ -2357,7 +2357,7 @@ export default function OrderDetail() {
               </p>
             )}
 
-            <div className="flex gap-2 pt-1">
+            <div className="flex flex-col-reverse gap-2 pt-1 sm:flex-row">
               <Button variant="outline" className="flex-1" onClick={copyPaymentLinkFromModal}>
                 <Copy className="h-4 w-4 mr-2" />
                 Copy Link
