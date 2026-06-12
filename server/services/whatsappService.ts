@@ -6,11 +6,13 @@ interface WhatsAppMessageParams {
   to: string;
   message: string;
   from?: string;
+  channel?: 'whatsapp' | 'sms';
 }
 
 export async function sendWhatsAppMessage(params: WhatsAppMessageParams): Promise<boolean> {
   try {
     const { to, message } = params;
+    const channel = params.channel ?? 'sms';
     
     const accountSid = process.env.TWILIO_ACCOUNT_SID;
     const authToken = process.env.TWILIO_AUTH_TOKEN;
@@ -24,16 +26,18 @@ export async function sendWhatsAppMessage(params: WhatsAppMessageParams): Promis
     const client = twilio(accountSid, authToken);
     
     const formattedPhone = formatPhoneToInternational(to);
+    const fromAddress = channel === 'whatsapp' ? `whatsapp:${twilioPhoneNumber}` : twilioPhoneNumber;
+    const toAddress   = channel === 'whatsapp' ? `whatsapp:${formattedPhone}`   : formattedPhone;
 
-    console.log(`📱 Sending SMS from ${twilioPhoneNumber} to ${formattedPhone}`);
+    console.log(`📱 Sending ${channel === 'whatsapp' ? 'WhatsApp' : 'SMS'} from ${fromAddress} to ${toAddress}`);
 
     await client.messages.create({
-      from: twilioPhoneNumber,
-      to: formattedPhone,
-      body: message
+      from: fromAddress,
+      to:   toAddress,
+      body: message,
     });
 
-    console.log(`✅ SMS sent successfully to ${formattedPhone}`);
+    console.log(`✅ ${channel === 'whatsapp' ? 'WhatsApp' : 'SMS'} sent successfully to ${toAddress}`);
     return true;
   } catch (error: unknown) {
     console.error('❌ SMS error:', error);

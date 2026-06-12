@@ -928,45 +928,28 @@ export function registerOrderCommsRoutes(app: Express): void {
         })
         .where(eq(orders.id, orderId));
 
-      // Send SMS notification to customer with payment link
-      let smsSent = false;
+      // Build the message text for the frontend to preview (not sent automatically)
       const customerPhone = order.customerPhone;
-      if (customerPhone && session.url) {
-        try {
-          // Build order items list for SMS (getOrderItems already includes product data)
-          let itemsList = '';
-          try {
-            const orderItemsList = await storage.getOrderItems(orderId);
-            const itemsListParts: string[] = [];
-            for (const item of orderItemsList) {
-              const productName = item.product?.name || `Product #${item.productId}`;
-              const total = parseFloat(item.total || '0');
-              const unitPrice = parseFloat(item.unitPrice || '0');
-              const sellingType = item.sellingType || 'units';
-              const promoNote = item.appliedOfferLabel ? ` (${item.appliedOfferLabel})` : '';
-              const freeNote = (item.freeItems || 0) > 0 ? ` +${item.freeItems} free` : '';
-              itemsListParts.push(`• ${productName} - ${item.quantity} ${sellingType} × £${unitPrice.toFixed(2)} = £${total.toFixed(2)}${promoNote}${freeNote}`);
-            }
-            itemsList = itemsListParts.length > 0 ? `\n\n📦 Items:\n${itemsListParts.join('\n')}` : '';
-          } catch (itemsError) {
-            console.error('⚠️ Could not fetch order items for SMS:', itemsError);
-          }
-          
-          // Use the correct payment amount and label in SMS
-          const paymentTypeLabel = order.paymentStatus === 'unpaid' && depositPercentage < 100
-            ? `Deposit (${depositPercentage}%)`
-            : 'Outstanding Balance';
-          const smsMessage = `Hi${order.customerName ? ` ${order.customerName.split(' ')[0]}` : ''}! ${wholesaler?.businessName || 'Your supplier'} is requesting payment for Order ${order.orderNumber}.${itemsList}\n\n${paymentTypeLabel}: £${paymentAmount.toFixed(2)}\n\nPay here: ${session.url}\n\nThis link expires in 24 hours.`;
-          
-          smsSent = await sendWhatsAppMessage({
-            to: customerPhone,
-            message: smsMessage
-          });
-          
-        } catch (smsError) {
-          const msg = smsError instanceof Error ? smsError.message : String(smsError);
-          console.warn(`[twilio] send-payment-link WhatsApp failed [orderId=${orderId}]: ${msg}`);
+      let smsMessage = '';
+      try {
+        const orderItemsList = await storage.getOrderItems(orderId);
+        const itemsListParts: string[] = [];
+        for (const item of orderItemsList) {
+          const productName = item.product?.name || `Product #${item.productId}`;
+          const total = parseFloat(item.total || '0');
+          const unitPrice = parseFloat(item.unitPrice || '0');
+          const sellingType = item.sellingType || 'units';
+          const promoNote = item.appliedOfferLabel ? ` (${item.appliedOfferLabel})` : '';
+          const freeNote = (item.freeItems || 0) > 0 ? ` +${item.freeItems} free` : '';
+          itemsListParts.push(`• ${productName} - ${item.quantity} ${sellingType} × £${unitPrice.toFixed(2)} = £${total.toFixed(2)}${promoNote}${freeNote}`);
         }
+        const itemsList = itemsListParts.length > 0 ? `\n\n📦 Items:\n${itemsListParts.join('\n')}` : '';
+        const paymentTypeLabel = order.paymentStatus === 'unpaid' && depositPercentage < 100
+          ? `Deposit (${depositPercentage}%)`
+          : 'Outstanding Balance';
+        smsMessage = `Hi${order.customerName ? ` ${order.customerName.split(' ')[0]}` : ''}! ${wholesaler?.businessName || 'Your supplier'} is requesting payment for Order ${order.orderNumber}.${itemsList}\n\n${paymentTypeLabel}: £${paymentAmount.toFixed(2)}\n\nPay here: ${session.url}\n\nThis link expires in 24 hours.`;
+      } catch (msgError) {
+        console.warn('⚠️ Could not build SMS message preview:', msgError);
       }
 
       // Get the updated order to return
@@ -977,13 +960,42 @@ export function registerOrderCommsRoutes(app: Express): void {
         paymentLink: session.url,
         amount: paymentAmount.toFixed(2),
         order: updatedOrder,
-        smsSent,
+        smsMessage,
         customerPhone: customerPhone || null,
       });
 
     } catch (error) {
       console.error('❌ Error generating balance payment link:', error);
       res.status(500).json({ error: 'Failed to generate payment link' });
+    }
+  });
+
+  // POST /api/orders/:orderId/send-payment-sms
+  app.post('/api/orders/:orderId/send-payment-sms', requireAuth, requireBooleanFeature('invoices'), requireNotViewer, requireMemberPermission('orders'), async (req: any, res) => {
+    try {
+      const orderId = parseInt(req.params.orderId);
+      if (isNaN(orderId)) return res.status(400).json({ error: 'Invalid order ID' });
+      const wholesalerId = resolveWholesalerId(req);
+      const { channel = 'whatsapp', message } = req.body as { channel?: 'whatsapp' | 'sms'; message?: string };
+
+      const [order] = await db.select().from(orders).where(eq(orders.id, orderId));
+      if (!order) return res.status(404).json({ error: 'Order not found' });
+      if (order.wholesalerId !== wholesalerId) return res.status(403).json({ error: 'Unauthorized' });
+
+      const customerPhone = order.customerPhone;
+      if (!customerPhone) return res.status(400).json({ error: 'No phone number on record for this customer' });
+
+      const textToSend = message || order.stripePaymentLinkUrl
+        ? (message || `Hi! You have a payment link for order ${order.orderNumber}: ${order.stripePaymentLinkUrl}`)
+        : null;
+      if (!textToSend) return res.status(400).json({ error: 'No message or stored payment link available' });
+
+      const sent = await sendWhatsAppMessage({ to: customerPhone, message: textToSend, channel });
+
+      res.json({ success: true, sent, channel });
+    } catch (error) {
+      console.error('❌ Error sending payment SMS:', error);
+      res.status(500).json({ error: 'Failed to send message' });
     }
   });
 

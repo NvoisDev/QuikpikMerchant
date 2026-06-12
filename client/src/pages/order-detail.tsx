@@ -18,7 +18,7 @@ import {
 import {
   DollarSign, Clock, CheckCircle, X, Truck, MapPin, Camera, Image as ImageIcon,
   RefreshCw, FileText, Loader2, Share2, Package, ChevronLeft, Home, Building, Warehouse, Building2,
-  Pencil, Plus, Minus, Search, MessageCircle, MoreHorizontal, Copy, Link, ClipboardList
+  Pencil, Plus, Minus, Search, MessageCircle, MoreHorizontal, Copy, Link, ClipboardList, Smartphone
 } from "lucide-react";
 import { useAuth, type AuthUser } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -325,6 +325,13 @@ export default function OrderDetail() {
   const [isSwitchToDeliveryOpen, setIsSwitchToDeliveryOpen] = useState(false);
   const [switchToDeliveryAddress, setSwitchToDeliveryAddress] = useState('');
   const [isSwitchingToDelivery, setIsSwitchingToDelivery] = useState(false);
+
+  const [showPaymentSendModal, setShowPaymentSendModal] = useState(false);
+  const [paymentSendChannel, setPaymentSendChannel] = useState<'whatsapp' | 'sms'>('whatsapp');
+  const [paymentSendMessage, setPaymentSendMessage] = useState('');
+  const [paymentSendLink, setPaymentSendLink] = useState('');
+  const [paymentSendPhone, setPaymentSendPhone] = useState('');
+  const [isSendingPaymentSms, setIsSendingPaymentSms] = useState(false);
 
   const swipeTouchStartX = useRef<number | null>(null);
   const swipeTouchStartY = useRef<number | null>(null);
@@ -834,38 +841,11 @@ export default function OrderDetail() {
       const data = await response.json();
       if (data.success && data.paymentLink) {
         if (data.order) setOrder({ ...order, ...data.order, stripePaymentLinkUrl: data.paymentLink });
-        const orderRef = order.orderNumber || `#${order.id}`;
-        const shareTitle = `Payment for Order ${orderRef}`;
-        const shareText = `Hi, here is your payment link for order ${orderRef}:`;
-
-        if (navigator.share) {
-          // Try to attach the invoice PDF to the share sheet
-          let pdfFile: File | null = null;
-          try {
-            const pdfRes = await fetch(`/api/orders/${order.id}/invoice/customer`, { credentials: 'include' });
-            if (pdfRes.ok) {
-              const blob = await pdfRes.blob();
-              pdfFile = new File([blob], `invoice-${orderRef}.pdf`, { type: 'application/pdf' });
-            }
-          } catch { /* non-fatal — share without PDF */ }
-
-          const shareWithFile = pdfFile && navigator.canShare?.({ files: [pdfFile] });
-          const shareData = shareWithFile
-            ? { title: shareTitle, text: shareText, url: data.paymentLink, files: [pdfFile!] }
-            : { title: shareTitle, text: shareText, url: data.paymentLink };
-
-          try {
-            await navigator.share(shareData);
-          } catch (err: any) {
-            if (err?.name !== 'AbortError' && err?.name !== 'NotAllowedError') {
-              try { await navigator.clipboard.writeText(data.paymentLink); } catch {}
-              toast({ title: "Link Copied", description: "Payment link copied to clipboard." });
-            }
-          }
-        } else {
-          try { await navigator.clipboard.writeText(data.paymentLink); } catch {}
-          toast({ title: "Payment Link Copied", description: "Payment link copied to clipboard." });
-        }
+        setPaymentSendLink(data.paymentLink);
+        setPaymentSendMessage(data.smsMessage || '');
+        setPaymentSendPhone(data.customerPhone || '');
+        setPaymentSendChannel('whatsapp');
+        setShowPaymentSendModal(true);
       } else {
         toast({ title: "Error", description: data.error || "Failed to generate payment link", variant: "destructive" });
       }
@@ -874,6 +854,36 @@ export default function OrderDetail() {
     } finally {
       setIsGeneratingPaymentLink(false);
     }
+  };
+
+  const sendPaymentSms = async () => {
+    if (!order) return;
+    setIsSendingPaymentSms(true);
+    try {
+      const response = await fetch(`/api/orders/${order.id}/send-payment-sms`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ channel: paymentSendChannel, message: paymentSendMessage }),
+      });
+      const data = await response.json();
+      if (data.success && data.sent) {
+        toast({ title: "Sent!", description: `Payment request sent via ${paymentSendChannel === 'whatsapp' ? 'WhatsApp' : 'SMS'}.` });
+      } else {
+        toast({ title: "Couldn't send", description: "The link was generated but the message failed to send. Use 'Copy Link' to share it manually.", variant: "destructive" });
+      }
+      setShowPaymentSendModal(false);
+    } catch {
+      toast({ title: "Error", description: "Failed to send message", variant: "destructive" });
+    } finally {
+      setIsSendingPaymentSms(false);
+    }
+  };
+
+  const copyPaymentLinkFromModal = async () => {
+    try { await navigator.clipboard.writeText(paymentSendLink); } catch {}
+    toast({ title: "Link Copied", description: "Payment link copied to clipboard." });
+    setShowPaymentSendModal(false);
   };
 
   const uploadOrderPhoto = async (file: File) => {
@@ -2277,6 +2287,74 @@ export default function OrderDetail() {
               >
                 {isSwitchingToDelivery ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
                 {isSwitchingToDelivery ? 'Saving...' : 'Save Delivery Address'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Payment send modal ───────────────────────────────────────────────── */}
+      <Dialog open={showPaymentSendModal} onOpenChange={setShowPaymentSendModal}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Send Payment Request</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-gray-600">
+              Send the payment link to <span className="font-medium">{order?.customerName?.split(' ')[0] || 'your customer'}</span> via:
+            </p>
+
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => setPaymentSendChannel('whatsapp')}
+                className={`flex items-center justify-center gap-2 p-3 rounded-lg border-2 text-sm font-medium transition-colors ${
+                  paymentSendChannel === 'whatsapp'
+                    ? 'border-green-500 bg-green-50 text-green-700'
+                    : 'border-gray-200 text-gray-500 hover:border-gray-300'
+                }`}
+              >
+                <MessageCircle className="h-4 w-4" />
+                WhatsApp
+              </button>
+              <button
+                onClick={() => setPaymentSendChannel('sms')}
+                className={`flex items-center justify-center gap-2 p-3 rounded-lg border-2 text-sm font-medium transition-colors ${
+                  paymentSendChannel === 'sms'
+                    ? 'border-blue-500 bg-blue-50 text-blue-700'
+                    : 'border-gray-200 text-gray-500 hover:border-gray-300'
+                }`}
+              >
+                <Smartphone className="h-4 w-4" />
+                SMS
+              </button>
+            </div>
+
+            {paymentSendMessage && (
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-xs text-gray-700 whitespace-pre-wrap max-h-44 overflow-y-auto">
+                {paymentSendMessage}
+              </div>
+            )}
+
+            {!paymentSendPhone && (
+              <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded p-2">
+                No phone number on file — use "Copy Link" to share manually.
+              </p>
+            )}
+
+            <div className="flex gap-2 pt-1">
+              <Button variant="outline" className="flex-1" onClick={copyPaymentLinkFromModal}>
+                <Copy className="h-4 w-4 mr-2" />
+                Copy Link
+              </Button>
+              <Button
+                className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                onClick={sendPaymentSms}
+                disabled={isSendingPaymentSms || !paymentSendPhone}
+              >
+                {isSendingPaymentSms
+                  ? <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  : <MessageCircle className="h-4 w-4 mr-2" />}
+                Send
               </Button>
             </div>
           </div>
