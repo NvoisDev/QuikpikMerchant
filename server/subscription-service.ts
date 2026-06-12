@@ -146,6 +146,7 @@ export class SubscriptionService {
           features: [
             "Up to 20 products",
             "Up to 5 price lists",
+            "Up to 1 team member",
             "Invoices & payments",
             "Customer management",
             "Order management",
@@ -889,9 +890,10 @@ export class SubscriptionService {
         description: 'Annual Starter plan — save 16% vs monthly',
         features: [
           'Up to 20 products',
+          'Up to 5 price lists',
+          'Up to 1 team member',
           'Invoices & payments',
           'Order management',
-          'Up to 5 price lists',
           'Customer tools',
           'Save 16% vs monthly',
         ],
