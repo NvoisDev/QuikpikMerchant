@@ -512,13 +512,21 @@ export function PriceListManagementDialog({
                     <Button variant="outline" size="sm" onClick={() => onFilterChange(null)}>
                       <X className="h-4 w-4 mr-2" /> Clear filter
                     </Button>
-                    <Button
-                      size="sm"
-                      onClick={handleCreatePriceListClick}
-                      className="bg-green-600 hover:bg-green-700"
-                    >
-                      <Plus className="h-4 w-4 mr-2" /> Create price list
-                    </Button>
+                    {(() => {
+                      const atLimit = !!(planLimits && planLimits.limits.priceLists !== -1 && (planLimits.usage.priceLists ?? 0) >= planLimits.limits.priceLists);
+                      return (
+                        <Button
+                          size="sm"
+                          onClick={handleCreatePriceListClick}
+                          className={atLimit ? 'bg-amber-600 hover:bg-amber-700' : 'bg-green-600 hover:bg-green-700'}
+                        >
+                          {atLimit
+                            ? <><Lock className="h-4 w-4 mr-2" />New Price List</>
+                            : <><Plus className="h-4 w-4 mr-2" />Create price list</>
+                          }
+                        </Button>
+                      );
+                    })()}
                   </div>
                 </CardContent>
               </Card>
@@ -534,12 +542,20 @@ export function PriceListManagementDialog({
                   <p className="text-muted-foreground text-center text-sm max-w-xs mb-4">
                     Create a price list to offer custom prices or discounts to specific customers or groups.
                   </p>
-                  <Button
-                    onClick={handleCreatePriceListClick}
-                    className="bg-green-600 hover:bg-green-700"
-                  >
-                    <Plus className="h-4 w-4 mr-2" /> Create First Price List
-                  </Button>
+                  {(() => {
+                    const atLimit = !!(planLimits && planLimits.limits.priceLists !== -1 && (planLimits.usage.priceLists ?? 0) >= planLimits.limits.priceLists);
+                    return (
+                      <Button
+                        onClick={handleCreatePriceListClick}
+                        className={atLimit ? 'bg-amber-600 hover:bg-amber-700' : 'bg-green-600 hover:bg-green-700'}
+                      >
+                        {atLimit
+                          ? <><Lock className="h-4 w-4 mr-2" />New Price List</>
+                          : <><Plus className="h-4 w-4 mr-2" />Create First Price List</>
+                        }
+                      </Button>
+                    );
+                  })()}
                 </CardContent>
               </Card>
             );
