@@ -110,10 +110,14 @@ export default function PaymentSuccess() {
             ) : (
               <div className="bg-green-50 border border-green-100 p-4 rounded-lg text-center">
                 <p className="text-green-700 font-semibold">
-                  You're now registered!
+                  {orderNumber ? 'Payment received!' : "You're now registered!"}
                 </p>
                 <p className="text-sm text-green-600 mt-1">
-                  Your account is ready to use
+                  {orderNumber
+                    ? (isFulfilled
+                        ? "your order has already been fulfilled, so nothing more to do on our end!"
+                        : "your order is being prepared and we'll be in touch shortly.")
+                    : "Your account is ready to use"}
                 </p>
               </div>
             )}
