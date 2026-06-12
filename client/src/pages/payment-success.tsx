@@ -86,6 +86,11 @@ export default function PaymentSuccess() {
             <CardTitle className="text-2xl text-green-600">
               {(isReturning || orderNumber) ? 'Order Confirmed!' : (sellerName ? `Welcome to ${sellerName}!` : 'Order Confirmed!')}
             </CardTitle>
+            {orderNumber && !isReturning && sellerName && (
+              <p className="text-base text-green-600 font-medium mt-1">
+                Welcome to {sellerName}!
+              </p>
+            )}
             {orderNumber && (
               <p className="text-sm text-gray-500 mt-2">
                 Order Reference: <span className="font-semibold text-gray-700">{orderNumber}</span>
