@@ -166,14 +166,18 @@ export default function TeamManagement() {
   });
 
   // Derive real tier from API data; default to 'free' (most restrictive) while loading.
-  const simpleTier: 'free' | 'standard' | 'premium' = planLimitsLoading
+  const simpleTier: 'free' | 'starter' | 'standard' | 'premium' = planLimitsLoading
     ? 'free'
     : planLimits?.plan === 'premium' ? 'premium'
     : planLimits?.plan === 'standard' ? 'standard'
+    : planLimits?.plan === 'starter' ? 'starter'
     : 'free';
 
   // Human-readable plan label for display
-  const planDisplayLabel = simpleTier === 'premium' ? 'Premium' : simpleTier === 'standard' ? 'Standard' : 'Free';
+  const planDisplayLabel =
+    simpleTier === 'premium' ? 'Premium' :
+    simpleTier === 'standard' ? 'Standard' :
+    simpleTier === 'starter' ? 'Starter' : 'Free';
 
   const inviteMemberMutation = useMutation({
     mutationFn: async (data: TeamMemberFormData) => {
