@@ -752,7 +752,13 @@ export default function ProductManagement() {
           {!isViewer && (
             <div className="flex items-center gap-3">
               {planLimits && planLimits.limits.products !== -1 && (
-                <span className="text-xs text-slate-400 hidden sm:block">
+                <span className={`text-xs font-semibold tabular-nums hidden sm:block ${
+                  planLimits.usage.products >= planLimits.limits.products
+                    ? 'text-red-600'
+                    : planLimits.usage.products / planLimits.limits.products >= 0.8
+                    ? 'text-amber-600'
+                    : 'text-slate-400'
+                }`}>
                   {planLimits.usage.products}/{planLimits.limits.products} products
                 </span>
               )}
@@ -774,6 +780,57 @@ export default function ProductManagement() {
             </div>
           )}
         </div>
+
+        {/* Product limit progress bar — only shown when there is a finite limit and usage ≥ 80% */}
+        {planLimits && planLimits.limits.products !== -1 && !planLimitsLoading &&
+          planLimits.usage.products / planLimits.limits.products >= 0.8 && (
+          <div className="mb-4 rounded-lg border px-4 py-3 space-y-2 hidden sm:block
+            border-amber-200 bg-amber-50"
+            style={planLimits.usage.products >= planLimits.limits.products
+              ? { borderColor: 'rgb(254 202 202)', backgroundColor: 'rgb(254 242 242)' }
+              : undefined}
+          >
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-medium text-gray-600">Product slots</p>
+              <span className={`text-xs font-semibold tabular-nums ${
+                planLimits.usage.products >= planLimits.limits.products
+                  ? 'text-red-600'
+                  : 'text-amber-600'
+              }`}>
+                {planLimits.usage.products} / {planLimits.limits.products} used
+              </span>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+              <div
+                className={`h-2 rounded-full transition-all duration-300 ${
+                  planLimits.usage.products >= planLimits.limits.products
+                    ? 'bg-red-500'
+                    : 'bg-amber-500'
+                }`}
+                style={{ width: `${Math.min((planLimits.usage.products / planLimits.limits.products) * 100, 100)}%` }}
+              />
+            </div>
+            {planLimits.usage.products >= planLimits.limits.products ? (
+              <p className="text-xs text-red-600 flex items-center gap-1">
+                <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                You've reached your product limit.{' '}
+                <button
+                  onClick={() => setShowUpgradeModal(true)}
+                  className="font-semibold underline hover:text-red-800"
+                >
+                  Upgrade your plan
+                </button>{' '}
+                to add more products.
+              </p>
+            ) : (
+              <p className="text-xs text-amber-700 flex items-center gap-1">
+                <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                You're almost at your limit —{' '}
+                {planLimits.limits.products - planLimits.usage.products} slot{planLimits.limits.products - planLimits.usage.products !== 1 ? 's' : ''} remaining.
+              </p>
+            )}
+          </div>
+        )}
 
         {/* Download Modal */}
         <DownloadProductsModal
