@@ -541,7 +541,7 @@ export function registerQuoteRoutes(app: Express): void {
             payment_method_types: ['card'],
             line_items: lineItems,
             mode: 'payment',
-            success_url: `${quoteBaseUrl}/customer/payment-success?order=${quoteOrder.orderNumber}&wholesaler=${wholesalerId}${isReturning ? '&returning=true' : ''}`,
+            success_url: `${quoteBaseUrl}/customer/payment-success?order=${quoteOrder.orderNumber}&wholesaler=${wholesalerId}${isReturning ? '&returning=true' : ''}${(quoteOrder.status === 'fulfilled' || quoteOrder.status === 'ready_to_collect') ? '&fulfilled=true' : ''}`,
             cancel_url: `${quoteBaseUrl}/store/${wholesalerId}`,
             metadata: quoteOrderMetadata,
             payment_intent_data: {
@@ -1134,7 +1134,7 @@ export function registerQuoteRoutes(app: Express): void {
           const editQuoteMetadata = { orderId: quoteId.toString(), orderNumber: existingOrder.orderNumber, wholesalerId, customerId: existingOrder.retailerId || '', isQuote: 'true', depositPercentage: depositPercentage.toString(), depositAmount: depositAmount.toFixed(2), totalAmount: total.toFixed(2), alreadyPaid: alreadyPaid.toFixed(2) };
           const baseSessionParams: any = {
             payment_method_types: ['card'], line_items: lineItems, mode: 'payment',
-            success_url: `${baseUrl}/customer/payment-success?order=${existingOrder.orderNumber}&wholesaler=${wholesalerId}`,
+            success_url: `${baseUrl}/customer/payment-success?order=${existingOrder.orderNumber}&wholesaler=${wholesalerId}${isReturning ? '&returning=true' : ''}${(existingOrder.status === 'fulfilled' || existingOrder.status === 'ready_to_collect') ? '&fulfilled=true' : ''}`,
             cancel_url: `${baseUrl}/store/${wholesalerId}`,
             metadata: editQuoteMetadata,
             payment_intent_data: { metadata: editQuoteMetadata } as Stripe.Checkout.SessionCreateParams['payment_intent_data'],

@@ -11,6 +11,7 @@ export default function PaymentSuccess() {
   const orderNumber = params.get('order');
   const wholesalerId = params.get('wholesaler');
   const isReturning = params.get('returning') === 'true';
+  const isFulfilled = params.get('fulfilled') === 'true';
 
   const { data: wholesaler } = useQuery<{ businessName: string | null; firstName: string | null }>({
     queryKey: [`/api/wholesaler/${wholesalerId}`],
@@ -101,7 +102,9 @@ export default function PaymentSuccess() {
                     : 'Thank you for your continued business!'}
                 </p>
                 <p className="text-sm text-green-600 mt-1">
-                  We appreciate your loyalty
+                  Payment received — {isFulfilled
+                    ? "your order has already been fulfilled, so nothing more to do on our end!"
+                    : "your order is being prepared and we'll be in touch shortly."}
                 </p>
               </div>
             ) : (

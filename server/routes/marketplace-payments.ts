@@ -680,7 +680,7 @@ export function registerPaymentRoutes(app: Express, customerActionLimiter: Reque
           quantity: 1,
         }],
         mode: 'payment',
-        success_url: `${baseUrl}/customer/payment-success?order=${order.orderNumber}&wholesaler=${order.wholesalerId}&returning=true`,
+        success_url: `${baseUrl}/customer/payment-success?order=${order.orderNumber}&wholesaler=${order.wholesalerId}&returning=true${(order.status === 'fulfilled' || order.status === 'ready_to_collect') ? '&fulfilled=true' : ''}`,
         cancel_url: `${baseUrl}/store/${order.wholesalerId}`,
         metadata: balanceOrderMetadata,
         customer_email: customer?.email || undefined,
