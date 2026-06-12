@@ -623,24 +623,69 @@ export default function TeamManagement() {
             Team Limits
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
-            <div>
-              <p className="text-sm text-gray-600">
-                Current Plan: <span className="font-semibold">{planDisplayLabel}</span>
-              </p>
-              <p className="text-sm text-gray-600">
-                Team Members: {currentTeamCount} / {teamLimit === -1 ? "unlimited" : teamLimit}
-              </p>
+        <CardContent className="space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+            <div className="flex-1 space-y-2">
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-gray-600">
+                  Current Plan: <span className="font-semibold">{planDisplayLabel}</span>
+                </p>
+                {teamLimit !== -1 && (
+                  <span className={`text-sm font-semibold tabular-nums ${
+                    !canAddMembers
+                      ? 'text-red-600'
+                      : teamLimit !== -1 && currentTeamCount / teamLimit >= 0.8
+                      ? 'text-amber-600'
+                      : 'text-gray-700'
+                  }`}>
+                    {currentTeamCount} / {teamLimit} slots used
+                  </span>
+                )}
+                {teamLimit === -1 && (
+                  <span className="text-sm text-gray-500">{currentTeamCount} members — unlimited</span>
+                )}
+              </div>
+
+              {/* Usage progress bar — only shown when there is a finite limit */}
+              {teamLimit !== -1 && !planLimitsLoading && (
+                <>
+                  <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
+                    <div
+                      className={`h-2.5 rounded-full transition-all duration-300 ${
+                        !canAddMembers
+                          ? 'bg-red-500'
+                          : currentTeamCount / teamLimit >= 0.8
+                          ? 'bg-amber-500'
+                          : 'bg-emerald-500'
+                      }`}
+                      style={{ width: `${Math.min((currentTeamCount / teamLimit) * 100, 100)}%` }}
+                    />
+                  </div>
+
+                  {/* Contextual hint below bar */}
+                  {!canAddMembers ? (
+                    <p className="text-xs text-red-600 flex items-center gap-1">
+                      <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                      You've reached your {planDisplayLabel} plan limit. Upgrade to invite more team members.
+                    </p>
+                  ) : currentTeamCount / teamLimit >= 0.8 ? (
+                    <p className="text-xs text-amber-700 flex items-center gap-1">
+                      <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                      You're almost at your limit — {teamLimit - currentTeamCount} slot{teamLimit - currentTeamCount !== 1 ? 's' : ''} remaining.
+                    </p>
+                  ) : null}
+                </>
+              )}
             </div>
-            {(simpleTier as string) === 'free' && (
-              <Button 
+
+            {(simpleTier as string) !== 'premium' && (
+              <Button
                 onClick={() => setShowUpgradeModal(true)}
                 variant="outline"
-                className="border-emerald-200 text-emerald-700 hover:bg-emerald-50 w-full sm:w-auto"
+                className="border-emerald-200 text-emerald-700 hover:bg-emerald-50 shrink-0 w-full sm:w-auto"
               >
                 <Crown className="h-4 w-4 mr-2" />
-                Upgrade to Add Team Members
+                {!canAddMembers ? 'Upgrade to add members' : 'Upgrade plan'}
               </Button>
             )}
           </div>
