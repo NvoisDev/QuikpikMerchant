@@ -329,6 +329,7 @@ export default function OrderDetail() {
   const [showPaymentSendModal, setShowPaymentSendModal] = useState(false);
   const [paymentSendChannel, setPaymentSendChannel] = useState<'whatsapp' | 'sms'>('whatsapp');
   const [paymentSendMessage, setPaymentSendMessage] = useState('');
+  const [originalPaymentMessage, setOriginalPaymentMessage] = useState('');
   const [paymentSendLink, setPaymentSendLink] = useState('');
   const [paymentSendPhone, setPaymentSendPhone] = useState('');
   const [isSendingPaymentSms, setIsSendingPaymentSms] = useState(false);
@@ -843,6 +844,7 @@ export default function OrderDetail() {
         if (data.order) setOrder({ ...order, ...data.order, stripePaymentLinkUrl: data.paymentLink });
         setPaymentSendLink(data.paymentLink);
         setPaymentSendMessage(data.smsMessage || '');
+        setOriginalPaymentMessage(data.smsMessage || '');
         setPaymentSendPhone(data.customerPhone || '');
         setPaymentSendChannel('whatsapp');
         setShowPaymentSendModal(true);
@@ -2330,8 +2332,22 @@ export default function OrderDetail() {
             </div>
 
             {paymentSendMessage && (
-              <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-xs text-gray-700 whitespace-pre-wrap max-h-44 overflow-y-auto">
-                {paymentSendMessage}
+              <div className="space-y-1">
+                <textarea
+                  className="w-full bg-gray-50 border border-gray-200 rounded-lg p-3 text-xs text-gray-700 resize-none max-h-44 overflow-y-auto focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent"
+                  rows={6}
+                  value={paymentSendMessage}
+                  onChange={(e) => setPaymentSendMessage(e.target.value)}
+                />
+                {paymentSendMessage !== originalPaymentMessage && (
+                  <button
+                    type="button"
+                    className="text-xs text-blue-600 hover:underline"
+                    onClick={() => setPaymentSendMessage(originalPaymentMessage)}
+                  >
+                    Reset to original
+                  </button>
+                )}
               </div>
             )}
 
