@@ -1064,9 +1064,9 @@ export default function OrderDetail() {
 
   const primaryActionConfig: Record<NonNullable<PrimaryAction>, { label: string; color: string; icon: React.ReactNode; onClick: () => void; loading?: boolean }> = {
     send_payment_link: {
-      label: 'Send Payment Link',
+      label: 'Generate & Send Payment Link',
       color: 'bg-blue-600 hover:bg-blue-700',
-      icon: <Link className="h-4 w-4 mr-2" />,
+      icon: <RefreshCw className="h-4 w-4 mr-2" />,
       onClick: generateAndCopyPaymentLink,
       loading: isGeneratingPaymentLink,
     },
@@ -1727,7 +1727,7 @@ export default function OrderDetail() {
                         >
                           {isGeneratingPaymentLink
                             ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Generating...</>
-                            : <><Copy className="h-4 w-4 mr-2" />Copy Payment Link</>}
+                            : <><RefreshCw className="h-4 w-4 mr-2" />Generate Payment Link</>}
                         </Button>
                       )}
                       {(order.customerPhone || order.retailer?.phoneNumber) && (
