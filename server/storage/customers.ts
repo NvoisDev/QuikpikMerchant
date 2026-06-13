@@ -925,17 +925,25 @@ export class CustomerStorage extends OrderStorage {
         sql`${products.stock} <= COALESCE(${products.lowStockThreshold}, 50)`
       ));
 
-    // Get unpaid amount and count — use subtotal - platformFee to match the Customers page calculation
+    // Get unpaid amount and count — includes fully-unpaid and part-paid orders
+    // Fully-unpaid: net amount = subtotal - platformFee
+    // Part-paid: outstanding balance = amountOutstanding column
     const [unpaidStats] = await db
       .select({
-        unpaidAmount: sql<number>`COALESCE(SUM(COALESCE(CAST(${orders.subtotal} AS NUMERIC), CAST(${orders.total} AS NUMERIC)) - COALESCE(CAST(${orders.platformFee} AS NUMERIC), 0)), 0)`,
+        unpaidAmount: sql<number>`COALESCE(SUM(
+          CASE
+            WHEN ${orders.paymentStatus} = 'part_paid'
+              THEN COALESCE(CAST(${orders.amountOutstanding} AS NUMERIC), 0)
+            ELSE COALESCE(CAST(${orders.subtotal} AS NUMERIC), CAST(${orders.total} AS NUMERIC)) - COALESCE(CAST(${orders.platformFee} AS NUMERIC), 0)
+          END
+        ), 0)`,
         unpaidCount: count(orders.id),
       })
       .from(orders)
       .where(and(
         eq(orders.wholesalerId, wholesalerId),
         sql`${orders.status} NOT IN ('cancelled', 'refunded')`,
-        sql`(${orders.paymentStatus} IS NULL OR ${orders.paymentStatus} = 'unpaid')`
+        sql`(${orders.paymentStatus} IS NULL OR ${orders.paymentStatus} IN ('unpaid', 'part_paid'))`
       ));
 
     return {
@@ -998,14 +1006,20 @@ export class CustomerStorage extends OrderStorage {
     // Use subtotal - platformFee to match the Customers page calculation
     const [unpaidStats] = await db
       .select({
-        unpaidAmount: sql<number>`COALESCE(SUM(COALESCE(CAST(${orders.subtotal} AS NUMERIC), CAST(${orders.total} AS NUMERIC)) - COALESCE(CAST(${orders.platformFee} AS NUMERIC), 0)), 0)`,
+        unpaidAmount: sql<number>`COALESCE(SUM(
+          CASE
+            WHEN ${orders.paymentStatus} = 'part_paid'
+              THEN COALESCE(CAST(${orders.amountOutstanding} AS NUMERIC), 0)
+            ELSE COALESCE(CAST(${orders.subtotal} AS NUMERIC), CAST(${orders.total} AS NUMERIC)) - COALESCE(CAST(${orders.platformFee} AS NUMERIC), 0)
+          END
+        ), 0)`,
         unpaidCount: count(orders.id),
       })
       .from(orders)
       .where(and(
         eq(orders.wholesalerId, wholesalerId),
         sql`${orders.status} NOT IN ('cancelled', 'refunded')`,
-        sql`(${orders.paymentStatus} IS NULL OR ${orders.paymentStatus} = 'unpaid')`
+        sql`(${orders.paymentStatus} IS NULL OR ${orders.paymentStatus} IN ('unpaid', 'part_paid'))`
       ));
 
     return {

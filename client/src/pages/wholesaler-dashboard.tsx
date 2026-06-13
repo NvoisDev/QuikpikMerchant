@@ -748,7 +748,7 @@ export default function WholesalerDashboard() {
                       <p className="text-white/80 text-xs sm:text-sm font-medium">Amount Owed</p>
                       <p className="text-xl sm:text-3xl font-bold">{statsLoading ? '...' : formatCurrency(stats?.unpaidAmount || 0)}</p>
                       <p className="text-white/80 text-xs mt-1">
-                        {statsLoading ? '' : `${stats?.unpaidCount ?? 0} unpaid invoice${(stats?.unpaidCount ?? 0) !== 1 ? 's' : ''}`}
+                        {statsLoading ? '' : `${stats?.unpaidCount ?? 0} order${(stats?.unpaidCount ?? 0) !== 1 ? 's' : ''} with balance due`}
                       </p>
                     </div>
                     <div className="bg-white/20 p-2 sm:p-3 rounded-full">
