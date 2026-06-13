@@ -617,12 +617,18 @@ export default function ProductManagement() {
     },
     onSuccess: (results) => {
       const successCount = results.filter(r => r.success).length;
-      const failCount = results.filter(r => !r.success).length;
-      toast({ title: "Bulk Upload Complete", description: `${successCount} products created successfully${failCount > 0 ? `, ${failCount} failed` : ''}`, variant: successCount > 0 ? "default" : "destructive" });
-      queryClient.invalidateQueries({ queryKey: ['/api/products'] });
-      setIsBulkUploadDialogOpen(false);
-      setUploadedProducts([]);
-      setUploadErrors([]);
+      const failures = results.filter(r => !r.success);
+      if (successCount > 0) queryClient.invalidateQueries({ queryKey: ['/api/products'] });
+      if (failures.length > 0) {
+        toast({ title: "Bulk Upload Partially Complete", description: `${successCount} created, ${failures.length} failed — see details below`, variant: "destructive" });
+        setUploadErrors(failures.map(r => `"${r.product}": ${r.error}`));
+        setUploadedProducts([]);
+      } else {
+        toast({ title: "Bulk Upload Complete", description: `${successCount} products created successfully` });
+        setIsBulkUploadDialogOpen(false);
+        setUploadedProducts([]);
+        setUploadErrors([]);
+      }
     },
     onError: (error: Error) => {
       toast({ title: "Error", description: "Failed to create products: " + error.message, variant: "destructive" });

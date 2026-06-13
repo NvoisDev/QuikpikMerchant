@@ -80,7 +80,7 @@ export default function BulkUploadDialog({
           <DialogTitle>Bulk Upload Products</DialogTitle>
         </DialogHeader>
 
-        {uploadedProducts.length === 0 ? (
+        {uploadedProducts.length === 0 && uploadErrors.length === 0 ? (
           <div className="space-y-6">
             <div className="text-center p-8 border-2 border-dashed border-gray-300 rounded-lg">
               <FileText className="mx-auto h-12 w-12 text-gray-400" />
