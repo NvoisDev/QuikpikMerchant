@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { MapPin, Plus, Star, ChevronDown, Home, Building, Truck } from "lucide-react";
 import { DeliveryAddressManager } from "./DeliveryAddressManager";
+import { formatAddressDisplay } from "@shared/utils/address-formatter";
 
 interface DeliveryAddress {
   id?: number;
@@ -39,18 +40,6 @@ const getLabelIcon = (label?: string) => {
     case 'warehouse': return Truck;
     default: return MapPin;
   }
-};
-
-const formatAddress = (address: DeliveryAddress) => {
-  const parts = [
-    address.addressLine1,
-    address.addressLine2,
-    address.city,
-    address.state,
-    address.postalCode,
-    address.country === "United Kingdom" ? "UK" : address.country
-  ].filter(Boolean);
-  return parts.join(", ");
 };
 
 export function AddressSelector({ 
@@ -192,7 +181,7 @@ export function AddressSelector({
                     )}
                   </div>
                   <p className="text-sm text-gray-900 leading-relaxed">
-                    {formatAddress(displayAddress)}
+                    {formatAddressDisplay(displayAddress)}
                   </p>
                   {displayAddress.instructions && (
                     <p className="text-xs text-gray-500 mt-1">

@@ -64,7 +64,6 @@ export async function checkAndSendTrialReminders(): Promise<number> {
           .set({ trial14DayReminderSentAt: new Date() })
           .where(sql`${users.id} = ${user.id}`);
         sent++;
-        console.log(`📧 Trial 14-day reminder sent to ${user.email}`);
       }
     }
 
@@ -83,7 +82,6 @@ export async function checkAndSendTrialReminders(): Promise<number> {
           .set({ trial3DayReminderSentAt: new Date() })
           .where(sql`${users.id} = ${user.id}`);
         sent++;
-        console.log(`📧 Trial 3-day reminder sent to ${user.email}`);
       }
     }
 

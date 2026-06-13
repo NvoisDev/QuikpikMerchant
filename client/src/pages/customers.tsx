@@ -23,6 +23,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { BusinessSearchInput, type BusinessPlaceResult } from "@/components/BusinessSearchInput";
+import { formatDateShort } from "@shared/utils/date";
 import {
   Users,
   Plus,
@@ -446,12 +447,6 @@ export default function Customers() {
       toast({ title: "Error", description: error.message || "Failed to grant customer access", variant: "destructive" });
     },
   });
-
-  const formatDate = (date: Date | string) => {
-    return new Date(date).toLocaleDateString('en-GB', {
-      day: '2-digit', month: 'short', year: 'numeric'
-    });
-  };
 
   const getInitials = (firstName: string, lastName?: string, businessName?: string, phoneNumber?: string) => {
     if (businessName) return businessName.slice(0, 2).toUpperCase();

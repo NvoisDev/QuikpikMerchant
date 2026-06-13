@@ -12,6 +12,7 @@ import { MapPin, Plus, Edit, Trash2, Star, Home, Building, Truck } from "lucide-
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { AddressSearchInput, type AddressPlaceResult } from "@/components/BusinessSearchInput";
+import { formatAddressDisplay } from "@shared/utils/address-formatter";
 
 interface DeliveryAddress {
   id?: number;
@@ -250,18 +251,6 @@ export function DeliveryAddressManager({
     }
   };
 
-  const formatAddress = (address: DeliveryAddress) => {
-    const parts = [
-      address.addressLine1,
-      address.addressLine2,
-      address.city,
-      address.state,
-      address.postalCode,
-      address.country === "United Kingdom" ? "UK" : address.country
-    ].filter(Boolean);
-    return parts.join(", ");
-  };
-
   const getLabelIcon = (label?: string) => {
     const labelData = ADDRESS_LABELS.find(l => l.value === label?.toLowerCase());
     return labelData ? labelData.icon : MapPin;
@@ -311,7 +300,7 @@ export function DeliveryAddressManager({
                           )}
                         </div>
                         <p className="text-sm text-gray-900 leading-relaxed">
-                          {formatAddress(address)}
+                          {formatAddressDisplay(address)}
                         </p>
                         {address.instructions && (
                           <p className="text-xs text-gray-500 mt-1">
@@ -608,7 +597,7 @@ export function DeliveryAddressManager({
           {addressToDelete && (
             <div className="p-4 bg-gray-50 rounded-lg">
               <p className="text-sm text-gray-900">
-                {formatAddress(addressToDelete)}
+                {formatAddressDisplay(addressToDelete)}
               </p>
             </div>
           )}

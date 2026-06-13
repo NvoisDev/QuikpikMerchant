@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
+import { formatDateShort } from "@shared/utils/date";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Store, Calendar, ExternalLink, Building2 } from "lucide-react";
@@ -53,14 +54,6 @@ export default function WholesalerSelection() {
       // Still redirect even if update fails
       setLocation(`/customer-portal/${wholesalerId}`);
     }
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-GB', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric'
-    });
   };
 
   const getWholesalerLogo = (wholesaler: any) => {
@@ -232,7 +225,7 @@ export default function WholesalerSelection() {
                     <div className="flex items-center space-x-2">
                       <Calendar className="w-3 h-3" />
                       <span>
-                        Connected: {formatDate(relationship.relationship.acceptedAt || relationship.relationship.invitedAt)}
+                        Connected: {formatDateShort(relationship.relationship.acceptedAt || relationship.relationship.invitedAt)}
                       </span>
                     </div>
                     
@@ -240,7 +233,7 @@ export default function WholesalerSelection() {
                       <div className="flex items-center space-x-2">
                         <Calendar className="w-3 h-3" />
                         <span>
-                          Last visited: {formatDate(relationship.relationship.lastAccessedAt)}
+                          Last visited: {formatDateShort(relationship.relationship.lastAccessedAt)}
                         </span>
                       </div>
                     )}

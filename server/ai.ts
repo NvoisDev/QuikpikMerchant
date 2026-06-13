@@ -81,8 +81,6 @@ export async function generateProductImage(productName: string, category?: strin
     // Add basic visual description without using the full description to avoid issues
     prompt += ". Clean minimalist studio photography with white background, professional lighting, commercial style, high quality, centered composition, product focus";
 
-    console.log("Generating image with prompt:", prompt);
-
     const response = await openai.images.generate({
       model: "dall-e-3",
       prompt: prompt,

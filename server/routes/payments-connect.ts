@@ -577,7 +577,6 @@ export function registerPaymentConnectRoutes(app: Express): void {
         const piOrderNumber = paymentIntent?.metadata?.orderNumber;
 
         if (piOrderId && piOrderNumber) {
-          console.log(`🔄 payment_intent.succeeded fallback — checking order ${piOrderNumber} (id ${piOrderId})`);
           try {
             const [existingOrder] = await db.select()
               .from(orders)
@@ -595,13 +594,11 @@ export function registerPaymentConnectRoutes(app: Express): void {
               .split(',').map((s: string) => s.trim()).includes(piId);
 
             if (alreadyRecorded) {
-              console.log(`⚡ payment_intent.succeeded fallback: PI ${piId} already recorded for order ${piOrderNumber} — skipping`);
               return res.json({ received: true, type: event.type });
             }
 
             // If the order is already fully paid, nothing to do
             if (existingOrder.paymentStatus === 'paid') {
-              console.log(`⚡ payment_intent.succeeded fallback: order ${piOrderNumber} already marked paid — skipping`);
               return res.json({ received: true, type: event.type });
             }
 
@@ -637,7 +634,6 @@ export function registerPaymentConnectRoutes(app: Express): void {
               })
               .where(eq(orders.id, parseInt(piOrderId)));
 
-            console.log(`✅ payment_intent.succeeded fallback: order ${piOrderNumber} updated → ${paymentStatus} (paid £${cumulativePaid.toFixed(2)} / £${orderTotal.toFixed(2)})`);
           } catch (fallbackErr) {
             console.error(`❌ payment_intent.succeeded fallback failed for order ${piOrderNumber}:`, fallbackErr);
           }
@@ -778,7 +774,6 @@ export function registerPaymentConnectRoutes(app: Express): void {
                   stripeCustomerId: typeof stripeCustomerId === 'string' ? stripeCustomerId : null,
                   reason: 'Re-engagement email sent after Listing plan subscription canceled',
                 });
-                console.log(`📧 Listing lapse re-engagement email sent to ${affectedUser.email}`);
               }
             } else {
               const { subject, html, text } = generateDowngradeEffectiveEmail({
@@ -835,7 +830,6 @@ export function registerPaymentConnectRoutes(app: Express): void {
                     stripeCustomerId: pastDueCustId,
                     reason: 'Re-engagement email sent after Listing plan payment failed (past_due)',
                   });
-                  console.log(`📧 Listing past_due re-engagement email sent to ${pastDueUser.email}`);
                 }
               } catch (pastDueEmailErr) {
                 console.error('❌ Failed to send listing past_due re-engagement email:', pastDueEmailErr);

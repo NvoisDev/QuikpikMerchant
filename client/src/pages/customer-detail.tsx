@@ -52,6 +52,7 @@ import {
   ChevronUp,
 } from "lucide-react";
 import { useAuth, type AuthUser } from "@/hooks/useAuth";
+import { formatDateShort } from "@shared/utils/date";
 
 interface Customer {
   id: string;
@@ -102,9 +103,6 @@ interface Order {
   depositPercentage?: number;
   amountPaid?: string;
 }
-
-const formatDate = (date: Date | string) =>
-  new Date(date).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 
 export default function CustomerDetail() {
   const [, navigate] = useLocation();
@@ -693,7 +691,7 @@ export default function CustomerDetail() {
             <p className="text-sm text-gray-600">{fullName}</p>
           )}
           <p className="text-sm text-muted-foreground">
-            Since {formatDate(customer.createdAt)}
+            Since {formatDateShort(customer.createdAt)}
             {customer.city && ` · ${customer.city}${customer.country ? `, ${customer.country}` : ""}`}
           </p>
           <div className="flex flex-wrap gap-1 mt-1">
@@ -755,7 +753,7 @@ export default function CustomerDetail() {
           <div className="flex items-center justify-between">
             <span className="text-sm">Last order</span>
             <span className="text-sm font-semibold">
-              {customer.lastOrderDate ? formatDate(customer.lastOrderDate) : "No orders yet"}
+              {customer.lastOrderDate ? formatDateShort(customer.lastOrderDate) : "No orders yet"}
             </span>
           </div>
           <div className="flex items-center justify-between">
@@ -1003,7 +1001,7 @@ export default function CustomerDetail() {
                     </div>
                     <div>
                       <p className="text-sm font-medium">{order.orderNumber || `#${order.id}`}</p>
-                      <p className="text-xs text-muted-foreground">{formatDate(order.createdAt)}</p>
+                      <p className="text-xs text-muted-foreground">{formatDateShort(order.createdAt)}</p>
                     </div>
                   </div>
                   <div className="text-right flex flex-col items-end gap-1">

@@ -69,6 +69,19 @@ export function formatDeliveryAddressOneLine(address: string | DeliveryAddress |
   return addressLines.join(', ');
 }
 
+// Format address for UI display: single line, "United Kingdom" abbreviated to "UK"
+export function formatAddressDisplay(address: DeliveryAddress): string {
+  const parts = [
+    address.addressLine1,
+    address.addressLine2,
+    address.city,
+    address.state,
+    address.postalCode,
+    address.country === 'United Kingdom' ? 'UK' : address.country,
+  ].filter(Boolean) as string[];
+  return parts.join(', ');
+}
+
 // Format address for HTML display with line breaks
 export function formatDeliveryAddressHTML(address: string | DeliveryAddress | null): string {
   const addressLines = formatDeliveryAddress(address);
