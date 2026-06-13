@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { BusinessSearchInput, type BusinessPlaceResult } from "@/components/BusinessSearchInput";
+import { BusinessSearchInput, AddressSearchInput, type BusinessPlaceResult, type AddressPlaceResult } from "@/components/BusinessSearchInput";
 import {
   ArrowLeft,
   MoreHorizontal,
@@ -933,10 +933,10 @@ export default function CustomerDetail() {
             <p className="font-medium">{fullName}</p>
             <p>{defaultAddress.addressLine1}</p>
             {defaultAddress.addressLine2 && <p>{defaultAddress.addressLine2}</p>}
-            <p>{defaultAddress.city}</p>
-            {defaultAddress.state && <p>{defaultAddress.state}</p>}
-            <p>{defaultAddress.postalCode}</p>
-            <p>{defaultAddress.country}</p>
+            <p className="text-muted-foreground">
+              {[defaultAddress.city, defaultAddress.state, defaultAddress.postalCode].filter(Boolean).join(', ')}
+              {defaultAddress.country && ` · ${defaultAddress.country}`}
+            </p>
           </div>
         ) : (
           <div className="text-center py-6 bg-gray-50 rounded-lg border border-dashed">
@@ -1193,6 +1193,43 @@ export default function CustomerDetail() {
                     <X className="h-3 w-3" />
                   </Button>
                 </div>
+
+                {/* Google Places address search */}
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Search address</Label>
+                  <AddressSearchInput
+                    onSelect={(result: AddressPlaceResult) =>
+                      setAddressFormData((prev) => ({
+                        ...prev,
+                        addressLine1: result.addressLine1,
+                        city: result.city,
+                        postalCode: result.postalCode,
+                        country: result.country,
+                      }))
+                    }
+                    placeholder="Type to find address..."
+                  />
+                  {customer?.streetAddress && (
+                    <button
+                      type="button"
+                      className="flex items-center gap-1 text-xs text-blue-600 hover:underline"
+                      onClick={() =>
+                        setAddressFormData((prev) => ({
+                          ...prev,
+                          addressLine1: customer.streetAddress || '',
+                          addressLine2: customer.addressLine2 || '',
+                          city: customer.city || '',
+                          postalCode: customer.postalCode || '',
+                          country: customer.country || '',
+                        }))
+                      }
+                    >
+                      <MapPin className="h-3 w-3" />
+                      Use contact address
+                    </button>
+                  )}
+                </div>
+
                 <div>
                   <Label className="text-xs">Label (e.g. Home, Office, Warehouse)</Label>
                   <Input
