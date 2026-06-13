@@ -592,7 +592,7 @@ export default function ProductManagement() {
 
   const bulkCreateProductsMutation = useMutation({
     mutationFn: async (products: BulkUploadRow[]) => {
-      const results = [];
+      const results: { success: boolean; error?: string; product: any; isLimitError?: boolean }[] = [];
       for (const product of products) {
         try {
           const productData = {
@@ -610,7 +610,10 @@ export default function ProductManagement() {
           const result = await apiRequest("POST", "/api/products", productData);
           results.push({ success: true, product: result });
         } catch (error) {
-          results.push({ success: false, error: error instanceof Error ? error.message : "Unknown error", product: product.name });
+          const msg = error instanceof Error ? error.message : "Unknown error";
+          const isLimitError = msg === 'Product limit exceeded';
+          results.push({ success: false, error: msg, product: product.name, isLimitError });
+          if (isLimitError) break;
         }
       }
       return results;
@@ -618,8 +621,16 @@ export default function ProductManagement() {
     onSuccess: (results) => {
       const successCount = results.filter(r => r.success).length;
       const failures = results.filter(r => !r.success);
+      const limitError = failures.find(r => r.isLimitError);
       if (successCount > 0) queryClient.invalidateQueries({ queryKey: ['/api/products'] });
-      if (failures.length > 0) {
+      if (limitError) {
+        const notCreated = uploadedProducts.length - successCount;
+        setUploadErrors([
+          `Your plan limit has been reached — ${successCount} product${successCount !== 1 ? 's' : ''} were added, but ${notCreated} could not be created.`,
+          `Upgrade your plan to add unlimited products.`,
+        ]);
+        setUploadedProducts([]);
+      } else if (failures.length > 0) {
         toast({ title: "Bulk Upload Partially Complete", description: `${successCount} created, ${failures.length} failed — see details below`, variant: "destructive" });
         setUploadErrors(failures.map(r => `"${r.product}": ${r.error}`));
         setUploadedProducts([]);
