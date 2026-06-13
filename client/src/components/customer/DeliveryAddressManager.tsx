@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { MapPin, Plus, Edit, Trash2, Star, Home, Building, Truck } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { AddressSearchInput, type AddressPlaceResult } from "@/components/BusinessSearchInput";
 
 interface DeliveryAddress {
   id?: number;
@@ -417,6 +418,26 @@ export function DeliveryAddressManager({
           </DialogHeader>
           
           <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Google Places address search */}
+            <div>
+              <Label>Search address</Label>
+              <AddressSearchInput
+                onSelect={(result: AddressPlaceResult) =>
+                  setFormData(prev => ({
+                    ...prev,
+                    addressLine1: result.addressLine1,
+                    city: result.city,
+                    postalCode: result.postalCode,
+                    country: result.country,
+                  }))
+                }
+                placeholder="Type to find your address..."
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Select an address above to auto-fill the fields below, or fill them in manually.
+              </p>
+            </div>
+
             {/* Address Line 1 */}
             <div>
               <Label htmlFor="addressLine1">Address Line 1 *</Label>
