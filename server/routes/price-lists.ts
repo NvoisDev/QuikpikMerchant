@@ -166,7 +166,7 @@ export function registerPriceListRoutes(app: Express): void {
         .from(priceLists)
         .where(eq(priceLists.wholesalerId, wholesalerId));
 
-      const summary: Record<string, { count: number; names: string[]; ids: number[] }> = {};
+      const summary: Record<string, { count: number; names: string[]; ids: number[]; directIds: number[] }> = {};
 
       // Fetch all assignments and group members in bulk to avoid N+1
       const allAssignments = lists.length > 0
@@ -186,10 +186,12 @@ export function registerPriceListRoutes(app: Express): void {
       for (const list of lists) {
         const assignments = allAssignments.filter((a) => a.priceListId === list.id);
         const customerIds = new Set<string>();
+        const directCustomerIds = new Set<string>();
 
         for (const a of assignments) {
           if (a.customerId) {
             customerIds.add(a.customerId);
+            directCustomerIds.add(a.customerId);
           } else if (a.customerGroupId) {
             allGroupMembers
               .filter((m) => m.groupId === a.customerGroupId)
@@ -198,10 +200,11 @@ export function registerPriceListRoutes(app: Express): void {
         }
 
         for (const cid of Array.from(customerIds)) {
-          if (!summary[cid]) summary[cid] = { count: 0, names: [], ids: [] };
+          if (!summary[cid]) summary[cid] = { count: 0, names: [], ids: [], directIds: [] };
           summary[cid].count += 1;
           summary[cid].names.push(list.name as string);
           summary[cid].ids.push(list.id);
+          if (directCustomerIds.has(cid)) summary[cid].directIds.push(list.id);
         }
       }
 

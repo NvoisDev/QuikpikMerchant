@@ -410,12 +410,7 @@ export default function CustomerDetail() {
 
   const removeFromPriceListMutation = useMutation({
     mutationFn: async (priceListId: number) => {
-      const res = await fetch(`/api/price-lists/${priceListId}`, { credentials: 'include' });
-      if (!res.ok) throw new Error('Failed to fetch price list');
-      const priceList = await res.json();
-      const existing: { customerId?: string | null; customerGroupId?: number | null }[] = priceList.assignments || [];
-      const updated = existing.filter((a) => a.customerId !== customerId);
-      await apiRequest('PUT', `/api/price-lists/${priceListId}/assignments`, updated);
+      await apiRequest('DELETE', `/api/price-lists/${priceListId}/customers/${customerId}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/price-lists/customer-summary'] });
@@ -424,7 +419,7 @@ export default function CustomerDetail() {
     onError: (error: any) => toast({ title: 'Error', description: error.message || 'Failed to remove from price list', variant: 'destructive' }),
   });
 
-  const { data: priceListCustomerSummary = {} } = useQuery<Record<string, { count: number; names: string[]; ids: number[] }>>({
+  const { data: priceListCustomerSummary = {} } = useQuery<Record<string, { count: number; names: string[]; ids: number[]; directIds: number[] }>>({
     queryKey: ['/api/price-lists/customer-summary'],
     enabled: !!customerId,
   });
@@ -848,7 +843,7 @@ export default function CustomerDetail() {
                 >
                   <Tag className="h-3 w-3" />
                   {name}
-                  {!isViewer && (
+                  {!isViewer && customerPriceLists.directIds.includes(customerPriceLists.ids[i]) && (
                     <button
                       className="ml-1 hover:text-red-500 transition-colors"
                       disabled={removeFromPriceListMutation.isPending}
@@ -1368,14 +1363,16 @@ export default function CustomerDetail() {
                     <Badge key={i} variant="outline" className="text-xs flex items-center gap-1">
                       <Tag className="h-3 w-3" />
                       {name}
-                      <button
-                        className="ml-1 hover:text-red-500 transition-colors"
-                        disabled={removeFromPriceListMutation.isPending}
-                        onClick={() => removeFromPriceListMutation.mutate(customerPriceLists.ids[i])}
-                        aria-label={`Remove from ${name}`}
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
+                      {customerPriceLists.directIds.includes(customerPriceLists.ids[i]) && (
+                        <button
+                          className="ml-1 hover:text-red-500 transition-colors"
+                          disabled={removeFromPriceListMutation.isPending}
+                          onClick={() => removeFromPriceListMutation.mutate(customerPriceLists.ids[i])}
+                          aria-label={`Remove from ${name}`}
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      )}
                     </Badge>
                   ))}
                 </div>
