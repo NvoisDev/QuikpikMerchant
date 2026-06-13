@@ -137,6 +137,7 @@ export function PriceListManagementDialog({
   const [expandedPriceLists, setExpandedPriceLists] = useState<Record<number, boolean>>({});
   const [priceListDetailCache, setPriceListDetailCache] = useState<Record<number, PriceListDetail>>({});
   const [sharingListId, setSharingListId] = useState<number | null>(null);
+  const [isSharingCatalogue, setIsSharingCatalogue] = useState<'xlsx' | 'pdf' | null>(null);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
   const handleCreatePriceListClick = () => {
@@ -309,6 +310,52 @@ export function PriceListManagementDialog({
       }
     } finally {
       setSharingListId(null);
+    }
+  };
+
+  const handleShareCatalogue = async (format: 'xlsx' | 'pdf') => {
+    const ext = format === 'pdf' ? 'pdf' : 'xlsx';
+    const mimeType = format === 'pdf' ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+    const url = `/api/products/catalogue-export?format=${format}`;
+    const fileName = `Standard Price List.${ext}`;
+
+    if (typeof navigator.share !== 'function') {
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      return;
+    }
+
+    setIsSharingCatalogue(format);
+    try {
+      const response = await fetch(url);
+      if (!response.ok) throw new Error('Failed to fetch catalogue');
+      const blob = await response.blob();
+      const file = new File([blob], fileName, { type: mimeType });
+
+      if (navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ title: 'Standard Price List', files: [file] });
+      } else {
+        await navigator.share({ title: 'Standard Price List', url: window.location.origin });
+      }
+    } catch (err) {
+      if ((err as { name?: string })?.name === 'AbortError') {
+        // dismissed by user
+      } else if ((err as { name?: string })?.name === 'NotAllowedError') {
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      } else {
+        toast({ title: 'Could not share', description: (err as { message?: string })?.message || 'Something went wrong.', variant: 'destructive' });
+      }
+    } finally {
+      setIsSharingCatalogue(null);
     }
   };
 
@@ -533,36 +580,79 @@ export function PriceListManagementDialog({
             );
           }
 
+          const catalogueCard = (
+            <Card className="border-green-100 bg-green-50/30">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between flex-wrap gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-lg bg-green-100 flex items-center justify-center shrink-0">
+                      <Tag className="h-5 w-5 text-green-700" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-slate-900">Standard Price List</h3>
+                      <p className="text-xs text-muted-foreground">Your full product catalogue at standard prices — with your logo</p>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="border-green-200 text-green-700 hover:bg-green-50 gap-1.5 text-xs"
+                      onClick={() => handleShareCatalogue('xlsx')}
+                      disabled={isSharingCatalogue !== null}
+                    >
+                      {isSharingCatalogue === 'xlsx' ? 'Exporting…' : <><Share2 className="h-3 w-3" /> Excel</>}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="border-green-200 text-green-700 hover:bg-green-50 gap-1.5 text-xs"
+                      onClick={() => handleShareCatalogue('pdf')}
+                      disabled={isSharingCatalogue !== null}
+                    >
+                      {isSharingCatalogue === 'pdf' ? 'Exporting…' : <><Share2 className="h-3 w-3" /> PDF</>}
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          );
+
           if (fetchedPriceLists.length === 0) {
             return (
-              <Card className="border-dashed">
-                <CardContent className="flex flex-col items-center justify-center py-12">
-                  <Tag className="h-12 w-12 text-muted-foreground/40 mb-4" />
-                  <h3 className="font-medium text-lg mb-2">No price lists yet</h3>
-                  <p className="text-muted-foreground text-center text-sm max-w-xs mb-4">
-                    Create a price list to offer custom prices or discounts to specific customers or groups.
-                  </p>
-                  {(() => {
-                    const atLimit = !!(planLimits && planLimits.limits.priceLists !== -1 && (planLimits.usage.priceLists ?? 0) >= planLimits.limits.priceLists);
-                    return (
-                      <Button
-                        onClick={handleCreatePriceListClick}
-                        className={atLimit ? 'bg-amber-600 hover:bg-amber-700' : 'bg-green-600 hover:bg-green-700'}
-                      >
-                        {atLimit
-                          ? <><Lock className="h-4 w-4 mr-2" />New Price List</>
-                          : <><Plus className="h-4 w-4 mr-2" />Create First Price List</>
-                        }
-                      </Button>
-                    );
-                  })()}
-                </CardContent>
-              </Card>
+              <div className="space-y-4">
+                {catalogueCard}
+                <Card className="border-dashed">
+                  <CardContent className="flex flex-col items-center justify-center py-10">
+                    <Tag className="h-10 w-10 text-muted-foreground/40 mb-3" />
+                    <h3 className="font-medium text-base mb-1">No custom price lists yet</h3>
+                    <p className="text-muted-foreground text-center text-sm max-w-xs mb-4">
+                      Create a custom price list to offer specific prices or discounts to particular customers or groups.
+                    </p>
+                    {(() => {
+                      const atLimit = !!(planLimits && planLimits.limits.priceLists !== -1 && (planLimits.usage.priceLists ?? 0) >= planLimits.limits.priceLists);
+                      return (
+                        <Button
+                          onClick={handleCreatePriceListClick}
+                          className={atLimit ? 'bg-amber-600 hover:bg-amber-700' : 'bg-green-600 hover:bg-green-700'}
+                        >
+                          {atLimit
+                            ? <><Lock className="h-4 w-4 mr-2" />New Price List</>
+                            : <><Plus className="h-4 w-4 mr-2" />Create First Price List</>
+                          }
+                        </Button>
+                      );
+                    })()}
+                  </CardContent>
+                </Card>
+              </div>
             );
           }
 
           return (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="space-y-4">
+              {catalogueCard}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {filteredPriceLists.map((list) => (
                 <Card key={list.id} className={`relative hover:shadow-lg transition-shadow border-slate-200 ${list.isLocked ? 'opacity-60 grayscale' : ''}`}>
                   <CardContent className="p-4 space-y-3">
@@ -696,19 +786,31 @@ export function PriceListManagementDialog({
                             <MoreHorizontal className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-40">
+                        <DropdownMenuContent align="end" className="w-48">
                           <DropdownMenuItem
                             onClick={() => handleNativeShare(list.id, list.name)}
                             disabled={sharingListId === list.id}
                           >
                             <Share2 className="h-4 w-4 mr-2" />
-                            {sharingListId === list.id ? "Sharing…" : "Share"}
+                            {sharingListId === list.id ? "Sharing…" : "Share Excel"}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => window.open(`/api/price-lists/${list.id}/export?format=pdf`, '_blank')}
+                          >
+                            <Share2 className="h-4 w-4 mr-2" />
+                            Share PDF
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             onClick={() => window.open(`/api/price-lists/${list.id}/export`, '_blank')}
                           >
                             <Download className="h-4 w-4 mr-2" />
                             Download Excel
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => window.open(`/api/price-lists/${list.id}/export?format=pdf`, '_blank')}
+                          >
+                            <Download className="h-4 w-4 mr-2" />
+                            Download PDF
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem
@@ -724,6 +826,7 @@ export function PriceListManagementDialog({
                   </CardContent>
                 </Card>
               ))}
+              </div>
             </div>
           );
         })()}

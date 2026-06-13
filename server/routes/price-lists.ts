@@ -12,6 +12,7 @@ import {
   wrapCustomerEmail, emailCard, emailTable, emailButton,
   emailHeading, getEmailLogoUrl,
 } from "../email-templates";
+import { fetchLogoBuffer, buildBrandedWorkbook, buildBrandedPdf, type PriceRow } from '../utils/price-list-export';
 import { whatsAppBusinessService } from "../whatsapp-simple";
 
 // ── Internal helpers ────────────────────────────────────────────────────────
@@ -50,7 +51,7 @@ function getWholesalerId(req: any): string {
 
 // ── Excel workbook builder ───────────────────────────────────────────────────
 
-async function buildPriceListWorkbook(wholesalerId: string, listId: number) {
+async function getPriceListRows(wholesalerId: string, listId: number) {
   const [list] = await db
     .select()
     .from(priceLists)
@@ -72,9 +73,7 @@ async function buildPriceListWorkbook(wholesalerId: string, listId: number) {
       discountPercentage: item.discountPercentage,
     });
     const customPalletPrice =
-      item.customPalletPrice != null
-        ? parseFloat(item.customPalletPrice)
-        : null;
+      item.customPalletPrice != null ? parseFloat(item.customPalletPrice) : null;
     priceListMap.set(item.productId, { unitPrice, customPalletPrice });
   }
 
@@ -82,43 +81,59 @@ async function buildPriceListWorkbook(wholesalerId: string, listId: number) {
     .filter((p) => p.status === "active")
     .sort((a, b) => (a.name || "").localeCompare(b.name || ""));
 
-  const buildRow = (p: any) => {
+  const buildRow = (p: any): PriceRow => {
     const hasPallets = p.palletPrice != null;
     const packParts = [p.packQuantity, p.unitSize, p.unitOfMeasure].filter(Boolean);
     const packSize = packParts.length > 0 ? packParts.join(" x ") : "—";
     const listEntry = priceListMap.get(p.id);
     const unitPrice = listEntry !== undefined ? listEntry.unitPrice : parseFloat(p.price || "0");
-    const palletPrice = hasPallets
+    const palletPrice: number | '' = hasPallets
       ? (listEntry?.customPalletPrice ?? parseFloat(p.palletPrice))
-      : "";
+      : '';
     return {
-      "Product Name": p.name || "—",
-      "Pack Size / Unit": packSize,
-      "Unit Price": unitPrice,
-      "Standard Pallet Price": palletPrice,
-      "Units per Pallet": hasPallets && p.unitsPerPallet != null ? p.unitsPerPallet : "",
+      name: p.name || "—",
+      packSize,
+      unitPrice,
+      palletPrice,
+      unitsPerPallet: hasPallets && p.unitsPerPallet != null ? p.unitsPerPallet : '',
     };
   };
 
   const priceListRows = allProducts.filter((p) => priceListMap.has(p.id)).map(buildRow);
   const standardRows = allProducts.filter((p) => !priceListMap.has(p.id)).map(buildRow);
-  const rows = [...priceListRows, ...standardRows];
+  return { list, rows: [...priceListRows, ...standardRows] };
+}
 
-  const ExcelJS = (await import("exceljs")).default;
-  const wb = new ExcelJS.Workbook();
-  const ws = wb.addWorksheet("Price List");
-  ws.columns = [
-    { header: "Product Name", key: "Product Name", width: 35 },
-    { header: "Pack Size / Unit", key: "Pack Size / Unit", width: 18 },
-    { header: "Unit Price", key: "Unit Price", width: 20 },
-    { header: "Standard Pallet Price", key: "Standard Pallet Price", width: 22 },
-    { header: "Units per Pallet", key: "Units per Pallet", width: 16 },
-  ];
-  rows.forEach((row) => ws.addRow(row));
+async function fetchWholesalerBranding(wholesalerId: string) {
+  const wholesaler = await storage.getUser(wholesalerId);
+  const businessName = wholesaler?.businessName || 'Price List';
+  const logoUrl = getEmailLogoUrl(wholesalerId, wholesaler?.logoType, wholesaler?.logoUrl, wholesaler?.updatedAt);
+  let logoBuffer: Buffer | undefined;
+  let logoExtension: 'png' | 'jpeg' | 'gif' | undefined;
+  if (logoUrl) {
+    const logoData = await fetchLogoBuffer(logoUrl);
+    if (logoData) { logoBuffer = logoData.buffer; logoExtension = logoData.extension; }
+  }
+  return { businessName, logoBuffer, logoExtension };
+}
 
+async function buildPriceListWorkbook(wholesalerId: string, listId: number) {
+  const { list, rows } = await getPriceListRows(wholesalerId, listId);
+  const { businessName, logoBuffer, logoExtension } = await fetchWholesalerBranding(wholesalerId);
   const safeName = list.name.replace(/[/\\?%*:|"<>]/g, "-");
   const filename = `${safeName} - Price List.xlsx`;
-  return { wb, filename };
+  const dateStr = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+  return buildBrandedWorkbook({ rows, subtitle: `${list.name} · ${dateStr}`, filename, logoBuffer, logoExtension, businessName });
+}
+
+async function buildPriceListPdf(wholesalerId: string, listId: number) {
+  const { list, rows } = await getPriceListRows(wholesalerId, listId);
+  const { businessName, logoBuffer } = await fetchWholesalerBranding(wholesalerId);
+  const safeName = list.name.replace(/[/\\?%*:|"<>]/g, "-");
+  const filename = `${safeName} - Price List.pdf`;
+  const dateStr = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+  const pdfBuffer = await buildBrandedPdf({ rows, subtitle: `${list.name} · ${dateStr}`, logoBuffer, businessName });
+  return { pdfBuffer, filename };
 }
 
 // ── Route registration ──────────────────────────────────────────────────────
@@ -223,13 +238,18 @@ export function registerPriceListRoutes(app: Express): void {
       const id = parseInt(req.params.id);
       if (isNaN(id)) return res.status(400).json({ message: "Invalid price list ID" });
 
+      const format = req.query.format === 'pdf' ? 'pdf' : 'xlsx';
+
+      if (format === 'pdf') {
+        const { pdfBuffer, filename } = await buildPriceListPdf(wholesalerId, id);
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+        return res.send(pdfBuffer);
+      }
+
       const { wb, filename } = await buildPriceListWorkbook(wholesalerId, id);
       const buf = Buffer.from(await wb.xlsx.writeBuffer());
-
-      res.setHeader(
-        "Content-Type",
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      );
+      res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
       res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
       res.send(buf);
     } catch (err: any) {

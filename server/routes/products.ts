@@ -7,6 +7,8 @@ import { productBatches, stockMovements } from "@shared/schema";
 import { isImpersonating } from "../utils/isImpersonating";
 import { resolveWholesalerId } from "../utils/resolveWholesalerId";
 import { sendEmail } from "../sendgrid-service";
+import { fetchLogoBuffer, buildBrandedWorkbook, buildBrandedPdf } from '../utils/price-list-export';
+import { getEmailLogoUrl } from '../email-templates';
 
 export function registerProductRoutes(app: Express): void {
   // GET /api/products
@@ -58,6 +60,69 @@ export function registerProductRoutes(app: Express): void {
     } catch (error) {
       console.error("Error fetching expiring products:", error);
       res.status(500).json({ message: "Failed to fetch expiring products" });
+    }
+  });
+
+  // GET /api/products/catalogue-export — branded standard price list (xlsx or pdf)
+  app.get('/api/products/catalogue-export', requireAuth, async (req: any, res) => {
+    try {
+      const wholesalerId = resolveWholesalerId(req);
+      const format = req.query.format === 'pdf' ? 'pdf' : 'xlsx';
+
+      const allProducts = (await storage.getProducts(wholesalerId))
+        .filter((p: any) => p.status === 'active')
+        .sort((a: any, b: any) => (a.name || '').localeCompare(b.name || ''));
+
+      const rows = allProducts.map((p: any) => {
+        const hasPallets = p.palletPrice != null;
+        const packParts = [p.packQuantity, p.unitSize, p.unitOfMeasure].filter(Boolean);
+        const palletPrice: number | '' = hasPallets ? parseFloat(p.palletPrice) : '';
+        const unitsPerPallet: number | '' = hasPallets && p.unitsPerPallet != null ? p.unitsPerPallet : '';
+        return {
+          name: p.name || '—',
+          packSize: packParts.length > 0 ? packParts.join(' x ') : '—',
+          unitPrice: parseFloat(p.price || '0'),
+          palletPrice,
+          unitsPerPallet,
+        };
+      });
+
+      const wholesaler = await storage.getUser(wholesalerId);
+      const businessName = wholesaler?.businessName || 'Standard Price List';
+      const logoUrl = getEmailLogoUrl(wholesalerId, wholesaler?.logoType, wholesaler?.logoUrl, wholesaler?.updatedAt);
+      let logoBuffer: Buffer | undefined;
+      let logoExtension: 'png' | 'jpeg' | 'gif' | undefined;
+      if (logoUrl) {
+        const logoData = await fetchLogoBuffer(logoUrl);
+        if (logoData) { logoBuffer = logoData.buffer; logoExtension = logoData.extension; }
+      }
+
+      const dateStr = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+      const subtitle = `Standard Price List · ${dateStr}`;
+      const safeName = businessName.replace(/[/\\?%*:|"<>]/g, '-');
+
+      if (format === 'pdf') {
+        const pdfBuffer = await buildBrandedPdf({ rows, subtitle, logoBuffer, businessName });
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="${safeName} - Standard Price List.pdf"`);
+        return res.send(pdfBuffer);
+      }
+
+      const { wb, filename } = await buildBrandedWorkbook({
+        rows,
+        subtitle,
+        filename: `${safeName} - Standard Price List.xlsx`,
+        logoBuffer,
+        logoExtension,
+        businessName,
+      });
+      const buf = Buffer.from(await wb.xlsx.writeBuffer());
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.send(buf);
+    } catch (err: any) {
+      console.error('Error exporting catalogue:', err);
+      res.status(500).json({ message: 'Failed to export catalogue' });
     }
   });
 
