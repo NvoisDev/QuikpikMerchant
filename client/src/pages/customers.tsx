@@ -23,7 +23,6 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { BusinessSearchInput, type BusinessPlaceResult } from "@/components/BusinessSearchInput";
-import { formatDateShort } from "@shared/utils/date";
 import {
   Users,
   Plus,

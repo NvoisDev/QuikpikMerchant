@@ -254,7 +254,6 @@ export function registerPaymentConnectRoutes(app: Express): void {
     } catch (dedupErr: unknown) {
       const err = dedupErr as { code?: string; message?: string };
       if (err?.code === '23505') {
-        console.log(`⚡ Stripe webhook duplicate skipped: ${event.id}`);
         return res.status(200).json({ received: true, duplicate: true });
       }
       // Unknown DB error — let Stripe retry by returning 500
