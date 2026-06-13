@@ -75,7 +75,11 @@ export function registerProductRoutes(app: Express): void {
 
       const rows = allProducts.map((p: any) => {
         const hasPallets = p.palletPrice != null;
-        const packParts = [p.packQuantity, p.unitSize, p.unitOfMeasure].filter(Boolean);
+        const numericSize = p.unitSize != null ? String(parseFloat(String(p.unitSize))) : null;
+        const unitDisplay = numericSize && p.unitOfMeasure
+          ? `${numericSize}${p.unitOfMeasure}`
+          : numericSize || p.unitOfMeasure || null;
+        const packParts = [p.packQuantity, unitDisplay].filter(Boolean);
         const palletPrice: number | '' = hasPallets ? parseFloat(p.palletPrice) : '';
         const unitsPerPallet: number | '' = hasPallets && p.unitsPerPallet != null ? p.unitsPerPallet : '';
         return {

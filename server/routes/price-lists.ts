@@ -83,8 +83,12 @@ async function getPriceListRows(wholesalerId: string, listId: number) {
 
   const buildRow = (p: any): PriceRow => {
     const hasPallets = p.palletPrice != null;
-    const packParts = [p.packQuantity, p.unitSize, p.unitOfMeasure].filter(Boolean);
-    const packSize = packParts.length > 0 ? packParts.join(" x ") : "—";
+    const numericSize = p.unitSize != null ? String(parseFloat(String(p.unitSize))) : null;
+    const unitDisplay = numericSize && p.unitOfMeasure
+      ? `${numericSize}${p.unitOfMeasure}`
+      : numericSize || p.unitOfMeasure || null;
+    const packParts = [p.packQuantity, unitDisplay].filter(Boolean);
+    const packSize = packParts.length > 0 ? packParts.join(' x ') : '—';
     const listEntry = priceListMap.get(p.id);
     const unitPrice = listEntry !== undefined ? listEntry.unitPrice : parseFloat(p.price || "0");
     const palletPrice: number | '' = hasPallets
