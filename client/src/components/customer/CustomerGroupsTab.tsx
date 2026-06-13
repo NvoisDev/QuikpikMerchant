@@ -430,14 +430,17 @@ export function CustomerGroupsTab({
   };
 
   const getAvailableCustomers = () => {
-    if (!selectedGroup || !customers) return [];
+    if (!selectedGroup || !customers || customerSearchQuery.length === 0) return [];
     const existingMemberIds = (groupMembers || []).map((member: GroupMember) => member?.id || member?.customerId).filter(Boolean);
+    const q = customerSearchQuery.toLowerCase();
     return (customers || []).filter(customer => {
       if (!customer) return false;
-      const matchesSearch = customerSearchQuery.length === 0 ||
-        `${customer.firstName || ''} ${customer.lastName || ''}`.toLowerCase().includes(customerSearchQuery.toLowerCase()) ||
+      const matchesSearch =
+        `${customer.firstName || ''} ${customer.lastName || ''}`.toLowerCase().includes(q) ||
+        (customer.businessName || '').toLowerCase().includes(q) ||
         (customer.phoneNumber || '').includes(customerSearchQuery) ||
-        (customer.email && customer.email.toLowerCase().includes(customerSearchQuery.toLowerCase()));
+        (customer.email || '').toLowerCase().includes(q) ||
+        (customer.city || '').toLowerCase().includes(q);
       const notAlreadyMember = !existingMemberIds.includes(customer.id);
       return matchesSearch && notAlreadyMember;
     });
