@@ -9,7 +9,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
 } from "@/components/ui/dialog";
 import { AlertTriangle, CheckCircle, RefreshCw } from "lucide-react";
-import { formatNumber } from "@shared/utils/currency";
+import { formatNumber } from "@/lib/currencies";
 import { useToast } from "@/hooks/use-toast";
 import { GREEN, fmt, planBadge } from "./shared";
 import type { AdminPlanRow, StripeModeData } from "./types";

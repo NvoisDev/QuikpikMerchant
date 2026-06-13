@@ -3,7 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Minus, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { formatCurrency, formatWeight } from "@shared/utils/currency";
+import { formatCurrency, formatWeight } from "@/lib/currencies";
 import { getPackQuantity, computePackWeightKg } from "@shared/utils/product";
 import type { ExtendedProduct, CartItem, PromotionalPricing } from "@/components/customer/portal-types";
 

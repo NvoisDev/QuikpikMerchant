@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Building2, ShoppingCart, Package, TrendingUp, DollarSign, AlertTriangle, AlertCircle, Star,
 } from "lucide-react";
-import { formatNumber } from "@shared/utils/currency";
+import { formatNumber } from "@/lib/currencies";
 import {
   GREEN, BLUE, AMBER, PURPLE, RED, fmt, StatCard, Row,
 } from "./shared";

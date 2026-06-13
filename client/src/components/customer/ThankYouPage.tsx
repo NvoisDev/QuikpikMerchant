@@ -3,7 +3,7 @@ import { CheckCircle, Mail, Package, ArrowLeft, ShoppingBag, Sparkles, Gift, Par
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { formatCurrency } from "@shared/utils/currency";
+import { formatCurrency } from "@/lib/currencies";
 import { getPackQuantity } from "@shared/utils/product";
 import { QuikpikFooter } from "@/components/ui/quikpik-footer";
 import { DeliveryAddressDisplay } from "@/components/shared/DeliveryAddressDisplay";

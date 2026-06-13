@@ -24,7 +24,7 @@ export const currencies = [
   { code: "TRY", symbol: "₺", name: "Turkish Lira" },
   { code: "ZAR", symbol: "R", name: "South African Rand" },
   { code: "BRL", symbol: "R$", name: "Brazilian Real" },
-  { code: "MXN", symbol: "$", name: "Mexican Peso" },
+  { code: "MXN", symbol: "MX$", name: "Mexican Peso" },
   { code: "ARS", symbol: "$", name: "Argentine Peso" },
   { code: "CLP", symbol: "$", name: "Chilean Peso" },
   { code: "COP", symbol: "$", name: "Colombian Peso" },
@@ -54,9 +54,10 @@ export const currencies = [
   { code: "TND", symbol: "د.ت", name: "Tunisian Dinar" },
 ];
 
-export function getCurrencySymbol(currencyCode: string): string {
-  const currency = currencies.find(c => c.code === currencyCode);
-  return currency?.symbol || currencyCode;
+export function getCurrencySymbol(currencyCode: string = "GBP"): string {
+  const code = (currencyCode || "GBP").toUpperCase();
+  const currency = currencies.find(c => c.code === code);
+  return currency?.symbol || code;
 }
 
 export function formatCurrency(amount: number | string | null | undefined, currencyCode: string = "GBP"): string {
@@ -64,8 +65,7 @@ export function formatCurrency(amount: number | string | null | undefined, curre
   const numAmount = typeof amount === "string" ? parseFloat(amount) : amount;
   if (isNaN(numAmount)) return "£0.00";
 
-  const finalCurrency = currencyCode || "GBP";
-  const symbol = getCurrencySymbol(finalCurrency);
+  const symbol = getCurrencySymbol(currencyCode || "GBP");
 
   const formatted = new Intl.NumberFormat('en-GB', {
     minimumFractionDigits: 2,
@@ -73,4 +73,20 @@ export function formatCurrency(amount: number | string | null | undefined, curre
   }).format(numAmount);
 
   return `${symbol}${formatted}`;
+}
+
+export function formatPercentage(percentage: number): string {
+  return `${percentage.toFixed(1)}%`;
+}
+
+export function formatNumber(num: number | string): string {
+  const parsed = typeof num === "string" ? parseFloat(num) : num;
+  if (isNaN(parsed)) return "0";
+  return Math.floor(parsed).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+}
+
+export function formatWeight(val: number | string): string {
+  const n = parseFloat(String(val));
+  if (isNaN(n)) return "0";
+  return parseFloat(n.toFixed(2)).toString();
 }

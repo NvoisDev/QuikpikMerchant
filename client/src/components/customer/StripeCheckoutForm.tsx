@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { ShieldCheck, HelpCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { formatCurrency } from "@shared/utils/currency";
+import { formatCurrency } from "@/lib/currencies";
 import type { StripeCheckoutFormProps, WholesalerPortal } from "./portal-types";
 
 async function fetchStripePromise(publishableKey?: string, wholesalerId?: string) {

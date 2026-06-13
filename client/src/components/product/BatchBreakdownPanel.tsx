@@ -1,8 +1,7 @@
 import { useRef } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Pencil, PackagePlus } from "lucide-react";
-import { formatCurrency } from "@/lib/currencies";
-import { formatNumber } from "@shared/utils/currency";
+import { formatCurrency, formatNumber } from "@/lib/currencies";
 import type { Product } from "@shared/schema";
 import type { ProductBatch } from "./types";
 

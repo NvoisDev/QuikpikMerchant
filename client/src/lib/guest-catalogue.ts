@@ -1,4 +1,4 @@
-import { formatNumber } from "@shared/utils/currency";
+import { formatNumber } from "@/lib/currencies";
 
 type GuestSellingFormat = "units" | "pallets" | "both" | null | undefined;
 

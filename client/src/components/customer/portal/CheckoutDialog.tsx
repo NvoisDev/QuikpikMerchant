@@ -13,7 +13,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useQuery } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { formatCurrency } from "@shared/utils/currency";
+import { formatCurrency } from "@/lib/currencies";
 import { calculateCustomerFee } from "@shared/utils/fees";
 import { getPackQuantity } from "@shared/utils/product";
 import type { CartItem, CustomerData, WholesalerPortal, AuthenticatedCustomer, PromotionalPricing, CollectionAddress, CompletedOrder, ExtendedProduct, Product } from "@/components/customer/portal-types";

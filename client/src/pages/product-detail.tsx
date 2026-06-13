@@ -25,7 +25,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth, type AuthUser } from "@/hooks/useAuth";
 import type { PromotionalOffer } from "@shared/schema";
 import { formatNumber } from "@/lib/utils";
-import { formatWeight } from "@shared/utils/currency";
+import { formatWeight } from "@/lib/currencies";
 import { computePackWeightKg } from "@shared/utils/product";
 import { InventoryCalculator } from "@shared/inventory-calculator";
 

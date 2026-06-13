@@ -6,8 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { cleanAIDescription } from "@shared/utils";
 import { useLocation } from "wouter";
 import type { PromotionalOffer } from "@shared/schema";
-import { formatCurrency } from "@/lib/currencies";
-import { formatWeight } from "@shared/utils/currency";
+import { formatCurrency, formatWeight } from "@/lib/currencies";
 import { computePackWeightKg } from "@shared/utils/product";
 import { formatNumber } from "@/lib/utils";
 

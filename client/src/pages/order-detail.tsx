@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { calculatePlatformFee } from "@shared/utils/fees";
-import { formatWeight } from "@shared/utils/currency";
+import { formatWeight } from "@/lib/currencies";
 import { useParams, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";

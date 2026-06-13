@@ -10,7 +10,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { useState, useMemo, useEffect } from "react";
-import { formatCurrency, formatWeight } from "@shared/utils/currency";
+import { formatCurrency, formatWeight } from "@/lib/currencies";
 import { formatDateTime } from "@shared/utils/date";
 import { computePackWeightKg } from "@shared/utils/product";
 import { QuikpikFooter } from "@/components/ui/quikpik-footer";

@@ -1,12 +1,11 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
-import { formatNumber as _formatNumber } from "@shared/utils/currency"
+import { formatNumber as _formatNumber } from "@/lib/currencies"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-// Re-export the canonical locale-independent formatter from shared utils
 export const formatNumber = _formatNumber;
 
 // Format numbers with commas and decimal places

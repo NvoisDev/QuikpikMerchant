@@ -1,4 +1,4 @@
-import { formatCurrency } from "@shared/utils/currency";
+import { formatCurrency } from "@/lib/currencies";
 
 export const getCurrencySymbol = (currency = 'GBP'): string => {
   switch (currency?.toUpperCase()) {

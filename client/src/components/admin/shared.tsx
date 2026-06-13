@@ -1,5 +1,5 @@
 import { startOfMonth, endOfMonth, subMonths, startOfDay, endOfDay } from "date-fns";
-import { formatCurrency } from "@shared/utils/currency";
+import { formatCurrency } from "@/lib/currencies";
 import {
   LayoutDashboard, Building2, Users, ShoppingCart, Package, TrendingUp,
   Settings, CreditCard, MapPin, Activity, BadgeCheck, Archive, Store,

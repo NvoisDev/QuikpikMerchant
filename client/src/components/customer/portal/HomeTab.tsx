@@ -9,7 +9,7 @@ import { RecentOrdersSection } from "@/components/customer/RecentOrdersSection";
 import { PriceDisplay } from "@/components/customer/PriceDisplay";
 import { TabQuickActions } from "./TabQuickActions";
 import type { CartItem, ExtendedProduct, Product, WholesalerPortal, AuthenticatedCustomer, CustomerOrderStats, PromotionalPricing } from "@/components/customer/portal-types";
-import { formatCurrency } from "@shared/utils/currency";
+import { formatCurrency } from "@/lib/currencies";
 
 interface HomeTabProps {
   setActiveTab: (tab: string) => void;

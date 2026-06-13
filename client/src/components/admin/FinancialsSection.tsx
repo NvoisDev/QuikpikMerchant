@@ -9,7 +9,7 @@ import { Calendar, TrendingUp, DollarSign, CreditCard, Users, RefreshCw } from "
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { format } from "date-fns";
-import { formatNumber } from "@shared/utils/currency";
+import { formatNumber } from "@/lib/currencies";
 import {
   GREEN, BLUE, AMBER, PURPLE, RED, fmt, pct, StatCard, PRESETS, presetToDates, planBadge,
 } from "./shared";

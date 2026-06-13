@@ -7,7 +7,7 @@ import { DeliveryAddressManager } from "@/components/customer/DeliveryAddressMan
 import { ThemeSwitcher } from "@/components/ui/theme-switcher";
 import { TabQuickActions } from "./TabQuickActions";
 import type { CartItem, WholesalerPortal, CustomerOrderStats } from "@/components/customer/portal-types";
-import { formatCurrency } from "@shared/utils/currency";
+import { formatCurrency } from "@/lib/currencies";
 
 interface AccountTabProps {
   setActiveTab: (tab: string) => void;

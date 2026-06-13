@@ -16,7 +16,7 @@ import {
   OrderActionsDropdown,
   PayBalanceButton,
 } from "@/components/customer/CustomerOrderHistory";
-import { formatCurrency } from "@shared/utils/currency";
+import { formatCurrency } from "@/lib/currencies";
 import { queryClient } from "@/lib/queryClient";
 
 interface RecentOrdersSectionProps {

@@ -11,7 +11,7 @@ import { PriceDisplay } from "@/components/customer/PriceDisplay";
 import { TabQuickActions } from "./TabQuickActions";
 import type { CartItem, ExtendedProduct, Product, WholesalerPortal, CustomerOrderStats, QuantitySuggestion, PromotionalPricing } from "@/components/customer/portal-types";
 import { cleanAIDescription } from "@shared/utils";
-import { formatCurrency, formatWeight } from "@shared/utils/currency";
+import { formatCurrency, formatWeight } from "@/lib/currencies";
 import { getPackQuantity, computePackWeightKg } from "@shared/utils/product";
 
 interface ProductsTabProps {

@@ -43,7 +43,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 // Shared utilities and types
 import { cleanAIDescription } from "@shared/utils";
 
-import { formatCurrency } from "@shared/utils/currency";
+import { formatCurrency } from "@/lib/currencies";
 import { Package2, Hash } from "lucide-react";
 import { getGuestBackTarget, getGuestStockRows, getSellingFormatLabel } from "@/lib/guest-catalogue";
 
