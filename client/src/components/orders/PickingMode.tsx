@@ -244,7 +244,6 @@ export function PickingMode({ orderId, orderNumber, onClose }: Props) {
                     <p className="text-xs text-slate-500 mt-0.5">
                       Qty: <span className="font-semibold text-slate-700">{item.quantity}</span>
                       {item.sellingType === 'pallets' && ' pallets'}
-                      {item.productUnitSize ? ` · ${item.productUnitSize}` : ''}
                       {(item.freeItems ?? 0) > 0 && ` + ${item.freeItems} free`}
                     </p>
                   </div>
