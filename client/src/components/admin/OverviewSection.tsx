@@ -1,7 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
-  Building2, ShoppingCart, Package, TrendingUp, DollarSign, AlertTriangle, AlertCircle, Star,
+  Building2, ShoppingCart, Package, TrendingUp, DollarSign, AlertTriangle, AlertCircle, Star, Info,
 } from "lucide-react";
 import { formatNumber } from "@/lib/currencies";
 import {
@@ -104,12 +105,29 @@ export function OverviewSection({ stats, statsLoading, revenueData, revenueLoadi
         <Card className="border-gray-200 shadow-none rounded-xl">
           <CardHeader className="pb-2 pt-4 px-4"><CardTitle className="text-sm font-semibold text-gray-700">Revenue (all-time)</CardTitle></CardHeader>
           <CardContent className="px-4 pb-4 space-y-2.5">
-            <Row label="Buyer fees (5.5% + £0.50)"  value={revenueLoading ? "—" : fmt(revenueTotals.totalCustomerFees)}  color={BLUE} />
-            <Row label="Merchant fees"               value={revenueLoading ? "—" : fmt(revenueTotals.totalPlatformFees)}  color={AMBER} />
-            <Row label="Stripe fees (est. 1.4% + £0.20)" value={revenueLoading ? "—" : `-${fmt(revenueTotals.totalStripeProcessingFees || 0)}`} color={RED} />
-            <Row label="Subscription MRR"            value={fmt(subMRR)} color={PURPLE} />
+            <Row label="Buyer fees"     value={revenueLoading ? "—" : fmt(revenueTotals.totalCustomerFees)}  color={BLUE} />
+            <Row label="Merchant fees"  value={revenueLoading ? "—" : fmt(revenueTotals.totalPlatformFees)}  color={AMBER} />
+            <Row label="Subscription MRR" value={fmt(subMRR)} color={PURPLE} />
             <div className="pt-1.5 border-t border-gray-100 space-y-1.5">
-              <Row label="Gross profit (after Stripe fees)"  value={revenueLoading ? "—" : fmt(revenueTotals.totalGrossProfit || 0)} color={GREEN} bold />
+              <div className="flex items-center justify-between">
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className={`text-sm font-bold ${GREEN} flex items-center gap-1 cursor-default`}>
+                        Gross profit
+                        <Info className="h-3.5 w-3.5 opacity-50" />
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="max-w-[220px] text-center text-xs">
+                      After estimated Stripe processing fees (est. 1.4% + £0.20/transaction)
+                      {!revenueLoading && revenueTotals.totalStripeProcessingFees
+                        ? ` — approx. ${fmt(revenueTotals.totalStripeProcessingFees)} deducted`
+                        : ""}
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+                <span className={`text-sm font-bold ${GREEN}`}>{revenueLoading ? "—" : fmt(revenueTotals.totalGrossProfit || 0)}</span>
+              </div>
               <Row label="Total earned (profit + MRR)" value={revenueLoading ? "—" : fmt((revenueTotals.totalGrossProfit || 0) + subMRR)} color={GREEN} bold />
             </div>
           </CardContent>
