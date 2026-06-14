@@ -23,8 +23,8 @@ export function registerAdminCoreRoutes(app: Express): void {
       const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
       const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
-      const [allWholesalers, allOrdersData, newWholesalers, planRows] = await Promise.all([
-        db.select({ subscriptionTier: users.subscriptionTier, archived: users.archived, subscriptionStatus: users.subscriptionStatus, showOnHomepage: users.showOnHomepage })
+      const [allWholesalers, allOrdersData, newWholesalers, planRows, subPlanRows] = await Promise.all([
+        db.select({ id: users.id, subscriptionTier: users.subscriptionTier, archived: users.archived, subscriptionStatus: users.subscriptionStatus, showOnHomepage: users.showOnHomepage })
           .from(users).where(and(eq(users.role, 'wholesaler'), eq(users.isTestAccount, false), eq(users.isInactive, false))),
         db.select({
           subtotal: orders.subtotal,
@@ -39,7 +39,14 @@ export function registerAdminCoreRoutes(app: Express): void {
           .where(and(eq(users.role, 'wholesaler'), gte(users.createdAt, monthStart), eq(users.isTestAccount, false), eq(users.isInactive, false))),
         db.select({ planId: subscriptionPlans.planId, monthlyPrice: subscriptionPlans.monthlyPrice, billingInterval: subscriptionPlans.billingInterval })
           .from(subscriptionPlans),
+        db.select({ userId: userSubscriptions.userId, planId: userSubscriptions.planId })
+          .from(userSubscriptions)
+          .where(sql`${userSubscriptions.status} IN ('active','trialing','past_due')`),
       ]);
+
+      // Map userId → exact planId from active subscription record
+      const subPlanMap: Record<string, string> = {};
+      for (const s of subPlanRows) { if (s.userId) subPlanMap[s.userId] = s.planId; }
 
       // Effective monthly revenue per plan — annual plans divided by 12 for MRR
       const PLAN_MRR: Record<string, number> = { free: 0 };
@@ -59,13 +66,15 @@ export function registerAdminCoreRoutes(app: Express): void {
         premium:  allWholesalers.filter(w => w.subscriptionTier === 'premium'  || w.subscriptionTier?.startsWith('premium_')).length,
       };
 
-      // Sum MRR using each wholesaler's exact planId price to handle annual variants correctly
+      // Sum MRR using each wholesaler's exact planId from userSubscriptions (captures custom pricing)
+      // Fall back to subscriptionTier if no subscription record exists
       let starterCount = 0, listingCount = 0, standardCount = 0, premiumCount = 0;
       let starterMRR = 0, listingMRR = 0, standardMRR = 0, premiumMRR = 0;
       for (const w of allWholesalers) {
         if (w.archived) continue;
         const tier = w.subscriptionTier || 'free';
-        const mrrContrib = PLAN_MRR[tier] ?? 0;
+        const exactPlanId = subPlanMap[w.id] ?? tier;
+        const mrrContrib = PLAN_MRR[exactPlanId] ?? PLAN_MRR[tier] ?? 0;
         if (!tier || tier === 'free' || tier === 'listing' || tier.startsWith('listing_')) {
           listingCount++; listingMRR += mrrContrib;
         } else if (tier === 'starter' || tier.startsWith('starter_')) {
