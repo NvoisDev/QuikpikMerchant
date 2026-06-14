@@ -509,7 +509,12 @@ export function WholesalersSection({ wholesalers, wholesalersLoading, isAdmin }:
       <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
         <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
           <SheetHeader className="mb-4">
-            <SheetTitle className="text-sm font-semibold">{selectedWholesaler?.businessName || `${selectedWholesaler?.firstName || ''} ${selectedWholesaler?.lastName || ''}`.trim()}</SheetTitle>
+            <div className="flex items-start justify-between gap-3">
+              <SheetTitle className="text-sm font-semibold">{selectedWholesaler?.businessName || `${selectedWholesaler?.firstName || ''} ${selectedWholesaler?.lastName || ''}`.trim()}</SheetTitle>
+              <Button size="sm" variant="outline" className="h-7 text-xs text-indigo-600 border-indigo-200 hover:bg-indigo-50 hover:text-indigo-700 flex-shrink-0" onClick={() => { setDrawerOpen(false); setImpersonateTarget(selectedWholesaler); }}>
+                <UserCheck className="h-3.5 w-3.5 mr-1" />Login as
+              </Button>
+            </div>
           </SheetHeader>
           {selectedWholesaler && (
             <div className="space-y-4">
