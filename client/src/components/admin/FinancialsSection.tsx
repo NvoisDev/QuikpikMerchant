@@ -262,16 +262,16 @@ export function FinancialsSection({ wholesalers, isAdmin }: { wholesalers: Whole
                 {wholesalerRevenueSummary.map((w, i) => (
                   <TableRow key={i} className="hover:bg-blue-50/30">
                     <TableCell className="text-xs font-medium text-gray-800">{w.name}</TableCell>
-                    <TableCell>{planBadge(w.tier)}</TableCell>
-                    <TableCell className="text-xs text-right text-gray-600">{w.orders}</TableCell>
-                    <TableCell className="text-xs text-right text-gray-600">{fmt(w.gmv)}</TableCell>
-                    <TableCell className="text-xs text-right font-medium" style={{ color: BLUE }}>{fmt(w.buyerFees)}</TableCell>
-                    <TableCell className="text-xs text-right font-medium" style={{ color: AMBER }}>{fmt(w.merchantFees)}</TableCell>
+                    <TableCell className="hidden sm:table-cell">{planBadge(w.tier)}</TableCell>
+                    <TableCell className="hidden sm:table-cell text-xs text-right text-gray-600">{w.orders}</TableCell>
+                    <TableCell className="hidden sm:table-cell text-xs text-right text-gray-600">{fmt(w.gmv)}</TableCell>
+                    <TableCell className="hidden sm:table-cell text-xs text-right font-medium" style={{ color: BLUE }}>{fmt(w.buyerFees)}</TableCell>
+                    <TableCell className="hidden sm:table-cell text-xs text-right font-medium" style={{ color: AMBER }}>{fmt(w.merchantFees)}</TableCell>
                     <TableCell className="text-xs text-right font-semibold text-gray-900">{fmt(w.total)}</TableCell>
-                    <TableCell className="text-xs text-right font-medium" style={{ color: "#4f46e5" }}>{w.subRevenue > 0 ? fmt(w.subRevenue) : "—"}</TableCell>
-                    <TableCell className="text-xs text-right font-medium" style={{ color: RED }}>-{fmt(w.stripeFees)}</TableCell>
-                    <TableCell className="text-xs text-right font-semibold" style={{ color: GREEN }}>{fmt(w.grossProfit)}</TableCell>
-                    <TableCell className="text-xs text-right font-medium text-indigo-600">{pct(w.total, w.gmv)}</TableCell>
+                    <TableCell className="hidden sm:table-cell text-xs text-right font-medium" style={{ color: "#4f46e5" }}>{w.subRevenue > 0 ? fmt(w.subRevenue) : "—"}</TableCell>
+                    <TableCell className="hidden sm:table-cell text-xs text-right font-medium" style={{ color: RED }}>-{fmt(w.stripeFees)}</TableCell>
+                    <TableCell className="hidden sm:table-cell text-xs text-right font-semibold" style={{ color: GREEN }}>{fmt(w.grossProfit)}</TableCell>
+                    <TableCell className="hidden sm:table-cell text-xs text-right font-medium text-indigo-600">{pct(w.total, w.gmv)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -293,7 +293,7 @@ export function FinancialsSection({ wholesalers, isAdmin }: { wholesalers: Whole
                   <TableHeader>
                     <TableRow className="hover:bg-transparent bg-blue-50">
                       {["Order #","Wholesaler","Customer","GMV","Buyer Fee","Merchant Fee","Total","Stripe Fee","Gross Profit","Take Rate","Date"].map((h, i) => (
-                        <TableHead key={i} className="text-xs font-semibold text-blue-700">{h}</TableHead>
+                        <TableHead key={i} className={`text-xs font-semibold text-blue-700${[1,2,4,5,7,8,9,10].includes(i) ? " hidden sm:table-cell" : ""}`}>{h}</TableHead>
                       ))}
                     </TableRow>
                   </TableHeader>
@@ -301,18 +301,18 @@ export function FinancialsSection({ wholesalers, isAdmin }: { wholesalers: Whole
                     {paged.map(o => (
                       <TableRow key={o.id} className="hover:bg-blue-50/30">
                         <TableCell className="font-mono text-xs text-gray-500">{o.orderNumber}</TableCell>
-                        <TableCell className="text-xs text-gray-700">{o.wholesalerName ?? "—"}</TableCell>
-                        <TableCell className="text-xs text-gray-600">{o.customerName ?? "—"}</TableCell>
+                        <TableCell className="hidden sm:table-cell text-xs text-gray-700">{o.wholesalerName ?? "—"}</TableCell>
+                        <TableCell className="hidden sm:table-cell text-xs text-gray-600">{o.customerName ?? "—"}</TableCell>
                         <TableCell className="text-xs text-right text-gray-600">{fmt(parseFloat(o.subtotal || "0"))}</TableCell>
-                        <TableCell className="text-xs text-right font-medium" style={{ color: BLUE }}>{fmt(parseFloat(o.customerTransactionFee || "0"))}</TableCell>
-                        <TableCell className="text-xs text-right font-medium" style={{ color: AMBER }}>{fmt(parseFloat(o.platformFee || "0"))}</TableCell>
+                        <TableCell className="hidden sm:table-cell text-xs text-right font-medium" style={{ color: BLUE }}>{fmt(parseFloat(o.customerTransactionFee || "0"))}</TableCell>
+                        <TableCell className="hidden sm:table-cell text-xs text-right font-medium" style={{ color: AMBER }}>{fmt(parseFloat(o.platformFee || "0"))}</TableCell>
                         <TableCell className="text-xs text-right font-semibold text-gray-900">{fmt(o.totalQuikpikIncome)}</TableCell>
-                        <TableCell className="text-xs text-right font-medium" style={{ color: RED }}>
+                        <TableCell className="hidden sm:table-cell text-xs text-right font-medium" style={{ color: RED }}>
                           -{fmt(o.stripeProcessingFee ?? 0)}{o.stripeFeIsEstimated && <span className="text-gray-400 font-normal ml-0.5">(est.)</span>}
                         </TableCell>
-                        <TableCell className="text-xs text-right font-semibold" style={{ color: GREEN }}>{fmt(o.grossProfit ?? 0)}</TableCell>
-                        <TableCell className="text-xs text-right font-medium text-indigo-600">{pct(o.totalQuikpikIncome, parseFloat(o.subtotal || "0"))}</TableCell>
-                        <TableCell className="text-xs text-gray-400">{o.createdAt ? format(new Date(o.createdAt), "dd MMM yy") : "—"}</TableCell>
+                        <TableCell className="hidden sm:table-cell text-xs text-right font-semibold" style={{ color: GREEN }}>{fmt(o.grossProfit ?? 0)}</TableCell>
+                        <TableCell className="hidden sm:table-cell text-xs text-right font-medium text-indigo-600">{pct(o.totalQuikpikIncome, parseFloat(o.subtotal || "0"))}</TableCell>
+                        <TableCell className="hidden sm:table-cell text-xs text-gray-400">{o.createdAt ? format(new Date(o.createdAt), "dd MMM yy") : "—"}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>

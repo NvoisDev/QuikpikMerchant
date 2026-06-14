@@ -123,30 +123,30 @@ export function CustomersSection({ isAdmin, highlightedId }: { isAdmin: boolean;
                         <p className="text-xs font-medium text-gray-800">{c.name}</p>
                         <p className="text-xs text-gray-400">{c.email || "—"}</p>
                       </TableCell>
-                      <TableCell className="text-xs font-mono text-gray-600">{c.phoneNumber || "—"}</TableCell>
-                      <TableCell className="text-xs text-gray-600">{c.wholesalerName}</TableCell>
+                      <TableCell className="hidden sm:table-cell text-xs font-mono text-gray-600">{c.phoneNumber || "—"}</TableCell>
+                      <TableCell className="hidden sm:table-cell text-xs text-gray-600">{c.wholesalerName}</TableCell>
                       <TableCell className="text-xs text-right text-gray-600">{c.orderCount}</TableCell>
-                      <TableCell className="text-xs text-gray-600">
+                      <TableCell className="hidden sm:table-cell text-xs text-gray-600">
                         {c.lastLoginAt ? (
                           new Date(c.lastLoginAt) > subDays(new Date(), 30)
                             ? formatDistanceToNow(new Date(c.lastLoginAt), { addSuffix: true })
                             : format(new Date(c.lastLoginAt), "d MMM yyyy")
                         ) : <span className="text-gray-300">Never</span>}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="hidden sm:table-cell">
                         {c.customerType ? (
                           <span className="text-xs px-2 py-0.5 rounded border" style={{ background: typeDot(c.customerType) + "22", color: typeColor(c.customerType), borderColor: typeDot(c.customerType) + "55" }}>
                             {typeLabel(c.customerType)}
                           </span>
                         ) : <span className="text-xs text-gray-300">—</span>}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="hidden sm:table-cell">
                         <div className="flex flex-col gap-1">
                           {c.isTestAccount && <span className="text-xs bg-yellow-100 text-yellow-700 border border-yellow-200 px-1.5 py-0.5 rounded font-medium w-fit">Test</span>}
                           {c.isSuspicious && <span className="text-xs bg-red-100 text-red-700 border border-red-200 px-1.5 py-0.5 rounded font-medium flex items-center gap-1 w-fit"><Flag className="h-3 w-3" />Suspicious</span>}
                         </div>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="hidden sm:table-cell">
                         <Button size="sm" variant="ghost" className="h-7 text-xs text-gray-400" onClick={e => { e.stopPropagation(); setSelectedCustomer(c); setDrawerOpen(true); }}>
                           <Eye className="h-3.5 w-3.5" />
                         </Button>

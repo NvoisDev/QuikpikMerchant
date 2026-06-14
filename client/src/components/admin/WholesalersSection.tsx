@@ -477,7 +477,7 @@ export function WholesalersSection({ wholesalers, wholesalersLoading, isAdmin }:
                           : <span className="text-xs px-2 py-0.5 rounded border bg-[#f0faf4] border-[#bbdfc8]" style={{ color: GREEN }}>Active</span>
                         }
                       </TableCell>
-                      <TableCell onClick={e => e.stopPropagation()}>
+                      <TableCell className="hidden sm:table-cell" onClick={e => e.stopPropagation()}>
                         <div className="flex items-center gap-1.5">
                           <Button size="sm" variant="outline" className="h-7 text-xs border-gray-200" disabled={toggleStatus.isPending} onClick={() => toggleStatus.mutate(w.id)}>
                             {w.archived ? "Activate" : "Suspend"}
