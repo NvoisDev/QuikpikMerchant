@@ -112,7 +112,7 @@ export function CustomersSection({ isAdmin, highlightedId }: { isAdmin: boolean;
                 <TableHeader>
                   <TableRow className="hover:bg-transparent bg-indigo-50">
                     {["Customer","Phone","Wholesaler","Orders","Last Login","Type","Flags",""].map((h, i) => (
-                      <TableHead key={i} className="text-xs font-semibold text-indigo-700">{h}</TableHead>
+                      <TableHead key={i} className={`text-xs font-semibold text-indigo-700${[1,2,4,5,6,7].includes(i) ? " hidden sm:table-cell" : ""}`}>{h}</TableHead>
                     ))}
                   </TableRow>
                 </TableHeader>

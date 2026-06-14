@@ -196,7 +196,7 @@ export default function SuperAdmin() {
           <button onClick={() => setSidebarOpen(true)} className="lg:hidden p-2 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100 flex-shrink-0">
             <Menu className="h-5 w-5" />
           </button>
-          <div className="flex-1 min-w-0 hidden sm:block">
+          <div className="flex-1 min-w-0">
             <h1 className="text-sm font-semibold text-gray-900 truncate">
               {SECTIONS.find(s => s.id === activeSection)?.label}
             </h1>

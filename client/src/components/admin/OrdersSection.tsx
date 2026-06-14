@@ -197,7 +197,7 @@ export function OrdersSection({ revenueData, revenueLoading, wholesalers, isAdmi
                   <TableHeader>
                     <TableRow className="hover:bg-transparent bg-amber-50">
                       {["Order #","Wholesaler","Customer","GMV","Take Rate","Status","Payment","Date",""].map((h, i) => (
-                        <TableHead key={i} className="text-xs font-semibold text-amber-700">{h}</TableHead>
+                        <TableHead key={i} className={`text-xs font-semibold text-amber-700${[1,2,4,6,7,8].includes(i) ? " hidden sm:table-cell" : ""}`}>{h}</TableHead>
                       ))}
                     </TableRow>
                   </TableHeader>
@@ -215,14 +215,14 @@ export function OrdersSection({ revenueData, revenueLoading, wholesalers, isAdmi
                                 {o.orderNumber}
                               </span>
                             </TableCell>
-                            <TableCell className="text-xs text-gray-700">{o.wholesalerName ?? "—"}</TableCell>
-                            <TableCell className="text-xs text-gray-600">{o.customerName ?? "—"}</TableCell>
+                            <TableCell className="hidden sm:table-cell text-xs text-gray-700">{o.wholesalerName ?? "—"}</TableCell>
+                            <TableCell className="hidden sm:table-cell text-xs text-gray-600">{o.customerName ?? "—"}</TableCell>
                             <TableCell className="text-xs text-right font-medium text-gray-700">{o.status === "cancelled" ? <span className="text-gray-400">£0.00</span> : fmt(parseFloat(o.subtotal || "0"))}</TableCell>
-                            <TableCell className="text-xs text-right font-medium text-indigo-600">{o.status === "cancelled" ? <span className="text-gray-400">—</span> : pct(o.totalQuikpikIncome, parseFloat(o.subtotal || "0"))}</TableCell>
+                            <TableCell className="hidden sm:table-cell text-xs text-right font-medium text-indigo-600">{o.status === "cancelled" ? <span className="text-gray-400">—</span> : pct(o.totalQuikpikIncome, parseFloat(o.subtotal || "0"))}</TableCell>
                             <TableCell>
                               <span className="text-xs text-gray-600 bg-gray-100 border border-gray-200 px-1.5 py-0.5 rounded">{(o.status || "pending").replace(/_/g, " ")}</span>
                             </TableCell>
-                            <TableCell>
+                            <TableCell className="hidden sm:table-cell">
                               {o.paymentStatus === "paid" && (o.refundedAt || (parseFloat(o.refundAmount || '0') > 0))
                                 ? <span className="text-xs px-1.5 py-0.5 rounded border bg-purple-50 border-purple-200 text-purple-700">refunded</span>
                                 : o.paymentStatus === "paid"
@@ -230,8 +230,8 @@ export function OrdersSection({ revenueData, revenueLoading, wholesalers, isAdmi
                                   : <span className="text-xs px-1.5 py-0.5 rounded bg-gray-50 text-gray-500 border border-gray-200">{o.paymentStatus || "pending"}</span>
                               }
                             </TableCell>
-                            <TableCell className="text-xs text-gray-400">{o.createdAt ? format(new Date(o.createdAt), "dd MMM yy") : "—"}</TableCell>
-                            <TableCell onClick={e => e.stopPropagation()}>
+                            <TableCell className="hidden sm:table-cell text-xs text-gray-400">{o.createdAt ? format(new Date(o.createdAt), "dd MMM yy") : "—"}</TableCell>
+                            <TableCell className="hidden sm:table-cell" onClick={e => e.stopPropagation()}>
                               <Button size="sm" variant="ghost" className="h-7 text-xs text-gray-400 hover:text-blue-600" title="Resend invoice"
                                 onClick={() => resendInvoice.mutate(String(o.id))} disabled={resendInvoice.isPending}>
                                 <Mail className="h-3.5 w-3.5" />

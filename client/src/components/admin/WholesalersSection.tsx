@@ -377,7 +377,7 @@ export function WholesalersSection({ wholesalers, wholesalersLoading, isAdmin }:
                 <TableHeader>
                   <TableRow className="hover:bg-transparent bg-[#f0faf4]">
                     {["Business","Plan","Orders","GMV (with fees)","GMV (no fees)","Total Fees","Last Order","Status",""].map((h, i) => (
-                      <TableHead key={i} className="text-xs font-semibold" style={{ color: GREEN }}>{h}</TableHead>
+                      <TableHead key={i} className={`text-xs font-semibold${[2,3,4,5,6,8].includes(i) ? " hidden sm:table-cell" : ""}`} style={{ color: GREEN }}>{h}</TableHead>
                     ))}
                   </TableRow>
                 </TableHeader>
@@ -466,11 +466,11 @@ export function WholesalersSection({ wholesalers, wholesalersLoading, isAdmin }:
                           })()}
                         </div>
                       </TableCell>
-                      <TableCell className="text-xs text-right text-gray-600">{w.orderCount}</TableCell>
-                      <TableCell className="text-xs text-right text-gray-600">{fmt(w.gmvWithFees ?? 0)}</TableCell>
-                      <TableCell className="text-xs text-right text-gray-600">{fmt(w.gmvWithoutFees ?? 0)}</TableCell>
-                      <TableCell className="text-xs text-right font-bold text-gray-900">{fmt(w.totalFeesEarned)}</TableCell>
-                      <TableCell className="text-xs text-gray-400">{w.lastOrderAt ? format(new Date(w.lastOrderAt), "dd MMM yy") : "—"}</TableCell>
+                      <TableCell className="hidden sm:table-cell text-xs text-right text-gray-600">{w.orderCount}</TableCell>
+                      <TableCell className="hidden sm:table-cell text-xs text-right text-gray-600">{fmt(w.gmvWithFees ?? 0)}</TableCell>
+                      <TableCell className="hidden sm:table-cell text-xs text-right text-gray-600">{fmt(w.gmvWithoutFees ?? 0)}</TableCell>
+                      <TableCell className="hidden sm:table-cell text-xs text-right font-bold text-gray-900">{fmt(w.totalFeesEarned)}</TableCell>
+                      <TableCell className="hidden sm:table-cell text-xs text-gray-400">{w.lastOrderAt ? format(new Date(w.lastOrderAt), "dd MMM yy") : "—"}</TableCell>
                       <TableCell>
                         {w.archived
                           ? <span className="text-xs px-2 py-0.5 rounded bg-gray-100 text-gray-500 border border-gray-200">Suspended</span>

@@ -254,7 +254,7 @@ export function FinancialsSection({ wholesalers, isAdmin }: { wholesalers: Whole
               <TableHeader>
                 <TableRow className="hover:bg-transparent bg-blue-50">
                   {["Wholesaler","Plan","Orders","GMV","Buyer Fees","Merchant Fees","Total Earned","Sub Revenue","Stripe Fees","Gross Profit","Take Rate"].map((h, i) => (
-                    <TableHead key={i} className="text-xs font-semibold text-blue-700">{h}</TableHead>
+                    <TableHead key={i} className={`text-xs font-semibold text-blue-700${[1,2,3,4,5,7,8,9,10].includes(i) ? " hidden sm:table-cell" : ""}`}>{h}</TableHead>
                   ))}
                 </TableRow>
               </TableHeader>
