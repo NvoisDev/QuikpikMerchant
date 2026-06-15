@@ -18,7 +18,7 @@ import {
 import {
   DollarSign, Clock, CheckCircle, X, Truck, MapPin, Camera, Image as ImageIcon,
   RefreshCw, FileText, Loader2, Share2, Package, ChevronLeft, Home, Building, Warehouse, Building2,
-  Pencil, Plus, Minus, Search, MessageCircle, MoreHorizontal, Copy, Link, ClipboardList, Smartphone
+  Pencil, Plus, Minus, Search, MessageCircle, MoreHorizontal, Copy, Link, ClipboardList, Smartphone, RotateCcw
 } from "lucide-react";
 import { useAuth, type AuthUser } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -1213,7 +1213,7 @@ export default function OrderDetail() {
                 Edit
               </Button>
             )}
-            {order.status !== 'cancelled' && order.status !== 'fulfilled' && !isViewer && (
+            {order.status !== 'cancelled' && !isViewer && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="sm" className="h-9 w-9 p-0">
@@ -1221,6 +1221,29 @@ export default function OrderDetail() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-52">
+                  {order.status === 'fulfilled' && (
+                    <DropdownMenuItem
+                      className="text-rose-600 focus:text-rose-600"
+                      onClick={async () => {
+                        try {
+                          const res = await fetch(`/api/orders/${order.id}/status`, {
+                            method: 'PATCH',
+                            headers: { 'Content-Type': 'application/json' },
+                            credentials: 'include',
+                            body: JSON.stringify({ status: 'processing', silent: true }),
+                          });
+                          if (!res.ok) throw new Error('Failed to undo fulfil');
+                          setOrder({ ...order, status: 'processing' });
+                          toast({ title: 'Fulfil undone', description: 'Order reset to Processing. No notification was sent.' });
+                        } catch {
+                          toast({ title: 'Error', description: 'Could not undo fulfil. Please try again.', variant: 'destructive' });
+                        }
+                      }}
+                    >
+                      <RotateCcw className="h-4 w-4 mr-2" />
+                      Undo Fulfil
+                    </DropdownMenuItem>
+                  )}
                   {order.paymentStatus !== 'paid' && (
                     <DropdownMenuItem
                       className="text-green-600 focus:text-green-600"

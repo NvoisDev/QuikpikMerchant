@@ -1440,7 +1440,7 @@ export function registerOrderLifecycleRoutes(app: Express): void {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) return res.status(400).json({ error: 'Invalid order ID' });
-      const { status } = req.body;
+      const { status, silent } = req.body;
       const allowedStatuses = ['pending', 'processing', 'fulfilled', 'cancelled', 'refunded'];
       if (!status || !allowedStatuses.includes(status)) {
         return res.status(400).json({ error: `Invalid status. Must be one of: ${allowedStatuses.join(', ')}` });
@@ -1459,7 +1459,7 @@ export function registerOrderLifecycleRoutes(app: Express): void {
 
       const updatedOrder = await storage.updateOrderStatus(id, status);
 
-      if (updatedOrder) {
+      if (updatedOrder && !silent) {
         sendOrderStatusNotification({ orderId: updatedOrder.id, status: updatedOrder.status }).catch((err) => {
           console.error('Failed to send order status notifications:', err);
         });
