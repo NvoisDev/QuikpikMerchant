@@ -331,6 +331,10 @@ export default function OrderDetail() {
     queryKey: ['/api/wholesaler/customers', order?.retailerId, 'addresses'],
     enabled: isSwitchToDeliveryOpen && !!order?.retailerId,
   });
+  const { data: customerProfile } = useQuery<{ streetAddress?: string | null; addressLine2?: string | null; city?: string | null; postalCode?: string | null; businessName?: string | null; firstName?: string | null }>({
+    queryKey: ['/api/customers', order?.retailerId],
+    enabled: isSwitchToDeliveryOpen && !!order?.retailerId,
+  });
 
   const [showPaymentSendModal, setShowPaymentSendModal] = useState(false);
   const [paymentSendChannel, setPaymentSendChannel] = useState<'whatsapp' | 'sms'>('whatsapp');
@@ -2360,31 +2364,43 @@ export default function OrderDetail() {
             <p className="text-sm text-gray-500">
               Enter the delivery address for order {order.orderNumber || `#${order.id}`}. This will change the fulfilment type from collection to delivery.
             </p>
-            {customerSavedAddresses.length > 0 && (
-              <div className="space-y-1.5">
-                <p className="text-xs text-gray-500 font-medium">Quick-fill from customer's saved address</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {customerSavedAddresses.map((a) => {
-                    const value = [a.addressLine1, a.addressLine2, a.city, a.postalCode].filter(Boolean).join(', ');
-                    const label = a.label || a.addressLine1;
-                    return (
+            {(() => {
+              const profileAddr = customerProfile?.streetAddress?.trim()
+                ? [customerProfile.streetAddress, customerProfile.addressLine2, customerProfile.city, customerProfile.postalCode].filter(Boolean).join(', ')
+                : null;
+              const profileLabel = customerProfile?.businessName?.trim() || customerProfile?.firstName?.trim() || 'Business address';
+              const portalChips = customerSavedAddresses.map((a) => ({
+                key: `addr-${a.id}`,
+                label: a.label || a.addressLine1,
+                value: [a.addressLine1, a.addressLine2, a.city, a.postalCode].filter(Boolean).join(', '),
+              }));
+              const allChips = [
+                ...(profileAddr ? [{ key: 'profile', label: profileLabel, value: profileAddr }] : []),
+                ...portalChips.filter(c => c.value !== profileAddr),
+              ];
+              if (allChips.length === 0) return null;
+              return (
+                <div className="space-y-1.5">
+                  <p className="text-xs text-gray-500 font-medium">Quick-fill from saved address</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {allChips.map((chip) => (
                       <button
-                        key={a.id}
+                        key={chip.key}
                         type="button"
-                        onClick={() => setSwitchToDeliveryAddress(value)}
+                        onClick={() => setSwitchToDeliveryAddress(chip.value)}
                         className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
-                          switchToDeliveryAddress === value
+                          switchToDeliveryAddress === chip.value
                             ? 'bg-blue-600 text-white border-blue-600'
                             : 'bg-white text-gray-700 border-gray-300 hover:border-blue-400 hover:text-blue-600'
                         }`}
                       >
-                        {label}
+                        {chip.label}
                       </button>
-                    );
-                  })}
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
             <div className="space-y-1.5">
               <label className="text-sm font-medium">Delivery address</label>
               <textarea
