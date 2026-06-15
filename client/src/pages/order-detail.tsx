@@ -328,11 +328,11 @@ export default function OrderDetail() {
   const [isSwitchToCollectionOpen, setIsSwitchToCollectionOpen] = useState(false);
   const [isSwitchingToCollection, setIsSwitchingToCollection] = useState(false);
   const { data: customerSavedAddresses = [] } = useQuery<{ id: number; label?: string | null; addressLine1: string; addressLine2?: string | null; city: string; postalCode: string; isDefault?: boolean | null }[]>({
-    queryKey: ['/api/wholesaler/customers', order?.retailerId, 'addresses'],
+    queryKey: [`/api/wholesaler/customers/${order?.retailerId}/addresses`],
     enabled: isSwitchToDeliveryOpen && !!order?.retailerId,
   });
   const { data: customerProfile } = useQuery<{ streetAddress?: string | null; addressLine2?: string | null; city?: string | null; postalCode?: string | null; businessName?: string | null; firstName?: string | null }>({
-    queryKey: ['/api/customers', order?.retailerId],
+    queryKey: [`/api/customers/${order?.retailerId}`],
     enabled: isSwitchToDeliveryOpen && !!order?.retailerId,
   });
 
