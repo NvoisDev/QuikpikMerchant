@@ -325,6 +325,8 @@ export default function OrderDetail() {
   const [isSwitchToDeliveryOpen, setIsSwitchToDeliveryOpen] = useState(false);
   const [switchToDeliveryAddress, setSwitchToDeliveryAddress] = useState('');
   const [isSwitchingToDelivery, setIsSwitchingToDelivery] = useState(false);
+  const [isSwitchToCollectionOpen, setIsSwitchToCollectionOpen] = useState(false);
+  const [isSwitchingToCollection, setIsSwitchingToCollection] = useState(false);
 
   const [showPaymentSendModal, setShowPaymentSendModal] = useState(false);
   const [paymentSendChannel, setPaymentSendChannel] = useState<'whatsapp' | 'sms'>('whatsapp');
@@ -831,6 +833,29 @@ export default function OrderDetail() {
     }
   };
 
+  const handleSwitchToCollection = async () => {
+    if (!order) return;
+    setIsSwitchingToCollection(true);
+    try {
+      const response = await fetch(`/api/orders/${order.id}/switch-to-collection`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+      });
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.error || 'Failed to switch to collection');
+      }
+      setOrder({ ...order, fulfillmentType: 'pickup', deliveryAddress: undefined, deliveryAddressId: undefined });
+      setIsSwitchToCollectionOpen(false);
+      toast({ title: 'Switched to collection', description: 'Order changed to collection successfully.' });
+    } catch (error) {
+      toast({ title: 'Failed to switch', description: error instanceof Error ? error.message : 'Please try again.', variant: 'destructive' });
+    } finally {
+      setIsSwitchingToCollection(false);
+    }
+  };
+
   const generateAndCopyPaymentLink = async () => {
     if (!order) return;
     setIsGeneratingPaymentLink(true);
@@ -1214,13 +1239,22 @@ export default function OrderDetail() {
                       Mark Ready
                     </DropdownMenuItem>
                   )}
-                  {isPickup && !['cancelled', 'fulfilled'].includes(order.status) && (
+                  {isPickup && order.status !== 'cancelled' && (
                     <DropdownMenuItem
                       className="text-blue-600 focus:text-blue-600"
                       onClick={() => setIsSwitchToDeliveryOpen(true)}
                     >
                       <Truck className="h-4 w-4 mr-2" />
                       Switch to Delivery
+                    </DropdownMenuItem>
+                  )}
+                  {!isPickup && order.status !== 'cancelled' && (
+                    <DropdownMenuItem
+                      className="text-orange-600 focus:text-orange-600"
+                      onClick={() => setIsSwitchToCollectionOpen(true)}
+                    >
+                      <MapPin className="h-4 w-4 mr-2" />
+                      Switch to Collection
                     </DropdownMenuItem>
                   )}
                   {order.status !== 'fulfilled' && (
@@ -2250,6 +2284,36 @@ export default function OrderDetail() {
               </Button>
               <Button className="flex-1 bg-green-600 hover:bg-green-700" onClick={handleMarkAsPaid} disabled={isMarkingPaid || !markAsPaidAmount}>
                 {isMarkingPaid ? 'Recording...' : 'Record Payment'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Switch to Collection dialog ──────────────────────────────────────── */}
+      <Dialog open={isSwitchToCollectionOpen} onOpenChange={setIsSwitchToCollectionOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <MapPin className="h-4 w-4 text-orange-600" />
+              Switch to Collection
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-1">
+            <p className="text-sm text-gray-500">
+              This will change order {order.orderNumber || `#${order.id}`} from delivery to collection. The delivery address will be cleared.
+            </p>
+            <div className="flex gap-2">
+              <Button variant="outline" className="flex-1" onClick={() => setIsSwitchToCollectionOpen(false)} disabled={isSwitchingToCollection}>
+                Cancel
+              </Button>
+              <Button
+                className="flex-1 bg-orange-600 hover:bg-orange-700 text-white"
+                onClick={handleSwitchToCollection}
+                disabled={isSwitchingToCollection}
+              >
+                {isSwitchingToCollection ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
+                {isSwitchingToCollection ? 'Saving...' : 'Switch to Collection'}
               </Button>
             </div>
           </div>
