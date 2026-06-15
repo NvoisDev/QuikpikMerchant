@@ -327,9 +327,9 @@ export default function OrderDetail() {
   const [isSwitchingToDelivery, setIsSwitchingToDelivery] = useState(false);
   const [isSwitchToCollectionOpen, setIsSwitchToCollectionOpen] = useState(false);
   const [isSwitchingToCollection, setIsSwitchingToCollection] = useState(false);
-  const { data: savedCollectionAddresses = [] } = useQuery<{ id: number; name: string; addressLine1: string; addressLine2?: string | null; city: string; postcode: string; isActive: boolean }[]>({
-    queryKey: ['/api/collection-addresses'],
-    enabled: isSwitchToDeliveryOpen,
+  const { data: customerSavedAddresses = [] } = useQuery<{ id: number; label?: string | null; addressLine1: string; addressLine2?: string | null; city: string; postalCode: string; isDefault?: boolean | null }[]>({
+    queryKey: ['/api/wholesaler/customers', order?.retailerId, 'addresses'],
+    enabled: isSwitchToDeliveryOpen && !!order?.retailerId,
   });
 
   const [showPaymentSendModal, setShowPaymentSendModal] = useState(false);
@@ -2360,39 +2360,31 @@ export default function OrderDetail() {
             <p className="text-sm text-gray-500">
               Enter the delivery address for order {order.orderNumber || `#${order.id}`}. This will change the fulfilment type from collection to delivery.
             </p>
-            {(() => {
-              const storeAddr = ((user as AuthUser)?.pickupAddress || (user as AuthUser)?.businessAddress)?.trim();
-              const activeAddrs = savedCollectionAddresses.filter(a => a.isActive !== false);
-              const chips = [
-                ...(storeAddr ? [{ label: 'Store address', value: storeAddr }] : []),
-                ...activeAddrs.map(a => ({
-                  label: a.name,
-                  value: [a.addressLine1, a.addressLine2, a.city, a.postcode].filter(Boolean).join(', '),
-                })),
-              ];
-              if (chips.length === 0) return null;
-              return (
-                <div className="space-y-1.5">
-                  <p className="text-xs text-gray-500 font-medium">Quick-fill from saved address</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {chips.map((chip, i) => (
+            {customerSavedAddresses.length > 0 && (
+              <div className="space-y-1.5">
+                <p className="text-xs text-gray-500 font-medium">Quick-fill from customer's saved address</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {customerSavedAddresses.map((a) => {
+                    const value = [a.addressLine1, a.addressLine2, a.city, a.postalCode].filter(Boolean).join(', ');
+                    const label = a.label || a.addressLine1;
+                    return (
                       <button
-                        key={i}
+                        key={a.id}
                         type="button"
-                        onClick={() => setSwitchToDeliveryAddress(chip.value)}
+                        onClick={() => setSwitchToDeliveryAddress(value)}
                         className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
-                          switchToDeliveryAddress === chip.value
+                          switchToDeliveryAddress === value
                             ? 'bg-blue-600 text-white border-blue-600'
                             : 'bg-white text-gray-700 border-gray-300 hover:border-blue-400 hover:text-blue-600'
                         }`}
                       >
-                        {chip.label}
+                        {label}
                       </button>
-                    ))}
-                  </div>
+                    );
+                  })}
                 </div>
-              );
-            })()}
+              </div>
+            )}
             <div className="space-y-1.5">
               <label className="text-sm font-medium">Delivery address</label>
               <textarea
