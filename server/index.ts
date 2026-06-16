@@ -19,6 +19,7 @@ import { startDatabaseMaintenance } from "./database-maintenance";
 import { checkAndSendPaymentReminders } from "./payment-reminders";
 import { checkAndSendWeeklyOrderDigests } from "./services/weeklyOrderDigestService";
 import { checkAndSendTrialReminders } from "./services/trialReminderService";
+import { pruneExpiredShortLinks } from "./shortPaymentLink";
 import cron from 'node-cron';
 import { db } from "./db";
 import { sql, eq, inArray } from "drizzle-orm";
@@ -887,6 +888,15 @@ httpServer.listen({ port, host: '0.0.0.0', reusePort: true }, () => {
       }
     });
     console.log(`📬 Weekly order digest enabled (daily check, sends once per week per wholesaler)`);
+
+    cron.schedule('0 2 * * *', async () => {
+      try {
+        await pruneExpiredShortLinks();
+      } catch (error) {
+        console.error('❌ Expired short link pruning failed:', error);
+      }
+    });
+    console.log(`🔗 Payment short-link pruning enabled (daily at 2 AM)`);
 
     // Run once immediately at startup to catch any missed downgrades from webhook failures
     try {
