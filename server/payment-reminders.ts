@@ -229,7 +229,7 @@ async function sendPaymentReminder(
       } else if (urgency === 'due_today') {
         smsMessage = `Hi ${firstName}! Payment due today: £${outstandingAmount.toFixed(2)} outstanding on order ${orderRef}${itemsPart} with ${businessName}.${payPart}`;
       } else {
-        smsMessage = `Hi ${firstName}, overdue notice: £${outstandingAmount.toFixed(2)} for order ${orderRef}${itemsPart} with ${businessName} was due on ${formattedDueDate}. Please pay immediately:${paymentLink ? ` ${paymentLink}` : ' contact us.'}`;
+        smsMessage = `Hi ${firstName}, overdue notice: £${outstandingAmount.toFixed(2)} for order ${orderRef}${itemsPart} with ${businessName} was due on ${formattedDueDate}. Please pay immediately${shortPayLink ? `: ${shortPayLink}` : ' — contact us.'}`; 
       }
       
       await sendWhatsAppMessage({ to: order.customerPhone, message: smsMessage });

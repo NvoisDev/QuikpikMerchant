@@ -988,9 +988,12 @@ export function registerOrderCommsRoutes(app: Express): void {
       const customerPhone = order.customerPhone;
       if (!customerPhone) return res.status(400).json({ error: 'No phone number on record for this customer' });
 
-      const textToSend = message || order.stripePaymentLinkUrl
-        ? (message || `Hi! You have a payment link for order ${order.orderNumber}: ${order.stripePaymentLinkUrl}`)
-        : null;
+      let fallbackText: string | null = null;
+      if (!message && order.stripePaymentLinkUrl) {
+        const shortFallbackUrl = await createShortPaymentLink(order.stripePaymentLinkUrl, wholesalerId, 24);
+        fallbackText = `Hi! You have a payment link for order ${order.orderNumber}: ${shortFallbackUrl}`;
+      }
+      const textToSend = message || fallbackText;
       if (!textToSend) return res.status(400).json({ error: 'No message or stored payment link available' });
 
       const sent = await sendWhatsAppMessage({ to: customerPhone, message: textToSend, channel });
