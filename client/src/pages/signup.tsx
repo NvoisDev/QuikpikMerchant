@@ -704,7 +704,8 @@ export default function Signup() {
                         </Button>
                       ) : (
                         <Button 
-                          type="submit" 
+                          type="button"
+                          onClick={() => form.handleSubmit(onSubmit)()}
                           disabled={isLoading}
                           className="w-full"
                         >
