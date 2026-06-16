@@ -5,6 +5,7 @@ import { sendPaymentReminderEmail } from './sendgrid-service';
 import { sendWhatsAppMessage } from './services/whatsappService';
 import { getStripeClient } from './stripeConfig';
 import { isConnectAccountReady } from './utils/stripe-connect-ready';
+import { createShortPaymentLink } from './shortPaymentLink';
 
 interface OrderWithPaymentTerms {
   id: number;
@@ -220,7 +221,8 @@ async function sendPaymentReminder(
   if (sendSmsChannel && order.customerPhone) {
     try {
       let smsMessage: string;
-      const payPart = paymentLink ? ` Pay here: ${paymentLink}` : ' Please contact us to arrange payment.';
+      const shortPayLink = paymentLink ? await createShortPaymentLink(paymentLink, order.wholesalerId, 24) : '';
+      const payPart = shortPayLink ? ` Pay here: ${shortPayLink}` : ' Please contact us to arrange payment.';
       
       if (urgency === 'upcoming') {
         smsMessage = `Hi ${firstName}! Reminder: £${outstandingAmount.toFixed(2)} balance due on ${formattedDueDate} for order ${orderRef}${itemsPart} with ${businessName}.${payPart}`;

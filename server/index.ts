@@ -460,6 +460,17 @@ async function runStartupMigrations() {
     // Task #1327: Trial expiry reminder tracking columns
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS trial_14day_reminder_sent_at TIMESTAMP`,
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS trial_3day_reminder_sent_at TIMESTAMP`,
+    // Task #1370: Payment short links — short redirect URLs for WhatsApp messages
+    `CREATE TABLE IF NOT EXISTS payment_short_links (
+      id SERIAL PRIMARY KEY,
+      code VARCHAR(16) NOT NULL UNIQUE,
+      url TEXT NOT NULL,
+      wholesaler_id VARCHAR REFERENCES users(id) ON DELETE CASCADE,
+      expires_at TIMESTAMP NOT NULL,
+      created_at TIMESTAMP NOT NULL DEFAULT NOW()
+    )`,
+    `CREATE INDEX IF NOT EXISTS psl_code_idx ON payment_short_links(code)`,
+    `CREATE INDEX IF NOT EXISTS psl_expires_at_idx ON payment_short_links(expires_at)`,
   ];
   for (const stmt of migrations) {
     await db.execute(sql.raw(stmt));

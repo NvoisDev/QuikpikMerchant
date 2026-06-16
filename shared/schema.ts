@@ -2020,6 +2020,25 @@ export const insertProspectStoreSchema = createInsertSchema(prospectStores).omit
 export type InsertProspectStore = z.infer<typeof insertProspectStoreSchema>;
 export type ProspectStore = typeof prospectStores.$inferSelect;
 
+// Payment short links — maps a short code to a full Stripe checkout URL
+export const paymentShortLinks = pgTable(
+  "payment_short_links",
+  {
+    id: serial("id").primaryKey(),
+    code: varchar("code", { length: 16 }).notNull().unique(),
+    url: text("url").notNull(),
+    wholesalerId: varchar("wholesaler_id").references(() => users.id, { onDelete: "cascade" }),
+    expiresAt: timestamp("expires_at").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    codeIdx: index("psl_code_idx").on(table.code),
+    expiresIdx: index("psl_expires_at_idx").on(table.expiresAt),
+  })
+);
+
+export type PaymentShortLink = typeof paymentShortLinks.$inferSelect;
+
 // User types
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;

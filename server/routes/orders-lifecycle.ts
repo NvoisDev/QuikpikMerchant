@@ -12,6 +12,7 @@ import { isConnectAccountReady } from "../utils/stripe-connect-ready";
 import { productBatches } from "@shared/schema";
 import { logQuoteActivity } from "../utils/quote-activity";
 import { sendCancellationNotification } from "../services/orderCancellationNotificationService";
+import { createShortPaymentLink } from "../shortPaymentLink";
 import {
   storage, db,
   requireAuth, requireNotViewer, requireMemberPermission, requireBooleanFeature,
@@ -648,6 +649,9 @@ export function registerOrderLifecycleRoutes(app: Express): void {
           const wholesalerContact = wholesaler.phoneNumber || wholesaler.email || '';
           const approvedPaymentMethod = approvedOrder.paymentMethod || 'bank_transfer';
 
+          const shortApproveUrl = approvePaymentLinkUrl
+            ? await createShortPaymentLink(approvePaymentLinkUrl, order.wholesalerId, 24)
+            : '';
           let message: string;
           if (approvePaymentLinkUrl) {
             // Payment link flow — same format as direct quote creation
@@ -665,13 +669,13 @@ export function registerOrderLifecycleRoutes(app: Express): void {
               } else {
                 balanceDueText = '\nBalance due: Immediately';
               }
-              message = `Hi ${customerGreeting}! ${businessName} has sent you an invoice.\n\nItems:\n${itemsList}${deliveryChargeText}\n\nOrder Total: £${totalDisplay}\nDeposit (${validDepositPct}%): £${depositAmt.toFixed(2)}\nRemaining: £${outstandingAmt.toFixed(2)}${balanceDueText}\n\nPay deposit: ${approvePaymentLinkUrl}\n\nLink expires in 24 hours.${wholesalerContact ? `\n\nContact ${businessName}: ${wholesalerContact}` : ''}`;
+              message = `Hi ${customerGreeting}! ${businessName} has sent you an invoice.\n\nItems:\n${itemsList}${deliveryChargeText}\n\nOrder Total: £${totalDisplay}\nDeposit (${validDepositPct}%): £${depositAmt.toFixed(2)}\nRemaining: £${outstandingAmt.toFixed(2)}${balanceDueText}\n\nPay deposit: ${shortApproveUrl}\n\nLink expires in 24 hours.${wholesalerContact ? `\n\nContact ${businessName}: ${wholesalerContact}` : ''}`;
             } else if (balanceDays > 0) {
               const dueDate = new Date();
               dueDate.setDate(dueDate.getDate() + balanceDays);
-              message = `Hi ${customerGreeting}! ${businessName} has sent you an invoice.\n\nItems:\n${itemsList}${deliveryChargeText}\n\nTotal: £${totalDisplay} due by ${dueDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}\n\nPay here: ${approvePaymentLinkUrl}${wholesalerContact ? `\n\nContact ${businessName}: ${wholesalerContact}` : ''}`;
+              message = `Hi ${customerGreeting}! ${businessName} has sent you an invoice.\n\nItems:\n${itemsList}${deliveryChargeText}\n\nTotal: £${totalDisplay} due by ${dueDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}\n\nPay here: ${shortApproveUrl}${wholesalerContact ? `\n\nContact ${businessName}: ${wholesalerContact}` : ''}`;
             } else {
-              message = `Hi ${customerGreeting}! ${businessName} has sent you an invoice.\n\nItems:\n${itemsList}${deliveryChargeText}\n\nTotal: £${totalDisplay}\n\nPay here: ${approvePaymentLinkUrl}\n\nLink expires in 24 hours.${wholesalerContact ? `\n\nContact ${businessName}: ${wholesalerContact}` : ''}`;
+              message = `Hi ${customerGreeting}! ${businessName} has sent you an invoice.\n\nItems:\n${itemsList}${deliveryChargeText}\n\nTotal: £${totalDisplay}\n\nPay here: ${shortApproveUrl}\n\nLink expires in 24 hours.${wholesalerContact ? `\n\nContact ${businessName}: ${wholesalerContact}` : ''}`;
             }
           } else {
             // Offline payment method

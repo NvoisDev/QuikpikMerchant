@@ -5,6 +5,7 @@ import { eq, and, ilike, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import { sendEmail } from "../sendgrid-service";
 import { requireAuth } from "../googleAuth";
+import { resolveShortPaymentLink } from "../shortPaymentLink";
 
 export function registerPublicStoreRoutes(app: Express) {
 
@@ -331,5 +332,28 @@ export function registerPublicStoreRoutes(app: Express) {
     } catch (err) {
       res.status(500).json({ message: "Failed to update" });
     }
+  });
+
+  // GET /pay/:code — short payment link redirect (no auth required)
+  app.get("/pay/:code", async (req, res) => {
+    const { code } = req.params;
+    if (!code || !/^[A-Za-z0-9_-]{6,16}$/.test(code)) {
+      return res.status(400).send(`
+        <html><body style="font-family:sans-serif;text-align:center;padding:60px">
+          <h2>Invalid link</h2>
+          <p>This payment link is not valid. Please contact your supplier for a new link.</p>
+        </body></html>
+      `);
+    }
+    const url = await resolveShortPaymentLink(code);
+    if (!url) {
+      return res.status(410).send(`
+        <html><body style="font-family:sans-serif;text-align:center;padding:60px">
+          <h2>Link expired</h2>
+          <p>This payment link has expired. Please contact your supplier to request a new one.</p>
+        </body></html>
+      `);
+    }
+    return res.redirect(302, url);
   });
 }

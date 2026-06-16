@@ -13,6 +13,7 @@ import {
 } from "./shared";
 import { isConnectAccountReady } from "../utils/stripe-connect-ready";
 import { resolveInvoiceWholesaler } from "./orders-read";
+import { createShortPaymentLink } from "../shortPaymentLink";
 
 export function registerOrderCommsRoutes(app: Express): void {
 
@@ -947,7 +948,8 @@ export function registerOrderCommsRoutes(app: Express): void {
         const paymentTypeLabel = order.paymentStatus === 'unpaid' && depositPercentage < 100
           ? `Deposit (${depositPercentage}%)`
           : 'Outstanding Balance';
-        smsMessage = `Hi${order.customerName ? ` ${order.customerName.split(' ')[0]}` : ''}! ${wholesaler?.businessName || 'Your supplier'} is requesting payment for Order ${order.orderNumber}.${itemsList}\n\n${paymentTypeLabel}: £${paymentAmount.toFixed(2)}\n\nPay here: ${session.url}\n\nThis link expires in 24 hours.`;
+        const shortCommsUrl = await createShortPaymentLink(session.url || '', wholesalerId, 24);
+        smsMessage = `Hi${order.customerName ? ` ${order.customerName.split(' ')[0]}` : ''}! ${wholesaler?.businessName || 'Your supplier'} is requesting payment for Order ${order.orderNumber}.${itemsList}\n\n${paymentTypeLabel}: £${paymentAmount.toFixed(2)}\n\nPay here: ${shortCommsUrl}\n\nThis link expires in 24 hours.`;
       } catch (msgError) {
         console.warn('⚠️ Could not build SMS message preview:', msgError);
       }

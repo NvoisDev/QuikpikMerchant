@@ -15,6 +15,7 @@ import {
 import { getStripeClient } from "../stripeConfig";
 import { ReliableSMSService } from "../sms-service";
 import { resolveWholesalerId } from "../utils/resolveWholesalerId";
+import { createShortPaymentLink } from "../shortPaymentLink";
 import { businessProfiles } from "@shared/schema";
 import { logQuoteActivity, fmtGBP } from "../utils/quote-activity";
 import { isConnectAccountReady } from "../utils/stripe-connect-ready";
@@ -645,20 +646,21 @@ export function registerQuoteRoutes(app: Express): void {
           ? `Please arrange payment via ${offlineMethodName} directly with ${businessName}.`
           : `Please arrange payment directly with ${businessName}.`;
         const customerGreeting = customer.firstName || customer.businessName || 'there';
+        const shortPaymentUrl = paymentLinkUrl ? await createShortPaymentLink(paymentLinkUrl, wholesalerId, 24) : '';
         const message = isPayLater
           ? `Hi ${customerGreeting}! ${businessName} has sent you an invoice.\n\nItems:\n${itemsList}${deliveryChargeText}\n\nTotal: £${total.toFixed(2)}\nPayment: Pay Later${deliveryNoteText}\n\nPlease arrange payment with ${businessName} directly.${wholesalerContact ? `\n\nContact ${businessName}: ${wholesalerContact}` : ''}`
           : isOfflineNonPayLater
           ? `Hi ${customerGreeting}! ${businessName} has sent you an invoice.\n\nItems:\n${itemsList}${deliveryChargeText}\n\nTotal: £${total.toFixed(2)}${deliveryNoteText}\n\n${offlineArrangement}${wholesalerContact ? `\n\nContact ${businessName}: ${wholesalerContact}` : ''}`
           : isDeposit 
-          ? `Hi ${customerGreeting}! ${businessName} has sent you an invoice.\n\nItems:\n${itemsList}${deliveryChargeText}\n\nOrder Total: £${total.toFixed(2)}\nDeposit (${validDepositPercentage}%): £${depositAmount.toFixed(2)}\nRemaining: £${outstandingAmount.toFixed(2)}${balanceDueText}${deliveryNoteText}\n\nPay deposit: ${paymentLinkUrl}\n\nLink expires in 24 hours.${wholesalerContact ? `\n\nContact ${businessName}: ${wholesalerContact}` : ''}`
+          ? `Hi ${customerGreeting}! ${businessName} has sent you an invoice.\n\nItems:\n${itemsList}${deliveryChargeText}\n\nOrder Total: £${total.toFixed(2)}\nDeposit (${validDepositPercentage}%): £${depositAmount.toFixed(2)}\nRemaining: £${outstandingAmount.toFixed(2)}${balanceDueText}${deliveryNoteText}\n\nPay deposit: ${shortPaymentUrl}\n\nLink expires in 24 hours.${wholesalerContact ? `\n\nContact ${businessName}: ${wholesalerContact}` : ''}`
           : (() => {
             if (orderBalanceDueDays > 0) {
               const fullDueDate = new Date();
               fullDueDate.setDate(fullDueDate.getDate() + orderBalanceDueDays);
               const formattedFullDueDate = fullDueDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-              return `Hi ${customerGreeting}! ${businessName} has sent you an invoice.\n\nItems:\n${itemsList}${deliveryChargeText}\n\nTotal: £${total.toFixed(2)} due by ${formattedFullDueDate}${deliveryNoteText}\n\nPay here: ${paymentLinkUrl}${wholesalerContact ? `\n\nContact ${businessName}: ${wholesalerContact}` : ''}`;
+              return `Hi ${customerGreeting}! ${businessName} has sent you an invoice.\n\nItems:\n${itemsList}${deliveryChargeText}\n\nTotal: £${total.toFixed(2)} due by ${formattedFullDueDate}${deliveryNoteText}\n\nPay here: ${shortPaymentUrl}${wholesalerContact ? `\n\nContact ${businessName}: ${wholesalerContact}` : ''}`;
             }
-            return `Hi ${customerGreeting}! ${businessName} has sent you an invoice.\n\nItems:\n${itemsList}${deliveryChargeText}\n\nTotal: £${total.toFixed(2)}${deliveryNoteText}\n\nPay here: ${paymentLinkUrl}\n\nLink expires in 24 hours.${wholesalerContact ? `\n\nContact ${businessName}: ${wholesalerContact}` : ''}`;
+            return `Hi ${customerGreeting}! ${businessName} has sent you an invoice.\n\nItems:\n${itemsList}${deliveryChargeText}\n\nTotal: £${total.toFixed(2)}${deliveryNoteText}\n\nPay here: ${shortPaymentUrl}\n\nLink expires in 24 hours.${wholesalerContact ? `\n\nContact ${businessName}: ${wholesalerContact}` : ''}`;
           })();
         
         try {
