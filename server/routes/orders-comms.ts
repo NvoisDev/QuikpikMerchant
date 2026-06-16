@@ -948,7 +948,8 @@ export function registerOrderCommsRoutes(app: Express): void {
         const paymentTypeLabel = order.paymentStatus === 'unpaid' && depositPercentage < 100
           ? `Deposit (${depositPercentage}%)`
           : 'Outstanding Balance';
-        const shortCommsUrl = await createShortPaymentLink(session.url || '', wholesalerId, 24);
+        const rawCommsUrl = session.url || '';
+        const shortCommsUrl = rawCommsUrl ? await createShortPaymentLink(rawCommsUrl, wholesalerId, 24) : rawCommsUrl;
         smsMessage = `Hi${order.customerName ? ` ${order.customerName.split(' ')[0]}` : ''}! ${wholesaler?.businessName || 'Your supplier'} is requesting payment for Order ${order.orderNumber}.${itemsList}\n\n${paymentTypeLabel}: £${paymentAmount.toFixed(2)}\n\nPay here: ${shortCommsUrl}\n\nThis link expires in 24 hours.`;
       } catch (msgError) {
         console.warn('⚠️ Could not build SMS message preview:', msgError);

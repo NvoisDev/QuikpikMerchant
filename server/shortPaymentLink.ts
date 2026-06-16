@@ -9,36 +9,45 @@ function generateCode(): string {
   return crypto.randomBytes(6).toString("base64url").slice(0, 8);
 }
 
+function isUniqueViolation(err: unknown): boolean {
+  if (err && typeof err === "object") {
+    const code = (err as any).code;
+    const msg: string = (err as any).message || "";
+    return code === "23505" || msg.includes("unique") || msg.includes("duplicate");
+  }
+  return false;
+}
+
 export async function createShortPaymentLink(
   stripeUrl: string,
   wholesalerId: string | null,
   expiresInHours = 24
 ): Promise<string> {
-  try {
-    let code = generateCode();
-    const expiresAt = new Date(Date.now() + expiresInHours * 60 * 60 * 1000);
+  if (!stripeUrl) return stripeUrl;
 
-    let attempts = 0;
-    while (attempts < 5) {
-      try {
-        await db.insert(paymentShortLinks).values({
-          code,
-          url: stripeUrl,
-          wholesalerId: wholesalerId ?? undefined,
-          expiresAt,
-        });
-        break;
-      } catch {
-        code = generateCode();
-        attempts++;
+  const expiresAt = new Date(Date.now() + expiresInHours * 60 * 60 * 1000);
+
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const code = generateCode();
+    try {
+      await db.insert(paymentShortLinks).values({
+        code,
+        url: stripeUrl,
+        wholesalerId: wholesalerId ?? undefined,
+        expiresAt,
+      });
+      return `${APP_DOMAIN}/pay/${code}`;
+    } catch (err) {
+      if (isUniqueViolation(err)) {
+        continue;
       }
+      console.error("⚠️ Failed to create short payment link — falling back to full URL:", err);
+      return stripeUrl;
     }
-
-    return `${APP_DOMAIN}/pay/${code}`;
-  } catch (err) {
-    console.error("⚠️ Failed to create short payment link — falling back to full URL:", err);
-    return stripeUrl;
   }
+
+  console.error("⚠️ Short payment link: exhausted 5 code collision attempts — falling back to full URL");
+  return stripeUrl;
 }
 
 export async function resolveShortPaymentLink(code: string): Promise<string | null> {
