@@ -17,6 +17,19 @@ import { createShortPaymentLink } from "../shortPaymentLink";
 
 export function registerOrderCommsRoutes(app: Express): void {
 
+  // POST /api/shorten — generate a short quikpik.app/pay/... link for a given Stripe URL
+  app.post("/api/shorten", requireAuth, async (req, res) => {
+    try {
+      const { url } = req.body as { url?: string };
+      if (!url || typeof url !== 'string') return res.status(400).json({ error: 'url required' });
+      const wholesalerId = await resolveWholesalerId(req);
+      const shortUrl = await createShortPaymentLink(url, wholesalerId, 24);
+      return res.json({ shortUrl });
+    } catch {
+      return res.json({ shortUrl: req.body?.url ?? '' });
+    }
+  });
+
   // POST /api/orders/:id/resend-ready-notification
   app.post("/api/orders/:id/resend-ready-notification", requireAuth, requireBooleanFeature('order_management'), requireNotViewer, requireMemberPermission('orders'), async (req, res) => {
     try {

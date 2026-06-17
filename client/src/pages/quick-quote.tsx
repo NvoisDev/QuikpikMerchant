@@ -726,6 +726,19 @@ export default function QuickQuote() {
       queryClient.invalidateQueries({ queryKey: ['/api/products'] });
 
       if (sendMethod === 'share' && data.paymentLink) {
+        let shortPayLink = data.paymentLink;
+        try {
+          const shortenRes = await fetch('/api/shorten', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ url: data.paymentLink }),
+          });
+          if (shortenRes.ok) {
+            const { shortUrl } = await shortenRes.json();
+            if (shortUrl) shortPayLink = shortUrl;
+          }
+        } catch {}
         const builtMessage = buildInvoiceMessage({
           customerName: selectedCustomer?.firstName || selectedCustomer?.businessName || 'there',
           businessName: user?.businessName || 'Your Supplier',
@@ -733,7 +746,7 @@ export default function QuickQuote() {
           total: formatCurrency(calculateTotal()),
           itemLines: quoteItems.map(item => `🛍️ ${item.quantity}× ${item.productName}`).join('\n'),
           fulfillmentLine: fulfillmentType === 'delivery' ? 'Delivery' : 'Collection from your store',
-          paymentLink: data.paymentLink,
+          paymentLink: shortPayLink,
           signOff: invoiceSignOffData?.invoiceSignOff ?? null,
           paymentMethod: quotePaymentMethod,
           balanceDueDays,

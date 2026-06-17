@@ -456,7 +456,7 @@ export default function OrderDetail() {
       });
   }, [id]);
 
-  const buildShareMessage = (o: Order): string => {
+  const buildShareMessage = async (o: Order): Promise<string> => {
     const orderRef = o.orderNumber || `#${o.id}`;
     const liveRetailerName = o.retailer
       ? (`${o.retailer?.firstName || ''} ${o.retailer?.lastName || ''}`.trim() || o.retailer?.businessName || '')
@@ -505,7 +505,20 @@ export default function OrderDetail() {
       lines.push('');
       lines.push(`💳 Balance due: ${formatMoney(outstanding)}`);
       if (o.stripePaymentLinkUrl && stripeReady) {
-        lines.push(`Pay here → ${o.stripePaymentLinkUrl}`);
+        let payUrl = o.stripePaymentLinkUrl;
+        try {
+          const shortenRes = await fetch('/api/shorten', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ url: o.stripePaymentLinkUrl }),
+          });
+          if (shortenRes.ok) {
+            const { shortUrl } = await shortenRes.json();
+            if (shortUrl) payUrl = shortUrl;
+          }
+        } catch {}
+        lines.push(`Pay here → ${payUrl}`);
       }
     }
 
@@ -559,7 +572,7 @@ export default function OrderDetail() {
             const blob = await response.blob();
             const file = new File([blob], filename, { type: 'application/pdf' });
             if (navigator.canShare({ files: [file] })) {
-              const shareMessage = buildShareMessage(order);
+              const shareMessage = await buildShareMessage(order);
               await navigator.share({ title: `${docType} ${orderRef}`, text: shareMessage, files: [file] });
               nativeShareSucceeded = true;
               return;
@@ -611,7 +624,7 @@ export default function OrderDetail() {
     try {
       const orderRef = order.orderNumber || `#${order.id}`;
       if (typeof navigator !== 'undefined' && navigator.share) {
-        const shareMessage = buildShareMessage(order);
+        const shareMessage = await buildShareMessage(order);
         try {
           await navigator.share({ title: `Invoice ${orderRef}`, text: shareMessage });
           return;
