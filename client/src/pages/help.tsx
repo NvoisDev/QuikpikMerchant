@@ -1258,6 +1258,62 @@ For a £100 order paid by card:
         `
       },
       {
+        title: "Short Payment Links",
+        content: `
+### Short Payment Links in WhatsApp & SMS Messages
+
+When Quikpik sends a payment request to a customer via WhatsApp or SMS, the message includes a short, clean link rather than the full Stripe URL. Instead of a long web address, customers see something like:
+
+**quikpik.app/pay/abc12345**
+
+#### Why Short Links?
+
+WhatsApp and SMS messages work best when they are concise. A raw Stripe payment URL can be over 200 characters long — difficult to read, easy to dismiss, and sometimes broken across two lines on a mobile screen. Short links keep the message clean and the call to action clear.
+
+#### When Short Links Are Sent
+
+A short payment link is included automatically in:
+- **Invoice / quote payment requests** — when you send a new quote to a customer and request payment
+- **Deposit requests** — when a deposit percentage is set on an order
+- **Balance payment requests** — when chasing the remaining balance on a partially paid order
+- **Automated payment reminders** — the upcoming, due-today, and overdue reminder messages sent daily
+
+You do not need to do anything differently. The short link is generated and included automatically every time a payment message is sent.
+
+#### How the Link Works
+
+1. Customer taps the short link in their WhatsApp or SMS message
+2. They are immediately redirected to the Stripe checkout page for that order
+3. They complete payment as normal on the Stripe-hosted page
+
+The redirect happens in under a second — customers won't notice any difference from tapping a direct link.
+
+#### Link Expiry
+
+Short payment links are valid for **24 hours** from the time the message was sent. After 24 hours the link expires and the customer will see a message letting them know it is no longer valid.
+
+If a customer tries to pay after the link has expired:
+1. They will see a short message saying the link has expired
+2. Ask the customer to let you know
+3. Resend the payment request from the order page — a fresh short link is generated automatically
+
+#### Is the Link Safe?
+
+Yes. The short link is a Quikpik-generated redirect — it only points to a genuine Stripe-hosted checkout page for the specific order. Customers are never taken anywhere other than the Stripe payment page. The link cannot be guessed: each code is randomly generated and unique.
+
+#### Troubleshooting
+
+**Customer says the link doesn't work**
+- Check whether it has been more than 24 hours since the message was sent — the link may have expired
+- Resend the payment request from the order to generate a fresh link
+
+**Customer did not receive a WhatsApp message**
+- Verify the customer's phone number is saved in international format (e.g. +447XXXXXXXXX)
+- Check that WhatsApp is configured in Settings → WhatsApp Integration
+- Try sending a test message manually from the order page
+        `
+      },
+      {
         title: "Payment Notification Emails",
         content: `
 ### Automatic Payment Notifications
