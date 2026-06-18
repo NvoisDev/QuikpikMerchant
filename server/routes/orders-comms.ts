@@ -4,7 +4,7 @@ import crypto from "crypto";
 import { formatDateTime } from "../../shared/utils/date";
 import { resolveWholesalerId } from "../utils/resolveWholesalerId";
 import {
-  SendGridAttachment, buildInvoicePdf, db, emailButton, emailCard, eq,
+  SendGridAttachment, buildInvoicePdf, db, emailButton, emailCard, escapeHtml, eq,
   formatPackDescriptor, generateReadyForCollectionEmail, getEmailLogoUrl,
   multer, orderPhotoUpload, orders,
   requireAuth, requireMemberPermission, requireNotViewer, requireBooleanFeature,
@@ -399,7 +399,7 @@ export function registerOrderCommsRoutes(app: Express): void {
             <p>This is a test email to verify email delivery is working correctly.</p>
             <p><strong>Test Time:</strong> ${new Date().toISOString()}</p>
             <p><strong>From:</strong> Quikpik Merchant Platform</p>
-            <p><strong>To:</strong> ${testEmail}</p>
+            <p><strong>To:</strong> ${escapeHtml(testEmail)}</p>
             <div style="background: #f0f9ff; padding: 15px; border-radius: 5px; margin: 20px 0;">
               <h4>Troubleshooting Tips:</h4>
               <ul>
@@ -511,8 +511,8 @@ export function registerOrderCommsRoutes(app: Express): void {
       }
 
       const body = emailCard(
-        `<p style="margin:0 0 12px;color:#374151;font-size:15px">Hi ${customerName},</p>` +
-        `<p style="margin:0 0 16px;color:#374151;font-size:15px">${businessName} is sharing your invoice <strong>${orderRef}</strong> with you. Please find it attached to this email.</p>` +
+        `<p style="margin:0 0 12px;color:#374151;font-size:15px">Hi ${escapeHtml(customerName)},</p>` +
+        `<p style="margin:0 0 16px;color:#374151;font-size:15px">${escapeHtml(businessName)} is sharing your invoice <strong>${escapeHtml(orderRef)}</strong> with you. Please find it attached to this email.</p>` +
         paymentSection +
         `<p style="margin:${paymentSection ? '16px' : '0'} 0 0;color:#6b7280;font-size:13px">If you have any questions about this invoice, please get in touch with us directly.</p>`
       );

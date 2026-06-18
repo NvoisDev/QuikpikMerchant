@@ -1,3 +1,4 @@
 - [Stripe Live Webhook Setup](stripe-webhook-setup.md) — Snapshot payload required for subscription/checkout events; Thin payload is v2-only and incompatible.
 - [Static assets must go in client/public](static-assets-path.md) — Vite root is client/, so only client/public/ is served; root-level public/ is NOT served in dev.
+- [Email HTML escaping](email-html-escaping.md) — one shared escapeHtml; branding+preheader escaped centrally (don't re-escape); emailCard/Table/Heading/Button/Badge take RAW HTML so escape user leaf values at call sites.
 - [esbuild 0.28 breaks Vite 5](esbuild-vite5-incompat.md) — never override esbuild>=0.28 while app is on vite@5.4.x; breaks frontend transform. Keep esbuild ^0.25; vitest has its own vite.

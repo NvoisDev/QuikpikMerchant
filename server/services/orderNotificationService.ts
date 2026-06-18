@@ -2,7 +2,7 @@ import { storage } from "../storage";
 import { sendWhatsAppMessage } from "./whatsappService";
 import { sendEmail } from "../sendgrid-service";
 import { formatPhoneToInternational } from "../../shared/phone-utils";
-import { wrapCustomerEmail, emailHeading, emailCard, emailBadge, emailTable, getEmailLogoUrl, formatPackDescriptor } from "../email-templates";
+import { wrapCustomerEmail, emailHeading, emailCard, emailBadge, emailTable, getEmailLogoUrl, formatPackDescriptor, escapeHtml } from "../email-templates";
 
 export interface OrderStatusNotification {
   orderId: number;
@@ -154,7 +154,7 @@ export class OrderNotificationService {
             const itemRows = await Promise.all(orderItems.map(async (oi) => {
               const product = await storage.getProduct(oi.productId ?? 0);
               const descriptor = formatPackDescriptor(product?.quantityInPack, product?.unitSize, product?.unitOfMeasure);
-              const name = (product?.name || `Product #${oi.productId}`) + (descriptor ? ` (${descriptor})` : '');
+              const name = escapeHtml((product?.name || `Product #${oi.productId}`) + (descriptor ? ` (${descriptor})` : ''));
               return [name, String(oi.quantity)];
             }));
             itemsSection = emailTable(['Item', 'Qty'], itemRows);
@@ -164,7 +164,7 @@ export class OrderNotificationService {
         }
       }
 
-      const emailBody = `${emailHeading('Order Update', { size: '22px', color: '#10b981' })}<p style="margin:0 0 20px">Hi ${notification.customerName},</p>${emailCard(`<p style="margin:0 0 8px"><strong>Order:</strong> ${notification.orderNumber}</p><p style="margin:0 0 8px"><strong>Status:</strong> ${emailBadge(statusLabel, statusColor)}</p><p style="margin:0">${emailContent.body}</p>${notification.trackingNumber ? `<p style="margin:8px 0 0"><strong>Tracking:</strong> ${notification.trackingNumber}</p>` : ''}${notification.estimatedDelivery ? `<p style="margin:8px 0 0"><strong>Estimated Delivery:</strong> ${notification.estimatedDelivery}</p>` : ''}`)}${itemsSection}`;
+      const emailBody = `${emailHeading('Order Update', { size: '22px', color: '#10b981' })}<p style="margin:0 0 20px">Hi ${escapeHtml(notification.customerName)},</p>${emailCard(`<p style="margin:0 0 8px"><strong>Order:</strong> ${notification.orderNumber}</p><p style="margin:0 0 8px"><strong>Status:</strong> ${emailBadge(statusLabel, statusColor)}</p><p style="margin:0">${escapeHtml(emailContent.body)}</p>${notification.trackingNumber ? `<p style="margin:8px 0 0"><strong>Tracking:</strong> ${escapeHtml(notification.trackingNumber)}</p>` : ''}${notification.estimatedDelivery ? `<p style="margin:8px 0 0"><strong>Estimated Delivery:</strong> ${escapeHtml(notification.estimatedDelivery)}</p>` : ''}`)}${itemsSection}`;
 
       await sendEmail({
         to: notification.customerEmail,

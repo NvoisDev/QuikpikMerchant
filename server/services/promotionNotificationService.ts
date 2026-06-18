@@ -11,6 +11,7 @@ import {
   emailButton,
   emailTable,
   emailBadge,
+  escapeHtml,
 } from "../email-templates";
 import { storage } from "../storage";
 
@@ -94,13 +95,13 @@ function buildStartEmailHtml(
     { size: "22px", color: "#059669" }
   );
 
-  const intro = `<p style="margin:0 0 16px;color:#374151">Great news! ${wholesaler.businessName} has just launched ${productCount === 1 ? "a special promotion" : "special promotions"} — don't miss out on these limited-time offers.</p>`;
+  const intro = `<p style="margin:0 0 16px;color:#374151">Great news! ${escapeHtml(wholesaler.businessName)} has just launched ${productCount === 1 ? "a special promotion" : "special promotions"} — don't miss out on these limited-time offers.</p>`;
 
   const rows = products.map((p) => {
     const promo = p.matchedPromo;
     const badge = emailBadge(formatPromoType(promo.type, promo), buildPromoBadgeColor(promo.type));
     const salePrice = p.promoPrice ? `<strong style="color:#059669">${formatPrice(p.promoPrice)}</strong>` : formatPrice(p.price);
-    return [p.name, badge, salePrice];
+    return [escapeHtml(p.name), badge, salePrice];
   });
 
   const table = emailTable(["Product", "Promo", "Price"], rows);
@@ -141,13 +142,13 @@ function buildEndEmailHtml(
     { size: "22px", color: "#d97706" }
   );
 
-  const intro = `<p style="margin:0 0 16px;color:#374151">Time is running out! ${productCount === 1 ? "This promotion" : "These promotions"} at ${wholesaler.businessName} ${productCount === 1 ? "ends" : "end"} today. Order now before it's too late.</p>`;
+  const intro = `<p style="margin:0 0 16px;color:#374151">Time is running out! ${productCount === 1 ? "This promotion" : "These promotions"} at ${escapeHtml(wholesaler.businessName)} ${productCount === 1 ? "ends" : "end"} today. Order now before it's too late.</p>`;
 
   const rows = products.map((p) => {
     const promo = p.matchedPromo;
     const badge = emailBadge(formatPromoType(promo.type, promo), buildPromoBadgeColor(promo.type));
     const salePrice = p.promoPrice ? `<strong style="color:#059669">${formatPrice(p.promoPrice)}</strong>` : formatPrice(p.price);
-    return [p.name, badge, salePrice];
+    return [escapeHtml(p.name), badge, salePrice];
   });
 
   const table = emailTable(["Product", "Promo", "Price"], rows);

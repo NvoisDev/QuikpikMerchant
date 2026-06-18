@@ -61,7 +61,7 @@ import {
 import { createEmailVerification, verifyEmailCode } from "../email-verification";
 import {
   generateWholesalerOrderNotificationEmail, generateReadyForCollectionEmail,
-  wrapCustomerEmail, emailCard, emailButton, emailHeading, emailBadge, emailDivider,
+  wrapCustomerEmail, emailCard, emailButton, emailHeading, emailBadge, emailDivider, escapeHtml,
   getEmailLogoUrl, buildItemisedRefundEmail, generateDowngradeScheduledEmail,
   generateDowngradeEffectiveEmail, generateListingLapseReEngagementEmail, formatPackDescriptor,
   type OrderEmailData, type ReadyForCollectionEmailData, type RefundLineItem,
@@ -117,7 +117,7 @@ export {
   generateResetToken, createResetExpiration, sendPasswordResetEmail, hashResetToken,
   createEmailVerification, verifyEmailCode,
   generateWholesalerOrderNotificationEmail, generateReadyForCollectionEmail,
-  wrapCustomerEmail, emailCard, emailButton, emailHeading, emailBadge, emailDivider,
+  wrapCustomerEmail, emailCard, emailButton, emailHeading, emailBadge, emailDivider, escapeHtml,
   getEmailLogoUrl, buildItemisedRefundEmail, generateDowngradeScheduledEmail,
   generateDowngradeEffectiveEmail, generateListingLapseReEngagementEmail, formatPackDescriptor,
   sendWelcomeMessages,

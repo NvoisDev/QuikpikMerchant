@@ -1,6 +1,6 @@
 import type { Express } from "express";
 import {
-  createResetExpiration, db, emailBadge, emailCard, emailHeading, eq,
+  createResetExpiration, db, emailBadge, emailCard, emailHeading, escapeHtml, eq,
   generateResetToken, getEmailLogoUrl,
   hashPassword, isInvitationExpired, requireAuth, requireOwner, requireTeamMemberLimits,
   sendEmail, sendPasswordResetEmail, sendTeamInvitationEmail,
@@ -563,7 +563,7 @@ export function registerAuthTeamRoutes(app: Express): void {
         if (wholesaler?.email && process.env.SENDGRID_API_KEY) {
           sgMail.setApiKey(process.env.SENDGRID_API_KEY);
           const fullName = `${firstName}${lastName ? ' ' + lastName : ''}`;
-          const notifyBody = `${emailHeading('Team Member Joined!', { size: '22px', color: '#10b981' })}<p style="margin:0 0 16px"><strong>${fullName}</strong> has accepted your invitation and joined <strong>${wholesaler.businessName || wholesaler.firstName}</strong> on Quikpik. They can now sign in using the Team Member tab and start working.</p>${emailCard(`<p style="margin:0 0 4px"><strong>Name:</strong> ${fullName}</p><p style="margin:0 0 4px"><strong>Email:</strong> ${teamMember.email}</p><p style="margin:0"><strong>Role:</strong> ${teamMember.role.charAt(0).toUpperCase() + teamMember.role.slice(1)}</p>`)}<p style="margin:16px 0 0;color:#6b7280;font-size:13px">You can manage your team members from the Team Management page in your dashboard.</p>`;
+          const notifyBody = `${emailHeading('Team Member Joined!', { size: '22px', color: '#10b981' })}<p style="margin:0 0 16px"><strong>${escapeHtml(fullName)}</strong> has accepted your invitation and joined <strong>${escapeHtml(wholesaler.businessName || wholesaler.firstName)}</strong> on Quikpik. They can now sign in using the Team Member tab and start working.</p>${emailCard(`<p style="margin:0 0 4px"><strong>Name:</strong> ${escapeHtml(fullName)}</p><p style="margin:0 0 4px"><strong>Email:</strong> ${escapeHtml(teamMember.email)}</p><p style="margin:0"><strong>Role:</strong> ${teamMember.role.charAt(0).toUpperCase() + teamMember.role.slice(1)}</p>`)}<p style="margin:16px 0 0;color:#6b7280;font-size:13px">You can manage your team members from the Team Management page in your dashboard.</p>`;
           await sgMail.send({
             to: wholesaler.email,
             from: { email: 'hello@quikpik.co', name: 'Quikpik Team' },

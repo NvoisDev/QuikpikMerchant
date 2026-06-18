@@ -15,21 +15,10 @@
 import type { Express, RequestHandler } from "express";
 import { getCurrentFeeConfig, getFeeConfigForWholesaler } from "../utils/fee-config";
 import {
-  db, emailButton, emailCard, emailHeading, formatPhoneToInternational,
+  db, emailButton, emailCard, emailHeading, escapeHtml, formatPhoneToInternational,
   getEmailLogoUrl, getStripeClient, multiWholesalerService,
   requireAuth, sendEmail, storage, wrapCustomerEmail,
 } from "./shared";
-
-/** Escapes characters that have special meaning in HTML to prevent XSS in email templates. */
-function escapeHtml(str: string | null | undefined): string {
-  if (str == null) return '';
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}
 
 export function registerUtilityRoutes(app: Express, customerActionLimiter: RequestHandler): void {
 
@@ -176,7 +165,7 @@ export function registerUtilityRoutes(app: Express, customerActionLimiter: Reque
           const safeWholesalerFirstName = escapeHtml(wholesaler.firstName) || 'Wholesaler';
           const emailBody = `${emailHeading('New Customer Enquiry', { size: '22px', color: '#10b981' })}<p style="margin:0 0 20px">Dear ${safeWholesalerFirstName}, you have received a new customer registration request.</p>${emailCard(`${emailHeading('Customer Details', { size: '16px' })}<p style="margin:0 0 6px"><strong>Name:</strong> ${safeCustomerName}</p><p style="margin:0 0 6px"><strong>Business:</strong> ${safeBusinessName}</p>${businessTypeLabel ? `<p style="margin:0 0 6px"><strong>Business Type:</strong> ${escapeHtml(businessTypeLabel)}</p>` : ''}<p style="margin:0 0 6px"><strong>Phone:</strong> ${safeCustomerPhone}</p><p style="margin:0 0 6px"><strong>Email:</strong> ${safeCustomerEmail}</p>${safeProductsInterested ? `<p style="margin:0 0 6px"><strong>Products Interested In:</strong> ${safeProductsInterested}</p>` : ''}${safeOrderFrequency ? `<p style="margin:0 0 6px"><strong>Estimated Order Quantity/Frequency:</strong> ${safeOrderFrequency}</p>` : ''}${safeRequestMessage ? `<p style="margin:0"><strong>Message:</strong> ${safeRequestMessage}</p>` : ''}`, { borderColor: '#dbeafe', bgColor: '#eff6ff' })}<p style="margin:20px 0 0">To approve or manage this request, please log into your Quikpik dashboard.</p>${emailButton('Review Request', 'https://quikpik.co/customers')}`;
 
-          const regHtml = wrapCustomerEmail(emailBody, { businessName: wholesaler.businessName || 'Quikpik', logoUrl: getEmailLogoUrl(wholesaler.id, wholesaler.logoType, wholesaler.logoUrl) }, { preheader: `New enquiry from ${safeCustomerName}` });
+          const regHtml = wrapCustomerEmail(emailBody, { businessName: wholesaler.businessName || 'Quikpik', logoUrl: getEmailLogoUrl(wholesaler.id, wholesaler.logoType, wholesaler.logoUrl) }, { preheader: `New enquiry from ${customerName}` });
           await sendEmail({
             to: wholesaler.email,
             from: 'hello@quikpik.co',

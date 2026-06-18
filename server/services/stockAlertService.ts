@@ -3,7 +3,7 @@ import { products, users, teamMembers, orders, orderItems } from "../../shared/s
 import { eq, and, or, isNull, lte, inArray } from "drizzle-orm";
 import { sendEmail } from "../sendgrid-service";
 import { sendWhatsAppMessage } from "./whatsappService";
-import { wrapCustomerEmail, emailHeading, emailCard, emailButton } from "../email-templates";
+import { wrapCustomerEmail, emailHeading, emailCard, emailButton, escapeHtml } from "../email-templates";
 
 export interface StockAlert {
   productId: number;
@@ -361,11 +361,11 @@ export class StockAlertService {
     let body = `${emailHeading('Stock Alert', { size: '22px', color: '#dc2626' })}<p style="margin:0 0 20px">We've detected ${alerts.length} products that need restocking to maintain optimal inventory levels.</p>`;
 
     if (urgentProducts.length > 0) {
-      body += emailCard(`${emailHeading('URGENT - Critical Stock Levels', { size: '16px', color: '#dc2626' })}<ul style="margin:0;padding-left:20px">${urgentProducts.map(product => `<li style="margin:8px 0"><strong>${product.productName}</strong> - Only ${product.currentStock} units left<br><small style="color:#6b7280">Suggested reorder: ${product.suggestedReorderQuantity} units</small></li>`).join('')}</ul>`, { borderColor: '#FECACA', bgColor: '#FEF2F2' });
+      body += emailCard(`${emailHeading('URGENT - Critical Stock Levels', { size: '16px', color: '#dc2626' })}<ul style="margin:0;padding-left:20px">${urgentProducts.map(product => `<li style="margin:8px 0"><strong>${escapeHtml(product.productName)}</strong> - Only ${product.currentStock} units left<br><small style="color:#6b7280">Suggested reorder: ${product.suggestedReorderQuantity} units</small></li>`).join('')}</ul>`, { borderColor: '#FECACA', bgColor: '#FEF2F2' });
     }
 
     if (lowProducts.length > 0) {
-      body += emailCard(`${emailHeading('Low Stock Products', { size: '16px', color: '#f59e0b' })}<ul style="margin:0;padding-left:20px">${lowProducts.map(product => `<li style="margin:8px 0"><strong>${product.productName}</strong> - ${product.currentStock} units (Min: ${product.minimumThreshold})<br><small style="color:#6b7280">Suggested reorder: ${product.suggestedReorderQuantity} units</small></li>`).join('')}</ul>`, { borderColor: '#FDE68A', bgColor: '#FFFBEB' });
+      body += emailCard(`${emailHeading('Low Stock Products', { size: '16px', color: '#f59e0b' })}<ul style="margin:0;padding-left:20px">${lowProducts.map(product => `<li style="margin:8px 0"><strong>${escapeHtml(product.productName)}</strong> - ${product.currentStock} units (Min: ${product.minimumThreshold})<br><small style="color:#6b7280">Suggested reorder: ${product.suggestedReorderQuantity} units</small></li>`).join('')}</ul>`, { borderColor: '#FDE68A', bgColor: '#FFFBEB' });
     }
 
     body += emailCard(`${emailHeading('Quick Actions', { size: '16px' })}<ul style="margin:0;padding-left:20px"><li style="margin-bottom:6px">Log into your dashboard to place reorders immediately</li><li style="margin-bottom:6px">Contact your suppliers to ensure timely delivery</li><li>Consider adjusting minimum stock thresholds for better planning</li></ul>`);

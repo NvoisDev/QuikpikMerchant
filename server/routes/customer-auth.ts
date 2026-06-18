@@ -43,7 +43,7 @@ import type { Express } from "express";
 import rateLimit from "express-rate-limit";
 import {
   ReliableSMSService, and, createEmailVerification, customerRegistrationRequests, db, desc,
-  emailButton, emailCard, emailHeading, eq, getEmailLogoUrl, gt, multiWholesalerService, or,
+  emailButton, emailCard, emailHeading, escapeHtml, eq, getEmailLogoUrl, gt, multiWholesalerService, or,
   parseCustomerName, requireAuth, requireNotViewer, sendEmail, sendWelcomeMessages,
   smsVerificationCodes, sql, storage, users, verifyEmailCode, wholesalerCustomerRelationships,
   wrapCustomerEmail
@@ -374,11 +374,11 @@ export function registerCustomerAuthRoutes(app: Express): void {
           <p style="margin:0 0 20px">A new customer has requested wholesale access via the login page.</p>
           ${emailCard(
             `${emailHeading('Enquiry Details', { size: '16px' })}
-             <p style="margin:0 0 6px"><strong>Name:</strong> ${name}</p>
-             <p style="margin:0 0 6px"><strong>Phone:</strong> ${phoneNumber}</p>
-             <p style="margin:0 0 6px"><strong>Email:</strong> ${email || 'Not provided'}</p>
-             <p style="margin:0 0 6px"><strong>Business:</strong> ${businessName || 'Not provided'}</p>
-             ${message ? `<p style="margin:0 0 6px"><strong>Message:</strong> ${message}</p>` : ''}`,
+             <p style="margin:0 0 6px"><strong>Name:</strong> ${escapeHtml(name)}</p>
+             <p style="margin:0 0 6px"><strong>Phone:</strong> ${escapeHtml(phoneNumber)}</p>
+             <p style="margin:0 0 6px"><strong>Email:</strong> ${escapeHtml(email) || 'Not provided'}</p>
+             <p style="margin:0 0 6px"><strong>Business:</strong> ${escapeHtml(businessName) || 'Not provided'}</p>
+             ${message ? `<p style="margin:0 0 6px"><strong>Message:</strong> ${escapeHtml(message)}</p>` : ''}`,
             { borderColor: '#dbeafe', bgColor: '#eff6ff' }
           )}`;
 
@@ -703,7 +703,7 @@ export function registerCustomerAuthRoutes(app: Express): void {
     requestMessage?: string | null;
   }): string {
     const businessTypeLabel = getBusinessTypeLabel(requestData.businessType);
-    return `${emailHeading('Your Submitted Details', { size: '16px' })}${requestData.businessName ? `<p style="margin:0 0 6px"><strong>Business Name:</strong> ${requestData.businessName}</p>` : ''}${businessTypeLabel ? `<p style="margin:0 0 6px"><strong>Business Type:</strong> ${businessTypeLabel}</p>` : ''}<p style="margin:0 0 6px"><strong>Phone:</strong> ${requestData.customerPhone}</p>${requestData.customerEmail ? `<p style="margin:0 0 6px"><strong>Email:</strong> ${requestData.customerEmail}</p>` : ''}${requestData.productsInterested ? `<p style="margin:0 0 6px"><strong>Products Interested In:</strong> ${requestData.productsInterested}</p>` : ''}${requestData.orderFrequency ? `<p style="margin:0 0 6px"><strong>Estimated Order Quantity/Frequency:</strong> ${requestData.orderFrequency}</p>` : ''}${requestData.requestMessage ? `<p style="margin:0"><strong>Message:</strong> ${requestData.requestMessage}</p>` : ''}`;
+    return `${emailHeading('Your Submitted Details', { size: '16px' })}${requestData.businessName ? `<p style="margin:0 0 6px"><strong>Business Name:</strong> ${escapeHtml(requestData.businessName)}</p>` : ''}${businessTypeLabel ? `<p style="margin:0 0 6px"><strong>Business Type:</strong> ${escapeHtml(businessTypeLabel)}</p>` : ''}<p style="margin:0 0 6px"><strong>Phone:</strong> ${escapeHtml(requestData.customerPhone)}</p>${requestData.customerEmail ? `<p style="margin:0 0 6px"><strong>Email:</strong> ${escapeHtml(requestData.customerEmail)}</p>` : ''}${requestData.productsInterested ? `<p style="margin:0 0 6px"><strong>Products Interested In:</strong> ${escapeHtml(requestData.productsInterested)}</p>` : ''}${requestData.orderFrequency ? `<p style="margin:0 0 6px"><strong>Estimated Order Quantity/Frequency:</strong> ${escapeHtml(requestData.orderFrequency)}</p>` : ''}${requestData.requestMessage ? `<p style="margin:0"><strong>Message:</strong> ${escapeHtml(requestData.requestMessage)}</p>` : ''}`;
   }
 
   // POST /api/registration-requests/:requestId/respond
@@ -857,7 +857,7 @@ export function registerCustomerAuthRoutes(app: Express): void {
             const wholesaler = await storage.getUser(userId);
             const businessName = wholesaler?.businessName || `${wholesaler?.firstName || ''} ${wholesaler?.lastName || ''}`.trim() || 'Wholesaler';
             
-            const approvedBody = `${emailHeading('Welcome!', { size: '22px', color: '#10b981' })}<p style="font-size:16px;margin:0 0 8px">Dear ${requestData.customerName},</p><p style="margin:0 0 20px">Great news! Your registration request has been approved. You now have access to our wholesale platform.</p>${emailCard(`${emailHeading('Your Access Details', { size: '16px' })}<p style="margin:0 0 6px"><strong>Phone Number:</strong> ${requestData.customerPhone}</p><p style="margin:0">Use your phone number to log in and start ordering.</p>`, { borderColor: '#a7f3d0', bgColor: '#ecfdf5' })}${emailCard(buildSubmissionSummaryCard(requestData), { borderColor: '#dbeafe', bgColor: '#eff6ff' })}${responseMessage ? emailCard(`<p style="margin:0 0 4px;font-weight:600">Message from ${businessName}:</p><p style="margin:0;color:#4b5563">${responseMessage}</p>`) : ''}${emailButton('Start Shopping', `https://quikpik.app/customer/${userId}`)}<p style="margin:20px 0 0">We look forward to serving you!</p>`;
+            const approvedBody = `${emailHeading('Welcome!', { size: '22px', color: '#10b981' })}<p style="font-size:16px;margin:0 0 8px">Dear ${escapeHtml(requestData.customerName)},</p><p style="margin:0 0 20px">Great news! Your registration request has been approved. You now have access to our wholesale platform.</p>${emailCard(`${emailHeading('Your Access Details', { size: '16px' })}<p style="margin:0 0 6px"><strong>Phone Number:</strong> ${escapeHtml(requestData.customerPhone)}</p><p style="margin:0">Use your phone number to log in and start ordering.</p>`, { borderColor: '#a7f3d0', bgColor: '#ecfdf5' })}${emailCard(buildSubmissionSummaryCard(requestData), { borderColor: '#dbeafe', bgColor: '#eff6ff' })}${responseMessage ? emailCard(`<p style="margin:0 0 4px;font-weight:600">Message from ${escapeHtml(businessName)}:</p><p style="margin:0;color:#4b5563">${escapeHtml(responseMessage)}</p>`) : ''}${emailButton('Start Shopping', `https://quikpik.app/customer/${userId}`)}<p style="margin:20px 0 0">We look forward to serving you!</p>`;
 
             await sendEmail({
               to: requestData.customerEmail,
@@ -876,7 +876,7 @@ export function registerCustomerAuthRoutes(app: Express): void {
             const wholesaler = await storage.getUser(userId);
             const businessName = wholesaler?.businessName || `${wholesaler?.firstName || ''} ${wholesaler?.lastName || ''}`.trim() || 'Wholesaler';
             
-            const rejectedBody = `${emailHeading('Registration Update', { size: '22px' })}<p style="font-size:16px;margin:0 0 8px">Dear ${requestData.customerName},</p><p style="margin:0 0 20px">Thank you for your interest in our wholesale platform. Unfortunately, your registration request could not be approved at this time.</p>${emailCard(buildSubmissionSummaryCard(requestData), { borderColor: '#dbeafe', bgColor: '#eff6ff' })}${responseMessage ? emailCard(`<p style="margin:0 0 4px;font-weight:600">Reason:</p><p style="margin:0;color:#4b5563">${responseMessage}</p>`) : ''}<p style="margin:20px 0 0">If you have any questions, please feel free to contact us directly. We appreciate your interest and hope to work with you in the future.</p>`;
+            const rejectedBody = `${emailHeading('Registration Update', { size: '22px' })}<p style="font-size:16px;margin:0 0 8px">Dear ${escapeHtml(requestData.customerName)},</p><p style="margin:0 0 20px">Thank you for your interest in our wholesale platform. Unfortunately, your registration request could not be approved at this time.</p>${emailCard(buildSubmissionSummaryCard(requestData), { borderColor: '#dbeafe', bgColor: '#eff6ff' })}${responseMessage ? emailCard(`<p style="margin:0 0 4px;font-weight:600">Reason:</p><p style="margin:0;color:#4b5563">${escapeHtml(responseMessage)}</p>`) : ''}<p style="margin:20px 0 0">If you have any questions, please feel free to contact us directly. We appreciate your interest and hope to work with you in the future.</p>`;
 
             await sendEmail({
               to: requestData.customerEmail,

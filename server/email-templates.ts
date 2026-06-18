@@ -2,6 +2,21 @@ import { formatDeliveryAddress, formatDeliveryAddressHTML } from '../shared/util
 import { formatDateTime } from '../shared/utils/date';
 import type { EmailRefundStatus } from '../shared/schema';
 
+/**
+ * Escapes characters with special meaning in HTML so user-supplied values
+ * cannot inject markup or scripts when interpolated into email bodies.
+ * This is the single shared helper used across all email-building code.
+ */
+export function escapeHtml(value: string | number | null | undefined): string {
+  if (value === null || value === undefined) return '';
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 export function formatPackDescriptor(
   packQuantity: number | null | undefined,
   unitSize: number | string | null | undefined,
@@ -56,26 +71,29 @@ export interface EmailBranding {
 
 function buildHeader(branding: EmailBranding): string {
   const hasHostedLogo = branding.logoUrl && branding.logoUrl.startsWith('http');
-  const initials = branding.businessName
-    .split(' ')
-    .map((w: string) => w[0] || '')
-    .join('')
-    .toUpperCase()
-    .slice(0, 2);
+  const safeName = escapeHtml(branding.businessName);
+  const initials = escapeHtml(
+    branding.businessName
+      .split(' ')
+      .map((w: string) => w[0] || '')
+      .join('')
+      .toUpperCase()
+      .slice(0, 2)
+  );
   if (hasHostedLogo) {
     return '<div style="text-align:center;padding:24px 20px 16px">' +
-      '<img src="' + branding.logoUrl + '" alt="' + branding.businessName + '" style="max-height:60px;max-width:180px;display:block;margin:0 auto">' +
-      '<div style="margin-top:10px;font-size:18px;font-weight:bold;color:#1f2937">' + branding.businessName + '</div>' +
+      '<img src="' + escapeHtml(branding.logoUrl) + '" alt="' + safeName + '" style="max-height:60px;max-width:180px;display:block;margin:0 auto">' +
+      '<div style="margin-top:10px;font-size:18px;font-weight:bold;color:#1f2937">' + safeName + '</div>' +
       '</div>';
   }
   return '<div style="text-align:center;padding:24px 20px 16px">' +
     '<div style="display:inline-block;width:56px;height:56px;border-radius:50%;background:#10b981;line-height:56px;font-size:22px;font-weight:bold;color:#fff;text-align:center">' + initials + '</div>' +
-    '<div style="margin-top:10px;font-size:18px;font-weight:bold;color:#1f2937">' + branding.businessName + '</div>' +
+    '<div style="margin-top:10px;font-size:18px;font-weight:bold;color:#1f2937">' + safeName + '</div>' +
     '</div>';
 }
 
 export function wrapCustomerEmail(body: string, branding: EmailBranding, options?: { preheader?: string }): string {
-  const ph = options?.preheader ? '<div style="display:none;max-height:0;overflow:hidden">' + options.preheader + '</div>' : '';
+  const ph = options?.preheader ? '<div style="display:none;max-height:0;overflow:hidden">' + escapeHtml(options.preheader) + '</div>' : '';
   return '<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>' +
     '<body style="margin:0;padding:0;background:#f4f5f7;font-family:Arial,sans-serif">' + ph +
     '<table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f5f7"><tr><td align="center" style="padding:20px 10px">' +
@@ -83,7 +101,7 @@ export function wrapCustomerEmail(body: string, branding: EmailBranding, options
     '<tr><td style="border-bottom:1px solid #eee">' + buildHeader(branding) + '</td></tr>' +
     '<tr><td style="padding:20px 30px;font-size:15px;line-height:1.6;color:#374151">' + body + '</td></tr>' +
     '<tr><td style="padding:16px 30px;border-top:1px solid #eee;text-align:center;font-size:12px;color:#aaa">' +
-    'Questions? Contact <b>' + branding.businessName + '</b> directly.<br>' +
+    'Questions? Contact <b>' + escapeHtml(branding.businessName) + '</b> directly.<br>' +
     '<span style="font-size:11px">Powered by <a href="https://quikpik.co" style="color:#aaa;text-decoration:none">Quikpik Merchant</a></span>' +
     '</td></tr></table></td></tr></table></body></html>';
 }
@@ -190,9 +208,9 @@ export function generateWholesalerOrderNotificationEmail(data: OrderEmailData): 
   if (data.fulfillmentType === 'pickup') {
     let addrDetail = '';
     if (data.collectionAddress) {
-      const addrLines = data.collectionAddress.split(', ').join('<br/>');
+      const addrLines = escapeHtml(data.collectionAddress).split(', ').join('<br/>');
       addrDetail = '<br/><span style="color:#6b7280;font-size:13px">' +
-        (data.collectionAddressName ? '<b>' + data.collectionAddressName + '</b><br/>' : '') +
+        (data.collectionAddressName ? '<b>' + escapeHtml(data.collectionAddressName) + '</b><br/>' : '') +
         addrLines + '</span>';
     }
     pickupHtml = emailCard(
@@ -202,13 +220,13 @@ export function generateWholesalerOrderNotificationEmail(data: OrderEmailData): 
   }
 
   const itemRows = data.items.map(item => {
-    const promoNote = item.appliedOfferLabel ? ' 🎁 ' + item.appliedOfferLabel : '';
+    const promoNote = item.appliedOfferLabel ? ' 🎁 ' + escapeHtml(item.appliedOfferLabel) : '';
     const freeNote = (item.freeItems ?? 0) > 0 ? ' (+' + item.freeItems + ' free)' : '';
     const packBadge = item.packDescriptor
-      ? '<br><span style="color:#6b7280;font-size:11px;">' + item.packDescriptor + '</span>'
+      ? '<br><span style="color:#6b7280;font-size:11px;">' + escapeHtml(item.packDescriptor) + '</span>'
       : '';
     return [
-      item.productName + packBadge + promoNote + freeNote,
+      escapeHtml(item.productName) + packBadge + promoNote + freeNote,
       item.quantity + ' ' + (item.sellingType === 'pallets' ? 'pallet(s)' : 'units'),
       '\u00A3' + item.unitPrice,
       '\u00A3' + item.total
@@ -222,11 +240,11 @@ export function generateWholesalerOrderNotificationEmail(data: OrderEmailData): 
     '<p style="margin:0 0 4px">Order <b>' + data.orderNumber + '</b></p>' +
     '<p style="margin:0 0 16px;font-size:14px;color:#6b7280">' + formatDateTime(data.orderDate) + '</p>' +
     emailCard(
-      '<p style="margin:0 0 4px"><b>Customer:</b> ' + data.customerName + '</p>' +
-      '<p style="margin:0 0 4px"><b>Email:</b> ' + data.customerEmail + '</p>' +
-      '<p style="margin:0 0 4px"><b>Phone:</b> ' + data.customerPhone + '</p>' +
+      '<p style="margin:0 0 4px"><b>Customer:</b> ' + escapeHtml(data.customerName) + '</p>' +
+      '<p style="margin:0 0 4px"><b>Email:</b> ' + escapeHtml(data.customerEmail) + '</p>' +
+      '<p style="margin:0 0 4px"><b>Phone:</b> ' + escapeHtml(data.customerPhone) + '</p>' +
       '<p style="margin:0 0 4px"><b>Fulfillment:</b> ' + (data.fulfillmentType === 'pickup' ? 'Customer Pickup' : 'Delivery') + '</p>' +
-      (data.shippingAddress ? '<p style="margin:0"><b>Address:</b> ' + data.shippingAddress + '</p>' : ''),
+      (data.shippingAddress ? '<p style="margin:0"><b>Address:</b> ' + escapeHtml(data.shippingAddress) + '</p>' : ''),
       { borderColor: '#dbeafe', bgColor: '#eff6ff' }
     ) +
     pickupHtml +
@@ -275,25 +293,25 @@ export function generateReadyForCollectionEmail(data: ReadyForCollectionEmailDat
 
   const secondCard = isDelivery
     ? emailCard(
-        '<p style="margin:0 0 4px"><b>Supplier:</b> ' + data.wholesalerName + '</p>' +
-        (data.deliveryAddress ? '<p style="margin:0 0 4px"><b>Delivery To:</b> ' + data.deliveryAddress + '</p>' : '') +
-        (data.businessPhone ? '<p style="margin:0"><b>Phone:</b> <a href="tel:' + data.businessPhone + '" style="color:#2563eb">' + data.businessPhone + '</a></p>' : ''),
+        '<p style="margin:0 0 4px"><b>Supplier:</b> ' + escapeHtml(data.wholesalerName) + '</p>' +
+        (data.deliveryAddress ? '<p style="margin:0 0 4px"><b>Delivery To:</b> ' + escapeHtml(data.deliveryAddress) + '</p>' : '') +
+        (data.businessPhone ? '<p style="margin:0"><b>Phone:</b> <a href="tel:' + escapeHtml(data.businessPhone) + '" style="color:#2563eb">' + escapeHtml(data.businessPhone) + '</a></p>' : ''),
         { borderColor: '#bfdbfe', bgColor: '#eff6ff' }
       )
     : emailCard(
-        '<p style="margin:0 0 4px"><b>Collect From:</b> ' + data.wholesalerName + '</p>' +
-        (data.collectionAddressName ? '<p style="margin:0 0 2px"><b>Location:</b> ' + data.collectionAddressName + '</p>' : '') +
-        (data.businessAddress ? '<p style="margin:0 0 4px"><b>Address:</b> ' + data.businessAddress + '</p>' : '') +
-        (data.businessPhone ? '<p style="margin:0"><b>Phone:</b> <a href="tel:' + data.businessPhone + '" style="color:#10b981">' + data.businessPhone + '</a></p>' : ''),
+        '<p style="margin:0 0 4px"><b>Collect From:</b> ' + escapeHtml(data.wholesalerName) + '</p>' +
+        (data.collectionAddressName ? '<p style="margin:0 0 2px"><b>Location:</b> ' + escapeHtml(data.collectionAddressName) + '</p>' : '') +
+        (data.businessAddress ? '<p style="margin:0 0 4px"><b>Address:</b> ' + escapeHtml(data.businessAddress) + '</p>' : '') +
+        (data.businessPhone ? '<p style="margin:0"><b>Phone:</b> <a href="tel:' + escapeHtml(data.businessPhone) + '" style="color:#10b981">' + escapeHtml(data.businessPhone) + '</a></p>' : ''),
         { borderColor: '#dbeafe', bgColor: '#eff6ff' }
       );
 
   const footerText = isDelivery
-    ? 'Your order will be dispatched shortly. ' + data.wholesalerName + ' will contact you to arrange delivery.'
-    : 'Please contact ' + data.wholesalerName + ' to arrange a collection time.';
+    ? 'Your order will be dispatched shortly. ' + escapeHtml(data.wholesalerName) + ' will contact you to arrange delivery.'
+    : 'Please contact ' + escapeHtml(data.wholesalerName) + ' to arrange a collection time.';
 
   const body = '<div style="text-align:center;margin-bottom:16px">' + emailBadge(badgeLabel, badgeColor) + '</div>' +
-    '<p style="margin:0 0 16px">Dear ' + data.customerName + ', ' + introText + '</p>' +
+    '<p style="margin:0 0 16px">Dear ' + escapeHtml(data.customerName) + ', ' + introText + '</p>' +
     emailCard(
       '<p style="margin:0 0 4px"><b>Order:</b> ' + data.orderNumber + '</p>' +
       '<p style="margin:0 0 4px"><b>Total:</b> <span style="color:#10b981;font-weight:bold">\u00A3' + parseFloat(data.orderTotal).toFixed(2) + '</span></p>' +
@@ -368,15 +386,15 @@ export function buildItemisedRefundEmail(options: {
     ? emailHeading('Order Cancelled', { size: '22px', color: '#DC2626' })
     : emailHeading('Partial Return Processed', { size: '22px', color: '#EA580C' });
 
-  const intro = '<p style="margin:0 0 8px">Hi ' + (customerName || 'there') + ',</p>' +
+  const intro = '<p style="margin:0 0 8px">Hi ' + escapeHtml(customerName || 'there') + ',</p>' +
     '<p style="margin:0 0 20px">' +
     (isFullCancellation
-      ? 'Your order <strong>' + orderNumber + '</strong> with ' + businessName + ' has been cancelled.'
-      : 'A partial return has been processed for your order <strong>' + orderNumber + '</strong> with ' + businessName + '.') +
+      ? 'Your order <strong>' + orderNumber + '</strong> with ' + escapeHtml(businessName) + ' has been cancelled.'
+      : 'A partial return has been processed for your order <strong>' + orderNumber + '</strong> with ' + escapeHtml(businessName) + '.') +
     '</p>';
 
   const returnRows = returnedItems.map(item => [
-    item.productName + (item.packDescriptor ? ' (' + item.packDescriptor + ')' : ''),
+    escapeHtml(item.productName) + (item.packDescriptor ? ' (' + escapeHtml(item.packDescriptor) + ')' : ''),
     item.quantity + ' ' + (item.sellingType === 'pallets' ? 'pallet(s)' : 'unit(s)'),
     '\u00A3' + item.unitPrice.toFixed(2),
     '\u00A3' + (item.unitPrice * item.quantity).toFixed(2),
@@ -403,7 +421,7 @@ export function buildItemisedRefundEmail(options: {
   let retainedSection = '';
   if (retainedItems && retainedItems.length > 0) {
     const retainedRows = retainedItems.map(item => [
-      item.productName + (item.packDescriptor ? ' (' + item.packDescriptor + ')' : ''),
+      escapeHtml(item.productName) + (item.packDescriptor ? ' (' + escapeHtml(item.packDescriptor) + ')' : ''),
       item.quantity + ' ' + (item.sellingType === 'pallets' ? 'pallet(s)' : 'unit(s)'),
       '\u00A3' + item.unitPrice.toFixed(2),
       '\u00A3' + (item.unitPrice * item.quantity).toFixed(2),
@@ -436,10 +454,10 @@ export function buildItemisedRefundEmail(options: {
     );
   }
 
-  const contactBlock = '<p style="margin:20px 0 0;font-size:14px;color:#6b7280">If you have any questions, please contact ' + businessName + ':</p>' +
+  const contactBlock = '<p style="margin:20px 0 0;font-size:14px;color:#6b7280">If you have any questions, please contact ' + escapeHtml(businessName) + ':</p>' +
     '<ul style="margin:8px 0;padding-left:20px;font-size:14px;color:#6b7280">' +
-    (businessPhone ? '<li>Phone: ' + businessPhone + '</li>' : '') +
-    (businessEmail ? '<li>Email: ' + businessEmail + '</li>' : '') +
+    (businessPhone ? '<li>Phone: ' + escapeHtml(businessPhone) + '</li>' : '') +
+    (businessEmail ? '<li>Email: ' + escapeHtml(businessEmail) + '</li>' : '') +
     '</ul>';
 
   return heading + intro + returnedSection + refundSummary + retainedSection + processingNote + contactBlock;
@@ -548,7 +566,7 @@ export function generateDowngradeScheduledEmail(data: DowngradeScheduledEmailDat
 
   const body =
     emailHeading('Downgrade Scheduled', { size: '22px', color: '#b45309' }) +
-    '<p style="margin:0 0 16px">Hi ' + (data.firstName || 'there') + ',</p>' +
+    '<p style="margin:0 0 16px">Hi ' + escapeHtml(data.firstName || 'there') + ',</p>' +
     '<p style="margin:0 0 20px">We\'ve received your request to downgrade your <b>' + planLabel + '</b> subscription. ' +
     'Your account will move to the <b>Free</b> plan' + (isImmediate ? ' now.' : ' at the end of your current billing period.') + '</p>' +
     emailCard(
@@ -638,7 +656,7 @@ export function generateDowngradeEffectiveEmail(data: DowngradeEffectiveEmailDat
 
   const body =
     emailHeading('Your plan is now Free', { size: '22px', color: '#374151' }) +
-    '<p style="margin:0 0 16px">Hi ' + (data.firstName || 'there') + ',</p>' +
+    '<p style="margin:0 0 16px">Hi ' + escapeHtml(data.firstName || 'there') + ',</p>' +
     '<p style="margin:0 0 20px">Your Quikpik subscription has ended and your account is now on the <b>Free plan</b>. ' +
     'You can continue using Quikpik within the following limits:</p>' +
     FREE_LIMITS_TABLE +
@@ -702,10 +720,10 @@ export function generateListingLapseReEngagementEmail(data: ListingLapseReEngage
   );
 
   const mainMessage = data.isPastDue
-    ? '<p style="margin:0 0 16px">Hi ' + (data.firstName || 'there') + ',</p>' +
+    ? '<p style="margin:0 0 16px">Hi ' + escapeHtml(data.firstName || 'there') + ',</p>' +
       '<p style="margin:0 0 20px">We weren\'t able to process the payment for your <b>Listing plan</b>. ' +
       'To keep your supplier profile live and stay visible to retailers, please update your payment details.</p>'
-    : '<p style="margin:0 0 16px">Hi ' + (data.firstName || 'there') + ',</p>' +
+    : '<p style="margin:0 0 16px">Hi ' + escapeHtml(data.firstName || 'there') + ',</p>' +
       '<p style="margin:0 0 20px">Your <b>Listing plan</b> subscription has ended and your supplier profile is no longer visible on the Quikpik marketplace. ' +
       'Reactivating takes just a minute — and at <b>\u00A319.99&nbsp;/&nbsp;month</b> it\'s the easiest way to keep retailers finding you.</p>';
 
