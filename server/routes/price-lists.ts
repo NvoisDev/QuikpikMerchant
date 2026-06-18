@@ -10,7 +10,7 @@ import { eq, and, inArray, count as drizzleCount } from "drizzle-orm";
 import { sendEmail } from "../sendgrid-service";
 import {
   wrapCustomerEmail, emailCard, emailTable, emailButton,
-  emailHeading, getEmailLogoUrl,
+  emailHeading, getEmailLogoUrl, escapeHtml,
 } from "../email-templates";
 import { fetchLogoBuffer, buildBrandedWorkbook, buildBrandedPdf, type PriceRow } from '../utils/price-list-export';
 import { whatsAppBusinessService } from "../whatsapp-simple";
@@ -753,12 +753,12 @@ export function registerPriceListRoutes(app: Express): void {
                 size: "20px",
                 color: "#10b981",
               }) +
-              `<p style="margin:0 0 16px">Dear ${customerName},</p>` +
-              `<p style="margin:0 0 16px">${businessName} has prepared a special price list just for you. These prices are available exclusively for your account.</p>` +
+              `<p style="margin:0 0 16px">Dear ${escapeHtml(customerName)},</p>` +
+              `<p style="margin:0 0 16px">${escapeHtml(businessName)} has prepared a special price list just for you. These prices are available exclusively for your account.</p>` +
               emailTable(["Product", "Your Price"], tableRows) +
               (list.startDate || list.endDate
                 ? emailCard(
-                    `<p style="margin:0;color:#92400e"><strong>Valid Period:</strong> ${list.startDate || "Now"} – ${list.endDate || "Until further notice"}</p>`,
+                    `<p style="margin:0;color:#92400e"><strong>Valid Period:</strong> ${escapeHtml(list.startDate || "Now")} – ${escapeHtml(list.endDate || "Until further notice")}</p>`,
                     { borderColor: "#fcd34d", bgColor: "#fffbeb" },
                   )
                 : "") +
