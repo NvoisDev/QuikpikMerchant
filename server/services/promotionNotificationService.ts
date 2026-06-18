@@ -82,7 +82,7 @@ function buildPromoBadgeColor(type: PromotionalOffer["type"]): string {
   }
 }
 
-function buildStartEmailHtml(
+export function buildStartEmailHtml(
   products: PromoProduct[],
   wholesaler: WholesalerInfo,
   storeUrl: string
@@ -129,7 +129,7 @@ function buildStartEmailHtml(
   }, { preheader: `${productCount} product${productCount > 1 ? "s" : ""} just went on sale at ${wholesaler.businessName}` });
 }
 
-function buildEndEmailHtml(
+export function buildEndEmailHtml(
   products: PromoProduct[],
   wholesaler: WholesalerInfo,
   storeUrl: string
