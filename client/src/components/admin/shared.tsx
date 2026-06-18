@@ -2,7 +2,7 @@ import { startOfMonth, endOfMonth, subMonths, startOfDay, endOfDay } from "date-
 import { formatCurrency } from "@/lib/currencies";
 import {
   LayoutDashboard, Building2, Users, ShoppingCart, Package, TrendingUp,
-  Settings, CreditCard, MapPin, Activity, BadgeCheck, Archive, Store,
+  Settings, CreditCard, MapPin, Activity, BadgeCheck, Archive, Store, LayoutTemplate,
 } from "lucide-react";
 import type { SectionId } from "./types";
 
@@ -50,6 +50,7 @@ export const SECTIONS: { id: SectionId; label: string; icon: React.ComponentType
   { id: "map",         label: "Customer Map",      icon: MapPin },
   { id: "logs",        label: "Support & Logs",    icon: Activity },
   { id: "prospects",   label: "Prospect Stores",   icon: Store },
+  { id: "templates",   label: "Templates",         icon: LayoutTemplate },
 ];
 
 export type Preset = "this_month" | "last_month" | "last_3_months" | "all_time";

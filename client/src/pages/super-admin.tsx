@@ -21,13 +21,14 @@ import { PlansSection } from "@/components/admin/PlansSection";
 import { CustomerMapSection } from "@/components/admin/CustomerMapSection";
 import { SupportLogsSection } from "@/components/admin/SupportLogsSection";
 import { ProspectStoresSection } from "@/components/admin/ProspectStoresSection";
+import { TemplatesSection } from "@/components/admin/TemplatesSection";
 import { QuickActionsModal } from "@/components/admin/QuickActionsModal";
 import { GlobalSearchBar } from "@/components/admin/GlobalSearchBar";
 
 const ADMIN_EMAILS = ["hello@quikpik.co", "mogunjemilua@gmail.com"];
 const GREEN = "#1a7a3d";
 
-const VALID_SECTIONS = new Set<SectionId>(["overview","wholesalers","customers","orders","products","financials","settings","plans","logs","map","prospects"]);
+const VALID_SECTIONS = new Set<SectionId>(["overview","wholesalers","customers","orders","products","financials","settings","plans","logs","map","prospects","templates"]);
 
 function AdminLogin() {
   const [loading, setLoading] = useState(false);
@@ -243,6 +244,9 @@ export default function SuperAdmin() {
           )}
           {activeSection === "prospects" && (
             <ProspectStoresSection isAdmin={isAdmin} wholesalers={wholesalers} />
+          )}
+          {activeSection === "templates" && (
+            <TemplatesSection isAdmin={isAdmin} />
           )}
         </main>
       </div>

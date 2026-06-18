@@ -1,4 +1,4 @@
-export type SectionId = "overview" | "wholesalers" | "customers" | "orders" | "products" | "financials" | "settings" | "plans" | "map" | "logs" | "prospects";
+export type SectionId = "overview" | "wholesalers" | "customers" | "orders" | "products" | "financials" | "settings" | "plans" | "map" | "logs" | "prospects" | "templates";
 
 export interface PlatformStats {
   activeWholesalers: number; totalWholesalers: number; suspendedWholesalers: number;
