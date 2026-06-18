@@ -107,11 +107,37 @@ export function wrapCustomerEmail(body: string, branding: EmailBranding, options
 }
 
 
-export function emailButton(text: string, url: string, color?: string): string {
-  const bg = color || '#10b981';
-  return '<div style="text-align:center;margin:20px 0"><a href="' + url + '" style="display:inline-block;padding:12px 28px;background:' + bg + ';color:#fff;text-decoration:none;border-radius:6px;font-size:15px;font-weight:bold">' + text + '</a></div>';
+/**
+ * Validates a URL for safe use in an email `href`/`src` attribute. Only allows
+ * http(s), mailto, tel and relative/anchor links; anything else (e.g.
+ * `javascript:`, `data:`, `vbscript:`) is replaced with a harmless `#` so a
+ * user-supplied URL can never execute script when a recipient clicks it.
+ */
+export function sanitizeEmailUrl(url: string | null | undefined): string {
+  const raw = (url ?? '').trim();
+  if (!raw) return '#';
+  if (raw.startsWith('/') || raw.startsWith('#') || raw.startsWith('?')) return raw;
+  if (/^(https?:|mailto:|tel:)/i.test(raw)) return raw;
+  return '#';
 }
 
+/**
+ * Renders a call-to-action button. The visible `text` and the `url` are treated
+ * as untrusted leaf values: `text` is HTML-escaped and `url` is validated +
+ * attribute-escaped here, so callers may pass raw user-controlled strings
+ * safely. `color` is expected to be a developer-controlled style constant.
+ */
+export function emailButton(text: string, url: string, color?: string): string {
+  const bg = color || '#10b981';
+  const href = escapeHtml(sanitizeEmailUrl(url));
+  return '<div style="text-align:center;margin:20px 0"><a href="' + href + '" style="display:inline-block;padding:12px 28px;background:' + bg + ';color:#fff;text-decoration:none;border-radius:6px;font-size:15px;font-weight:bold">' + escapeHtml(text) + '</a></div>';
+}
+
+/**
+ * Wraps already-composed HTML in a card container. The `content` is interpolated
+ * verbatim (NOT escaped) so callers can compose markup — every user-controlled
+ * leaf value inside `content` MUST be escaped at the call site.
+ */
 export function emailCard(content: string, options?: { borderColor?: string; bgColor?: string }): string {
   const border = options?.borderColor || '#e5e7eb';
   const bg = options?.bgColor || '#f9fafb';
@@ -122,12 +148,22 @@ export function emailDivider(): string {
   return '<hr style="border:none;border-top:1px solid #e5e7eb;margin:20px 0">';
 }
 
+/**
+ * Renders a heading. The `text` is treated as an untrusted leaf value and is
+ * HTML-escaped here, so callers may pass raw user-controlled strings safely.
+ */
 export function emailHeading(text: string, options?: { color?: string; size?: string }): string {
   const color = options?.color || '#1f2937';
   const size = options?.size || '18px';
-  return '<h2 style="margin:0 0 12px;font-size:' + size + ';font-weight:bold;color:' + color + '">' + text + '</h2>';
+  return '<h2 style="margin:0 0 12px;font-size:' + size + ';font-weight:bold;color:' + color + '">' + escapeHtml(text) + '</h2>';
 }
 
+/**
+ * Renders a table from already-composed HTML cells. Header and cell strings are
+ * interpolated verbatim (NOT escaped) so callers can compose markup (links,
+ * spans, formatted prices) — every user-controlled leaf value inside a cell MUST
+ * be escaped at the call site.
+ */
 export function emailTable(headers: string[], rows: string[][]): string {
   const ths = headers.map((h, i) => {
     const align = i === 0 ? 'left' : i === headers.length - 1 ? 'right' : 'center';
@@ -143,9 +179,14 @@ export function emailTable(headers: string[], rows: string[][]): string {
   return '<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin:12px 0"><thead><tr>' + ths + '</tr></thead><tbody>' + trs + '</tbody></table>';
 }
 
+/**
+ * Renders a small pill/badge. The `text` is treated as an untrusted leaf value
+ * and is HTML-escaped here, so callers may pass raw user-controlled strings
+ * safely.
+ */
 export function emailBadge(text: string, color?: string): string {
   const bg = color || '#10b981';
-  return '<span style="display:inline-block;padding:3px 10px;background:' + bg + ';color:#fff;border-radius:12px;font-size:12px;font-weight:bold">' + text + '</span>';
+  return '<span style="display:inline-block;padding:3px 10px;background:' + bg + ';color:#fff;border-radius:12px;font-size:12px;font-weight:bold">' + escapeHtml(text) + '</span>';
 }
 
 export interface ReadyForCollectionEmailData {
