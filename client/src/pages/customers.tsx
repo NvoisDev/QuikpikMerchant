@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useRef } from "react";
 import { useCurrency } from "@/hooks/useCurrency";
 import { FeatureLock, isListingTier } from "@/components/FeatureLock";
 import PageHeader from "@/components/PageHeader";
@@ -209,6 +209,9 @@ export default function Customers() {
 
   // Contact picker state
   const contactPickerSupported = typeof navigator !== 'undefined' && 'contacts' in navigator;
+  const isMobile = typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0);
+  const singleVcfInputRef = useRef<HTMLInputElement>(null);
+  const bulkVcfInputRef = useRef<HTMLInputElement>(null);
   const [bulkImportContacts, setBulkImportContacts] = useState<BulkContact[]>([]);
   const [isBulkImportDialogOpen, setIsBulkImportDialogOpen] = useState(false);
   const [isBulkImporting, setIsBulkImporting] = useState(false);
@@ -379,6 +382,106 @@ export default function Customers() {
         ? `${failed} contact${failed !== 1 ? 's' : ''} skipped (duplicate phone number or missing data).`
         : 'All contacts imported successfully.',
     });
+  };
+
+  // --- vCard (.vcf) fallback for browsers without Contact Picker API ---
+
+  const parseVCard = (text: string): BulkContact[] => {
+    const results: BulkContact[] = [];
+    const cards = text.split(/(?=BEGIN:VCARD)/i).filter(s => s.includes('END:VCARD'));
+    for (const card of cards) {
+      // Unfold folded lines (CRLF + whitespace)
+      const unfolded = card.replace(/\r?\n[ \t]/g, '');
+      const get = (key: string) => {
+        const re = new RegExp(`^${key}(?:;[^:]*)?:(.*)$`, 'im');
+        return (unfolded.match(re)?.[1] ?? '').trim();
+      };
+      const getAll = (key: string) => {
+        const re = new RegExp(`^${key}(?:;[^:]*)?:(.*)$`, 'gim');
+        return [...unfolded.matchAll(re)].map(m => m[1].trim()).filter(Boolean);
+      };
+
+      // Name
+      let firstName = '';
+      let lastName = '';
+      const n = get('N');
+      if (n) {
+        const parts = n.split(';');
+        lastName  = parts[0]?.trim() || '';
+        firstName = parts[1]?.trim() || '';
+      }
+      const fn = get('FN') || `${firstName} ${lastName}`.trim();
+      if (!firstName && fn) {
+        const parts = fn.split(' ');
+        firstName = parts[0] || '';
+        lastName  = parts.slice(1).join(' ');
+      }
+
+      // Phone — take first available, strip formatting
+      const phones = getAll('TEL');
+      const phone = phones.map(p => p.replace(/[^\d+]/g, '')).find(p => p.length >= 7) || '';
+
+      // Email
+      const email = getAll('EMAIL')[0] || '';
+
+      // Address — ADR: pobox;extended;street;city;region;postal;country
+      const adr = get('ADR');
+      let address = '', city = '', postalCode = '', country = '';
+      if (adr) {
+        const parts = adr.split(';');
+        address    = parts[2]?.trim() || '';
+        city       = parts[3]?.trim() || '';
+        postalCode = parts[5]?.trim() || '';
+        country    = parts[6]?.trim() || '';
+      }
+
+      if (phone) {
+        results.push({ name: fn, firstName, lastName, phone, email, address, city, postalCode, country, selected: true });
+      }
+    }
+    return results;
+  };
+
+  const handleSingleVcf = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const contacts = parseVCard(ev.target?.result as string);
+      if (contacts.length === 0) {
+        toast({ title: 'No contact found', description: 'Make sure the .vcf file contains a contact with a phone number.', variant: 'destructive' });
+        return;
+      }
+      const c = contacts[0];
+      const opts = { shouldDirty: true, shouldTouch: true };
+      if (c.firstName)  addCustomerForm.setValue('firstName',   c.firstName,  opts);
+      if (c.lastName)   addCustomerForm.setValue('lastName',    c.lastName,   opts);
+      if (c.phone)      addCustomerForm.setValue('phoneNumber', c.phone,      opts);
+      if (c.email)      addCustomerForm.setValue('email',       c.email,      opts);
+      if (c.address)    addCustomerForm.setValue('streetAddress', c.address,  opts);
+      if (c.city)       addCustomerForm.setValue('city',        c.city,       opts);
+      if (c.postalCode) addCustomerForm.setValue('postalCode',  c.postalCode, opts);
+      if (c.country)    addCustomerForm.setValue('country',     c.country,    opts);
+    };
+    reader.readAsText(file);
+  };
+
+  const handleBulkVcf = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const contacts = parseVCard(ev.target?.result as string);
+      if (contacts.length === 0) {
+        toast({ title: 'No contacts found', description: 'Make sure the file contains contacts with phone numbers.', variant: 'destructive' });
+        return;
+      }
+      setBulkImportContacts(contacts);
+      setIsBulkImportDialogOpen(true);
+    };
+    reader.readAsText(file);
   };
 
   // Plan limits — used by CustomerGroupsTab and PriceListManagementDialog
@@ -733,16 +836,28 @@ export default function Customers() {
                   onSelect={handleBusinessSearch}
                 />
               </div>
-              {contactPickerSupported && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full h-11 border-dashed border-emerald-300 text-emerald-700 hover:bg-emerald-50 active:bg-emerald-100 text-sm font-medium"
-                  onClick={pickSingleContact}
-                >
-                  <Phone className="h-4 w-4 mr-2 shrink-0" />
-                  Import from contacts
-                </Button>
+              {isMobile && (
+                contactPickerSupported ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full h-11 border-dashed border-emerald-300 text-emerald-700 hover:bg-emerald-50 active:bg-emerald-100 text-sm font-medium"
+                    onClick={pickSingleContact}
+                  >
+                    <Phone className="h-4 w-4 mr-2 shrink-0" />
+                    Import from contacts
+                  </Button>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full h-11 border-dashed border-emerald-300 text-emerald-700 hover:bg-emerald-50 active:bg-emerald-100 text-sm font-medium"
+                    onClick={() => singleVcfInputRef.current?.click()}
+                  >
+                    <BookUser className="h-4 w-4 mr-2 shrink-0" />
+                    Import from contacts
+                  </Button>
+                )
               )}
               <div className="border-t border-dashed pt-3">
                 <p className="text-xs text-muted-foreground mb-3">Or fill in manually:</p>
@@ -925,6 +1040,10 @@ export default function Customers() {
           </Form>
         </DialogContent>
       </Dialog>
+
+      {/* Hidden vCard file inputs (fallback for non-Safari mobile) */}
+      <input ref={singleVcfInputRef} type="file" accept=".vcf,text/vcard" className="hidden" onChange={handleSingleVcf} />
+      <input ref={bulkVcfInputRef}   type="file" accept=".vcf,text/vcard" className="hidden" onChange={handleBulkVcf} />
 
       {/* Bulk Contact Import Dialog */}
       <Dialog open={isBulkImportDialogOpen} onOpenChange={(open) => { if (!isBulkImporting) setIsBulkImportDialogOpen(open); }}>
@@ -1143,10 +1262,10 @@ export default function Customers() {
                       <Search className="h-4 w-4 mr-2" />
                       Search & Merge Customers
                     </DropdownMenuItem>
-                    {contactPickerSupported && (
+                    {isMobile && (
                       <>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={pickBulkContacts}>
+                        <DropdownMenuItem onClick={contactPickerSupported ? pickBulkContacts : () => bulkVcfInputRef.current?.click()}>
                           <BookUser className="h-4 w-4 mr-2" />
                           Import from contacts
                         </DropdownMenuItem>
