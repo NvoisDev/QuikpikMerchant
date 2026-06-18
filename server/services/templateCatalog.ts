@@ -58,8 +58,11 @@ const SAMPLE = {
   wholesalerPhone: "+44 7700 900999",
   orderNumber: "ORD-2026-0042",
   portalUrl: "https://quikpik.app/store/fresh-foods",
+  storeUrl: "https://quikpik.app/store/fresh-foods",
   orderUrl: "https://quikpik.app/orders/ORD-2026-0042",
   paymentLink: "https://quikpik.app/pay/ORD-2026-0042",
+  broadcastTitle: "Summer Stock Clearance",
+  broadcastBody: "Big savings across our full range this week — fresh deliveries every morning. Reply to this message or tap your store link to place an order before stock runs out.",
 };
 
 const SAMPLE_ITEMS = [
@@ -437,7 +440,7 @@ ${emailButton("View Unfulfilled Orders", ordersLink, "#10b981")}
 // ===========================================================================
 function buildWhatsAppTemplates(): TemplatePreview[] {
   const out: TemplatePreview[] = [];
-  const { orderNumber, wholesalerName, customerName, customerBusiness, portalUrl, wholesalerPhone, wholesalerEmail } = SAMPLE;
+  const { orderNumber, wholesalerName, customerName, customerBusiness, portalUrl, storeUrl, wholesalerPhone, wholesalerEmail } = SAMPLE;
 
   // --- Order status updates (customer) -----------------------------------
   out.push(waEntry("wa-order-confirmed", "Order Confirmed", "customer", "WhatsApp/SMS sent when an order is confirmed.", `✅ *Order Confirmed*\n\nOrder: ${orderNumber}\nWholesaler: ${wholesalerName}\n\nYour order is being prepared and you'll receive regular updates.`));
@@ -467,6 +470,11 @@ function buildWhatsAppTemplates(): TemplatePreview[] {
   out.push(waEntry("wa-stock-restocked", "Back In Stock", "customer", "Broadcast telling customers a product is available again.", `📢 *Stock Update Alert*\n\nProduct: *Coca-Cola 330ml*\n\n✅ *BACK IN STOCK*\nGreat news! This product is available again.\n\n📦 Stock: 480 units available\n💰 Price: £0.45\n📦 MOQ: 24 units\n\n🛒 Place your order now!${contactFooter}`));
   out.push(waEntry("wa-stock-low", "Low Stock Alert (Broadcast)", "customer", "Broadcast warning customers a product is running low.", `📢 *Stock Update Alert*\n\nProduct: *Coca-Cola 330ml*\n\n⚠️ *LOW STOCK ALERT*\nOnly 36 units remaining!\n\n💰 Price: £0.45\n📦 MOQ: 24 units\n\n🛒 Order now to secure your stock!${contactFooter}`));
   out.push(waEntry("wa-stock-price", "Price Update (Broadcast)", "customer", "Broadcast announcing a product price change.", `📢 *Stock Update Alert*\n\nProduct: *Coca-Cola 330ml*\n\n💰 *PRICE UPDATE*\nNew price: £0.42\n📦 Stock: 480 units available\n📦 MOQ: 24 units${contactFooter}`));
+
+  // --- Marketing & promotions (customer) ---------------------------------
+  out.push(waEntry("wa-marketing-broadcast", "Marketing Broadcast", "customer", "Custom marketing message a wholesaler broadcasts to their customers over WhatsApp/SMS.", `📢 ${SAMPLE.broadcastTitle}\n${SAMPLE.broadcastBody}\nFrom: ${wholesalerName}`));
+  out.push(waEntry("wa-promotion-launched", "Product Promotion (On Sale)", "customer", "Sent to customers when a wholesaler launches a product promotion / sale.", `${wholesalerName}: 3 products just went on sale! Shop now: ${storeUrl}`));
+  out.push(waEntry("wa-promotion-ending", "Product Promotion (Ending Today)", "customer", "Last-chance reminder sent on the final day of a promotion.", `${wholesalerName}: Last chance — 3 deals end today! Shop: ${storeUrl}`));
 
   // --- Stock alert (wholesaler) ------------------------------------------
   out.push(waEntry("wa-stock-alert-owner", "Low Stock Alert (Owner)", "wholesaler", "WhatsApp alert to the wholesaler when products run low.", `🚨 *STOCK ALERT*\n\n3 products need restocking:\n\n⚠️ *URGENT (≤5 units):*\n• Coca-Cola 330ml: 3 left\n• Walkers Crisps Variety Box: 5 left\n\n📦 *Products to reorder:*\n• Coca-Cola 330ml: 3/50 units\n• Walkers Crisps Variety Box: 5/50 units\n• Cadbury Dairy Milk 110g: 18/50 units\n\n💡 *Suggested reorder value: £3000*\n\nCheck your dashboard to place reorders quickly.`));

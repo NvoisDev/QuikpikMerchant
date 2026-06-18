@@ -46,4 +46,13 @@ describe('template catalogue', () => {
     expect(combos.has('whatsapp_sms:customer')).toBe(true);
     expect(combos.has('whatsapp_sms:wholesaler')).toBe(true);
   });
+
+  it('includes the required marketing & promotion WhatsApp/SMS templates', () => {
+    const keys = new Set(templates.map((t) => t.key));
+    // Marketing broadcast and product promotion are core platform messages and
+    // must always be previewable in the admin Templates section.
+    expect(keys.has('wa-marketing-broadcast')).toBe(true);
+    expect(keys.has('wa-promotion-launched')).toBe(true);
+    expect(keys.has('wa-promotion-ending')).toBe(true);
+  });
 });
