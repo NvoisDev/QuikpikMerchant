@@ -1,10 +1,9 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -18,8 +17,8 @@ import { useLocation } from "wouter";
 import { ContextualHelpBubble } from "@/components/ContextualHelpBubble";
 import { helpContent } from "@/data/whatsapp-help-content";
 import {
-  Users, Plus, MessageSquare, UserPlus, Edit, Trash2, Search, Eye,
-  Smartphone, ContactRound, ChevronDown, Edit3, Check, X,
+  Users, Plus, MessageSquare, UserPlus, Edit, Trash2, Search,
+  Smartphone, ContactRound, ChevronDown, ChevronRight, Edit3, Check, X,
 } from "lucide-react";
 
 const customerGroupFormSchema = z.object({
@@ -457,7 +456,7 @@ export function CustomerGroupsTab({
     <>
       {/* Groups Tab Content */}
       <div className="space-y-4 sm:space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0">
+        <div className="flex items-center justify-between gap-3">
           <h2 className="text-lg sm:text-xl font-semibold">Customer Groups</h2>
           <div className="flex items-center space-x-2">
             <ContextualHelpBubble
@@ -467,7 +466,7 @@ export function CustomerGroupsTab({
             />
             {!isViewer && (
               <Button
-                className="w-full sm:w-auto"
+                size="sm"
                 disabled={planLimitsLoading}
                 onClick={() => {
                   const limit = planLimits?.limits?.customGroups;
@@ -571,44 +570,43 @@ export function CustomerGroupsTab({
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
             {customerGroups.map((group) => (
-              <Card key={group.id} className="hover:shadow-lg transition-shadow border-slate-200">
-                <CardHeader className="pb-3 p-4 sm:p-6">
-                  <div className="flex items-start justify-between gap-2">
+              <Card
+                key={group.id}
+                onClick={() => handleViewMembers(group)}
+                className="group cursor-pointer border-slate-200 shadow-sm hover:shadow-md hover:border-slate-300 transition-all"
+              >
+                <CardContent className="p-3 sm:p-4">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleViewMembers(group);
+                    }}
+                    aria-label={`View members of ${group.name}`}
+                    className="flex items-center justify-between gap-3 w-full text-left rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/40"
+                  >
                     <div className="min-w-0 flex-1">
-                      <CardTitle className="text-base sm:text-lg md:text-xl truncate font-bold text-slate-900">{group.name}</CardTitle>
-                      {group.description && (
-                        <p className="text-xs sm:text-sm text-slate-500 mt-1 line-clamp-2">{group.description}</p>
-                      )}
+                      <h3 className="font-bold text-slate-900 text-base sm:text-lg truncate">{group.name}</h3>
+                      <p className="text-xs sm:text-sm text-slate-500 truncate mt-0.5">
+                        <span className="font-medium text-slate-700">{group.memberCount || 0} {(group.memberCount || 0) === 1 ? 'member' : 'members'}</span>
+                        {group.description && <span> • {group.description}</span>}
+                      </p>
                     </div>
-                    <div className="flex items-center space-x-1 sm:space-x-2 flex-shrink-0">
-                      <Badge className="text-xs font-semibold px-2.5 py-1 bg-emerald-100 text-emerald-700 border-0 rounded-full">
-                        {group.memberCount || 0}
-                      </Badge>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleViewMembers(group)}
-                        title="View Members"
-                        className="h-7 w-7 sm:h-8 sm:w-8 p-0 shrink-0"
-                      >
-                        <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="pt-0 p-4 sm:p-6">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center">
+                    <ChevronRight className="h-4 w-4 text-slate-300 flex-shrink-0 group-hover:text-slate-400 transition-colors" />
+                  </button>
+
+                  <div className="flex items-center justify-between gap-2 mt-3 pt-3 border-t border-slate-100">
+                    <div onClick={(e) => e.stopPropagation()}>
                       {!isViewer && (
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="outline" size="sm" className="h-7 sm:h-8 px-2 sm:px-3 text-xs sm:text-sm">
-                              <UserPlus className="h-3 w-3 sm:h-4 sm:w-4" />
-                              <span className="hidden xs:inline ml-1 sm:ml-2">Add</span>
-                              <ChevronDown className="ml-1 sm:ml-2 h-3 w-3 sm:h-4 sm:w-4" />
+                            <Button variant="outline" size="sm" className="h-8 px-2.5 text-xs sm:text-sm">
+                              <UserPlus className="h-3.5 w-3.5" />
+                              <span className="hidden xs:inline ml-1.5">Add</span>
+                              <ChevronDown className="ml-1 h-3.5 w-3.5" />
                             </Button>
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-48">
+                          <DropdownMenuContent align="start" className="w-48">
                             <DropdownMenuItem
                               onClick={() => {
                                 setSelectedGroup(group);
@@ -640,16 +638,16 @@ export function CustomerGroupsTab({
                         </DropdownMenu>
                       )}
                     </div>
-                    <div className="flex items-center space-x-1 sm:space-x-2">
+                    <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => navigate("/campaigns")}
                         title="Broadcast coming soon"
                         aria-label="Broadcast coming soon"
-                        className="h-7 w-7 sm:h-8 sm:w-8 p-0"
+                        className="h-8 w-8 p-0 rounded-full text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
                       >
-                        <MessageSquare className="h-3 w-3 sm:h-4 sm:w-4" />
+                        <MessageSquare className="h-4 w-4" />
                       </Button>
                       {!isViewer && (
                         <Button
@@ -661,9 +659,10 @@ export function CustomerGroupsTab({
                             setIsEditGroupDialogOpen(true);
                           }}
                           title="Edit Group"
-                          className="h-7 w-7 sm:h-8 sm:w-8 p-0"
+                          aria-label="Edit Group"
+                          className="h-8 w-8 p-0 rounded-full text-slate-500 hover:text-slate-700 hover:bg-slate-100"
                         >
-                          <Edit className="h-3 w-3 sm:h-4 sm:w-4" />
+                          <Edit className="h-4 w-4" />
                         </Button>
                       )}
                       {!isViewer && (
@@ -676,9 +675,10 @@ export function CustomerGroupsTab({
                             }
                           }}
                           title="Delete Group"
-                          className="h-7 w-7 sm:h-8 sm:w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                          aria-label="Delete Group"
+                          className="h-8 w-8 p-0 rounded-full text-red-500 hover:text-red-600 hover:bg-red-50"
                         >
-                          <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
+                          <Trash2 className="h-4 w-4" />
                         </Button>
                       )}
                     </div>
@@ -765,25 +765,25 @@ export function CustomerGroupsTab({
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4">
+          <div>
             {groupMembers.length > 0 ? (
-              <div className="space-y-3">
+              <div className="-mx-1 max-h-[60vh] overflow-y-auto divide-y divide-slate-100">
                 {groupMembers.map((member: GroupMember, index: number) => (
-                  <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <div className="flex items-center space-x-3">
-                      <Avatar className="h-8 w-8">
-                        <AvatarFallback className="bg-blue-100 text-blue-700 text-sm">
+                  <div key={index} className="flex items-center justify-between gap-3 px-1 py-2.5">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <Avatar className="h-9 w-9 flex-shrink-0">
+                        <AvatarFallback className="bg-blue-100 text-blue-700 text-xs font-medium">
                           {getInitials(member)}
                         </AvatarFallback>
                       </Avatar>
-                      <div>
-                        <p className="font-medium text-xs">
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-slate-900 truncate">
                           {member.businessName || `${member.firstName || ''} ${member.lastName || ''}`.trim() || member.name || member.phoneNumber || member.phone_number || 'Unknown'}
                         </p>
-                        <p className="text-xs text-gray-500">{member.phoneNumber || member.phone_number}</p>
+                        <p className="text-xs text-slate-500 truncate">{member.phoneNumber || member.phone_number}</p>
                       </div>
                     </div>
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center gap-1.5 flex-shrink-0">
                       <Button
                         variant="ghost"
                         size="sm"
@@ -799,6 +799,8 @@ export function CustomerGroupsTab({
                           setIsEditMemberDialogOpen(true);
                         }}
                         title="Edit Member"
+                        aria-label="Edit Member"
+                        className="h-8 w-8 p-0 rounded-full text-slate-500 hover:text-slate-700 hover:bg-slate-100"
                       >
                         <Edit3 className="h-4 w-4" />
                       </Button>
@@ -807,18 +809,19 @@ export function CustomerGroupsTab({
                         size="sm"
                         onClick={() => handleRemoveFromGroup(member.id || member.customerId || '', selectedGroup?.id!)}
                         title="Remove Member"
-                        className="hover:bg-red-100"
+                        aria-label="Remove Member"
+                        className="h-8 w-8 p-0 rounded-full text-red-500 hover:text-red-600 hover:bg-red-50"
                       >
-                        <X className="h-4 w-4 text-red-500" />
+                        <X className="h-4 w-4" />
                       </Button>
                     </div>
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="text-center py-6">
-                <Users className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                <p className="text-sm text-gray-500">No members in this group yet</p>
+              <div className="text-center py-8">
+                <Users className="h-9 w-9 text-slate-300 mx-auto mb-2" />
+                <p className="text-sm text-slate-500">No members in this group yet</p>
               </div>
             )}
           </div>
