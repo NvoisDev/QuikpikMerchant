@@ -1,0 +1,127 @@
+I’d like to modernise and improve the UI/UX of the Customer Groups section across both desktop and mobile, while keeping the current functionality intact.
+
+Current issues:
+
+* Cards feel too tall with excessive whitespace
+* Actions/icons feel disconnected from the content
+* Visual hierarchy is weak — group names, counts, and actions compete equally
+* The layout feels more like a form system than a modern SaaS dashboard
+* Mobile spacing and proportions need refinement
+
+Goals:
+The experience should feel:
+
+* modern
+* operational
+* compact but clean
+* premium SaaS quality
+* similar to platforms like Shopify, Stripe, Linear, or Notion
+
+UI/UX Improvements Required
+
+1. Reduce Card Height
+
+* Compress vertical spacing
+* Make cards denser and more information-rich
+* Reduce unnecessary empty areas
+* Improve scanability when many groups exist
+
+2. Improve Card Structure
+    Redesign each group card into:
+
+* Group name
+* Member count
+* Optional subtext/description
+* Inline actions aligned neatly
+* Cleaner spacing and alignment
+
+Example:
+Retailers
+7 members • London stores
+
+3. Make Entire Card Clickable
+
+* Remove dependency on the eye icon for viewing members
+* Tapping/clicking the card should open the member list modal
+* Keep icons for secondary actions only
+
+4. Improve Action Buttons
+    Current floating icons feel disconnected.
+
+Please:
+
+* Wrap action icons inside soft circular containers/buttons
+* Add hover/tap states
+* Use subtle semantic colours:
+    * edit = neutral grey
+    * message = green tint
+    * delete = soft red
+* Ensure spacing between icons is balanced
+
+5. Modernise Member Modal
+    The member modal currently feels outdated.
+
+Please improve:
+
+* row spacing
+* typography hierarchy
+* alignment
+* visual grouping
+* divider usage
+
+Each member row should feel structured and clean:
+
+* avatar
+* name
+* phone number
+* actions grouped neatly
+
+6. Improve Mobile UX
+    Focus heavily on mobile optimisation:
+
+* reduce oversized spacing
+* tighten layouts
+* improve touch ergonomics
+* ensure cards feel compact and modern
+* reduce visual clutter
+
+7. Add Optional Group Metadata
+    Prepare the UI structure for future scalability:
+
+* group descriptions
+* tags/categories
+* activity indicators
+* last contacted
+* invoice/order stats
+
+Even if backend functionality is not implemented yet, the UI should be designed with this evolution in mind.
+
+8. Improve Create Group CTA
+    The “Create Group” button currently dominates the page.
+
+Please redesign into:
+
+* a more subtle top-right action
+    OR
+* a floating action button (+)
+
+The page should feel cleaner and more balanced.
+
+9. Visual Design Direction
+    Please redesign using a more premium SaaS aesthetic:
+
+* softer shadows
+* improved spacing system
+* cleaner typography hierarchy
+* better icon alignment
+* subtle borders/backgrounds
+* improved interaction feedback
+
+Reference inspiration:
+
+* Shopify Admin
+* Stripe Dashboard
+* Linear
+* Notion
+
+The goal is for Quikpik to feel like a modern wholesale operations platform, not a traditional ERP or admin panel.
