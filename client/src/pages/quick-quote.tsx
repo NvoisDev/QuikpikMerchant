@@ -98,6 +98,8 @@ interface Customer {
   businessName?: string;
   email?: string;
   phoneNumber?: string;
+  totalOrders?: number;
+  lastOrderDate?: string | null;
 }
 
 interface DeliveryAddress {
@@ -1618,21 +1620,9 @@ export default function QuickQuote() {
                       className="mt-2"
                     />
                   </SheetHeader>
-                  <div className="flex-1 overflow-y-auto divide-y divide-gray-100">
+                  <div className="flex-1 overflow-y-auto">
                     {(() => {
-                      const filtered = customers.filter((c) => {
-                        if (!customerSearch) return true;
-                        const q = customerSearch.toLowerCase();
-                        const name = (c.businessName || `${c.firstName || ''} ${c.lastName || ''}`.trim()).toLowerCase();
-                        const phone = (c.phoneNumber || '').toLowerCase();
-                        return name.includes(q) || phone.includes(q);
-                      });
-                      if (filtered.length === 0) {
-                        return (
-                          <p className="text-sm text-slate-500 text-center py-8">No customers found.</p>
-                        );
-                      }
-                      return filtered.map((customer) => (
+                      const renderRow = (customer: Customer) => (
                         <button
                           key={customer.id}
                           className={`w-full flex items-center gap-3 px-4 py-2 text-left hover:bg-gray-50 transition-colors ${selectedCustomer?.id === customer.id ? 'bg-green-50' : ''}`}
@@ -1658,7 +1648,67 @@ export default function QuickQuote() {
                             className={`h-4 w-4 flex-shrink-0 text-green-600 ${selectedCustomer?.id === customer.id ? 'opacity-100' : 'opacity-0'}`}
                           />
                         </button>
-                      ));
+                      );
+
+                      const sectionHeader = (label: string) => (
+                        <div className="px-4 py-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500 bg-slate-50 border-b border-slate-200">
+                          {label}
+                        </div>
+                      );
+
+                      if (customerSearch) {
+                        const q = customerSearch.toLowerCase();
+                        const filtered = customers.filter((c) => {
+                          const name = (c.businessName || `${c.firstName || ''} ${c.lastName || ''}`.trim()).toLowerCase();
+                          const phone = (c.phoneNumber || '').toLowerCase();
+                          return name.includes(q) || phone.includes(q);
+                        });
+                        if (filtered.length === 0) {
+                          return (
+                            <p className="text-sm text-slate-500 text-center py-8">No customers found.</p>
+                          );
+                        }
+                        return (
+                          <div className="divide-y divide-gray-100">
+                            {filtered.map(renderRow)}
+                          </div>
+                        );
+                      }
+
+                      if (customers.length === 0) {
+                        return (
+                          <p className="text-sm text-slate-500 text-center py-8">No customers found.</p>
+                        );
+                      }
+
+                      const frequent = [...customers]
+                        .filter((c) => (c.totalOrders ?? 0) > 0)
+                        .sort((a, b) => {
+                          const ao = a.totalOrders ?? 0;
+                          const bo = b.totalOrders ?? 0;
+                          if (bo !== ao) return bo - ao;
+                          const ad = a.lastOrderDate ? new Date(a.lastOrderDate).getTime() : 0;
+                          const bd = b.lastOrderDate ? new Date(b.lastOrderDate).getTime() : 0;
+                          return bd - ad;
+                        })
+                        .slice(0, 5);
+
+                      return (
+                        <>
+                          {frequent.length > 0 && (
+                            <>
+                              {sectionHeader('Frequently contacted')}
+                              <div className="divide-y divide-gray-100">
+                                {frequent.map(renderRow)}
+                              </div>
+                            </>
+                          )}
+                          {frequent.length > 0 && sectionHeader('All customers')}
+                          <div className="divide-y divide-gray-100">
+                            {customers.map(renderRow)}
+                          </div>
+                        </>
+                      );
                     })()}
                   </div>
                 </SheetContent>
