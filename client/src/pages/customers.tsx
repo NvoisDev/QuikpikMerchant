@@ -912,11 +912,11 @@ export default function Customers() {
                 </CardContent>
               </Card>
             ) : (
-              <div className="space-y-2 overflow-x-hidden">
+              <div className="divide-y divide-gray-100 border border-gray-100 rounded-lg overflow-hidden bg-white">
                 {sortedCustomers.map((customer) => (
-                  <div key={customer?.id} className="flex items-center gap-3 px-3 py-2.5 rounded-lg border bg-white hover:bg-gray-50 transition-colors cursor-pointer min-w-0" onClick={() => navigate(`/customers/${customer?.id}`)}>
-                    <Avatar className="h-9 w-9 flex-shrink-0">
-                      <AvatarFallback className="bg-blue-100 text-blue-600 text-sm">
+                  <div key={customer?.id} className="flex items-center gap-3 px-3 py-2 hover:bg-gray-50 transition-colors cursor-pointer min-w-0" onClick={() => navigate(`/customers/${customer?.id}`)}>
+                    <Avatar className="h-8 w-8 flex-shrink-0">
+                      <AvatarFallback className="bg-blue-100 text-blue-600 text-xs">
                         {getInitials(customer?.firstName || '', customer?.lastName, customer?.businessName, customer?.phoneNumber)}
                       </AvatarFallback>
                     </Avatar>
