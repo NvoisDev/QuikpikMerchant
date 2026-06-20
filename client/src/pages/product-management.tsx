@@ -31,6 +31,7 @@ import StockManagementDialog from "@/components/product/StockManagementDialog";
 import type { BulkUploadRow, ProductBatch, StockMovement } from "@/components/product/types";
 import ProductFormDialog, { type ProductFormData } from "@/components/products/ProductFormDialog";
 import DownloadProductsModal from "@/components/products/DownloadProductsModal";
+import { productMatchesFilters } from "@/pages/product-filters";
 
 type ProductWithBatches = Product & {
   batchCount?: number;
@@ -652,21 +653,9 @@ export default function ProductManagement() {
     },
   });
 
-  const filteredProducts = (products?.filter((product) => {
-    const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      product.description?.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = categoryFilter === "all" || product.category === categoryFilter;
-    if (statusFilter === "expiring") {
-      const now = Date.now();
-      const thirtyDaysFromNow = now + 30 * 24 * 60 * 60 * 1000;
-      const hasExpiryDate = !!product.expiryDate;
-      const nearestExpiryTime = product.nearestExpiry ? new Date(product.nearestExpiry).getTime() : null;
-      const hasNearestExpirySoon = nearestExpiryTime !== null && nearestExpiryTime >= now && nearestExpiryTime <= thirtyDaysFromNow;
-      return matchesSearch && matchesCategory && (hasExpiryDate || hasNearestExpirySoon);
-    }
-    const matchesStatus = statusFilter === "all" || product.status === statusFilter || (statusFilter === "out_of_stock" && (product.stock === 0 || product.stock === null));
-    return matchesSearch && matchesStatus && matchesCategory;
-  }) || []).sort((a, b) => {
+  const filteredProducts = (products?.filter((product) =>
+    productMatchesFilters(product, { searchQuery, statusFilter, categoryFilter })
+  ) || []).sort((a, b) => {
     if (marginSort === "name_asc" || marginSort === "name_desc") {
       const nameA = (a.name || "").toLowerCase().trim();
       const nameB = (b.name || "").toLowerCase().trim();
