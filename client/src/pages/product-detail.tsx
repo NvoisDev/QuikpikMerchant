@@ -4,7 +4,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import {
   ArrowLeft, Edit, PackagePlus, ToggleLeft, ToggleRight, Tag, Copy,
   Trash2, MoreHorizontal, Package, AlertTriangle, ChevronDown, ChevronUp,
-  Thermometer, Layers, Clock, ShieldAlert, Loader2, CalendarDays, Pencil, Share2,
+  Thermometer, Layers, Clock, ShieldAlert, Loader2, CalendarDays, Pencil, Share2, RefreshCw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,6 +28,7 @@ import { formatNumber } from "@/lib/utils";
 import { formatWeight } from "@/lib/currencies";
 import { computePackWeightKg } from "@shared/utils/product";
 import { InventoryCalculator } from "@shared/inventory-calculator";
+import { fetchProductDetail, fetchWithTimeout } from "@/lib/product-detail-fetch";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -188,13 +189,15 @@ export default function ProductDetail() {
 
   // ── Queries ───────────────────────────────────────────────────────────────
 
-  const { data: product, isLoading: productLoading } = useQuery<ProductDetail>({
+  const {
+    data: product,
+    isLoading: productLoading,
+    isError: productError,
+    refetch: refetchProduct,
+    isFetching: productFetching,
+  } = useQuery<ProductDetail | null>({
     queryKey: ["/api/products", productId],
-    queryFn: async () => {
-      const res = await fetch(`/api/products/${productId}`);
-      if (!res.ok) throw new Error("Product not found");
-      return res.json();
-    },
+    queryFn: () => fetchProductDetail<ProductDetail>(productId),
     enabled: !!productId,
     staleTime: 0,
   });
@@ -202,7 +205,7 @@ export default function ProductDetail() {
   const { data: batches = [], isLoading: batchesLoading } = useQuery<Batch[]>({
     queryKey: ["/api/products", productId, "batches"],
     queryFn: async () => {
-      const res = await fetch(`/api/products/${productId}/batches?activeOnly=false`);
+      const res = await fetchWithTimeout(`/api/products/${productId}/batches?activeOnly=false`);
       if (!res.ok) return [];
       return res.json();
     },
@@ -213,7 +216,7 @@ export default function ProductDetail() {
   const { data: stockSummary, isLoading: summaryLoading } = useQuery<StockSummary>({
     queryKey: ["/api/products", productId, "stock-summary"],
     queryFn: async () => {
-      const res = await fetch(`/api/products/${productId}/stock-summary`);
+      const res = await fetchWithTimeout(`/api/products/${productId}/stock-summary`);
       if (!res.ok) return null;
       return res.json();
     },
@@ -224,7 +227,7 @@ export default function ProductDetail() {
   const { data: stockMovements = [], isLoading: movementsLoading } = useQuery<StockMovementEntry[]>({
     queryKey: ["/api/products", productId, "stock-movements"],
     queryFn: async () => {
-      const res = await fetch(`/api/products/${productId}/stock-movements`);
+      const res = await fetchWithTimeout(`/api/products/${productId}/stock-movements`);
       if (!res.ok) return [];
       return res.json();
     },
@@ -359,6 +362,29 @@ export default function ProductDetail() {
         {[0, 1, 2, 3].map((i) => (
           <div key={i} className="h-32 bg-gray-100 rounded-xl animate-pulse" />
         ))}
+      </div>
+    );
+  }
+
+  // The product request failed or timed out. Surface a clear error with a retry
+  // action instead of leaving the page stuck on a blank/skeleton state.
+  if (productError) {
+    return (
+      <div className="max-w-2xl mx-auto p-4 text-center py-16">
+        <AlertTriangle className="h-12 w-12 text-amber-400 mx-auto mb-4" />
+        <h2 className="text-lg font-semibold text-gray-700">Couldn't load this product</h2>
+        <p className="text-sm text-gray-500 mt-1 max-w-sm mx-auto">
+          Something went wrong while loading. Please check your connection and try again.
+        </p>
+        <div className="flex items-center justify-center gap-2 mt-5">
+          <Button onClick={() => refetchProduct()} disabled={productFetching}>
+            <RefreshCw className={`h-4 w-4 mr-1.5 ${productFetching ? "animate-spin" : ""}`} />
+            {productFetching ? "Retrying…" : "Try again"}
+          </Button>
+          <Button variant="outline" onClick={() => navigate("/products")}>
+            Back to products
+          </Button>
+        </div>
       </div>
     );
   }
