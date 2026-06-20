@@ -47,6 +47,7 @@ export default function ProductManagement() {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [categoryFilter, setCategoryFilter] = useState("all");
   const [viewMode, setViewMode] = useState<"grid" | "list">(() => {
     const saved = localStorage.getItem("productsViewMode");
     return saved === "grid" || saved === "list" ? saved : "grid";
@@ -100,6 +101,11 @@ export default function ProductManagement() {
       return response.json();
     },
     staleTime: 0,
+  });
+
+  // Central, platform-managed category list (same list used by the product form & storefront).
+  const { data: categoryList = [] } = useQuery<{ id: number; name: string; productCount: number }[]>({
+    queryKey: ["/api/categories"],
   });
 
   // Auto-open edit/stock modal when navigated from the product detail page
@@ -649,16 +655,17 @@ export default function ProductManagement() {
   const filteredProducts = (products?.filter((product) => {
     const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       product.description?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCategory = categoryFilter === "all" || product.category === categoryFilter;
     if (statusFilter === "expiring") {
       const now = Date.now();
       const thirtyDaysFromNow = now + 30 * 24 * 60 * 60 * 1000;
       const hasExpiryDate = !!product.expiryDate;
       const nearestExpiryTime = product.nearestExpiry ? new Date(product.nearestExpiry).getTime() : null;
       const hasNearestExpirySoon = nearestExpiryTime !== null && nearestExpiryTime >= now && nearestExpiryTime <= thirtyDaysFromNow;
-      return matchesSearch && (hasExpiryDate || hasNearestExpirySoon);
+      return matchesSearch && matchesCategory && (hasExpiryDate || hasNearestExpirySoon);
     }
     const matchesStatus = statusFilter === "all" || product.status === statusFilter || (statusFilter === "out_of_stock" && (product.stock === 0 || product.stock === null));
-    return matchesSearch && matchesStatus;
+    return matchesSearch && matchesStatus && matchesCategory;
   }) || []).sort((a, b) => {
     if (marginSort === "name_asc" || marginSort === "name_desc") {
       const nameA = (a.name || "").toLowerCase().trim();
@@ -903,6 +910,17 @@ export default function ProductManagement() {
                 <SelectItem value="inactive">Inactive</SelectItem>
                 <SelectItem value="out_of_stock">Out of Stock</SelectItem>
                 <SelectItem value="expiring">Expiring Products</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+              <SelectTrigger className="w-[150px] h-8 border-slate-200 rounded-lg">
+                <SelectValue placeholder="All Categories" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Categories</SelectItem>
+                {categoryList.map((cat) => (
+                  <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
             <Select value={marginSort} onValueChange={(v) => handleSetMarginSort(v as "asc" | "desc" | "name_asc" | "name_desc")}>
