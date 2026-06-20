@@ -49,6 +49,10 @@ interface PublicProduct {
   packQuantity?: number | null;
   unitSize?: string | null;
   unitOfMeasure?: string | null;
+  priceVisible?: boolean;
+  moqVisible?: boolean;
+  stockVisible?: boolean;
+  packSizeVisible?: boolean;
   views: number;
   lastUpdated: string;
 }
@@ -221,28 +225,38 @@ export default function PublicProductPage() {
                 </div>
               </div>
               
-              <div className="text-3xl font-bold text-green-600 mb-4">
-                {formatCurrency(parseFloat(product.price), 'GBP')}
-                <span className="text-sm font-normal text-gray-500 ml-2">per unit</span>
-              </div>
+              {(product.priceVisible === false || product.price == null) ? (
+                <div className="text-xl font-semibold text-gray-400 italic mb-4">Price on request</div>
+              ) : (
+                <div className="text-3xl font-bold text-green-600 mb-4">
+                  {formatCurrency(parseFloat(product.price), 'GBP')}
+                  <span className="text-sm font-normal text-gray-500 ml-2">per unit</span>
+                </div>
+              )}
               
               <p className="text-gray-700 text-lg leading-relaxed">{cleanAIDescription(product.description)}</p>
             </div>
 
             {/* Availability & MOQ */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-green-50 p-4 rounded-lg border border-green-200">
-                <h3 className="font-semibold text-green-800 mb-1">Availability</h3>
-                <p className="text-green-700">{product.availability}</p>
+            {(product.stockVisible === true || product.moqVisible !== false) && (
+              <div className={`grid gap-4 ${product.stockVisible === true && product.moqVisible !== false ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                {product.stockVisible === true && (
+                  <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                    <h3 className="font-semibold text-green-800 mb-1">Availability</h3>
+                    <p className="text-green-700">{product.availability}</p>
+                  </div>
+                )}
+                {product.moqVisible !== false && (
+                  <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                    <h3 className="font-semibold text-blue-800 mb-1">Min. Order</h3>
+                    <p className="text-blue-700">{product.minOrderQuantity} units</p>
+                  </div>
+                )}
               </div>
-              <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                <h3 className="font-semibold text-blue-800 mb-1">Min. Order</h3>
-                <p className="text-blue-700">{product.minOrderQuantity} units</p>
-              </div>
-            </div>
+            )}
 
             {/* Pack size */}
-            {product.packQuantity && product.unitSize && product.unitOfMeasure && (
+            {product.packSizeVisible !== false && product.packQuantity && product.unitSize && product.unitOfMeasure && (
               <div className="flex justify-between items-center py-2 border-t">
                 <span className="text-gray-500">Pack size</span>
                 <span className="text-gray-700 font-medium">{product.packQuantity} × {product.unitSize}{product.unitOfMeasure}</span>

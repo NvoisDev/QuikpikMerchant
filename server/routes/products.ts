@@ -993,11 +993,17 @@ export function registerProductRoutes(app: Express): void {
 
       const location = [wholesaler.city, wholesaler.country].filter(Boolean).join(', ') || 'United Kingdom';
 
+      // Store-wide visibility controls — redact hidden fields so they never reach public clients
+      const priceVisible = (wholesaler.priceDisplayMode ?? 'hidden') === 'shown';
+      const moqVisible = wholesaler.moqVisible !== false;
+      const stockVisible = wholesaler.stockVisible === true;
+      const packSizeVisible = wholesaler.packSizeVisible !== false;
+
       res.json({
         id: product.id.toString(),
         name: product.name,
         description: product.description || '',
-        price: product.price,
+        price: priceVisible ? product.price : null,
         category: product.category || 'General',
         images,
         wholesaler: {
@@ -1010,11 +1016,15 @@ export function registerProductRoutes(app: Express): void {
           email: wholesaler.businessEmail || wholesaler.email || undefined,
         },
         specifications: {},
-        availability,
-        minOrderQuantity: product.moq ?? 1,
-        packQuantity: product.packQuantity ?? null,
-        unitSize: product.unitSize ?? (product as any).sizePerUnit ?? null,
-        unitOfMeasure: product.unitOfMeasure ?? null,
+        availability: stockVisible ? availability : null,
+        minOrderQuantity: moqVisible ? (product.moq ?? 1) : null,
+        packQuantity: packSizeVisible ? (product.packQuantity ?? null) : null,
+        unitSize: packSizeVisible ? (product.unitSize ?? (product as any).sizePerUnit ?? null) : null,
+        unitOfMeasure: packSizeVisible ? (product.unitOfMeasure ?? null) : null,
+        priceVisible,
+        moqVisible,
+        stockVisible,
+        packSizeVisible,
         views: 0,
         lastUpdated: product.updatedAt?.toISOString() ?? new Date().toISOString(),
       });

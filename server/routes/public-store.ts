@@ -54,6 +54,9 @@ export function registerPublicStoreRoutes(app: Express) {
           storeSlug: users.storeSlug,
           storeVisibility: users.storeVisibility,
           priceDisplayMode: users.priceDisplayMode,
+          moqVisible: users.moqVisible,
+          stockVisible: users.stockVisible,
+          packSizeVisible: users.packSizeVisible,
           deliveryRegions: users.deliveryRegions,
           city: users.city,
           country: users.country,
@@ -104,7 +107,25 @@ export function registerPublicStoreRoutes(app: Express) {
         )
         .orderBy(products.name);
 
-      res.json({ wholesaler, products: publicProducts });
+      // Redact fields the wholesaler has chosen to hide so they never reach public clients
+      const showPrices = (wholesaler.priceDisplayMode ?? 'hidden') === 'shown';
+      const showMoq = wholesaler.moqVisible !== false;
+      const showStock = wholesaler.stockVisible === true;
+      const showPackSize = wholesaler.packSizeVisible !== false;
+      const sanitizedProducts = publicProducts.map((p) => ({
+        ...p,
+        price: showPrices ? p.price : null,
+        palletPrice: showPrices ? p.palletPrice : null,
+        minOrderQuantity: showMoq ? p.minOrderQuantity : null,
+        baseUnitStock: showStock ? p.baseUnitStock : null,
+        unitsPerPack: showPackSize ? p.unitsPerPack : null,
+        unitsPerPallet: showPackSize ? p.unitsPerPallet : null,
+        unitWeightKg: showPackSize ? p.unitWeightKg : null,
+        totalPackageWeight: showPackSize ? p.totalPackageWeight : null,
+        packQuantity: showPackSize ? p.packQuantity : null,
+      }));
+
+      res.json({ wholesaler, products: sanitizedProducts });
     } catch (err) {
       console.error("Error fetching public wholesaler:", err);
       res.status(500).json({ message: "Failed to load store" });

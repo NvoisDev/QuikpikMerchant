@@ -299,7 +299,11 @@ export const users = pgTable("users", {
 
   // Public storefront settings
   storeVisibility: varchar("store_visibility", { length: 20 }).default('private'), // 'private' | 'public'
-  priceDisplayMode: varchar("price_display_mode", { length: 20 }).default('hidden'), // 'hidden' | 'shown' | 'moq_only'
+  priceDisplayMode: varchar("price_display_mode", { length: 20 }).default('hidden'), // 'hidden' | 'shown'
+  // Public storefront field visibility — store-wide, applies to public store grid + public product page
+  moqVisible: boolean("moq_visible").default(true),
+  stockVisible: boolean("stock_visible").default(false),
+  packSizeVisible: boolean("pack_size_visible").default(true),
   storeDescription: text("store_description"),
   deliveryRegions: varchar("delivery_regions", { length: 500 }),
 

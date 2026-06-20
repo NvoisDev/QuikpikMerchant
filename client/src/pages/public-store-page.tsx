@@ -41,6 +41,9 @@ interface PublicWholesaler {
   storeDescription?: string | null;
   storeSlug?: string | null;
   priceDisplayMode: string;
+  moqVisible?: boolean;
+  stockVisible?: boolean;
+  packSizeVisible?: boolean;
   deliveryRegions?: string | null;
   city?: string | null;
   country?: string | null;
@@ -80,15 +83,21 @@ function WholesalerLogo({ wholesaler }: { wholesaler: PublicWholesaler }) {
 function ProductCard({
   product,
   priceDisplayMode,
+  showMoq,
+  showStock,
+  showPackSize,
   currency,
   onEnquire,
 }: {
   product: PublicProduct;
   priceDisplayMode: string;
+  showMoq: boolean;
+  showStock: boolean;
+  showPackSize: boolean;
   currency: string;
   onEnquire: (product: PublicProduct) => void;
 }) {
-  const showPrices = priceDisplayMode === 'shown' || priceDisplayMode === 'moq_only';
+  const showPrices = priceDisplayMode === 'shown';
   const imgSrc = product.imageUrl || (product.images && product.images[0]) || null;
 
   return (
@@ -114,7 +123,7 @@ function ProductCard({
         )}
 
         {/* Weight info */}
-        {(product.totalPackageWeight || product.packQuantity) && (() => {
+        {showPackSize && (product.totalPackageWeight || product.packQuantity) && (() => {
           const totalW = parseFloat(product.totalPackageWeight ?? '0') || 0;
           const qty = product.packQuantity || 0;
           const storedUnit = parseFloat(product.unitWeightKg ?? '0') || 0;
@@ -130,17 +139,26 @@ function ProductCard({
         })()}
 
         {/* MOQ */}
-        {product.minOrderQuantity && product.minOrderQuantity > 1 && (
+        {showMoq && product.minOrderQuantity && product.minOrderQuantity > 1 && (
           <p className="text-[11px] text-amber-600 font-medium mb-1">
             Min. order: {product.minOrderQuantity} units
           </p>
         )}
-        {product.unitsPerPack && (
+        {showPackSize && product.unitsPerPack && (
           <p className="text-[11px] text-gray-400 mb-1">{product.unitsPerPack} units/pack</p>
         )}
 
+        {/* Stock availability */}
+        {showStock && product.baseUnitStock != null && (
+          product.baseUnitStock > 0 ? (
+            <p className="text-[11px] text-emerald-600 font-medium mb-1">{product.baseUnitStock} in stock</p>
+          ) : (
+            <p className="text-[11px] text-red-500 font-medium mb-1">Out of stock</p>
+          )
+        )}
+
         {/* Price */}
-        {showPrices ? (
+        {showPrices && product.price != null ? (
           <p className="text-base font-bold text-gray-900 mb-3">
             {formatCurrency(product.price, currency)}
             <span className="text-xs font-normal text-gray-400 ml-1">/ unit</span>
@@ -568,6 +586,9 @@ export default function PublicStorePage() {
                 key={product.id}
                 product={product}
                 priceDisplayMode={wholesaler.priceDisplayMode}
+                showMoq={wholesaler.moqVisible !== false}
+                showStock={wholesaler.stockVisible === true}
+                showPackSize={wholesaler.packSizeVisible !== false}
                 currency={currency}
                 onEnquire={handleEnquire}
               />

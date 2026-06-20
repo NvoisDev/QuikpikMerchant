@@ -694,7 +694,10 @@ function CollectionAddressesSection() {
 function PublicStoreSettings({ user }: { user: any }) {
   const { toast } = useToast();
   const [isPublic, setIsPublic] = useState(user?.storeVisibility === 'public');
-  const [priceMode, setPriceMode] = useState(user?.priceDisplayMode || 'hidden');
+  const [showPrices, setShowPrices] = useState(user?.priceDisplayMode === 'shown');
+  const [showMoq, setShowMoq] = useState(user?.moqVisible ?? true);
+  const [showStock, setShowStock] = useState(user?.stockVisible ?? false);
+  const [showPackSize, setShowPackSize] = useState(user?.packSizeVisible ?? true);
   const [description, setDescription] = useState(user?.storeDescription || '');
   const [regions, setRegions] = useState(user?.deliveryRegions || '');
   const [showOnHomepage, setShowOnHomepage] = useState(user?.showOnHomepage ?? false);
@@ -702,11 +705,14 @@ function PublicStoreSettings({ user }: { user: any }) {
 
   useEffect(() => {
     setIsPublic(user?.storeVisibility === 'public');
-    setPriceMode(user?.priceDisplayMode || 'hidden');
+    setShowPrices(user?.priceDisplayMode === 'shown');
+    setShowMoq(user?.moqVisible ?? true);
+    setShowStock(user?.stockVisible ?? false);
+    setShowPackSize(user?.packSizeVisible ?? true);
     setDescription(user?.storeDescription || '');
     setRegions(user?.deliveryRegions || '');
     setShowOnHomepage(user?.showOnHomepage ?? false);
-  }, [user?.storeVisibility, user?.priceDisplayMode, user?.storeDescription, user?.deliveryRegions, user?.showOnHomepage]);
+  }, [user?.storeVisibility, user?.priceDisplayMode, user?.moqVisible, user?.stockVisible, user?.packSizeVisible, user?.storeDescription, user?.deliveryRegions, user?.showOnHomepage]);
 
   const storeSlug = user?.storeSlug || user?.id || '';
   const publicUrl = `${window.location.origin}/w/${storeSlug}`;
@@ -716,7 +722,10 @@ function PublicStoreSettings({ user }: { user: any }) {
     try {
       const r = await apiRequest('PUT', '/api/user/profile', {
         storeVisibility: isPublic ? 'public' : 'private',
-        priceDisplayMode: priceMode,
+        priceDisplayMode: showPrices ? 'shown' : 'hidden',
+        moqVisible: showMoq,
+        stockVisible: showStock,
+        packSizeVisible: showPackSize,
         storeDescription: description.trim() || null,
         deliveryRegions: regions.trim() || null,
         showOnHomepage,
@@ -762,19 +771,40 @@ function PublicStoreSettings({ user }: { user: any }) {
             </a>
           </div>
 
-          {/* Price display mode */}
+          {/* What visitors see */}
           <div>
-            <Label className="text-xs font-medium text-gray-700 mb-1.5 block">What visitors see</Label>
-            <Select value={priceMode} onValueChange={setPriceMode}>
-              <SelectTrigger className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="hidden">Prices hidden — enquiry only</SelectItem>
-                <SelectItem value="moq_only">Show MOQ only — no prices</SelectItem>
-                <SelectItem value="shown">Show full prices</SelectItem>
-              </SelectContent>
-            </Select>
+            <Label className="text-xs font-medium text-gray-700 mb-1 block">What visitors see</Label>
+            <p className="text-xs text-gray-500 mb-2">Choose which details public visitors see on your store and product pages.</p>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
+                <div className="pr-3">
+                  <p className="text-sm font-medium text-gray-900">Show prices</p>
+                  <p className="text-xs text-gray-500 mt-0.5">Show unit prices instead of 'Price on request'.</p>
+                </div>
+                <Switch checked={showPrices} onCheckedChange={setShowPrices} />
+              </div>
+              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
+                <div className="pr-3">
+                  <p className="text-sm font-medium text-gray-900">Show minimum order quantity</p>
+                  <p className="text-xs text-gray-500 mt-0.5">Show the MOQ, e.g. 'Min. order: 12 units'.</p>
+                </div>
+                <Switch checked={showMoq} onCheckedChange={setShowMoq} />
+              </div>
+              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
+                <div className="pr-3">
+                  <p className="text-sm font-medium text-gray-900">Show stock availability</p>
+                  <p className="text-xs text-gray-500 mt-0.5">Show units in stock or 'Out of stock'.</p>
+                </div>
+                <Switch checked={showStock} onCheckedChange={setShowStock} />
+              </div>
+              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
+                <div className="pr-3">
+                  <p className="text-sm font-medium text-gray-900">Show pack size and weight</p>
+                  <p className="text-xs text-gray-500 mt-0.5">Show units per pack and pack weight.</p>
+                </div>
+                <Switch checked={showPackSize} onCheckedChange={setShowPackSize} />
+              </div>
+            </div>
           </div>
 
           {/* Store description */}

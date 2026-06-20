@@ -32,6 +32,12 @@ async function runStartupMigrations() {
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS latitude DECIMAL(10,7)`,
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS longitude DECIMAL(10,7)`,
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS geocode_status VARCHAR(10)`,
+    // Storefront display controls: store-wide visibility toggles for the public store grid + product page
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS moq_visible BOOLEAN NOT NULL DEFAULT TRUE`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS stock_visible BOOLEAN NOT NULL DEFAULT FALSE`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS pack_size_visible BOOLEAN NOT NULL DEFAULT TRUE`,
+    // Collapse legacy 'moq_only' price mode into 'hidden' (MOQ now governed by moq_visible)
+    `UPDATE users SET price_display_mode = 'hidden' WHERE price_display_mode = 'moq_only'`,
     `ALTER TABLE customer_registration_requests ADD COLUMN IF NOT EXISTS customer_type VARCHAR(20)`,
     // Task #19: customer group enforcement status field
     `ALTER TABLE customer_groups ADD COLUMN IF NOT EXISTS status VARCHAR(20) NOT NULL DEFAULT 'active'`,
