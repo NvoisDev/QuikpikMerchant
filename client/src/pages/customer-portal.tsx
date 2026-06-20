@@ -656,6 +656,11 @@ export default function CustomerPortal() {
     refetchOnWindowFocus: false,
   });
 
+  // Central, platform-managed category list (shared list, ordered consistently everywhere).
+  const { data: centralCategories = [] } = useQuery<{ id: number; name: string; productCount: number }[]>({
+    queryKey: ["/api/categories"],
+  });
+
   const calculatePromotionalPricing = (product: Product | ExtendedProduct, quantity: number = 1) => {
     // Use custom price list price if the customer has one assigned
     const hasCustomPrice = !!product.customPrice;
@@ -779,9 +784,13 @@ export default function CustomerPortal() {
   }, [filteredProducts, featuredProduct, featuredProductId]);
 
   const categories = useMemo(() => {
-    const cats = new Set(products.map((p: Product) => p.category).filter(Boolean));
-    return Array.from(cats);
-  }, [products]);
+    const presentCats = new Set(products.map((p: Product) => p.category).filter(Boolean) as string[]);
+    const centralNames = centralCategories.map(c => c.name);
+    return [
+      ...centralNames.filter(name => presentCats.has(name)),
+      ...Array.from(presentCats).filter(name => !centralNames.includes(name)).sort(),
+    ];
+  }, [products, centralCategories]);
 
   const timeGreeting = useMemo(() => {
     const hour = new Date().getHours();

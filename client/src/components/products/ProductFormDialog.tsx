@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -19,18 +19,6 @@ import { currencies, formatCurrency } from "@/lib/currencies";
 import { BASE_UNITS } from "@shared/units";
 import { computePackWeightKg } from "@shared/utils/product";
 import ButtonLoader from "@/components/ui/button-loader";
-
-export const productCategories = [
-  "Groceries & Food",
-  "Fresh Produce",
-  "Beverages & Drinks",
-  "Snacks & Confectionery",
-  "Personal Care & Hygiene",
-  "Household Cleaning",
-  "Health & Pharmacy",
-  "Baby & Childcare",
-  "Pet Food & Supplies",
-];
 
 export const productFormSchema = z.object({
   name: z.string().min(1, "Product name is required"),
@@ -136,6 +124,12 @@ export default function ProductFormDialog({
   const { toast } = useToast();
   const [, navigate] = useLocation();
   const [isGeneratingDescription, setIsGeneratingDescription] = useState(false);
+
+  // Central, platform-managed category list (shared across product form & storefront).
+  const { data: categoryList = [] } = useQuery<{ id: number; name: string; productCount: number }[]>({
+    queryKey: ["/api/categories"],
+  });
+  const categoryNames = categoryList.map((c) => c.name);
   const lastAutoFilledUnitWeight = useRef('');
   const editTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -561,7 +555,7 @@ export default function ProductFormDialog({
                 control={form.control}
                 name="category"
                 render={({ field }) => {
-                  const isDiscontinued = field.value && !productCategories.includes(field.value);
+                  const isDiscontinued = field.value && !categoryNames.includes(field.value);
                   return (
                     <FormItem>
                       <FormLabel>Category</FormLabel>
@@ -577,7 +571,7 @@ export default function ProductFormDialog({
                               {field.value} (discontinued)
                             </SelectItem>
                           )}
-                          {productCategories.map((category) => (
+                          {categoryNames.map((category) => (
                             <SelectItem key={category} value={category}>{category}</SelectItem>
                           ))}
                         </SelectContent>

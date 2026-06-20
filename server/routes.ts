@@ -8,6 +8,7 @@ import { registerSystemRoutes } from "./routes/system";
 import { registerAuthRoutes } from "./routes/auth";
 import { registerCustomerAuthRoutes } from "./routes/customer-auth";
 import { registerProductRoutes } from "./routes/products";
+import { registerCategoryRoutes } from "./routes/categories";
 import { registerOrderRoutes } from "./routes/orders";
 import { registerCustomerRoutes } from "./routes/customers";
 import { registerAddressRoutes } from "./routes/addresses";
@@ -38,6 +39,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerAuthRoutes(app);
   registerCustomerAuthRoutes(app);
   registerProductRoutes(app);
+  registerCategoryRoutes(app);
   registerOrderRoutes(app);
   registerCustomerRoutes(app);
   registerAddressRoutes(app);

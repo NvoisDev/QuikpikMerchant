@@ -5,6 +5,7 @@ import {
   timestamp,
   jsonb,
   index,
+  uniqueIndex,
   serial,
   integer,
   decimal,
@@ -13,7 +14,7 @@ import {
   date,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import { z } from "zod";
 
 // Promotional offer types
@@ -580,6 +581,22 @@ export const products = pgTable("products", {
   wholesalerIdIdx: index("products_wholesaler_id_idx").on(table.wholesalerId),
   statusIdx: index("products_status_idx").on(table.status),
 }));
+
+// Central, platform-managed product categories (single shared global list).
+// products.category remains free text; this table is the source of truth for the
+// selectable category list shown in the product form and storefront.
+export const categories = pgTable("categories", {
+  id: serial("id").primaryKey(),
+  name: varchar("name").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  // Case-insensitive uniqueness so "Beverages" and "beverages" can't both exist.
+  nameLowerUniq: uniqueIndex("categories_name_lower_uniq").on(sql`lower(${table.name})`),
+}));
+
+export const insertCategorySchema = createInsertSchema(categories).omit({ id: true, createdAt: true });
+export type InsertCategory = z.infer<typeof insertCategorySchema>;
+export type Category = typeof categories.$inferSelect;
 
 // Batch-level inventory tracking — each delivery/restocking event creates a new batch
 export const productBatches = pgTable("product_batches", {

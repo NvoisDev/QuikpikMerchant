@@ -372,10 +372,21 @@ export default function PublicStorePage() {
     enabled: !!slug,
   });
 
+  const { data: centralCategories = [] } = useQuery<{ id: number; name: string; productCount: number }[]>({
+    queryKey: ["/api/categories"],
+  });
+
   const wholesaler = data?.wholesaler;
   const allProducts = data?.products ?? [];
 
-  const categories = [...new Set(allProducts.map(p => p.category).filter(Boolean))] as string[];
+  // Show only categories that have products, ordered by the central platform list,
+  // with any extras (legacy/uncatalogued names) appended alphabetically.
+  const presentCats = new Set(allProducts.map(p => p.category).filter(Boolean) as string[]);
+  const centralNames = centralCategories.map(c => c.name);
+  const categories = [
+    ...centralNames.filter(name => presentCats.has(name)),
+    ...Array.from(presentCats).filter(name => !centralNames.includes(name)).sort(),
+  ];
 
   const filtered = allProducts.filter(p => {
     const matchSearch = !search || p.name.toLowerCase().includes(search.toLowerCase()) ||

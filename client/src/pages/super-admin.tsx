@@ -15,6 +15,7 @@ import { WholesalersSection } from "@/components/admin/WholesalersSection";
 import { CustomersSection } from "@/components/admin/CustomersSection";
 import { OrdersSection } from "@/components/admin/OrdersSection";
 import { ProductsSection } from "@/components/admin/ProductsSection";
+import { CategoriesSection } from "@/components/admin/CategoriesSection";
 import { FinancialsSection } from "@/components/admin/FinancialsSection";
 import { SystemSettingsSection } from "@/components/admin/SystemSettingsSection";
 import { PlansSection } from "@/components/admin/PlansSection";
@@ -28,7 +29,7 @@ import { GlobalSearchBar } from "@/components/admin/GlobalSearchBar";
 const ADMIN_EMAILS = ["hello@quikpik.co", "mogunjemilua@gmail.com"];
 const GREEN = "#1a7a3d";
 
-const VALID_SECTIONS = new Set<SectionId>(["overview","wholesalers","customers","orders","products","financials","settings","plans","logs","map","prospects","templates"]);
+const VALID_SECTIONS = new Set<SectionId>(["overview","wholesalers","customers","orders","products","categories","financials","settings","plans","logs","map","prospects","templates"]);
 
 function AdminLogin() {
   const [loading, setLoading] = useState(false);
@@ -226,6 +227,9 @@ export default function SuperAdmin() {
           )}
           {activeSection === "products" && (
             <ProductsSection isAdmin={isAdmin} highlightedId={highlightedRecord?.section === "products" ? Number(highlightedRecord.id) : undefined} />
+          )}
+          {activeSection === "categories" && (
+            <CategoriesSection isAdmin={isAdmin} />
           )}
           {activeSection === "financials" && (
             <FinancialsSection wholesalers={wholesalers} isAdmin={isAdmin} />

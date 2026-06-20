@@ -472,6 +472,38 @@ async function runStartupMigrations() {
     )`,
     `CREATE INDEX IF NOT EXISTS psl_code_idx ON payment_short_links(code)`,
     `CREATE INDEX IF NOT EXISTS psl_expires_at_idx ON payment_short_links(expires_at)`,
+    // Task #1391: Central, platform-managed product categories (single shared global list).
+    // products.category stays free text; this table is the source of truth for the
+    // selectable category list. Created here (not only via db:push) so production gets it on boot.
+    `CREATE TABLE IF NOT EXISTS categories (
+      id SERIAL PRIMARY KEY,
+      name VARCHAR NOT NULL,
+      created_at TIMESTAMP DEFAULT NOW()
+    )`,
+    // Case-insensitive uniqueness so "Beverages" and "beverages" can't both exist.
+    // Created before the seeds so ON CONFLICT DO NOTHING is deterministic.
+    `CREATE UNIQUE INDEX IF NOT EXISTS categories_name_lower_uniq ON categories (LOWER(name))`,
+    // Seed the original hardcoded defaults (idempotent — no-op once present).
+    `INSERT INTO categories (name) VALUES
+      ('Groceries & Food'),
+      ('Fresh Produce'),
+      ('Beverages & Drinks'),
+      ('Snacks & Confectionery'),
+      ('Personal Care & Hygiene'),
+      ('Household Cleaning'),
+      ('Health & Pharmacy'),
+      ('Baby & Childcare'),
+      ('Pet Food & Supplies')
+     ON CONFLICT DO NOTHING`,
+    // Carry over every distinct category already saved on products so nothing is lost.
+    // DISTINCT ON (lower(trim(...))) collapses case/whitespace variants within this
+    // statement so they can't conflict with each other on the unique index.
+    `INSERT INTO categories (name)
+     SELECT DISTINCT ON (LOWER(TRIM(category))) TRIM(category)
+     FROM products
+     WHERE category IS NOT NULL AND TRIM(category) <> ''
+     ORDER BY LOWER(TRIM(category))
+     ON CONFLICT DO NOTHING`,
   ];
   for (const stmt of migrations) {
     await db.execute(sql.raw(stmt));
