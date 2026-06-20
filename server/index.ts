@@ -504,6 +504,18 @@ async function runStartupMigrations() {
      WHERE category IS NOT NULL AND TRIM(category) <> ''
      ORDER BY LOWER(TRIM(category))
      ON CONFLICT DO NOTHING`,
+    // Task #1393: Canonicalise existing product category text to match the central
+    // category list. Older products may have been saved with different casing or
+    // surrounding whitespace ("beverages & drinks" vs the seeded "Beverages & Drinks").
+    // Rewrite each product's free-text category to the canonical categories.name when
+    // they match case/whitespace-insensitively but the stored text differs, so counts,
+    // renames and deletes all line up. Idempotent (no-op once everything is canonical).
+    `UPDATE products p
+     SET category = c.name
+     FROM categories c
+     WHERE p.category IS NOT NULL
+       AND LOWER(TRIM(p.category)) = LOWER(TRIM(c.name))
+       AND p.category <> c.name`,
   ];
   for (const stmt of migrations) {
     await db.execute(sql.raw(stmt));

@@ -40,6 +40,7 @@ CRITICAL REQUIREMENT: Maximum simplicity for both customer and wholesaler portal
 - **Multi-Collection Address Support**: Wholesalers manage multiple named pickup locations via `collectionAddresses` table, with a full fallback chain for addresses. CRUD API available.
 - **Edit Quote Before Payment**: Wholesalers can edit pending quotes, triggering stock restoration, item recalculations, new Stripe session creation, and audit logging.
 - **Quote Activity Log**: Append-only audit trail for quotes in `quoteActivityLogs` table, providing a timeline of actions with detailed changes.
+- **Category Matching**: `products.category` is free text; the central `categories` table is the source of truth for the selectable list. Product counts, rename bulk-updates, and delete clearing all match category text case- and whitespace-insensitively (`LOWER(TRIM(...))`) so legacy spelling/casing variants are included. A one-time startup pass canonicalises existing product category text to the matching `categories.name`.
 
 ## External Dependencies
 - **Payment Processing**: Stripe Connect (marketplace payments with Express accounts, application fees).
