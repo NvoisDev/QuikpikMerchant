@@ -63,6 +63,7 @@ const PublicStorePage = lazy(() => import("@/pages/public-store-page"));
 const LeadsPage = lazy(() => import("@/pages/leads"));
 const Blog = lazy(() => import("@/pages/blog"));
 const BlogPost = lazy(() => import("@/pages/blog-post"));
+const PriceListDetail = lazy(() => import("@/pages/price-list-detail"));
 
 import AppLayout from "@/components/layout/app-layout";
 import SubscriptionExpiredWall from "@/components/SubscriptionExpiredWall";
@@ -91,6 +92,9 @@ const CustomerDetailSection = () => (
 );
 const CustomersSection = () => (
   <SectionErrorBoundary sectionName="Customers"><Customers /></SectionErrorBoundary>
+);
+const PriceListDetailSection = () => (
+  <SectionErrorBoundary sectionName="Price list detail"><PriceListDetail /></SectionErrorBoundary>
 );
 const CustomerRegistrationRequestsSection = () => (
   <SectionErrorBoundary sectionName="Customer registration requests"><CustomerRegistrationRequests /></SectionErrorBoundary>
@@ -253,6 +257,7 @@ function AuthenticatedRoutes() {
               <Route path="/products/:id" component={ProductDetailSection} />
               <Route path="/products" component={ProductManagementSection} />
               <Route path="/promotions" component={PromotionsSection} />
+              <Route path="/price-lists/:id" component={PriceListDetailSection} />
               <Route path="/customers/:customerId" component={CustomerDetailSection} />
               <Route path="/customers" component={CustomersSection} />
               <Route path="/customer-registration-requests" component={CustomerRegistrationRequestsSection} />

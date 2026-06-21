@@ -19,7 +19,7 @@ import { ContextualHelpBubble } from "@/components/ContextualHelpBubble";
 import { helpContent } from "@/data/whatsapp-help-content";
 import {
   Plus, Tag, Package, Users, Edit3, Calendar, Lock, ChevronDown, ChevronUp,
-  Check, X, Share2, Download, Trash2, MoreHorizontal, AlertTriangle, AlertCircle,
+  Check, X, Share2, Download, Trash2, MoreHorizontal, AlertTriangle, AlertCircle, Eye,
 } from "lucide-react";
 import { SubscriptionUpgradeModal } from "@/components/subscription/SubscriptionUpgradeModal";
 
@@ -777,6 +777,11 @@ export function PriceListManagementDialog({
                       </div>
                     )}
                     <div className="flex gap-1.5 pt-1">
+                      <Button asChild size="sm" variant="outline" className="flex-1 text-xs">
+                        <Link href={`/price-lists/${list.id}`}>
+                          <Eye className="h-3 w-3 mr-1" /> View
+                        </Link>
+                      </Button>
                       <Button size="sm" variant="outline" className="flex-1 text-xs" onClick={() => !list.isLocked && openManagePriceList(list)} disabled={list.isLocked} title={list.isLocked ? "Upgrade your plan to manage this price list" : undefined}>
                         {list.isLocked ? <Lock className="h-3 w-3 mr-1" /> : <Edit3 className="h-3 w-3 mr-1" />} Manage
                       </Button>

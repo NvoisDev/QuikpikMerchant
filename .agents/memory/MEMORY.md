@@ -2,6 +2,7 @@
 - [Static assets must go in client/public](static-assets-path.md) — Vite root is client/, so only client/public/ is served; root-level public/ is NOT served in dev.
 - [Email HTML escaping](email-html-escaping.md) — one shared escapeHtml; branding+preheader escaped centrally (don't re-escape); emailCard/Table/Heading/Button/Badge take RAW HTML so escape user leaf values at call sites.
 - [esbuild 0.28 breaks Vite 5](esbuild-vite5-incompat.md) — never override esbuild>=0.28 while app is on vite@5.4.x; breaks frontend transform. Keep esbuild ^0.25; vitest has its own vite.
+- [Default query fetcher uses only queryKey[0]](query-fetcher-url.md) — array key segments are NOT joined into the URL; put full URL in [0] or supply an explicit queryFn.
 - [Product stock source of truth](product-stock-source-of-truth.md) — live stock = products.stock/palletStock (recomputed from active batches); baseUnitStock is stale legacy, never trust it for availability despite replit.md.
 - [Quote-edit stock recompute](quote-edit-stock-recompute.md) — PATCH /api/quotes recomputes stock from active-batch SUM; tests must seed an active productBatch or new pallet lines spuriously 400 (OUT_OF_STOCK).
 - [Public storefront visibility](public-storefront-visibility.md) — hideable storefront fields (price/MOQ/stock/pack) must be redacted server-side in both public endpoints, not just gated in the UI.
