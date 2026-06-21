@@ -17,7 +17,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { useAuth, type AuthUser } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { useLocation, Link } from "wouter";
+import { Link, useLocation } from "wouter";
 
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -210,6 +210,7 @@ function PriceChangesTab() {
               <th className="px-4 py-2.5 text-right font-medium">New Price</th>
               <th className="px-4 py-2.5 text-right font-medium">Change</th>
               <th className="px-4 py-2.5 text-right font-medium hidden md:table-cell">Date</th>
+              <th className="px-4 py-2.5 text-right font-medium hidden lg:table-cell">Order</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
@@ -223,10 +224,17 @@ function PriceChangesTab() {
                   <td className="px-4 py-3 text-right text-gray-500">{fmt(row.oldPrice)}</td>
                   <td className="px-4 py-3 text-right font-medium text-gray-800">{fmt(row.newPrice)}</td>
                   <td className={`px-4 py-3 text-right font-semibold text-xs ${isUp ? 'text-green-600' : 'text-red-500'}`}>
-                    {isUp ? '▲' : '▼'} {Math.abs(pct).toFixed(1)}%
+                    {isUp ? '↑' : '↓'} {Math.abs(pct).toFixed(1)}%
                   </td>
                   <td className="px-4 py-3 text-right text-gray-400 text-xs hidden md:table-cell">
                     {new Date(row.changedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                  </td>
+                  <td className="px-4 py-3 text-right hidden lg:table-cell">
+                    {row.orderId ? (
+                      <Link href={`/orders/${row.orderId}`} className="text-xs text-emerald-600 hover:underline">
+                        View order
+                      </Link>
+                    ) : null}
                   </td>
                 </tr>
               );

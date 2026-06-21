@@ -155,8 +155,7 @@ export function registerProductRoutes(app: Express): void {
         })
         .from(productPriceHistory)
         .where(and(...conditions))
-        .orderBy(desc(productPriceHistory.changedAt))
-        .limit(200);
+        .orderBy(desc(productPriceHistory.changedAt));
 
       res.json(rows);
     } catch (error) {
@@ -196,8 +195,7 @@ export function registerProductRoutes(app: Express): void {
             eq(productPriceHistory.productId, productId),
           )
         )
-        .orderBy(desc(productPriceHistory.changedAt))
-        .limit(50);
+        .orderBy(desc(productPriceHistory.changedAt));
 
       res.json(rows);
     } catch (error) {

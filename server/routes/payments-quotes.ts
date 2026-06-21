@@ -146,15 +146,7 @@ async function applyPriceScopePropagation(
           .set({ palletPrice: newPriceStr, updatedAt: new Date() })
           .where(eq(products.id, ni.productId));
         propagations.push({ productId: ni.productId, sellingType, scope: 'all', oldPrice: catalogPrice, newPrice: ni.customPrice });
-        await trx.insert(productPriceHistory).values({
-          wholesalerId,
-          productId: ni.productId,
-          productName: prod.name,
-          sellingType,
-          oldPrice: catalogPrice.toFixed(2),
-          newPrice: ni.customPrice.toFixed(2),
-          ...(orderId != null ? { orderId } : {}),
-        });
+        // Pallet-only changes are not recorded in price history (unit prices only)
       } else {
         // A unit-price change also scales the product's pallet price by the same
         // ratio (newPallet = oldPallet × newUnit / oldUnit). Guard against a
@@ -171,26 +163,18 @@ async function applyPriceScopePropagation(
         }
         await trx.update(products).set(updateSet).where(eq(products.id, ni.productId));
         propagations.push({ productId: ni.productId, sellingType, scope: 'all', oldPrice: catalogPrice, newPrice: ni.customPrice });
+        // Record unit price change in history (pallet auto-scaling is a derived side-effect, not recorded)
         await trx.insert(productPriceHistory).values({
           wholesalerId,
           productId: ni.productId,
           productName: prod.name,
-          sellingType,
+          sellingType: 'units',
           oldPrice: catalogPrice.toFixed(2),
           newPrice: ni.customPrice.toFixed(2),
           ...(orderId != null ? { orderId } : {}),
         });
         if (scaledPallet !== null && Math.abs(scaledPallet - oldPallet) > 0.001) {
           propagations.push({ productId: ni.productId, sellingType: 'pallets', scope: 'all', oldPrice: oldPallet, newPrice: scaledPallet });
-          await trx.insert(productPriceHistory).values({
-            wholesalerId,
-            productId: ni.productId,
-            productName: prod.name,
-            sellingType: 'pallets',
-            oldPrice: oldPallet.toFixed(2),
-            newPrice: scaledPallet.toFixed(2),
-            ...(orderId != null ? { orderId } : {}),
-          });
         }
       }
     } else {

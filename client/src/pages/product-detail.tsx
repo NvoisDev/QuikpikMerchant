@@ -557,14 +557,16 @@ export default function ProductDetail() {
                   <p className="text-xl font-bold text-gray-900">
                     {product.priceVisible ? fmt(product.price, currency) : "Hidden"}
                   </p>
-                  {priceHistory.length > 0 && (() => {
-                    const last = priceHistory[0];
+                  {(() => {
+                    const unitHistory = priceHistory.filter(h => h.sellingType === "units");
+                    if (unitHistory.length === 0) return null;
+                    const last = unitHistory[0];
                     const pct = ((parseFloat(last.newPrice) - parseFloat(last.oldPrice)) / parseFloat(last.oldPrice)) * 100;
                     const isUp = pct > 0;
                     const dateLabel = new Date(last.changedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
                     return (
-                      <p className={`text-[11px] mt-0.5 ${isUp ? "text-green-600" : "text-red-500"}`}>
-                        {isUp ? "▲" : "▼"} {Math.abs(pct).toFixed(1)}% · {dateLabel}
+                      <p className="text-[11px] mt-0.5 text-gray-400">
+                        {isUp ? "↑" : "↓"} {Math.abs(pct).toFixed(1)}% on {dateLabel}
                       </p>
                     );
                   })()}
