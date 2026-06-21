@@ -922,27 +922,27 @@ export function registerProductRoutes(app: Express): void {
       const { default: OpenAI } = await import('openai');
       const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-      const prompt = `STRICT LIMIT: 100 characters or fewer total. Write a very short, punchy one-sentence wholesale product description for: ${productName}${category ? ` (${category})` : ''}. No bullet points, no formatting, no introductory phrases — just the description itself.`;
+      const prompt = `STRICT LIMIT: 250 characters or fewer total. Write a short, punchy wholesale product description (one or two sentences) for: ${productName}${category ? ` (${category})` : ''}. No bullet points, no formatting, no introductory phrases — just the description itself.`;
 
       const response = await openai.chat.completions.create({
         model: "gpt-4o", // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
         messages: [
           {
             role: "system",
-            content: "You write ultra-short product descriptions for wholesale platforms. CRITICAL RULE: every response must be 100 characters or fewer — count carefully. One sentence only. No bullet points, no formatting markers.",
+            content: "You write short product descriptions for wholesale platforms. CRITICAL RULE: every response must be 250 characters or fewer — count carefully. One or two sentences only. No bullet points, no formatting markers.",
           },
           { role: "user", content: prompt },
         ],
-        max_tokens: 60,
         temperature: 0.7,
+        max_tokens: 120,
       }, { signal: AbortSignal.timeout(25_000) });
 
       let generatedDescription = (response.choices[0].message.content || "").trim();
 
-      if (generatedDescription.length > 100) {
-        const truncated = generatedDescription.slice(0, 100);
+      if (generatedDescription.length > 250) {
+        const truncated = generatedDescription.slice(0, 250);
         const lastSpace = truncated.lastIndexOf(" ");
-        generatedDescription = lastSpace > 0 ? truncated.slice(0, lastSpace) : truncated.slice(0, 97) + "...";
+        generatedDescription = lastSpace > 0 ? truncated.slice(0, lastSpace) : truncated.slice(0, 247) + "...";
       }
 
       res.json({ description: generatedDescription });

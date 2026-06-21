@@ -23,8 +23,8 @@ import ButtonLoader from "@/components/ui/button-loader";
 export const productFormSchema = z.object({
   name: z.string().min(1, "Product name is required"),
   description: z.string().optional().refine(
-    (val) => !val || val.length <= 100,
-    { message: "Description must be 100 characters or less" }
+    (val) => !val || val.length <= 250,
+    { message: "Description must be 250 characters or less" }
   ),
   price: z.string().min(1, "Price is required"),
   currency: z.string().min(1, "Currency is required"),
@@ -406,10 +406,10 @@ export default function ProductFormDialog({
         const data = await response.json();
         const generatedDescription = data.description;
         form.setValue("description", generatedDescription);
-        if (generatedDescription.length > 100) {
-          toast({ title: "Description Generated (Warning)", description: `Generated description is ${generatedDescription.length} characters. Please trim to 100 characters max.`, variant: "destructive" });
-        } else if (generatedDescription.length > 85) {
-          toast({ title: "Description Generated", description: `Generated ${generatedDescription.length} characters. Consider keeping under 85 for best results.` });
+        if (generatedDescription.length > 250) {
+          toast({ title: "Description Generated (Warning)", description: `Generated description is ${generatedDescription.length} characters. Please trim to 250 characters max.`, variant: "destructive" });
+        } else if (generatedDescription.length > 220) {
+          toast({ title: "Description Generated", description: `Generated ${generatedDescription.length} characters. Consider keeping under 250 for best results.` });
         } else {
           toast({ title: "Description Generated", description: `Perfect! Generated ${generatedDescription.length} characters within optimal range.` });
         }
@@ -648,19 +648,19 @@ export default function ProductFormDialog({
                     </ButtonLoader>
                   </div>
                   <FormControl>
-                    <Textarea placeholder="Short punchy summary (max 100 characters)" maxLength={100} {...field} />
+                    <Textarea placeholder="Short punchy summary (max 250 characters)" maxLength={250} {...field} />
                   </FormControl>
                   <div className="flex justify-between text-xs mt-1">
                     <span className="text-gray-500">Short punchy summary</span>
                     <span className={
-                      (field.value?.length || 0) > 100
+                      (field.value?.length || 0) > 250
                         ? "text-red-600 font-medium"
-                        : (field.value?.length || 0) > 85
+                        : (field.value?.length || 0) > 220
                           ? "text-amber-600 font-medium"
                           : "text-gray-500"
                     }>
-                      {field.value?.length || 0}/100
-                      {(field.value?.length || 0) > 100 && (
+                      {field.value?.length || 0}/250
+                      {(field.value?.length || 0) > 250 && (
                         <span className="ml-1 text-red-600">⚠️ Exceeds limit</span>
                       )}
                     </span>
