@@ -106,6 +106,17 @@ interface StockMovementEntry {
   createdAt: string;
 }
 
+interface PriceHistoryEntry {
+  id: number;
+  productId: number | null;
+  productName: string;
+  sellingType: string;
+  oldPrice: string;
+  newPrice: string;
+  orderId: number | null;
+  changedAt: string;
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 const fmt = (val: string | number | null | undefined, currency = "GBP") => {
@@ -233,6 +244,17 @@ export default function ProductDetail() {
     },
     enabled: !!productId,
     staleTime: 0,
+  });
+
+  const { data: priceHistory = [] } = useQuery<PriceHistoryEntry[]>({
+    queryKey: ["/api/products", productId, "price-history"],
+    queryFn: async () => {
+      const res = await fetchWithTimeout(`/api/products/${productId}/price-history`);
+      if (!res.ok) return [];
+      return res.json();
+    },
+    enabled: !!productId,
+    staleTime: 60_000,
   });
 
   // ── Mutations ─────────────────────────────────────────────────────────────
@@ -535,6 +557,17 @@ export default function ProductDetail() {
                   <p className="text-xl font-bold text-gray-900">
                     {product.priceVisible ? fmt(product.price, currency) : "Hidden"}
                   </p>
+                  {priceHistory.length > 0 && (() => {
+                    const last = priceHistory[0];
+                    const pct = ((parseFloat(last.newPrice) - parseFloat(last.oldPrice)) / parseFloat(last.oldPrice)) * 100;
+                    const isUp = pct > 0;
+                    const dateLabel = new Date(last.changedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+                    return (
+                      <p className={`text-[11px] mt-0.5 ${isUp ? "text-green-600" : "text-red-500"}`}>
+                        {isUp ? "▲" : "▼"} {Math.abs(pct).toFixed(1)}% · {dateLabel}
+                      </p>
+                    );
+                  })()}
                 </div>
                 {product.costPrice && (
                   <div>

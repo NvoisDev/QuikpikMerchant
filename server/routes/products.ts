@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import {
-  and, asc, count, db, eq, generateProductImage, insertProductSchema, isNull, openai, or,
-  products, requireAuth, requireMemberPermission, requireNotViewer, requireProductLimits, sql, storage, users, z
+  and, asc, count, db, desc, eq, generateProductImage, insertProductSchema, isNull, openai, or,
+  products, productPriceHistory, requireAuth, requireMemberPermission, requireNotViewer, requireProductLimits, sql, storage, users, z
 } from "./shared";
 import { productBatches, stockMovements } from "@shared/schema";
 import { isImpersonating } from "../utils/isImpersonating";
@@ -127,6 +127,82 @@ export function registerProductRoutes(app: Express): void {
     } catch (err: any) {
       console.error('Error exporting catalogue:', err);
       res.status(500).json({ message: 'Failed to export catalogue' });
+    }
+  });
+
+  // GET /api/products/price-history — all price changes for this wholesaler
+  // Optional ?productId=N filter to scope to one product
+  app.get('/api/products/price-history', requireAuth, async (req: any, res) => {
+    try {
+      const wholesalerId = resolveWholesalerId(req);
+      const productIdFilter = req.query.productId ? parseInt(req.query.productId as string) : null;
+
+      const conditions = [eq(productPriceHistory.wholesalerId, wholesalerId)];
+      if (productIdFilter && !isNaN(productIdFilter)) {
+        conditions.push(eq(productPriceHistory.productId, productIdFilter));
+      }
+
+      const rows = await db
+        .select({
+          id: productPriceHistory.id,
+          productId: productPriceHistory.productId,
+          productName: productPriceHistory.productName,
+          sellingType: productPriceHistory.sellingType,
+          oldPrice: productPriceHistory.oldPrice,
+          newPrice: productPriceHistory.newPrice,
+          orderId: productPriceHistory.orderId,
+          changedAt: productPriceHistory.changedAt,
+        })
+        .from(productPriceHistory)
+        .where(and(...conditions))
+        .orderBy(desc(productPriceHistory.changedAt))
+        .limit(200);
+
+      res.json(rows);
+    } catch (error) {
+      console.error('Error fetching price history:', error);
+      res.status(500).json({ message: 'Failed to fetch price history' });
+    }
+  });
+
+  // GET /api/products/:id/price-history — price changes for a specific product
+  app.get('/api/products/:id/price-history', requireAuth, async (req: any, res) => {
+    try {
+      const wholesalerId = resolveWholesalerId(req);
+      const productId = parseInt(req.params.id);
+      if (isNaN(productId)) return res.status(400).json({ message: 'Invalid product ID' });
+
+      // Ownership check
+      const product = await storage.getProduct(productId);
+      if (!product || product.wholesalerId !== wholesalerId) {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      const rows = await db
+        .select({
+          id: productPriceHistory.id,
+          productId: productPriceHistory.productId,
+          productName: productPriceHistory.productName,
+          sellingType: productPriceHistory.sellingType,
+          oldPrice: productPriceHistory.oldPrice,
+          newPrice: productPriceHistory.newPrice,
+          orderId: productPriceHistory.orderId,
+          changedAt: productPriceHistory.changedAt,
+        })
+        .from(productPriceHistory)
+        .where(
+          and(
+            eq(productPriceHistory.wholesalerId, wholesalerId),
+            eq(productPriceHistory.productId, productId),
+          )
+        )
+        .orderBy(desc(productPriceHistory.changedAt))
+        .limit(50);
+
+      res.json(rows);
+    } catch (error) {
+      console.error('Error fetching product price history:', error);
+      res.status(500).json({ message: 'Failed to fetch product price history' });
     }
   });
 

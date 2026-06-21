@@ -827,6 +827,30 @@ export const insertQuoteActivityLogSchema = createInsertSchema(quoteActivityLogs
 export type InsertQuoteActivityLog = z.infer<typeof insertQuoteActivityLogSchema>;
 export type QuoteActivityLog = typeof quoteActivityLogs.$inferSelect;
 
+// ── Product Price History ─────────────────────────────────────────────────────
+// Immutable record of every catalog price change made via scope='all' propagation.
+// Each row captures the before/after prices for a single product/sellingType pair
+// at the moment the invoice was edited. orderId links back to the triggering quote.
+export const productPriceHistory = pgTable("product_price_history", {
+  id: serial("id").primaryKey(),
+  wholesalerId: varchar("wholesaler_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  productId: integer("product_id").references(() => products.id, { onDelete: "set null" }),
+  productName: varchar("product_name", { length: 255 }).notNull(),
+  sellingType: varchar("selling_type", { length: 10 }).notNull().default("units"),
+  oldPrice: decimal("old_price", { precision: 10, scale: 2 }).notNull(),
+  newPrice: decimal("new_price", { precision: 10, scale: 2 }).notNull(),
+  orderId: integer("order_id").references(() => orders.id, { onDelete: "set null" }),
+  changedAt: timestamp("changed_at").defaultNow().notNull(),
+}, (table) => ({
+  wholesalerIdx: index("pph_wholesaler_id_idx").on(table.wholesalerId),
+  productIdx: index("pph_product_id_idx").on(table.productId),
+  changedAtIdx: index("pph_changed_at_idx").on(table.wholesalerId, table.changedAt),
+}));
+
+export const insertProductPriceHistorySchema = createInsertSchema(productPriceHistory).omit({ id: true, changedAt: true });
+export type InsertProductPriceHistory = z.infer<typeof insertProductPriceHistorySchema>;
+export type ProductPriceHistory = typeof productPriceHistory.$inferSelect;
+
 export const orderItems = pgTable("order_items", {
   id: serial("id").primaryKey(),
   orderId: integer("order_id").notNull().references(() => orders.id),

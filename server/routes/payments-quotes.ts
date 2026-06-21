@@ -11,6 +11,7 @@ import {
   requireAuth, requireNotViewer, requireBooleanFeature, sendEmail, sendWhatsAppMessage, sendCustomerInvoiceEmail,
   sql, stockMovements, storage, sum, wrapCustomerEmail, desc, quoteActivityLogs,
   teamMembers, users, priceLists, priceListItems, priceListAssignments,
+  productPriceHistory,
 } from "./shared";
 import { getStripeClient } from "../stripeConfig";
 import { ReliableSMSService } from "../sms-service";
@@ -65,9 +66,9 @@ interface PricePropagation {
 // product+sellingType (first wins) for deterministic catalog updates.
 async function applyPriceScopePropagation(
   trx: any,
-  opts: { wholesalerId: string; customerId: string; customerName?: string | null; lines: PriceScopeLine[] },
+  opts: { wholesalerId: string; customerId: string; customerName?: string | null; lines: PriceScopeLine[]; orderId?: number | null },
 ): Promise<PricePropagation[]> {
-  const { wholesalerId, customerId, customerName, lines } = opts;
+  const { wholesalerId, customerId, customerName, lines, orderId } = opts;
   const propagations: PricePropagation[] = [];
 
   // Lookup so a unit line set to 'all' can detect a sibling pallet line for the
@@ -145,6 +146,15 @@ async function applyPriceScopePropagation(
           .set({ palletPrice: newPriceStr, updatedAt: new Date() })
           .where(eq(products.id, ni.productId));
         propagations.push({ productId: ni.productId, sellingType, scope: 'all', oldPrice: catalogPrice, newPrice: ni.customPrice });
+        await trx.insert(productPriceHistory).values({
+          wholesalerId,
+          productId: ni.productId,
+          productName: prod.name,
+          sellingType,
+          oldPrice: catalogPrice.toFixed(2),
+          newPrice: ni.customPrice.toFixed(2),
+          ...(orderId != null ? { orderId } : {}),
+        });
       } else {
         // A unit-price change also scales the product's pallet price by the same
         // ratio (newPallet = oldPallet × newUnit / oldUnit). Guard against a
@@ -161,8 +171,26 @@ async function applyPriceScopePropagation(
         }
         await trx.update(products).set(updateSet).where(eq(products.id, ni.productId));
         propagations.push({ productId: ni.productId, sellingType, scope: 'all', oldPrice: catalogPrice, newPrice: ni.customPrice });
+        await trx.insert(productPriceHistory).values({
+          wholesalerId,
+          productId: ni.productId,
+          productName: prod.name,
+          sellingType,
+          oldPrice: catalogPrice.toFixed(2),
+          newPrice: ni.customPrice.toFixed(2),
+          ...(orderId != null ? { orderId } : {}),
+        });
         if (scaledPallet !== null && Math.abs(scaledPallet - oldPallet) > 0.001) {
           propagations.push({ productId: ni.productId, sellingType: 'pallets', scope: 'all', oldPrice: oldPallet, newPrice: scaledPallet });
+          await trx.insert(productPriceHistory).values({
+            wholesalerId,
+            productId: ni.productId,
+            productName: prod.name,
+            sellingType: 'pallets',
+            oldPrice: oldPallet.toFixed(2),
+            newPrice: scaledPallet.toFixed(2),
+            ...(orderId != null ? { orderId } : {}),
+          });
         }
       }
     } else {
@@ -662,6 +690,7 @@ export function registerQuoteRoutes(app: Express): void {
           customerId,
           customerName: quoteOrderRow.customerName,
           lines: Object.values(propagationLines),
+          orderId: quoteOrderRow.id,
         });
         return quoteOrderRow;
       });
@@ -1646,6 +1675,7 @@ export function registerQuoteRoutes(app: Express): void {
           customerId: existingOrder.retailerId,
           customerName: existingOrder.customerName,
           lines: Object.values(newItemMap),
+          orderId: quoteId,
         }));
 
         // 7d. Update order totals and payment link

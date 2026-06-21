@@ -572,6 +572,21 @@ async function runStartupMigrations() {
      WHERE p.category IS NOT NULL
        AND LOWER(TRIM(p.category)) = LOWER(TRIM(c.name))
        AND p.category <> c.name`,
+    // Task #1438: Product price history — immutable log of catalog price changes via scope='all'
+    `CREATE TABLE IF NOT EXISTS product_price_history (
+      id SERIAL PRIMARY KEY,
+      wholesaler_id VARCHAR NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      product_id INTEGER REFERENCES products(id) ON DELETE SET NULL,
+      product_name VARCHAR(255) NOT NULL,
+      selling_type VARCHAR(10) NOT NULL DEFAULT 'units',
+      old_price DECIMAL(10,2) NOT NULL,
+      new_price DECIMAL(10,2) NOT NULL,
+      order_id INTEGER REFERENCES orders(id) ON DELETE SET NULL,
+      changed_at TIMESTAMP NOT NULL DEFAULT NOW()
+    )`,
+    `CREATE INDEX IF NOT EXISTS pph_wholesaler_id_idx ON product_price_history(wholesaler_id)`,
+    `CREATE INDEX IF NOT EXISTS pph_product_id_idx ON product_price_history(product_id)`,
+    `CREATE INDEX IF NOT EXISTS pph_changed_at_idx ON product_price_history(wholesaler_id, changed_at)`,
   ];
   for (const stmt of migrations) {
     await db.execute(sql.raw(stmt));

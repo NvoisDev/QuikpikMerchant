@@ -38,6 +38,7 @@ import {
   MessageCircle,
   ShieldX,
   MoreHorizontal,
+  TrendingUp,
   Clock,
   Tag,
   Share2,
@@ -153,6 +154,89 @@ type NamedEntity = {
   phoneNumber?: string | null;
 };
 
+interface PriceChangeRow {
+  id: number;
+  productId: number | null;
+  productName: string;
+  sellingType: string;
+  oldPrice: string;
+  newPrice: string;
+  orderId: number | null;
+  changedAt: string;
+}
+
+function PriceChangesTab() {
+  const { data: rows = [], isLoading } = useQuery<PriceChangeRow[]>({
+    queryKey: ['/api/products/price-history'],
+    staleTime: 30_000,
+  });
+
+  const fmt = (val: string) => {
+    const n = parseFloat(val);
+    if (!isFinite(n)) return '—';
+    return new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(n);
+  };
+
+  if (isLoading) {
+    return (
+      <div className="space-y-2">
+        {[0, 1, 2, 3].map((i) => (
+          <div key={i} className="h-12 bg-gray-100 rounded-lg animate-pulse" />
+        ))}
+      </div>
+    );
+  }
+
+  if (rows.length === 0) {
+    return (
+      <div className="text-center py-16 text-gray-400">
+        <TrendingUp className="h-10 w-10 mx-auto mb-3 opacity-30" />
+        <p className="text-sm font-medium text-gray-500">No price changes yet</p>
+        <p className="text-xs mt-1">When you update a product price via an invoice using "Apply to all orders", it will appear here.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      <p className="text-xs text-gray-500 pb-1">Catalog price changes made via invoice price propagation (scope = all orders).</p>
+      <div className="rounded-xl border border-gray-100 overflow-hidden">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="bg-gray-50 text-xs text-gray-500 uppercase tracking-wide">
+              <th className="px-4 py-2.5 text-left font-medium">Product</th>
+              <th className="px-4 py-2.5 text-left font-medium hidden sm:table-cell">Type</th>
+              <th className="px-4 py-2.5 text-right font-medium">Old Price</th>
+              <th className="px-4 py-2.5 text-right font-medium">New Price</th>
+              <th className="px-4 py-2.5 text-right font-medium">Change</th>
+              <th className="px-4 py-2.5 text-right font-medium hidden md:table-cell">Date</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-50">
+            {rows.map((row) => {
+              const pct = ((parseFloat(row.newPrice) - parseFloat(row.oldPrice)) / parseFloat(row.oldPrice)) * 100;
+              const isUp = pct > 0;
+              return (
+                <tr key={row.id} className="bg-white hover:bg-gray-50/50 transition-colors">
+                  <td className="px-4 py-3 font-medium text-gray-800 max-w-[140px] truncate">{row.productName}</td>
+                  <td className="px-4 py-3 text-gray-500 hidden sm:table-cell capitalize">{row.sellingType}</td>
+                  <td className="px-4 py-3 text-right text-gray-500">{fmt(row.oldPrice)}</td>
+                  <td className="px-4 py-3 text-right font-medium text-gray-800">{fmt(row.newPrice)}</td>
+                  <td className={`px-4 py-3 text-right font-semibold text-xs ${isUp ? 'text-green-600' : 'text-red-500'}`}>
+                    {isUp ? '▲' : '▼'} {Math.abs(pct).toFixed(1)}%
+                  </td>
+                  <td className="px-4 py-3 text-right text-gray-400 text-xs hidden md:table-cell">
+                    {new Date(row.changedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
 
 export default function Customers() {
   const { formatMoney } = useCurrency();
@@ -763,7 +847,7 @@ export default function Customers() {
 
       <div className="space-y-4 sm:space-y-6 p-4 sm:p-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 sm:space-y-6">
-          <TabsList className="grid w-full grid-cols-3 h-auto bg-slate-100 p-1 rounded-xl">
+          <TabsList className="grid w-full grid-cols-4 h-auto bg-slate-100 p-1 rounded-xl">
             <TabsTrigger value="address-book" className="flex items-center justify-center space-x-1 sm:space-x-2 py-2 sm:py-3 rounded-lg data-[state=active]:bg-white data-[state=active]:text-emerald-700 data-[state=active]:shadow-sm">
               <Contact className="h-3 w-3 sm:h-4 sm:w-4" />
               <span className="text-xs sm:text-sm">Directory</span>
@@ -775,6 +859,10 @@ export default function Customers() {
             <TabsTrigger value="price-lists" className="flex items-center justify-center space-x-1 sm:space-x-2 py-2 sm:py-3 rounded-lg data-[state=active]:bg-white data-[state=active]:text-emerald-700 data-[state=active]:shadow-sm">
               <Tag className="h-3 w-3 sm:h-4 sm:w-4" />
               <span className="text-xs sm:text-sm">Price Lists</span>
+            </TabsTrigger>
+            <TabsTrigger value="price-changes" className="flex items-center justify-center space-x-1 sm:space-x-2 py-2 sm:py-3 rounded-lg data-[state=active]:bg-white data-[state=active]:text-emerald-700 data-[state=active]:shadow-sm">
+              <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="text-xs sm:text-sm">Price Changes</span>
             </TabsTrigger>
           </TabsList>
 
@@ -1085,6 +1173,10 @@ export default function Customers() {
               filterCustomer={priceListFilterCustomer}
               onFilterChange={setPriceListFilterCustomer}
             />
+          </TabsContent>
+
+          <TabsContent value="price-changes" className="space-y-4 sm:space-y-6">
+            <PriceChangesTab />
           </TabsContent>
         </Tabs>
       </div>
