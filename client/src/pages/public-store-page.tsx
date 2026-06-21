@@ -52,6 +52,10 @@ interface PublicWholesaler {
   enablePickup?: boolean;
   deliveryNote?: string | null;
   preferredCurrency?: string;
+  enquiriesEnabled?: boolean;
+  minOrderAmount?: number | null;
+  allowQuoteRequests?: boolean;
+  whatsappContactVisible?: boolean;
 }
 
 function formatCurrency(amount: string | number, currency = 'GBP') {
@@ -88,6 +92,7 @@ function ProductCard({
   showStock,
   showPackSize,
   currency,
+  enquiriesEnabled,
   onEnquire,
 }: {
   product: PublicProduct;
@@ -96,6 +101,7 @@ function ProductCard({
   showStock: boolean;
   showPackSize: boolean;
   currency: string;
+  enquiriesEnabled: boolean;
   onEnquire: (product: PublicProduct) => void;
 }) {
   const showPrices = priceDisplayMode === 'shown';
@@ -160,24 +166,36 @@ function ProductCard({
           )
         )}
 
-        {/* Price */}
+        {/* Price / CTA */}
         {showPrices && product.price != null ? (
-          <p className="text-base font-bold text-gray-900 mb-3">
-            {formatCurrency(product.price, currency)}
-            <span className="text-xs font-normal text-gray-400 ml-1">/ unit</span>
-          </p>
+          <>
+            <p className="text-base font-bold text-gray-900 mb-3">
+              {formatCurrency(product.price, currency)}
+              <span className="text-xs font-normal text-gray-400 ml-1">/ unit</span>
+            </p>
+            {enquiriesEnabled && (
+              <Button
+                size="sm"
+                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs h-8"
+                onClick={() => onEnquire(product)}
+              >
+                <MessageSquare className="h-3 w-3 mr-1" />
+                Enquire
+              </Button>
+            )}
+          </>
+        ) : enquiriesEnabled ? (
+          <Button
+            size="sm"
+            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs h-8"
+            onClick={() => onEnquire(product)}
+          >
+            <Tag className="h-3 w-3 mr-1" />
+            Get Trade Pricing
+          </Button>
         ) : (
           <p className="text-sm text-gray-400 italic mb-3">Price on request</p>
         )}
-
-        <Button
-          size="sm"
-          className="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs h-8"
-          onClick={() => onEnquire(product)}
-        >
-          <MessageSquare className="h-3 w-3 mr-1" />
-          {priceDisplayMode === 'hidden' ? 'Request Quote' : 'Enquire'}
-        </Button>
       </div>
     </div>
   );
@@ -462,13 +480,15 @@ export default function PublicStorePage() {
               <span className="text-sm font-semibold text-emerald-600">Quikpik</span>
             </div>
           </Link>
-          <Button
-            size="sm"
-            className="bg-emerald-600 hover:bg-emerald-700 text-xs"
-            onClick={() => { setEnquiryProduct(null); setShowEnquiry(true); }}
-          >
-            <MessageSquare className="h-3.5 w-3.5 mr-1" /> Get in touch
-          </Button>
+          {wholesaler.enquiriesEnabled !== false && (
+            <Button
+              size="sm"
+              className="bg-emerald-600 hover:bg-emerald-700 text-xs"
+              onClick={() => { setEnquiryProduct(null); setShowEnquiry(true); }}
+            >
+              <MessageSquare className="h-3.5 w-3.5 mr-1" /> Get in touch
+            </Button>
+          )}
         </div>
       </div>
 
@@ -515,6 +535,11 @@ export default function PublicStorePage() {
                 {wholesaler.deliveryRegions && (
                   <span className="flex items-center gap-1 text-xs text-gray-400">
                     <MapPin className="h-3 w-3" /> {wholesaler.deliveryRegions}
+                  </span>
+                )}
+                {(wholesaler.minOrderAmount ?? 0) > 0 && (
+                  <span className="flex items-center gap-1 text-xs text-emerald-600 font-medium">
+                    <Tag className="h-3 w-3" /> Min. order: £{wholesaler.minOrderAmount}
                   </span>
                 )}
               </div>
@@ -593,6 +618,7 @@ export default function PublicStorePage() {
                 showStock={wholesaler.stockVisible === true}
                 showPackSize={wholesaler.packSizeVisible !== false}
                 currency={currency}
+                enquiriesEnabled={wholesaler.enquiriesEnabled !== false}
                 onEnquire={handleEnquire}
               />
             ))}

@@ -587,6 +587,13 @@ async function runStartupMigrations() {
     `CREATE INDEX IF NOT EXISTS pph_wholesaler_id_idx ON product_price_history(wholesaler_id)`,
     `CREATE INDEX IF NOT EXISTS pph_product_id_idx ON product_price_history(product_id)`,
     `CREATE INDEX IF NOT EXISTS pph_changed_at_idx ON product_price_history(wholesaler_id, changed_at)`,
+    // Task #1443: Customer Portal settings — new columns with safe defaults for all existing wholesalers
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS enquiries_enabled BOOLEAN NOT NULL DEFAULT TRUE`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS min_order_amount INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS allow_quote_requests BOOLEAN NOT NULL DEFAULT TRUE`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS require_approval_for_pricing BOOLEAN NOT NULL DEFAULT FALSE`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS allow_guest_browsing BOOLEAN NOT NULL DEFAULT TRUE`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS whatsapp_contact_visible BOOLEAN NOT NULL DEFAULT TRUE`,
   ];
   for (const stmt of migrations) {
     await db.execute(sql.raw(stmt));

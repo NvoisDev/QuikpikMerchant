@@ -65,6 +65,10 @@ export function registerPublicStoreRoutes(app: Express) {
           deliveryNote: users.deliveryNote,
           preferredCurrency: users.preferredCurrency,
           isInactive: users.isInactive,
+          enquiriesEnabled: users.enquiriesEnabled,
+          minOrderAmount: users.minOrderAmount,
+          allowQuoteRequests: users.allowQuoteRequests,
+          whatsappContactVisible: users.whatsappContactVisible,
         })
         .from(users)
         .where(
@@ -240,12 +244,16 @@ export function registerPublicStoreRoutes(app: Express) {
 
       // Verify the wholesaler is public
       const [wholesaler] = await db
-        .select({ id: users.id, storeVisibility: users.storeVisibility, email: users.email, businessName: users.businessName })
+        .select({ id: users.id, storeVisibility: users.storeVisibility, email: users.email, businessName: users.businessName, enquiriesEnabled: users.enquiriesEnabled })
         .from(users)
         .where(eq(users.id, data.wholesalerId));
 
       if (!wholesaler || wholesaler.storeVisibility !== 'public') {
         return res.status(404).json({ message: "Store not found" });
+      }
+
+      if (wholesaler.enquiriesEnabled === false) {
+        return res.status(403).json({ message: "Enquiries are not currently enabled for this store" });
       }
 
       const [enquiry] = await db

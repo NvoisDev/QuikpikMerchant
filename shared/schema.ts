@@ -310,6 +310,14 @@ export const users = pgTable("users", {
   // Pay Later — wholesaler-controlled
   allowPayLater: boolean("allow_pay_later").default(false),
 
+  // Customer Portal access settings
+  enquiriesEnabled: boolean("enquiries_enabled").default(true),
+  minOrderAmount: integer("min_order_amount").default(0),
+  allowQuoteRequests: boolean("allow_quote_requests").default(true),
+  requireApprovalForPricing: boolean("require_approval_for_pricing").default(false),
+  allowGuestBrowsing: boolean("allow_guest_browsing").default(true),
+  whatsappContactVisible: boolean("whatsapp_contact_visible").default(true),
+
   // Public homepage opt-in — wholesaler chooses to appear on the landing page logo strip
   showOnHomepage: boolean("show_on_homepage").default(false),
 
