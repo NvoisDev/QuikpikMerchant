@@ -20,7 +20,7 @@ import { ContextualHelpBubble } from "@/components/ContextualHelpBubble";
 import { helpContent } from "@/data/whatsapp-help-content";
 import {
   Plus, Tag, Package, Users, Edit3, Calendar, Lock, ChevronDown, ChevronUp,
-  Check, X, Share2, Download, Trash2, MoreHorizontal, AlertTriangle, AlertCircle, Eye,
+  Check, X, Share2, Download, Trash2, MoreHorizontal, AlertTriangle, AlertCircle, Eye, Search,
 } from "lucide-react";
 import { SubscriptionUpgradeModal } from "@/components/subscription/SubscriptionUpgradeModal";
 
@@ -145,6 +145,7 @@ export function PriceListManagementDialog({
   const [sharingListId, setSharingListId] = useState<number | null>(null);
   const [isSharingCatalogue, setIsSharingCatalogue] = useState<'xlsx' | 'pdf' | null>(null);
   const [showCataloguePreview, setShowCataloguePreview] = useState(false);
+  const [catalogueSearch, setCatalogueSearch] = useState("");
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
   const handleCreatePriceListClick = () => {
@@ -1309,7 +1310,7 @@ export function PriceListManagementDialog({
       </Dialog>
 
       {/* Standard Price List preview sheet */}
-      <Sheet open={showCataloguePreview} onOpenChange={setShowCataloguePreview}>
+      <Sheet open={showCataloguePreview} onOpenChange={(open) => { setShowCataloguePreview(open); if (!open) setCatalogueSearch(""); }}>
         <SheetContent side="bottom" className="h-[85vh] flex flex-col p-0">
           <SheetHeader className="px-4 pt-4 pb-3 border-b shrink-0">
             <SheetTitle className="flex items-center gap-2 text-base">
@@ -1344,43 +1345,69 @@ export function PriceListManagementDialog({
               );
             }
 
-            return (
-              <div className="flex-1 overflow-y-auto">
-                <table className="w-full text-sm">
-                  <thead className="sticky top-0 bg-white border-b z-10">
-                    <tr className="text-xs text-muted-foreground uppercase tracking-wide">
-                      <th className="text-left px-4 py-2.5 font-medium">Product</th>
-                      <th className="text-right px-4 py-2.5 font-medium">Unit price</th>
-                      <th className="text-right px-4 py-2.5 font-medium pr-5">Pallet price</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {activeProducts.map(p => {
-                      const numericSize = p.unitSize != null ? String(parseFloat(String(p.unitSize))) : null;
-                      const unitDisplay = numericSize && p.unitOfMeasure
-                        ? `${numericSize}${p.unitOfMeasure}`
-                        : numericSize || p.unitOfMeasure || null;
-                      const packParts = [p.packQuantity, unitDisplay].filter(Boolean);
-                      const packSize = packParts.length > 0 ? packParts.join(' x ') : null;
+            const searchTerm = catalogueSearch.trim().toLowerCase();
+            const filteredProducts = searchTerm
+              ? activeProducts.filter(p => p.name.toLowerCase().includes(searchTerm))
+              : activeProducts;
 
-                      return (
-                        <tr key={p.id} className="hover:bg-gray-50/60">
-                          <td className="px-4 py-3">
-                            <p className="font-medium text-slate-900 leading-snug">{p.name}</p>
-                            {packSize && <p className="text-xs text-muted-foreground mt-0.5">{packSize}</p>}
-                          </td>
-                          <td className="px-4 py-3 text-right font-medium text-slate-800 whitespace-nowrap">
-                            {formatMoney(parseFloat(p.price))}
-                          </td>
-                          <td className="px-4 py-3 text-right pr-5 text-muted-foreground whitespace-nowrap">
-                            {p.palletPrice ? formatMoney(parseFloat(p.palletPrice)) : <span className="text-gray-300">—</span>}
-                          </td>
+            return (
+              <>
+                <div className="px-4 py-2.5 border-b shrink-0">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                    <Input
+                      placeholder="Search products…"
+                      value={catalogueSearch}
+                      onChange={e => setCatalogueSearch(e.target.value)}
+                      className="pl-9 h-9 text-sm"
+                    />
+                  </div>
+                </div>
+                <div className="flex-1 overflow-y-auto">
+                  {filteredProducts.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center h-full text-center px-6 py-12">
+                      <Search className="h-8 w-8 text-muted-foreground/40 mb-3" />
+                      <p className="font-medium text-slate-700 mb-1">No products match</p>
+                      <p className="text-sm text-muted-foreground">Try a different search term.</p>
+                    </div>
+                  ) : (
+                    <table className="w-full text-sm">
+                      <thead className="sticky top-0 bg-white border-b z-10">
+                        <tr className="text-xs text-muted-foreground uppercase tracking-wide">
+                          <th className="text-left px-4 py-2.5 font-medium">Product</th>
+                          <th className="text-right px-4 py-2.5 font-medium">Unit price</th>
+                          <th className="text-right px-4 py-2.5 font-medium pr-5">Pallet price</th>
                         </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {filteredProducts.map(p => {
+                          const numericSize = p.unitSize != null ? String(parseFloat(String(p.unitSize))) : null;
+                          const unitDisplay = numericSize && p.unitOfMeasure
+                            ? `${numericSize}${p.unitOfMeasure}`
+                            : numericSize || p.unitOfMeasure || null;
+                          const packParts = [p.packQuantity, unitDisplay].filter(Boolean);
+                          const packSize = packParts.length > 0 ? packParts.join(' x ') : null;
+
+                          return (
+                            <tr key={p.id} className="hover:bg-gray-50/60">
+                              <td className="px-4 py-3">
+                                <p className="font-medium text-slate-900 leading-snug">{p.name}</p>
+                                {packSize && <p className="text-xs text-muted-foreground mt-0.5">{packSize}</p>}
+                              </td>
+                              <td className="px-4 py-3 text-right font-medium text-slate-800 whitespace-nowrap">
+                                {formatMoney(parseFloat(p.price))}
+                              </td>
+                              <td className="px-4 py-3 text-right pr-5 text-muted-foreground whitespace-nowrap">
+                                {p.palletPrice ? formatMoney(parseFloat(p.palletPrice)) : <span className="text-gray-300">—</span>}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+              </>
             );
           })()}
         </SheetContent>
