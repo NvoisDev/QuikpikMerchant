@@ -24,7 +24,8 @@ interface PublicProduct {
   images?: string[] | null;
   unitsPerPack?: number | null;
   unitsPerPallet?: number | null;
-  baseUnitStock?: number | null;
+  stock?: number | null;
+  palletStock?: number | null;
   minOrderQuantity?: number | null;
   sku?: string | null;
   unitWeightKg?: string | null;
@@ -149,9 +150,11 @@ function ProductCard({
         )}
 
         {/* Stock availability */}
-        {showStock && product.baseUnitStock != null && (
-          product.baseUnitStock > 0 ? (
-            <p className="text-[11px] text-emerald-600 font-medium mb-1">{product.baseUnitStock} in stock</p>
+        {showStock && product.stock != null && (
+          (product.stock > 0 || (product.palletStock ?? 0) > 0) ? (
+            <p className="text-[11px] text-emerald-600 font-medium mb-1">
+              {product.stock > 0 ? `${product.stock} in stock` : `${product.palletStock} pallets available`}
+            </p>
           ) : (
             <p className="text-[11px] text-red-500 font-medium mb-1">Out of stock</p>
           )
