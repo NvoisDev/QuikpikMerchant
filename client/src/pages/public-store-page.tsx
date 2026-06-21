@@ -56,6 +56,7 @@ interface PublicWholesaler {
   minOrderAmount?: number | null;
   allowQuoteRequests?: boolean;
   whatsappContactVisible?: boolean;
+  phoneNumber?: string | null;
 }
 
 function formatCurrency(amount: string | number, currency = 'GBP') {
@@ -480,15 +481,28 @@ export default function PublicStorePage() {
               <span className="text-sm font-semibold text-emerald-600">Quikpik</span>
             </div>
           </Link>
-          {wholesaler.enquiriesEnabled !== false && (
-            <Button
-              size="sm"
-              className="bg-emerald-600 hover:bg-emerald-700 text-xs"
-              onClick={() => { setEnquiryProduct(null); setShowEnquiry(true); }}
-            >
-              <MessageSquare className="h-3.5 w-3.5 mr-1" /> Get in touch
-            </Button>
-          )}
+          <div className="flex items-center gap-2">
+            {wholesaler.whatsappContactVisible !== false && wholesaler.phoneNumber && (
+              <a
+                href={`https://wa.me/${wholesaler.phoneNumber.replace(/\D/g, '')}`}
+                target="_blank"
+                rel="noreferrer"
+              >
+                <Button size="sm" variant="outline" className="border-emerald-600 text-emerald-700 hover:bg-emerald-50 text-xs">
+                  <Phone className="h-3.5 w-3.5 mr-1" /> WhatsApp
+                </Button>
+              </a>
+            )}
+            {wholesaler.enquiriesEnabled !== false && (
+              <Button
+                size="sm"
+                className="bg-emerald-600 hover:bg-emerald-700 text-xs"
+                onClick={() => { setEnquiryProduct(null); setShowEnquiry(true); }}
+              >
+                <MessageSquare className="h-3.5 w-3.5 mr-1" /> Get in touch
+              </Button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -539,7 +553,7 @@ export default function PublicStorePage() {
                 )}
                 {(wholesaler.minOrderAmount ?? 0) > 0 && (
                   <span className="flex items-center gap-1 text-xs text-emerald-600 font-medium">
-                    <Tag className="h-3 w-3" /> Min. order: £{wholesaler.minOrderAmount}
+                    <Tag className="h-3 w-3" /> Min. order: £{((wholesaler.minOrderAmount ?? 0) / 100).toFixed(0)}
                   </span>
                 )}
               </div>

@@ -719,11 +719,14 @@ function PublicStoreSettings({ user }: { user: any }) {
   const [regions, setRegions] = useState(user?.deliveryRegions || '');
   const [showOnHomepage, setShowOnHomepage] = useState(user?.showOnHomepage ?? false);
   const [enquiriesEnabled, setEnquiriesEnabled] = useState(user?.enquiriesEnabled !== false);
-  const [minOrderAmount, setMinOrderAmount] = useState(String(user?.minOrderAmount ?? 0));
+  const [minOrderAmount, setMinOrderAmount] = useState(String((user?.minOrderAmount ?? 0) / 100));
   const [allowQuoteRequests, setAllowQuoteRequests] = useState(user?.allowQuoteRequests !== false);
   const [requireApprovalForPricing, setRequireApprovalForPricing] = useState(user?.requireApprovalForPricing === true);
   const [allowGuestBrowsing, setAllowGuestBrowsing] = useState(user?.allowGuestBrowsing !== false);
   const [whatsappContactVisible, setWhatsappContactVisible] = useState(user?.whatsappContactVisible !== false);
+  const [portalAllowPayLater, setPortalAllowPayLater] = useState(user?.allowPayLater ?? false);
+  const [portalDeliveryNote, setPortalDeliveryNote] = useState(user?.deliveryNote || '');
+  const [portalPickupInstructions, setPortalPickupInstructions] = useState(user?.pickupInstructions || '');
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -736,12 +739,15 @@ function PublicStoreSettings({ user }: { user: any }) {
     setRegions(user?.deliveryRegions || '');
     setShowOnHomepage(user?.showOnHomepage ?? false);
     setEnquiriesEnabled(user?.enquiriesEnabled !== false);
-    setMinOrderAmount(String(user?.minOrderAmount ?? 0));
+    setMinOrderAmount(String((user?.minOrderAmount ?? 0) / 100));
     setAllowQuoteRequests(user?.allowQuoteRequests !== false);
     setRequireApprovalForPricing(user?.requireApprovalForPricing === true);
     setAllowGuestBrowsing(user?.allowGuestBrowsing !== false);
     setWhatsappContactVisible(user?.whatsappContactVisible !== false);
-  }, [user?.storeVisibility, user?.priceDisplayMode, user?.moqVisible, user?.stockVisible, user?.packSizeVisible, user?.storeDescription, user?.deliveryRegions, user?.showOnHomepage, user?.enquiriesEnabled, user?.minOrderAmount, user?.allowQuoteRequests, user?.requireApprovalForPricing, user?.allowGuestBrowsing, user?.whatsappContactVisible]);
+    setPortalAllowPayLater(user?.allowPayLater ?? false);
+    setPortalDeliveryNote(user?.deliveryNote || '');
+    setPortalPickupInstructions(user?.pickupInstructions || '');
+  }, [user?.storeVisibility, user?.priceDisplayMode, user?.moqVisible, user?.stockVisible, user?.packSizeVisible, user?.storeDescription, user?.deliveryRegions, user?.showOnHomepage, user?.enquiriesEnabled, user?.minOrderAmount, user?.allowQuoteRequests, user?.requireApprovalForPricing, user?.allowGuestBrowsing, user?.whatsappContactVisible, user?.allowPayLater, user?.deliveryNote, user?.pickupInstructions]);
 
   const storeSlug = user?.storeSlug || user?.id || '';
   const publicUrl = `${window.location.origin}/w/${storeSlug}`;
@@ -759,11 +765,14 @@ function PublicStoreSettings({ user }: { user: any }) {
         deliveryRegions: regions.trim() || null,
         showOnHomepage,
         enquiriesEnabled,
-        minOrderAmount: parseInt(minOrderAmount, 10) || 0,
+        minOrderAmount: Math.round(parseFloat(minOrderAmount || '0') * 100),
         allowQuoteRequests,
         requireApprovalForPricing,
         allowGuestBrowsing,
         whatsappContactVisible,
+        allowPayLater: portalAllowPayLater,
+        deliveryNote: portalDeliveryNote.trim() || null,
+        pickupInstructions: portalPickupInstructions.trim() || null,
       });
       if (r.ok) {
         queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
@@ -950,17 +959,56 @@ function PublicStoreSettings({ user }: { user: any }) {
         </div>
       </div>
 
+      {/* Checkout & payment */}
+      <div className="mt-6">
+        <Label className="text-xs font-medium text-gray-700 mb-1 block">Checkout &amp; payment</Label>
+        <p className="text-xs text-gray-500 mb-2">Control the payment options customers see during checkout.</p>
+        <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
+          <div className="pr-3">
+            <p className="text-sm font-medium text-gray-900">Enable Pay Later</p>
+            <p className="text-xs text-gray-500 mt-0.5">Let customers choose to pay on invoice instead of upfront.</p>
+          </div>
+          <Switch checked={portalAllowPayLater} onCheckedChange={setPortalAllowPayLater} />
+        </div>
+      </div>
+
       {/* Minimum order amount */}
       <div className="mt-4">
         <Label className="text-xs font-medium text-gray-700 mb-1.5 block">Minimum order amount (£)</Label>
-        <p className="text-xs text-gray-500 mb-2">Set a minimum order value. Enter 0 for no minimum. Shown as a badge on your public store.</p>
+        <p className="text-xs text-gray-500 mb-2">Set a minimum order value in pounds. Leave as 0 for no minimum. Shown as a badge on your public store.</p>
         <input
           type="number"
           min="0"
+          step="1"
           className="w-32 rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
           placeholder="0"
           value={minOrderAmount}
-          onChange={e => setMinOrderAmount(e.target.value.replace(/[^0-9]/g, ''))}
+          onChange={e => setMinOrderAmount(e.target.value.replace(/[^0-9.]/g, ''))}
+        />
+      </div>
+
+      {/* Delivery & collection notes */}
+      <div className="mt-4">
+        <Label className="text-xs font-medium text-gray-700 mb-1.5 block">Delivery note (optional)</Label>
+        <p className="text-xs text-gray-500 mb-2">Shown to customers on their invoice — e.g. delivery window, carrier info.</p>
+        <textarea
+          className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/30"
+          rows={2}
+          placeholder="e.g. Delivery within 2–3 business days via DPD"
+          value={portalDeliveryNote}
+          onChange={e => setPortalDeliveryNote(e.target.value)}
+        />
+      </div>
+
+      <div className="mt-3">
+        <Label className="text-xs font-medium text-gray-700 mb-1.5 block">Collection / pickup instructions (optional)</Label>
+        <p className="text-xs text-gray-500 mb-2">Shown to customers who choose collection — e.g. address, parking, hours.</p>
+        <textarea
+          className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/30"
+          rows={2}
+          placeholder="e.g. Unit 4, Industrial Estate. Open Mon–Fri 8am–5pm. Ring bell on arrival."
+          value={portalPickupInstructions}
+          onChange={e => setPortalPickupInstructions(e.target.value)}
         />
       </div>
 
