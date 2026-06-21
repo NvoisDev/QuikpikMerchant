@@ -147,7 +147,7 @@ export function ProductsSection({ isAdmin, highlightedId }: { isAdmin: boolean; 
                         ) : <span className="text-gray-300">—</span>}
                       </TableCell>
                       <TableCell className="text-xs">
-                        <span className={p.hasZeroStock ? "text-amber-600 font-medium" : "text-gray-600"}>{p.baseUnitStock ?? 0}</span>
+                        <span className={p.hasZeroStock ? "text-amber-600 font-medium" : "text-gray-600"}>{p.stock ?? 0}</span>
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1 flex-wrap">

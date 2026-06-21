@@ -90,7 +90,7 @@ export interface CustomerRow {
 export interface ProductRow {
   id: number; name: string; category: string | null; wholesalerName: string | null;
   wholesalerId: string; costPrice: number | null; sellingPrice: number | null;
-  price: number | null; baseUnitStock: number | null;
+  price: number | null; stock: number | null; palletStock: number | null;
   margin: number | null; stockAlert: boolean | null; status: string;
   hasMissingCost: boolean; hasLowMargin: boolean; hasZeroStock: boolean;
   quantityInPack: number | null; unitSize: string | null; unitOfMeasure: string | null;

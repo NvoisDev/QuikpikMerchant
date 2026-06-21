@@ -31,13 +31,7 @@ export function registerAdminOpsRoutes(app: Express): void {
         id: products.id, name: products.name, wholesalerId: products.wholesalerId,
         wholesalerName: users.businessName, price: products.price, costPrice: products.costPrice,
         status: products.status,
-        baseUnitStock: sql<number>`COALESCE((
-          SELECT SUM(${productBatches.quantity})
-          FROM ${productBatches}
-          WHERE ${productBatches.productId} = ${products.id}
-            AND ${productBatches.status} = 'active'
-            AND (${productBatches.expiryDate} IS NULL OR ${productBatches.expiryDate} >= CURRENT_DATE)
-        ), 0)`,
+        stock: products.stock, palletStock: products.palletStock,
         category: products.category, quantityInPack: products.quantityInPack,
         unitSize: products.unitSize, unitOfMeasure: products.unitOfMeasure,
       }).from(products)
@@ -54,7 +48,7 @@ export function registerAdminOpsRoutes(app: Express): void {
           ...p, price, costPrice: cost, margin,
           hasMissingCost: cost === null,
           hasLowMargin: margin !== null && margin < 10,
-          hasZeroStock: (Number(p.baseUnitStock) || 0) === 0,
+          hasZeroStock: (Number(p.stock) || 0) === 0 && (Number(p.palletStock) || 0) === 0,
         };
       });
 
