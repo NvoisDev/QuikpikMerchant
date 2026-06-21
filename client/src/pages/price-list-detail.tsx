@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { apiRequest } from "@/lib/queryClient";
 import { useCurrency } from "@/hooks/useCurrency";
+import { resolvePriceListRow } from "./price-list-pricing";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -54,21 +55,6 @@ interface Customer {
 interface CustomerGroup {
   id: number;
   name: string;
-}
-
-// ── Helpers ─────────────────────────────────────────────────────────────────
-
-/**
- * Resolve the unit price a customer sees, mirroring the server's resolveCustomPrice:
- * any non-empty custom price wins (including 0), then discount %, else the standard price.
- */
-function resolveUnitPrice(item: PLItem): number {
-  const base = parseFloat(item.product?.price || "0");
-  if (item.customPrice) return parseFloat(item.customPrice);
-  if (item.discountPercentage) {
-    return Math.round(base * (1 - parseFloat(item.discountPercentage) / 100) * 100) / 100;
-  }
-  return base;
 }
 
 // ── Page ──────────────────────────────────────────────────────────────────────
@@ -231,12 +217,8 @@ export default function PriceListDetail() {
                   </thead>
                   <tbody>
                     {items.map((item) => {
-                      const productMissing = !item.product;
-                      const base = parseFloat(item.product?.price || "0");
-                      const unitPrice = resolveUnitPrice(item);
-                      const hasFixed = !!item.customPrice;
-                      const hasPct = !hasFixed && !!item.discountPercentage;
-                      const isCustom = hasFixed || hasPct;
+                      const { productMissing, base, unitPrice, hasPct, isCustom } =
+                        resolvePriceListRow(item);
 
                       const hasPallets = item.product?.palletPrice != null;
                       const basePallet = hasPallets ? parseFloat(item.product!.palletPrice as string) : null;

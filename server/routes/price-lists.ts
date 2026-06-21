@@ -14,21 +14,9 @@ import {
 } from "../email-templates";
 import { fetchLogoBuffer, buildBrandedWorkbook, buildBrandedPdf, type PriceRow } from '../utils/price-list-export';
 import { whatsAppBusinessService } from "../whatsapp-simple";
+import { resolveCustomPrice } from "../utils/price-resolution";
 
 // ── Internal helpers ────────────────────────────────────────────────────────
-
-function resolveCustomPrice(
-  basePrice: string,
-  item: { customPrice: string | null; discountPercentage: string | null },
-): number {
-  const base = parseFloat(basePrice || "0");
-  if (item.customPrice) return parseFloat(item.customPrice);
-  if (item.discountPercentage) {
-    const pct = parseFloat(item.discountPercentage);
-    return Math.round(base * (1 - pct / 100) * 100) / 100;
-  }
-  return base;
-}
 
 function isPriceListActive(list: {
   isActive: boolean;
