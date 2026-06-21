@@ -424,6 +424,60 @@ export default function CustomerDetail() {
     enabled: !!customerId,
   });
 
+  interface PersonalPriceItem {
+    id: number;
+    productId: number;
+    productName: string;
+    standardPrice: string;
+    standardPalletPrice: string | null;
+    hasPallets: boolean;
+    customPrice: string | null;
+    customPalletPrice: string | null;
+  }
+  const personalPricesKey = `/api/price-lists/personal/${customerId}`;
+  const { data: personalPrices, isLoading: personalPricesLoading } = useQuery<{ listId: number | null; items: PersonalPriceItem[] }>({
+    queryKey: [personalPricesKey],
+    enabled: !!customerId,
+  });
+
+  const [editingPersonalId, setEditingPersonalId] = useState<number | null>(null);
+  const [editPersonalUnit, setEditPersonalUnit] = useState('');
+  const [editPersonalPallet, setEditPersonalPallet] = useState('');
+
+  const startEditPersonal = (item: PersonalPriceItem) => {
+    setEditingPersonalId(item.id);
+    setEditPersonalUnit(item.customPrice ?? '');
+    setEditPersonalPallet(item.customPalletPrice ?? '');
+  };
+  const cancelEditPersonal = () => {
+    setEditingPersonalId(null);
+    setEditPersonalUnit('');
+    setEditPersonalPallet('');
+  };
+
+  const updatePersonalPriceMutation = useMutation({
+    mutationFn: async ({ itemId, customPrice, customPalletPrice }: { itemId: number; customPrice: string | null; customPalletPrice: string | null }) => {
+      await apiRequest('PATCH', `/api/price-lists/personal/${customerId}/items/${itemId}`, { customPrice, customPalletPrice });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [personalPricesKey] });
+      cancelEditPersonal();
+      toast({ title: 'Personal price updated' });
+    },
+    onError: (error: any) => toast({ title: 'Error', description: error.message || 'Failed to update price', variant: 'destructive' }),
+  });
+
+  const deletePersonalPriceMutation = useMutation({
+    mutationFn: async (itemId: number) => {
+      await apiRequest('DELETE', `/api/price-lists/personal/${customerId}/items/${itemId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [personalPricesKey] });
+      toast({ title: 'Personal price removed' });
+    },
+    onError: (error: any) => toast({ title: 'Error', description: error.message || 'Failed to remove price', variant: 'destructive' }),
+  });
+
   const customerPriceLists = customerId ? priceListCustomerSummary[customerId] : null;
 
   interface PriceListDetailItem {
@@ -909,6 +963,141 @@ export default function CustomerDetail() {
           <p className="text-sm text-muted-foreground">No price lists assigned</p>
         )}
       </div>
+
+      {(personalPricesLoading || (personalPrices && personalPrices.items.length > 0)) && (
+        <>
+          <Separator />
+          <div>
+            <h2 className="text-sm font-semibold text-muted-foreground mb-1">Personal prices</h2>
+            <p className="text-xs text-muted-foreground mb-3">Special prices set for this customer from invoices.</p>
+            {personalPricesLoading ? (
+              <p className="text-sm text-muted-foreground">Loading…</p>
+            ) : (
+              <div className="space-y-2">
+                {personalPrices!.items.map((item) => {
+                  const isEditing = editingPersonalId === item.id;
+                  const stdUnit = parseFloat(item.standardPrice || '0');
+                  const custUnit = item.customPrice != null ? parseFloat(item.customPrice) : null;
+                  const stdPallet = item.standardPalletPrice != null ? parseFloat(item.standardPalletPrice) : null;
+                  const custPallet = item.customPalletPrice != null ? parseFloat(item.customPalletPrice) : null;
+                  return (
+                    <div key={item.id} className="rounded-md border bg-muted/30 p-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <span className="text-sm font-medium">{item.productName}</span>
+                        {!isViewer && !isEditing && (
+                          <div className="flex items-center gap-1 shrink-0">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 w-7 p-0"
+                              onClick={() => startEditPersonal(item)}
+                              aria-label="Edit personal price"
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 w-7 p-0 text-red-500 hover:text-red-600"
+                              disabled={deletePersonalPriceMutation.isPending}
+                              onClick={() => {
+                                if (confirm(`Remove the personal price for ${item.productName}? This customer will go back to the standard price.`)) {
+                                  deletePersonalPriceMutation.mutate(item.id);
+                                }
+                              }}
+                              aria-label="Remove personal price"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+
+                      {isEditing ? (
+                        <div className="mt-2 space-y-2">
+                          <div className="flex items-center gap-2">
+                            <Label className="text-xs w-20 shrink-0">Unit price</Label>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              inputMode="decimal"
+                              value={editPersonalUnit}
+                              onChange={(e) => setEditPersonalUnit(e.target.value)}
+                              placeholder={`Standard ${formatMoney(stdUnit)}`}
+                              className="h-8 text-sm"
+                            />
+                          </div>
+                          {item.hasPallets && (
+                            <div className="flex items-center gap-2">
+                              <Label className="text-xs w-20 shrink-0">Pallet price</Label>
+                              <Input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                inputMode="decimal"
+                                value={editPersonalPallet}
+                                onChange={(e) => setEditPersonalPallet(e.target.value)}
+                                placeholder={stdPallet != null ? `Standard ${formatMoney(stdPallet)}` : 'No pallet price'}
+                                className="h-8 text-sm"
+                              />
+                            </div>
+                          )}
+                          <p className="text-xs text-muted-foreground">Leave a field blank to use the standard price for that unit.</p>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              size="sm"
+                              className="h-8"
+                              disabled={updatePersonalPriceMutation.isPending}
+                              onClick={() => updatePersonalPriceMutation.mutate({
+                                itemId: item.id,
+                                customPrice: editPersonalUnit.trim() === '' ? null : editPersonalUnit.trim(),
+                                customPalletPrice: editPersonalPallet.trim() === '' ? null : editPersonalPallet.trim(),
+                              })}
+                            >
+                              <Check className="h-3.5 w-3.5 mr-1" />
+                              Save
+                            </Button>
+                            <Button variant="ghost" size="sm" className="h-8" onClick={cancelEditPersonal}>
+                              <X className="h-3.5 w-3.5 mr-1" />
+                              Cancel
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="mt-1 space-y-0.5">
+                          {custUnit != null && (
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="text-muted-foreground">Unit price</span>
+                              <span>
+                                <span className="font-semibold text-green-700">{formatMoney(custUnit)}</span>
+                                {custUnit < stdUnit && (
+                                  <span className="ml-1 line-through text-muted-foreground">{formatMoney(stdUnit)}</span>
+                                )}
+                              </span>
+                            </div>
+                          )}
+                          {custPallet != null && (
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="text-muted-foreground">Pallet price</span>
+                              <span>
+                                <span className="font-semibold text-green-700">{formatMoney(custPallet)}</span>
+                                {stdPallet != null && custPallet < stdPallet && (
+                                  <span className="ml-1 line-through text-muted-foreground">{formatMoney(stdPallet)}</span>
+                                )}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </>
+      )}
 
       <Separator />
 

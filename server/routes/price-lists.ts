@@ -264,6 +264,166 @@ export function registerPriceListRoutes(app: Express): void {
     }
   });
 
+  // ── Personal (per-customer) price overrides ────────────────────────────────
+  // Auto-created when a wholesaler picks "This customer only" while editing an
+  // invoice. They live in a hidden isPersonal price list assigned to one customer
+  // and are excluded from the price-list manager, so they get dedicated CRUD here.
+
+  async function findPersonalListId(wholesalerId: string, customerId: string): Promise<number | null> {
+    const rows = await db
+      .select({ id: priceLists.id })
+      .from(priceLists)
+      .innerJoin(priceListAssignments, eq(priceListAssignments.priceListId, priceLists.id))
+      .where(and(
+        eq(priceLists.wholesalerId, wholesalerId),
+        eq(priceLists.isPersonal, true),
+        eq(priceListAssignments.customerId, customerId),
+      ))
+      .limit(1);
+    return rows.length > 0 ? rows[0].id : null;
+  }
+
+  // Delete the personal list outright once it has no remaining overrides, so an
+  // empty hidden list doesn't linger. Cascades remove its assignment row too.
+  async function cleanupEmptyPersonalList(listId: number): Promise<void> {
+    const [remaining] = await db
+      .select({ value: drizzleCount() })
+      .from(priceListItems)
+      .where(eq(priceListItems.priceListId, listId));
+    if ((remaining?.value ?? 0) === 0) {
+      await db.delete(priceLists).where(eq(priceLists.id, listId));
+    }
+  }
+
+  // GET /api/price-lists/personal/:customerId — this customer's personal overrides
+  app.get("/api/price-lists/personal/:customerId", requireAuth, async (req: any, res) => {
+    try {
+      const wholesalerId = getWholesalerId(req);
+      const { customerId } = req.params;
+
+      const listId = await findPersonalListId(wholesalerId, customerId);
+      if (listId === null) return res.json({ listId: null, items: [] });
+
+      const rawItems = await db
+        .select()
+        .from(priceListItems)
+        .where(eq(priceListItems.priceListId, listId));
+
+      const items = (
+        await Promise.all(
+          rawItems.map(async (item) => {
+            const product = await storage.getProduct(item.productId);
+            if (!product) return null;
+            return {
+              id: item.id,
+              productId: item.productId,
+              productName: product.name,
+              standardPrice: product.price,
+              standardPalletPrice: product.palletPrice ?? null,
+              hasPallets: product.palletPrice != null,
+              customPrice: item.customPrice,
+              customPalletPrice: item.customPalletPrice,
+            };
+          }),
+        )
+      )
+        .filter((i): i is NonNullable<typeof i> => i !== null)
+        .sort((a, b) => (a.productName || "").localeCompare(b.productName || ""));
+
+      res.json({ listId, items });
+    } catch (err) {
+      console.error("Error fetching personal prices:", err);
+      res.status(500).json({ message: "Failed to fetch personal prices" });
+    }
+  });
+
+  // PATCH /api/price-lists/personal/:customerId/items/:itemId — edit one override
+  app.patch("/api/price-lists/personal/:customerId/items/:itemId", requireAuth, requireNotViewer, async (req: any, res) => {
+    try {
+      const wholesalerId = getWholesalerId(req);
+      const { customerId } = req.params;
+      const itemId = parseInt(req.params.itemId);
+      if (isNaN(itemId)) return res.status(400).json({ message: "Invalid item ID" });
+
+      const listId = await findPersonalListId(wholesalerId, customerId);
+      if (listId === null) return res.status(404).json({ message: "No personal prices found for this customer" });
+
+      const [item] = await db
+        .select()
+        .from(priceListItems)
+        .where(and(eq(priceListItems.id, itemId), eq(priceListItems.priceListId, listId)));
+      if (!item) return res.status(404).json({ message: "Override not found" });
+
+      const schema = z.object({
+        customPrice: z.string().optional().nullable(),
+        customPalletPrice: z.string().optional().nullable(),
+      });
+      const data = schema.parse(req.body);
+
+      const normalize = (v: string | null | undefined, current: string | null): string | null => {
+        if (v === undefined) return current;
+        if (v === null || v.trim() === "") return null;
+        const n = parseFloat(v);
+        if (isNaN(n) || n < 0) throw new Error("INVALID_PRICE");
+        return n.toFixed(2);
+      };
+
+      let nextPrice: string | null;
+      let nextPallet: string | null;
+      try {
+        nextPrice = normalize(data.customPrice, item.customPrice);
+        nextPallet = normalize(data.customPalletPrice, item.customPalletPrice);
+      } catch {
+        return res.status(400).json({ message: "Price must be a positive number" });
+      }
+
+      // Both overrides cleared → remove the override entirely.
+      if (nextPrice === null && nextPallet === null) {
+        await db.delete(priceListItems).where(eq(priceListItems.id, itemId));
+        await cleanupEmptyPersonalList(listId);
+        return res.json({ deleted: true });
+      }
+
+      const [updated] = await db
+        .update(priceListItems)
+        .set({ customPrice: nextPrice, customPalletPrice: nextPallet })
+        .where(eq(priceListItems.id, itemId))
+        .returning();
+      res.json(updated);
+    } catch (err) {
+      if (err instanceof z.ZodError)
+        return res.status(400).json({ message: "Invalid data", errors: err.errors });
+      console.error("Error updating personal price:", err);
+      res.status(500).json({ message: "Failed to update personal price" });
+    }
+  });
+
+  // DELETE /api/price-lists/personal/:customerId/items/:itemId — remove one override
+  app.delete("/api/price-lists/personal/:customerId/items/:itemId", requireAuth, requireNotViewer, async (req: any, res) => {
+    try {
+      const wholesalerId = getWholesalerId(req);
+      const { customerId } = req.params;
+      const itemId = parseInt(req.params.itemId);
+      if (isNaN(itemId)) return res.status(400).json({ message: "Invalid item ID" });
+
+      const listId = await findPersonalListId(wholesalerId, customerId);
+      if (listId === null) return res.status(404).json({ message: "No personal prices found for this customer" });
+
+      const [item] = await db
+        .select()
+        .from(priceListItems)
+        .where(and(eq(priceListItems.id, itemId), eq(priceListItems.priceListId, listId)));
+      if (!item) return res.status(404).json({ message: "Override not found" });
+
+      await db.delete(priceListItems).where(eq(priceListItems.id, itemId));
+      await cleanupEmptyPersonalList(listId);
+      res.json({ success: true });
+    } catch (err) {
+      console.error("Error deleting personal price:", err);
+      res.status(500).json({ message: "Failed to delete personal price" });
+    }
+  });
+
   // GET /api/price-lists/:id — single price list with items and assignments
   app.get("/api/price-lists/:id", requireAuth, async (req: any, res) => {
     try {
