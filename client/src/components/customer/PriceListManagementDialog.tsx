@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Label } from "@/components/ui/label";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Switch } from "@/components/ui/switch";
@@ -61,6 +62,11 @@ interface PLProduct {
   name: string;
   price: string;
   palletPrice?: string | null;
+  palletQuantity?: number | null;
+  unitsPerPallet?: number | null;
+  packQuantity?: number | null;
+  unitSize?: string | null;
+  unitOfMeasure?: string | null;
   status?: string;
 }
 
@@ -138,6 +144,7 @@ export function PriceListManagementDialog({
   const [priceListDetailCache, setPriceListDetailCache] = useState<Record<number, PriceListDetail>>({});
   const [sharingListId, setSharingListId] = useState<number | null>(null);
   const [isSharingCatalogue, setIsSharingCatalogue] = useState<'xlsx' | 'pdf' | null>(null);
+  const [showCataloguePreview, setShowCataloguePreview] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
   const handleCreatePriceListClick = () => {
@@ -159,7 +166,7 @@ export function PriceListManagementDialog({
     queryKey: ['/api/price-lists/customer-summary'],
   });
 
-  const { data: productsForPL = [] } = useQuery<PLProduct[]>({
+  const { data: productsForPL = [], isLoading: isLoadingProducts } = useQuery<PLProduct[]>({
     queryKey: ['/api/products'],
   });
 
@@ -594,6 +601,14 @@ export function PriceListManagementDialog({
                     </div>
                   </div>
                   <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="border-green-200 text-green-700 hover:bg-green-50 gap-1.5 text-xs"
+                      onClick={() => setShowCataloguePreview(true)}
+                    >
+                      <Eye className="h-3 w-3" /> View
+                    </Button>
                     <Button
                       size="sm"
                       variant="outline"
@@ -1292,6 +1307,84 @@ export function PriceListManagementDialog({
           </Tabs>
         </DialogContent>
       </Dialog>
+
+      {/* Standard Price List preview sheet */}
+      <Sheet open={showCataloguePreview} onOpenChange={setShowCataloguePreview}>
+        <SheetContent side="bottom" className="h-[85vh] flex flex-col p-0">
+          <SheetHeader className="px-4 pt-4 pb-3 border-b shrink-0">
+            <SheetTitle className="flex items-center gap-2 text-base">
+              <Tag className="h-4 w-4 text-green-700" />
+              Standard Price List
+            </SheetTitle>
+          </SheetHeader>
+
+          {(() => {
+            const activeProducts = productsForPL.filter(p => p.status !== 'inactive' && p.status !== 'archived');
+
+            if (isLoadingProducts) {
+              return (
+                <div className="flex-1 flex items-center justify-center">
+                  <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                    <div className="h-5 w-5 border-2 border-green-600 border-t-transparent rounded-full animate-spin" />
+                    <span className="text-sm">Loading catalogue…</span>
+                  </div>
+                </div>
+              );
+            }
+
+            if (activeProducts.length === 0) {
+              return (
+                <div className="flex-1 flex items-center justify-center text-center px-6">
+                  <div>
+                    <Package className="h-10 w-10 text-muted-foreground/40 mx-auto mb-3" />
+                    <p className="font-medium text-slate-700 mb-1">No products yet</p>
+                    <p className="text-sm text-muted-foreground">Add products to your catalogue and they'll appear here.</p>
+                  </div>
+                </div>
+              );
+            }
+
+            return (
+              <div className="flex-1 overflow-y-auto">
+                <table className="w-full text-sm">
+                  <thead className="sticky top-0 bg-white border-b z-10">
+                    <tr className="text-xs text-muted-foreground uppercase tracking-wide">
+                      <th className="text-left px-4 py-2.5 font-medium">Product</th>
+                      <th className="text-right px-4 py-2.5 font-medium">Unit price</th>
+                      <th className="text-right px-4 py-2.5 font-medium pr-5">Pallet price</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {activeProducts.map(p => {
+                      const numericSize = p.unitSize != null ? String(parseFloat(String(p.unitSize))) : null;
+                      const unitDisplay = numericSize && p.unitOfMeasure
+                        ? `${numericSize}${p.unitOfMeasure}`
+                        : numericSize || p.unitOfMeasure || null;
+                      const packParts = [p.packQuantity, unitDisplay].filter(Boolean);
+                      const packSize = packParts.length > 0 ? packParts.join(' x ') : null;
+
+                      return (
+                        <tr key={p.id} className="hover:bg-gray-50/60">
+                          <td className="px-4 py-3">
+                            <p className="font-medium text-slate-900 leading-snug">{p.name}</p>
+                            {packSize && <p className="text-xs text-muted-foreground mt-0.5">{packSize}</p>}
+                          </td>
+                          <td className="px-4 py-3 text-right font-medium text-slate-800 whitespace-nowrap">
+                            {formatMoney(parseFloat(p.price))}
+                          </td>
+                          <td className="px-4 py-3 text-right pr-5 text-muted-foreground whitespace-nowrap">
+                            {p.palletPrice ? formatMoney(parseFloat(p.palletPrice)) : <span className="text-gray-300">—</span>}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            );
+          })()}
+        </SheetContent>
+      </Sheet>
 
       <SubscriptionUpgradeModal
         open={showUpgradeModal}
