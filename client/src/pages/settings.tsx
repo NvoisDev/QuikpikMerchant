@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { AddressSearchInput, type AddressPlaceResult } from "@/components/BusinessSearchInput";
 import { getNextAlertDate, ALERT_DAY_NAMES } from "@/lib/stockAlertSchedule";
 
 interface BusinessProfile {
@@ -612,6 +613,22 @@ function CollectionAddressesSection() {
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-3 py-2">
+            <div>
+              <Label className="text-xs text-gray-600">Search address</Label>
+              <AddressSearchInput
+                onSelect={(result: AddressPlaceResult) =>
+                  setForm(f => ({
+                    ...f,
+                    addressLine1: result.addressLine1 || f.addressLine1,
+                    city: result.city || f.city,
+                    postcode: result.postalCode || f.postcode,
+                    country: result.country || f.country,
+                  }))
+                }
+                placeholder="Type to find address..."
+                className="mt-1"
+              />
+            </div>
             <div>
               <Label className="text-xs text-gray-600">Location name *</Label>
               <Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. Main Warehouse, City Centre Store" className="mt-1" />
