@@ -1818,10 +1818,19 @@ export const priceLists = pgTable("price_lists", {
   // Auto-managed list holding prices set for a single customer via the invoice editor
   // ("This customer" scope). Excluded from the price-list manager UI and plan limits.
   isPersonal: boolean("is_personal").default(false).notNull(),
+  // Denormalised single-customer owner for personal lists. NULL for ordinary
+  // (manager-managed / group) lists. Backs the partial unique index below that
+  // enforces at most one personal list per (wholesaler, customer).
+  customerId: varchar("customer_id").references(() => users.id, { onDelete: "cascade" }),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => ({
   wholesalerIdIdx: index("price_lists_wholesaler_id_idx").on(table.wholesalerId),
+  // Concurrent invoice edits for the same customer must not each create a personal
+  // list. Partial unique index makes the find-or-create deterministic.
+  personalCustomerUniq: uniqueIndex("price_lists_personal_customer_uniq")
+    .on(table.wholesalerId, table.customerId)
+    .where(sql`${table.isPersonal} = true AND ${table.customerId} IS NOT NULL`),
 }));
 
 export const priceListItems = pgTable("price_list_items", {

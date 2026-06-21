@@ -65,6 +65,53 @@ async function runStartupMigrations() {
     // Task #1407: Per-customer "personal" price lists created from the invoice editor.
     // Hidden from price-list manager surfaces; carries a single-customer price override.
     `ALTER TABLE price_lists ADD COLUMN IF NOT EXISTS is_personal BOOLEAN NOT NULL DEFAULT FALSE`,
+    // Task #1410: Prevent duplicate per-customer personal price lists from concurrent edits.
+    // Denormalise the single customer onto the personal list so a partial unique index can
+    // enforce at most one personal list per (wholesaler, customer). wholesaler_id/is_personal
+    // already live here; the customer used to live only on price_list_assignments.
+    `ALTER TABLE price_lists ADD COLUMN IF NOT EXISTS customer_id VARCHAR`,
+    // Backfill the new column for existing personal lists from their single assignment.
+    `UPDATE price_lists pl
+       SET customer_id = pa.customer_id
+       FROM price_list_assignments pa
+       WHERE pa.price_list_id = pl.id
+         AND pl.is_personal = TRUE
+         AND pl.customer_id IS NULL
+         AND pa.customer_id IS NOT NULL`,
+    // Dedupe any pre-existing duplicates (the exact race this guard prevents) before the
+    // unique index is created, otherwise index creation would fail. Keep the lowest id per
+    // (wholesaler, customer); re-point item overrides from the losers onto the survivor.
+    `WITH dups AS (
+       SELECT id, MIN(id) OVER (PARTITION BY wholesaler_id, customer_id) AS keep_id
+       FROM price_lists
+       WHERE is_personal = TRUE AND customer_id IS NOT NULL
+     )
+     UPDATE price_list_items pli
+       SET price_list_id = d.keep_id
+       FROM dups d
+       WHERE pli.price_list_id = d.id AND d.id <> d.keep_id`,
+    // Collapse duplicate (list, product) item rows that re-pointing may have produced on the
+    // survivor, keeping the lowest id. Scoped to personal lists only.
+    `DELETE FROM price_list_items a
+       USING price_list_items b, price_lists pl
+       WHERE a.price_list_id = b.price_list_id
+         AND a.product_id = b.product_id
+         AND a.id > b.id
+         AND pl.id = a.price_list_id
+         AND pl.is_personal = TRUE`,
+    // Remove the now-empty duplicate personal lists (their assignments cascade away).
+    `WITH dups AS (
+       SELECT id, MIN(id) OVER (PARTITION BY wholesaler_id, customer_id) AS keep_id
+       FROM price_lists
+       WHERE is_personal = TRUE AND customer_id IS NOT NULL
+     )
+     DELETE FROM price_lists pl
+       USING dups d
+       WHERE pl.id = d.id AND d.id <> d.keep_id`,
+    // The guarantee: at most one personal list per (wholesaler, customer).
+    `CREATE UNIQUE INDEX IF NOT EXISTS price_lists_personal_customer_uniq
+       ON price_lists (wholesaler_id, customer_id)
+       WHERE is_personal = TRUE AND customer_id IS NOT NULL`,
     // Task #72: Add phone number to team members for SMS stock alerts
     `ALTER TABLE team_members ADD COLUMN IF NOT EXISTS phone_number VARCHAR(50)`,
     // Task #73: Add expiry date to products

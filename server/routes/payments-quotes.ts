@@ -1461,16 +1461,32 @@ export function registerQuoteRoutes(app: Express): void {
         const ensurePersonalList = async (): Promise<number> => {
           const found = await findPersonalList();
           if (found !== null) return found;
+          // A partial unique index (wholesaler_id, customer_id WHERE is_personal) makes this
+          // deterministic: a concurrent edit for the same customer can only ever leave one
+          // personal list. onConflictDoNothing absorbs the race; we then re-read the winner.
           const [created] = await trx.insert(priceLists).values({
             wholesalerId,
+            customerId: existingOrder.retailerId,
             name: `Personal prices — ${existingOrder.customerName || 'Customer'}`,
             isActive: true,
             isPersonal: true,
-          }).returning({ id: priceLists.id });
-          personalListId = created.id;
-          personalListResolved = true;
-          await trx.insert(priceListAssignments).values({ priceListId: created.id, customerId: existingOrder.retailerId });
-          return created.id;
+          })
+            .onConflictDoNothing({
+              target: [priceLists.wholesalerId, priceLists.customerId],
+              where: sql`${priceLists.isPersonal} = true AND ${priceLists.customerId} IS NOT NULL`,
+            })
+            .returning({ id: priceLists.id });
+          if (created) {
+            personalListId = created.id;
+            personalListResolved = true;
+            await trx.insert(priceListAssignments).values({ priceListId: created.id, customerId: existingOrder.retailerId });
+            return created.id;
+          }
+          // Lost the race: another concurrent edit created the personal list. Re-read it.
+          personalListResolved = false;
+          const winner = await findPersonalList();
+          if (winner !== null) return winner;
+          throw new Error('Failed to resolve personal price list after insert conflict');
         };
 
         for (const ni of Object.values(newItemMap)) {
