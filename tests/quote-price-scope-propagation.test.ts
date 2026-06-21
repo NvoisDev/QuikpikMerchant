@@ -187,6 +187,32 @@ async function getPersonalLists() {
   return db.select().from(priceLists).where(and(eq(priceLists.wholesalerId, WHOLESALER_ID), eq(priceLists.isPersonal, true)));
 }
 
+/**
+ * Pre-seed an existing personal price list for CUSTOMER_ID with a single override
+ * row, mimicking a customer who already has a "this customer only" special price.
+ */
+async function seedPersonalList(opts: {
+  productId: number;
+  customPrice?: string | null;
+  customPalletPrice?: string | null;
+}): Promise<{ listId: number; itemId: number }> {
+  const [list] = await db.insert(priceLists).values({
+    wholesalerId: WHOLESALER_ID,
+    customerId: CUSTOMER_ID,
+    name: 'Personal prices — zz_test Customer',
+    isActive: true,
+    isPersonal: true,
+  }).returning({ id: priceLists.id });
+  await db.insert(priceListAssignments).values({ priceListId: list.id, customerId: CUSTOMER_ID });
+  const [item] = await db.insert(priceListItems).values({
+    priceListId: list.id,
+    productId: opts.productId,
+    customPrice: opts.customPrice ?? null,
+    customPalletPrice: opts.customPalletPrice ?? null,
+  }).returning({ id: priceListItems.id });
+  return { listId: list.id, itemId: item.id };
+}
+
 beforeAll(async () => {
   authState.user = { id: WHOLESALER_ID };
   // Wholesaler + customer rows must exist (orders FK to users; storage.getUser is real).
@@ -295,6 +321,95 @@ describe("PATCH /api/quotes/:id — scope 'customer'", () => {
     const [prod] = await db.select().from(products).where(eq(products.id, productId));
     expect(prod.palletPrice).toBe('100.00');
     expect(prod.price).toBe('10.00');
+  });
+});
+
+describe("PATCH /api/quotes/:id — scope 'customer' with an EXISTING personal override", () => {
+  it('is a no-op when the customer is already pinned to the typed price (no extra write)', async () => {
+    const productId = await makeProduct({ price: '10.00' });
+    // Customer already has a "this customer only" price of £9.
+    const { listId, itemId } = await seedPersonalList({ productId, customPrice: '9.00' });
+    const orderId = await makeQuote({ productId, quantity: 3, unitPrice: '9.00' });
+
+    // Wholesaler types the SAME £9 again with scope 'customer'.
+    const res = await patchQuote(orderId, [
+      { productId, quantity: 3, customPrice: 9, sellingType: 'units', priceScope: 'customer' },
+    ]);
+    expect(res.status).toBe(200);
+
+    // No second personal list was created — the existing one is reused.
+    const lists = await getPersonalLists();
+    expect(lists.length).toBe(1);
+    expect(lists[0].id).toBe(listId);
+
+    // The single override row is untouched: same id, same value, no duplicate row.
+    const itemRows = await db.select().from(priceListItems).where(eq(priceListItems.priceListId, listId));
+    expect(itemRows.length).toBe(1);
+    expect(itemRows[0].id).toBe(itemId);
+    expect(itemRows[0].customPrice).toBe('9.00');
+
+    // Catalog price stays put.
+    const [prod] = await db.select().from(products).where(eq(products.id, productId));
+    expect(prod.price).toBe('10.00');
+  });
+
+  it('OVERWRITES a stale override even when the typed price equals the catalog price', async () => {
+    const productId = await makeProduct({ price: '10.00' });
+    // Stale "this customer only" price of £7 (cheaper than the £10 catalog price).
+    const { listId, itemId } = await seedPersonalList({ productId, customPrice: '7.00' });
+    const orderId = await makeQuote({ productId, quantity: 2, unitPrice: '7.00' });
+
+    // Wholesaler edits the line back UP to the catalog price (£10) with scope 'customer'.
+    // This must NOT be skipped as an "equals catalog" no-op — it must overwrite the £7
+    // override so the customer is re-pinned to £10 (not silently left on the stale £7).
+    const res = await patchQuote(orderId, [
+      { productId, quantity: 2, customPrice: 10, sellingType: 'units', priceScope: 'customer' },
+    ]);
+    expect(res.status).toBe(200);
+
+    // Same list, same row id — updated in place, not duplicated.
+    const lists = await getPersonalLists();
+    expect(lists.length).toBe(1);
+    expect(lists[0].id).toBe(listId);
+
+    const itemRows = await db.select().from(priceListItems).where(eq(priceListItems.priceListId, listId));
+    expect(itemRows.length).toBe(1);
+    expect(itemRows[0].id).toBe(itemId);
+    // The stale £7 override is overwritten with the catalog £10.
+    expect(itemRows[0].customPrice).toBe('10.00');
+
+    // Catalog price itself is left alone — 'customer' scope never touches the product.
+    const [prod] = await db.select().from(products).where(eq(products.id, productId));
+    expect(prod.price).toBe('10.00');
+  });
+
+  it('reuses the SAME personal list for a second product on the same invoice', async () => {
+    const productA = await makeProduct({ price: '10.00' });
+    const productB = await makeProduct({ price: '20.00' });
+    // Quote starts with only product A on the line.
+    const orderId = await makeQuote({ productId: productA, quantity: 1, unitPrice: '10.00' });
+
+    // Edit applies a 'customer' price to BOTH products (B is newly added to the invoice).
+    const res = await patchQuote(orderId, [
+      { productId: productA, quantity: 1, customPrice: 9, sellingType: 'units', priceScope: 'customer' },
+      { productId: productB, quantity: 1, customPrice: 18, sellingType: 'units', priceScope: 'customer' },
+    ]);
+    expect(res.status).toBe(200);
+
+    // find-or-create is memoised once per request → exactly ONE personal list, with
+    // ONE assignment, holding BOTH product overrides.
+    const lists = await getPersonalLists();
+    expect(lists.length).toBe(1);
+
+    const assignments = await db.select().from(priceListAssignments).where(eq(priceListAssignments.priceListId, lists[0].id));
+    expect(assignments.length).toBe(1);
+    expect(assignments[0].customerId).toBe(CUSTOMER_ID);
+
+    const itemRows = await db.select().from(priceListItems).where(eq(priceListItems.priceListId, lists[0].id));
+    expect(itemRows.length).toBe(2);
+    const byProduct = new Map(itemRows.map((r) => [r.productId, r.customPrice]));
+    expect(byProduct.get(productA)).toBe('9.00');
+    expect(byProduct.get(productB)).toBe('18.00');
   });
 });
 
