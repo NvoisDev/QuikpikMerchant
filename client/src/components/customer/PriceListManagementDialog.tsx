@@ -454,6 +454,10 @@ export function PriceListManagementDialog({
     });
   };
 
+  useEffect(() => {
+    setExpandedPriceListSearch({});
+  }, [filterCustomer]);
+
   const filteredPriceLists = filterCustomer
     ? fetchedPriceLists.filter((list) =>
         (priceListCustomerSummary[filterCustomer.id]?.ids ?? []).includes(list.id)
