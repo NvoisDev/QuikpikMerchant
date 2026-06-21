@@ -1500,10 +1500,33 @@ export function registerQuoteRoutes(app: Express): void {
           if (ni.priceScope === 'all') {
             // Update the product's base catalog price. No-op when it already matches.
             if (Math.abs(catalogPrice - ni.customPrice) <= 0.001) continue;
-            await trx.update(products)
-              .set(isPallet ? { palletPrice: newPriceStr, updatedAt: new Date() } : { price: newPriceStr, updatedAt: new Date() })
-              .where(eq(products.id, ni.productId));
-            pricePropagations.push({ productId: ni.productId, sellingType: ni.sellingType, scope: 'all', oldPrice: catalogPrice, newPrice: ni.customPrice });
+            if (isPallet) {
+              await trx.update(products)
+                .set({ palletPrice: newPriceStr, updatedAt: new Date() })
+                .where(eq(products.id, ni.productId));
+              pricePropagations.push({ productId: ni.productId, sellingType: ni.sellingType, scope: 'all', oldPrice: catalogPrice, newPrice: ni.customPrice });
+            } else {
+              // A unit-price change also scales the product's pallet price by the same
+              // ratio (newPallet = oldPallet × newUnit / oldUnit), mirroring the product
+              // editor's behaviour. Guard against a zero/invalid old unit price, and only
+              // touch the pallet price when the product actually has one.
+              // If the SAME product also has a pallet line being set to 'all' in this same
+              // edit, that explicit pallet edit owns the pallet price — skip auto-scaling so
+              // the outcome is deterministic regardless of iteration order.
+              const oldPallet = parseFloat(prod.palletPrice || '0');
+              const palletLineEditedForAll = newItemMap[`${ni.productId}:pallets`]?.priceScope === 'all';
+              const updateSet: { price: string; updatedAt: Date; palletPrice?: string } = { price: newPriceStr, updatedAt: new Date() };
+              let scaledPallet: number | null = null;
+              if (!palletLineEditedForAll && oldPallet > 0 && catalogPrice > 0) {
+                scaledPallet = parseFloat((oldPallet * (ni.customPrice / catalogPrice)).toFixed(2));
+                updateSet.palletPrice = scaledPallet.toFixed(2);
+              }
+              await trx.update(products).set(updateSet).where(eq(products.id, ni.productId));
+              pricePropagations.push({ productId: ni.productId, sellingType: ni.sellingType, scope: 'all', oldPrice: catalogPrice, newPrice: ni.customPrice });
+              if (scaledPallet !== null && Math.abs(scaledPallet - oldPallet) > 0.001) {
+                pricePropagations.push({ productId: ni.productId, sellingType: 'pallets', scope: 'all', oldPrice: oldPallet, newPrice: scaledPallet });
+              }
+            }
           } else {
             // 'customer' — write into a personal price list assigned ONLY to this customer.
             // Compare against the customer's CURRENT override, NOT the catalog: a line edited

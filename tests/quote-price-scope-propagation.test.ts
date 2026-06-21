@@ -81,7 +81,7 @@ import { db } from '../server/db';
 import {
   users, orders, orderItems, products,
   priceLists, priceListItems, priceListAssignments,
-  stockMovements, quoteActivityLogs,
+  stockMovements, quoteActivityLogs, productBatches,
 } from '@shared/schema';
 import { registerQuoteRoutes } from '../server/routes/payments-quotes';
 
@@ -103,6 +103,9 @@ async function cleanup() {
   }
   if (createdProductIds.length > 0) {
     await db.delete(stockMovements).where(inArray(stockMovements.productId, createdProductIds));
+    // Edits restore stock via batches (creating RETURN batches), and some tests seed
+    // their own batch — clear them all before the products are removed.
+    await db.delete(productBatches).where(inArray(productBatches.productId, createdProductIds));
   }
   // Personal price lists owned by the test wholesaler (assignments cascade on list delete).
   const lists = await db.select({ id: priceLists.id }).from(priceLists).where(eq(priceLists.wholesalerId, WHOLESALER_ID));
@@ -414,10 +417,11 @@ describe("PATCH /api/quotes/:id — scope 'customer' with an EXISTING personal o
 });
 
 describe("PATCH /api/quotes/:id — scope 'all'", () => {
-  it('updates the product base UNIT price and leaves the pallet price + price lists alone', async () => {
+  it('updates the base UNIT price AND scales the pallet price by the same ratio', async () => {
     const productId = await makeProduct({ price: '10.00', palletPrice: '100.00' });
     const orderId = await makeQuote({ productId, quantity: 2, unitPrice: '10.00' });
 
+    // Unit price 10 → 12 is a ×1.2 change, so the pallet price scales 100 → 120.
     const res = await patchQuote(orderId, [
       { productId, quantity: 2, customPrice: 12, sellingType: 'units', priceScope: 'all' },
     ]);
@@ -425,10 +429,64 @@ describe("PATCH /api/quotes/:id — scope 'all'", () => {
 
     const [prod] = await db.select().from(products).where(eq(products.id, productId));
     expect(prod.price).toBe('12.00');
-    // Pallet column must stay separate.
-    expect(prod.palletPrice).toBe('100.00');
+    // Pallet price tracks the unit-price change proportionally.
+    expect(prod.palletPrice).toBe('120.00');
 
     // 'all' must not create a personal price list.
+    expect((await getPersonalLists()).length).toBe(0);
+  });
+
+  it('rounds the scaled pallet price to 2dp for a non-round ratio', async () => {
+    const productId = await makeProduct({ price: '9.00', palletPrice: '100.00' });
+    const orderId = await makeQuote({ productId, quantity: 1, unitPrice: '9.00' });
+
+    // 9 → 10 is ×(10/9); 100 × 10/9 = 111.111… → 111.11.
+    const res = await patchQuote(orderId, [
+      { productId, quantity: 1, customPrice: 10, sellingType: 'units', priceScope: 'all' },
+    ]);
+    expect(res.status).toBe(200);
+
+    const [prod] = await db.select().from(products).where(eq(products.id, productId));
+    expect(prod.price).toBe('10.00');
+    expect(prod.palletPrice).toBe('111.11');
+  });
+
+  it('leaves a product with no pallet price untouched when scaling a unit price', async () => {
+    const productId = await makeProduct({ price: '10.00' }); // no pallet price
+    const orderId = await makeQuote({ productId, quantity: 2, unitPrice: '10.00' });
+
+    const res = await patchQuote(orderId, [
+      { productId, quantity: 2, customPrice: 15, sellingType: 'units', priceScope: 'all' },
+    ]);
+    expect(res.status).toBe(200);
+
+    const [prod] = await db.select().from(products).where(eq(products.id, productId));
+    expect(prod.price).toBe('15.00');
+    // No pallet price existed, so nothing to scale — stays null.
+    expect(prod.palletPrice).toBeNull();
+    expect((await getPersonalLists()).length).toBe(0);
+  });
+
+  it('lets an explicit pallet edit win over unit-price scaling (same product, one request)', async () => {
+    const productId = await makeProduct({ price: '10.00', palletPrice: '100.00' });
+    // Editing a quote restores the original lines' stock via batches and recomputes
+    // stock from the batch sum, so seed an ample active batch to keep stock available
+    // for the newly-added pallet line.
+    await db.insert(productBatches).values({ productId, batchNumber: 'zz_test_batch', quantity: 100000, status: 'active' });
+    const orderId = await makeQuote({ productId, quantity: 2, unitPrice: '10.00' });
+
+    // Edit BOTH the unit line (10 → 12, which would scale pallet 100 → 120) AND the
+    // pallet line (100 → 150) in one request, both scope 'all'. The explicit pallet
+    // edit must win deterministically: pallet ends at 150, never the scaled 120.
+    const res = await patchQuote(orderId, [
+      { productId, quantity: 2, customPrice: 12, sellingType: 'units', priceScope: 'all' },
+      { productId, quantity: 1, customPrice: 150, sellingType: 'pallets', priceScope: 'all' },
+    ]);
+    expect(res.status).toBe(200);
+
+    const [prod] = await db.select().from(products).where(eq(products.id, productId));
+    expect(prod.price).toBe('12.00');
+    expect(prod.palletPrice).toBe('150.00');
     expect((await getPersonalLists()).length).toBe(0);
   });
 
