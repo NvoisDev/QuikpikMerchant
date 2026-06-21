@@ -10,7 +10,7 @@ import {
   inArray, isNull, ne, or, orderItems, orders, productBatches, products,
   requireAuth, requireNotViewer, requireBooleanFeature, sendEmail, sendWhatsAppMessage, sendCustomerInvoiceEmail,
   sql, stockMovements, storage, sum, wrapCustomerEmail, desc, quoteActivityLogs,
-  teamMembers, users,
+  teamMembers, users, priceLists, priceListItems, priceListAssignments,
 } from "./shared";
 import { getStripeClient } from "../stripeConfig";
 import { ReliableSMSService } from "../sms-service";
@@ -27,6 +27,11 @@ interface QuoteEditItem {
   quantity: number;
   customPrice: number;
   sellingType?: string;
+  // Where a manually-changed line price should be applied:
+  //  'invoice'  → this order item only (default / legacy behaviour)
+  //  'customer' → the addressed customer's personal price list
+  //  'all'      → the product's base catalog price
+  priceScope?: 'invoice' | 'customer' | 'all';
 }
 type ExistingOrderItem = Awaited<ReturnType<typeof storage.getOrderItems>>[number] & { sellingType?: string };
 
@@ -960,6 +965,9 @@ export function registerQuoteRoutes(app: Express): void {
         if (!['units', 'pallets'].includes(normalizedType)) {
           return res.status(400).json({ error: 'Invalid sellingType — must be "units" or "pallets"', errorType: 'VALIDATION_ERROR' });
         }
+        if (item.priceScope !== undefined && !['invoice', 'customer', 'all'].includes(item.priceScope)) {
+          return res.status(400).json({ error: 'Invalid priceScope — must be "invoice", "customer" or "all"', errorType: 'VALIDATION_ERROR' });
+        }
       }
 
       // ── Step 1: Validate editability (read-only) ──────────────────────────
@@ -1034,14 +1042,15 @@ export function registerQuoteRoutes(app: Express): void {
         }
       }
 
-      // Count quantities by productId+sellingType for new items (consolidate duplicates)
-      const newItemMap: Record<string, { productId: number; quantity: number; sellingType: string; customPrice: number }> = {};
+      // Count quantities by productId+sellingType for new items (consolidate duplicates).
+      // priceScope is consolidated first-wins, matching customPrice consolidation below.
+      const newItemMap: Record<string, { productId: number; quantity: number; sellingType: string; customPrice: number; priceScope: 'invoice' | 'customer' | 'all' }> = {};
       for (const item of items) {
         const key = `${item.productId}:${item.sellingType || 'units'}`;
         if (newItemMap[key]) {
           newItemMap[key].quantity += item.quantity;
         } else {
-          newItemMap[key] = { productId: item.productId, quantity: item.quantity, sellingType: item.sellingType || 'units', customPrice: item.customPrice };
+          newItemMap[key] = { productId: item.productId, quantity: item.quantity, sellingType: item.sellingType || 'units', customPrice: item.customPrice, priceScope: item.priceScope || 'invoice' };
         }
       }
 
@@ -1177,6 +1186,8 @@ export function registerQuoteRoutes(app: Express): void {
 
       const changeList: string[] = [];
       const restoredProductWarnings: string[] = [];
+      // Collected during the transaction for the post-commit activity log.
+      const pricePropagations: Array<{ productId: number; sellingType: string; scope: 'customer' | 'all'; oldPrice: number; newPrice: number }> = [];
       for (const oldItem of existingItems) {
         if (oldItem.productId === null) continue;
         const sellingTypeOld = oldItem.sellingType || 'units';
@@ -1422,6 +1433,71 @@ export function registerQuoteRoutes(app: Express): void {
           }
         }
 
+        // 7c-bis. Propagate manually-changed line prices to the chosen scope.
+        // Only acts when the wholesaler explicitly chose 'customer'/'all' AND the typed
+        // price actually differs from the current catalog price for that selling type.
+        // Atomic with the rest of the edit: a failure here rolls back the whole edit.
+        let personalListId: number | null = null;
+        for (const ni of Object.values(newItemMap)) {
+          if (ni.priceScope !== 'customer' && ni.priceScope !== 'all') continue;
+          const [prod] = await trx.select().from(products).where(eq(products.id, ni.productId)).limit(1);
+          if (!prod) continue;
+          const isPallet = ni.sellingType === 'pallets';
+          const catalogPrice = isPallet ? parseFloat(prod.palletPrice || '0') : parseFloat(prod.price || '0');
+          if (!(Math.abs(catalogPrice - ni.customPrice) > 0.001)) continue; // unchanged vs catalog → no propagation
+          const newPriceStr = ni.customPrice.toFixed(2);
+
+          if (ni.priceScope === 'all') {
+            // Update the product's base catalog price (units → price, pallets → palletPrice).
+            await trx.update(products)
+              .set(isPallet ? { palletPrice: newPriceStr, updatedAt: new Date() } : { price: newPriceStr, updatedAt: new Date() })
+              .where(eq(products.id, ni.productId));
+          } else {
+            // 'customer' — write into a personal price list assigned ONLY to this customer.
+            // existingOrder.retailerId is NOT NULL on orders, so this always resolves to a customer.
+            if (personalListId === null) {
+              const existingPersonal = await trx.select({ id: priceLists.id })
+                .from(priceLists)
+                .innerJoin(priceListAssignments, eq(priceListAssignments.priceListId, priceLists.id))
+                .where(and(
+                  eq(priceLists.wholesalerId, wholesalerId),
+                  eq(priceLists.isPersonal, true),
+                  eq(priceListAssignments.customerId, existingOrder.retailerId),
+                ))
+                .limit(1);
+              if (existingPersonal.length > 0) {
+                personalListId = existingPersonal[0].id;
+              } else {
+                const [created] = await trx.insert(priceLists).values({
+                  wholesalerId,
+                  name: `Personal prices — ${existingOrder.customerName || 'Customer'}`,
+                  isActive: true,
+                  isPersonal: true,
+                }).returning({ id: priceLists.id });
+                personalListId = created.id;
+                await trx.insert(priceListAssignments).values({ priceListId: personalListId, customerId: existingOrder.retailerId });
+              }
+            }
+            // Upsert the per-product override, preserving the other selling type's field.
+            const [existingRow] = await trx.select().from(priceListItems)
+              .where(and(eq(priceListItems.priceListId, personalListId), eq(priceListItems.productId, ni.productId)))
+              .limit(1);
+            if (existingRow) {
+              await trx.update(priceListItems)
+                .set(isPallet ? { customPalletPrice: newPriceStr } : { customPrice: newPriceStr })
+                .where(eq(priceListItems.id, existingRow.id));
+            } else {
+              await trx.insert(priceListItems).values({
+                priceListId: personalListId,
+                productId: ni.productId,
+                customPrice: isPallet ? null : newPriceStr,
+                customPalletPrice: isPallet ? newPriceStr : null,
+              });
+            }
+          }
+          pricePropagations.push({ productId: ni.productId, sellingType: ni.sellingType, scope: ni.priceScope, oldPrice: catalogPrice, newPrice: ni.customPrice });
+        }
+
         // 7d. Update order totals and payment link
         await trx.update(orders).set({
           subtotal: productSubtotal.toFixed(2),
@@ -1536,6 +1612,33 @@ export function registerQuoteRoutes(app: Express): void {
                   performedBy: req.user.id,
                 });
               }
+            }
+          }
+          // Price-scope propagation logs (base catalog update / per-customer price)
+          for (const prop of pricePropagations) {
+            const palletLabel = prop.sellingType === 'pallets' ? 'pallet ' : '';
+            if (prop.scope === 'all') {
+              logQuoteActivity({
+                quoteId: quoteId,
+                actionType: 'base_price_updated',
+                entityType: 'product',
+                entityId: String(prop.productId),
+                oldValue: { price: prop.oldPrice, sellingType: prop.sellingType },
+                newValue: { price: prop.newPrice, sellingType: prop.sellingType },
+                description: `${pName(prop.productId)} base ${palletLabel}price updated for all customers: £${fmtGBP(prop.oldPrice)} → £${fmtGBP(prop.newPrice)}`,
+                performedBy: req.user.id,
+              });
+            } else {
+              logQuoteActivity({
+                quoteId: quoteId,
+                actionType: 'customer_price_set',
+                entityType: 'product',
+                entityId: String(prop.productId),
+                oldValue: { price: prop.oldPrice, sellingType: prop.sellingType },
+                newValue: { price: prop.newPrice, sellingType: prop.sellingType },
+                description: `${pName(prop.productId)} ${palletLabel}price set for ${existingOrder.customerName || 'this customer'} only: £${fmtGBP(prop.oldPrice)} → £${fmtGBP(prop.newPrice)}`,
+                performedBy: req.user.id,
+              });
             }
           }
         } catch (activityErr: any) {

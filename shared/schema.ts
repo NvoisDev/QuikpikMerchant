@@ -1815,6 +1815,9 @@ export const priceLists = pgTable("price_lists", {
   endDate: date("end_date"),
   isActive: boolean("is_active").default(true).notNull(),
   isLocked: boolean("is_locked").default(false).notNull(),
+  // Auto-managed list holding prices set for a single customer via the invoice editor
+  // ("This customer" scope). Excluded from the price-list manager UI and plan limits.
+  isPersonal: boolean("is_personal").default(false).notNull(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => ({

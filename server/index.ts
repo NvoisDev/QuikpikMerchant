@@ -62,6 +62,9 @@ async function runStartupMigrations() {
     `UPDATE users SET product_limit = 20 WHERE subscription_tier = 'standard' AND product_limit NOT IN (-1, 20)`,
     // Task #305: Add is_locked column to price_lists for plan enforcement
     `ALTER TABLE price_lists ADD COLUMN IF NOT EXISTS is_locked BOOLEAN NOT NULL DEFAULT FALSE`,
+    // Task #1407: Per-customer "personal" price lists created from the invoice editor.
+    // Hidden from price-list manager surfaces; carries a single-customer price override.
+    `ALTER TABLE price_lists ADD COLUMN IF NOT EXISTS is_personal BOOLEAN NOT NULL DEFAULT FALSE`,
     // Task #72: Add phone number to team members for SMS stock alerts
     `ALTER TABLE team_members ADD COLUMN IF NOT EXISTS phone_number VARCHAR(50)`,
     // Task #73: Add expiry date to products

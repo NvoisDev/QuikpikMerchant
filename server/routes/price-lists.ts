@@ -150,7 +150,7 @@ export function registerPriceListRoutes(app: Express): void {
       const lists = await db
         .select()
         .from(priceLists)
-        .where(eq(priceLists.wholesalerId, wholesalerId))
+        .where(and(eq(priceLists.wholesalerId, wholesalerId), eq(priceLists.isPersonal, false)))
         .orderBy(priceLists.createdAt);
 
       const enriched = await Promise.all(
@@ -183,7 +183,7 @@ export function registerPriceListRoutes(app: Express): void {
       const lists = await db
         .select()
         .from(priceLists)
-        .where(eq(priceLists.wholesalerId, wholesalerId));
+        .where(and(eq(priceLists.wholesalerId, wholesalerId), eq(priceLists.isPersonal, false)));
 
       const summary: Record<string, { count: number; names: string[]; ids: number[]; directIds: number[] }> = {};
 
@@ -310,7 +310,7 @@ export function registerPriceListRoutes(app: Express): void {
       const tierLimits = getPlanLimits(tier);
       if (tierLimits.priceLists !== -1) {
         const [countRow] = await db.select({ value: drizzleCount() }).from(priceLists)
-          .where(and(eq(priceLists.wholesalerId, wholesalerId), eq(priceLists.isLocked, false)));
+          .where(and(eq(priceLists.wholesalerId, wholesalerId), eq(priceLists.isLocked, false), eq(priceLists.isPersonal, false)));
         const currentCount = countRow?.value ?? 0;
         if (currentCount >= tierLimits.priceLists) {
           return res.status(403).json({ message: `You've reached your plan limit of ${tierLimits.priceLists} price list${tierLimits.priceLists === 1 ? '' : 's'}. Upgrade to create more.` });

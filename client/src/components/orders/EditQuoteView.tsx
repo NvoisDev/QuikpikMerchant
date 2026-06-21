@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Loader2, ChevronLeft, X, Plus, Minus, Search } from "lucide-react";
@@ -81,6 +81,26 @@ export function EditQuoteView({
   const [editDeliveryCost, setEditDeliveryCost] = useState(
     parseFloat(order.deliveryCost || '0').toFixed(2)
   );
+  // Session price baselines: the price each line had when the editor opened, or when
+  // the line was added / its selling type switched. We only offer a price-scope choice
+  // for lines whose price the wholesaler has *manually changed this session*, so a
+  // previously-saved custom price doesn't keep nagging. Ref because reads happen during
+  // render; writes are paired with the matching setEditItems call.
+  const priceBaselineRef = useRef<Record<string, number> | null>(null);
+  if (priceBaselineRef.current === null) {
+    priceBaselineRef.current = Object.fromEntries(
+      editItems.map(it => [`${it.productId}-${it.sellingType}`, it.customPrice])
+    );
+  }
+  const setBaseline = (productId: number, sellingType: 'units' | 'pallets', price: number) => {
+    if (priceBaselineRef.current) priceBaselineRef.current[`${productId}-${sellingType}`] = price;
+  };
+  // Per-line chosen scope for a manual price change. Default 'all' (update base catalog).
+  const [priceScopes, setPriceScopes] = useState<Record<string, 'invoice' | 'customer' | 'all'>>({});
+  const isPriceChanged = (item: EditItem) => {
+    const baseline = priceBaselineRef.current?.[getItemKey(item)];
+    return baseline !== undefined && Math.abs(item.customPrice - baseline) > 0.001;
+  };
 
   const editSubtotal = editItems.reduce((sum, item) => sum + item.customPrice * item.quantity, 0);
   const deliveryCostVal = parseFloat(editDeliveryCost) || 0;
@@ -139,6 +159,8 @@ export function EditQuoteView({
       const updated = [...editItems];
       updated[index] = { ...updated[index], sellingType: 'pallets', customPrice: item.palletPrice, quantity: palletQty };
       setEditItems(updated);
+      // Switching is not a manual price change — baseline the new key to its catalog price.
+      setBaseline(item.productId, 'pallets', item.palletPrice);
       const newKey = `${item.productId}-pallets`;
       setPackInputs(prev => ({ ...prev, [newKey]: palletQty.toString() }));
       setPackMode(prev => ({ ...prev, [newKey]: false }));
@@ -151,6 +173,8 @@ export function EditQuoteView({
       const updated = [...editItems];
       updated[index] = { ...updated[index], sellingType: 'units', customPrice: item.unitPrice, quantity: preservedQty };
       setEditItems(updated);
+      // Switching is not a manual price change — baseline the new key to its catalog price.
+      setBaseline(item.productId, 'units', item.unitPrice);
       const newKey = `${item.productId}-units`;
       setPackInputs(prev => ({ ...prev, [newKey]: preservedQty.toString() }));
       setPackMode(prev => ({ ...prev, [newKey]: false }));
@@ -183,6 +207,9 @@ export function EditQuoteView({
             customPrice: item.customPrice,
             quantity: item.quantity,
             sellingType: item.sellingType,
+            // Only send a propagating scope for lines whose price changed this session;
+            // unchanged lines stay 'invoice' so nothing leaks to catalog / customer lists.
+            priceScope: isPriceChanged(item) ? (priceScopes[getItemKey(item)] || 'all') : 'invoice',
           })),
           paymentMethod: editPaymentMethod,
           deliveryCost: deliveryCostVal,
@@ -368,6 +395,21 @@ export function EditQuoteView({
                         {item.customPrice <= 0 && (
                           <p className="text-xs text-red-600">Price must be greater than £0</p>
                         )}
+                        {isPriceChanged(item) && (
+                          <select
+                            value={priceScopes[getItemKey(item)] || 'all'}
+                            onChange={(e) => {
+                              const key = getItemKey(item);
+                              setPriceScopes(prev => ({ ...prev, [key]: e.target.value as 'invoice' | 'customer' | 'all' }));
+                            }}
+                            className="mt-0.5 text-xs border rounded p-0.5 bg-white max-w-[10rem]"
+                            title="Where should this new price apply?"
+                          >
+                            <option value="all">Update for all customers</option>
+                            <option value="customer">This customer only</option>
+                            <option value="invoice">This invoice only</option>
+                          </select>
+                        )}
                       </div>
                       <span className="text-sm font-medium text-green-700 ml-auto">
                         {formatMoney(item.customPrice * item.quantity)}
@@ -521,6 +563,7 @@ export function EditQuoteView({
                                 unitPrice: parseFloat(product.price),
                                 palletMoq: product.palletMoq,
                               }]);
+                              setBaseline(product.id, 'units', parseFloat(product.price));
                             }
                             setEditProductDialogOpen(false);
                             setEditProductSearch('');
@@ -554,6 +597,7 @@ export function EditQuoteView({
                                 unitPrice: parseFloat(product.price),
                                 palletMoq: product.palletMoq,
                               }]);
+                              setBaseline(product.id, 'pallets', parseFloat(product.palletPrice!));
                             }
                             setEditProductDialogOpen(false);
                             setEditProductSearch('');

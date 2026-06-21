@@ -132,6 +132,11 @@ export default function ProductFormDialog({
   const categoryNames = categoryList.map((c) => c.name);
   const lastAutoFilledUnitWeight = useRef('');
   const editTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Part B: changing the unit price proportionally scales the pallet price.
+  // lastPriceRef holds the previous unit price (the ratio's denominator);
+  // originalPalletPriceRef is the pallet price when the form opened (for the ▲/▼ note).
+  const lastPriceRef = useRef<number | null>(null);
+  const originalPalletPriceRef = useRef<number | null>(null);
 
   const form = useForm<ProductFormData>({
     resolver: zodResolver(productFormSchema),
@@ -177,11 +182,15 @@ export default function ProductFormDialog({
     }
     if (open && !editingProduct && !initialValues) {
       lastAutoFilledUnitWeight.current = '';
+      lastPriceRef.current = null;
+      originalPalletPriceRef.current = null;
       return;
     }
     if (open && !editingProduct && initialValues) {
       lastAutoFilledUnitWeight.current = '';
       form.reset({ ...form.formState.defaultValues, ...initialValues } as Parameters<typeof form.reset>[0]);
+      lastPriceRef.current = parseFloat(String((initialValues as any).price ?? '')) || null;
+      originalPalletPriceRef.current = parseFloat(String((initialValues as any).palletPrice ?? '')) || null;
       return;
     }
     if (open && editingProduct) {
@@ -238,6 +247,9 @@ export default function ProductFormDialog({
             costPrice: String(editingProduct.costPrice || ""),
           };
           form.reset(safeData as Parameters<typeof form.reset>[0]);
+          // Baseline for proportional pallet scaling + the ▲/▼ note.
+          lastPriceRef.current = parseFloat(safeData.price as string) || null;
+          originalPalletPriceRef.current = parseFloat(safeData.palletPrice as string) || null;
           if (!safeData.unitWeight) {
             let autoStr = '';
             if (safeData.totalPackageWeight) {
@@ -348,6 +360,28 @@ export default function ProductFormDialog({
           }
         }
       }
+    });
+    return () => subscription.unsubscribe();
+  }, [form]);
+
+  // Part B: when the unit price changes, scale the pallet price by the same ratio
+  // (newPallet = oldPallet × newPrice / oldPrice). The pallet field stays editable —
+  // this only fires on a real price edit (name === 'price'), never on form.reset
+  // (which fires with name === undefined).
+  useEffect(() => {
+    const subscription = form.watch((values, { name }) => {
+      if (name !== 'price') return;
+      const newPrice = parseFloat(String(values.price ?? ''));
+      const oldPrice = lastPriceRef.current;
+      const palletPrice = parseFloat(String(form.getValues('palletPrice') ?? ''));
+      if (oldPrice !== null && oldPrice > 0 && newPrice > 0 && palletPrice > 0) {
+        const scaled = palletPrice * (newPrice / oldPrice);
+        const scaledStr = scaled.toFixed(2);
+        if (scaledStr !== String(form.getValues('palletPrice') ?? '')) {
+          form.setValue('palletPrice', scaledStr, { shouldValidate: false, shouldDirty: true });
+        }
+      }
+      if (newPrice > 0) lastPriceRef.current = newPrice;
     });
     return () => subscription.unsubscribe();
   }, [form]);
@@ -1022,6 +1056,10 @@ export default function ProductFormDialog({
                     const unitsPerPalletNum = parseFloat(watchedUnitsPerPallet);
                     const unitPrice = palletPriceNum > 0 && unitsPerPalletNum > 0 ? palletPriceNum / unitsPerPalletNum : null;
                     const currency = form.watch("currency") || "GBP";
+                    // ▲/▼ change vs the pallet price when the form opened (Part B note).
+                    const origPallet = originalPalletPriceRef.current;
+                    const palletPct = origPallet && origPallet > 0 && palletPriceNum > 0
+                      ? ((palletPriceNum - origPallet) / origPallet) * 100 : null;
                     return (
                       <FormItem>
                         <FormLabel>Pallet Price ({currency})</FormLabel>
@@ -1033,6 +1071,11 @@ export default function ProductFormDialog({
                           {unitPrice !== null ? (
                             <>Total price for full pallet &mdash; <span className="font-medium text-orange-700">{formatCurrency(unitPrice, currency)} per unit</span></>
                           ) : "Total price for full pallet"}
+                          {palletPct !== null && Math.abs(palletPct) >= 0.5 && (
+                            <span className={`ml-1 font-medium ${palletPct > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                              {palletPct > 0 ? '▲' : '▼'} {Math.abs(palletPct).toFixed(0)}%
+                            </span>
+                          )}
                         </div>
                       </FormItem>
                     );
