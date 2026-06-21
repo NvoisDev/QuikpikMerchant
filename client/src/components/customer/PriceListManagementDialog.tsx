@@ -141,6 +141,7 @@ export function PriceListManagementDialog({
     name: "", description: "", startDate: "", endDate: "", isActive: true,
   });
   const [expandedPriceLists, setExpandedPriceLists] = useState<Record<number, boolean>>({});
+  const [expandedPriceListSearch, setExpandedPriceListSearch] = useState<Record<number, string>>({});
   const [priceListDetailCache, setPriceListDetailCache] = useState<Record<number, PriceListDetail>>({});
   const [sharingListId, setSharingListId] = useState<number | null>(null);
   const [isSharingCatalogue, setIsSharingCatalogue] = useState<'xlsx' | 'pdf' | null>(null);
@@ -720,29 +721,51 @@ export function PriceListManagementDialog({
                             ) : detail.items.length === 0 ? (
                               <p className="text-muted-foreground italic">No products added.</p>
                             ) : (
-                              <div className="space-y-1">
-                                {detail.items.map(item => {
-                                  const base = parseFloat(item.product?.price || "0");
-                                  const hasFixed = !!(item.customPrice && parseFloat(item.customPrice) > 0);
-                                  const hasPct = !!(item.discountPercentage && parseFloat(item.discountPercentage) > 0);
+                              <>
+                                <div className="relative mb-2">
+                                  <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground pointer-events-none" />
+                                  <Input
+                                    placeholder="Search products…"
+                                    value={expandedPriceListSearch[list.id] ?? ""}
+                                    onChange={e => setExpandedPriceListSearch(prev => ({ ...prev, [list.id]: e.target.value }))}
+                                    className="pl-6 h-7 text-xs"
+                                  />
+                                </div>
+                                {(() => {
+                                  const searchTerm = (expandedPriceListSearch[list.id] ?? "").toLowerCase();
+                                  const filtered = searchTerm
+                                    ? detail.items.filter(item => (item.product?.name || "").toLowerCase().includes(searchTerm))
+                                    : detail.items;
+                                  if (filtered.length === 0) {
+                                    return <p className="text-muted-foreground italic">No products match your search.</p>;
+                                  }
                                   return (
-                                    <div key={item.productId} className="flex items-center justify-between">
-                                      <span className="text-gray-700 truncate max-w-[55%]">{item.product?.name || "Unknown"}</span>
-                                      {hasFixed && (
-                                        <span className="text-green-700 font-medium">{formatMoney(item.customPrice)}</span>
-                                      )}
-                                      {hasPct && !hasFixed && (
-                                        <span className="text-green-700 font-medium">
-                                          {parseFloat(item.discountPercentage).toFixed(0)}% off → {formatMoney(base * (1 - parseFloat(item.discountPercentage) / 100))}
-                                        </span>
-                                      )}
-                                      {!hasFixed && !hasPct && (
-                                        <span className="text-muted-foreground italic">standard price</span>
-                                      )}
+                                    <div className="space-y-1">
+                                      {filtered.map(item => {
+                                        const base = parseFloat(item.product?.price || "0");
+                                        const hasFixed = !!(item.customPrice && parseFloat(item.customPrice) > 0);
+                                        const hasPct = !!(item.discountPercentage && parseFloat(item.discountPercentage) > 0);
+                                        return (
+                                          <div key={item.productId} className="flex items-center justify-between">
+                                            <span className="text-gray-700 truncate max-w-[55%]">{item.product?.name || "Unknown"}</span>
+                                            {hasFixed && (
+                                              <span className="text-green-700 font-medium">{formatMoney(item.customPrice)}</span>
+                                            )}
+                                            {hasPct && !hasFixed && (
+                                              <span className="text-green-700 font-medium">
+                                                {parseFloat(item.discountPercentage).toFixed(0)}% off → {formatMoney(base * (1 - parseFloat(item.discountPercentage) / 100))}
+                                              </span>
+                                            )}
+                                            {!hasFixed && !hasPct && (
+                                              <span className="text-muted-foreground italic">standard price</span>
+                                            )}
+                                          </div>
+                                        );
+                                      })}
                                     </div>
                                   );
-                                })}
-                              </div>
+                                })()}
+                              </>
                             )}
                           </div>
 
