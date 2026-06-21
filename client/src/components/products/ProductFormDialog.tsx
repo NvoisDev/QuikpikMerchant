@@ -137,6 +137,9 @@ export default function ProductFormDialog({
   // originalPalletPriceRef is the pallet price when the form opened (for the ▲/▼ note).
   const lastPriceRef = useRef<number | null>(null);
   const originalPalletPriceRef = useRef<number | null>(null);
+  // True once the wholesaler types directly into the pallet field — clears the ▲/▼
+  // proportional-change note, which only describes an auto-scaled pallet price.
+  const [palletManuallyEdited, setPalletManuallyEdited] = useState(false);
 
   const form = useForm<ProductFormData>({
     resolver: zodResolver(productFormSchema),
@@ -184,6 +187,7 @@ export default function ProductFormDialog({
       lastAutoFilledUnitWeight.current = '';
       lastPriceRef.current = null;
       originalPalletPriceRef.current = null;
+      setPalletManuallyEdited(false);
       return;
     }
     if (open && !editingProduct && initialValues) {
@@ -191,6 +195,7 @@ export default function ProductFormDialog({
       form.reset({ ...form.formState.defaultValues, ...initialValues } as Parameters<typeof form.reset>[0]);
       lastPriceRef.current = parseFloat(String((initialValues as any).price ?? '')) || null;
       originalPalletPriceRef.current = parseFloat(String((initialValues as any).palletPrice ?? '')) || null;
+      setPalletManuallyEdited(false);
       return;
     }
     if (open && editingProduct) {
@@ -250,6 +255,7 @@ export default function ProductFormDialog({
           // Baseline for proportional pallet scaling + the ▲/▼ note.
           lastPriceRef.current = parseFloat(safeData.price as string) || null;
           originalPalletPriceRef.current = parseFloat(safeData.palletPrice as string) || null;
+          setPalletManuallyEdited(false);
           if (!safeData.unitWeight) {
             let autoStr = '';
             if (safeData.totalPackageWeight) {
@@ -1064,14 +1070,14 @@ export default function ProductFormDialog({
                       <FormItem>
                         <FormLabel>Pallet Price ({currency})</FormLabel>
                         <FormControl>
-                          <Input type="number" step="0.01" placeholder="e.g., 240.00" {...field} onChange={(e) => field.onChange(e.target.value)} />
+                          <Input type="number" step="0.01" placeholder="e.g., 240.00" {...field} onChange={(e) => { field.onChange(e.target.value); setPalletManuallyEdited(true); }} />
                         </FormControl>
                         <FormMessage />
                         <div className="text-xs text-muted-foreground">
                           {unitPrice !== null ? (
                             <>Total price for full pallet &mdash; <span className="font-medium text-orange-700">{formatCurrency(unitPrice, currency)} per unit</span></>
                           ) : "Total price for full pallet"}
-                          {palletPct !== null && Math.abs(palletPct) >= 0.5 && (
+                          {palletPct !== null && Math.abs(palletPct) >= 0.5 && !palletManuallyEdited && (
                             <span className={`ml-1 font-medium ${palletPct > 0 ? 'text-green-600' : 'text-red-600'}`}>
                               {palletPct > 0 ? '▲' : '▼'} {Math.abs(palletPct).toFixed(0)}%
                             </span>
