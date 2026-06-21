@@ -163,7 +163,7 @@ async function applyPriceScopePropagation(
         }
         await trx.update(products).set(updateSet).where(eq(products.id, ni.productId));
         propagations.push({ productId: ni.productId, sellingType, scope: 'all', oldPrice: catalogPrice, newPrice: ni.customPrice });
-        // Record unit price change in history (pallet auto-scaling is a derived side-effect, not recorded)
+        // Record the unit price change in history.
         await trx.insert(productPriceHistory).values({
           wholesalerId,
           productId: ni.productId,
@@ -175,6 +175,16 @@ async function applyPriceScopePropagation(
         });
         if (scaledPallet !== null && Math.abs(scaledPallet - oldPallet) > 0.001) {
           propagations.push({ productId: ni.productId, sellingType: 'pallets', scope: 'all', oldPrice: oldPallet, newPrice: scaledPallet });
+          // Also record the auto-scaled pallet price in history so the full change is auditable.
+          await trx.insert(productPriceHistory).values({
+            wholesalerId,
+            productId: ni.productId,
+            productName: prod.name,
+            sellingType: 'pallets',
+            oldPrice: oldPallet.toFixed(2),
+            newPrice: scaledPallet.toFixed(2),
+            ...(orderId != null ? { orderId } : {}),
+          });
         }
       }
     } else {

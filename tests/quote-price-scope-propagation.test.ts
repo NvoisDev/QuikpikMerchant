@@ -122,6 +122,16 @@ async function cleanup() {
   }
   if (allProductIds.length > 0) {
     await db.delete(stockMovements).where(inArray(stockMovements.productId, allProductIds));
+    // order_items.batch_id has no onDelete cascade, so null it out before deleting batches
+    // to avoid FK violations from stale rows left by previously-failed test runs.
+    const batchRows = await db
+      .select({ id: productBatches.id })
+      .from(productBatches)
+      .where(inArray(productBatches.productId, allProductIds));
+    const batchIds = batchRows.map((b) => b.id);
+    if (batchIds.length > 0) {
+      await db.update(orderItems).set({ batchId: null }).where(inArray(orderItems.batchId, batchIds));
+    }
     await db.delete(productBatches).where(inArray(productBatches.productId, allProductIds));
     // productPriceHistory has a FK on products.id — must be cleared before products.
     await db.delete(productPriceHistory).where(inArray(productPriceHistory.productId, allProductIds));
@@ -137,7 +147,18 @@ async function cleanup() {
     await db.delete(priceListAssignments).where(inArray(priceListAssignments.priceListId, listIds));
     await db.delete(priceLists).where(inArray(priceLists.id, listIds));
   }
+  if (allProductIds.length > 0) {
+    // Safety net: delete any stray order_items referencing test products that were
+    // not covered by the orderId-scoped delete above (e.g. items whose order wasn't
+    // tracked, or items from a rolled-back then concurrently re-inserted transaction).
+    await db.delete(orderItems).where(inArray(orderItems.productId, allProductIds));
+  }
   if (allOrderIds.length > 0) {
+    // Re-delete quoteActivityLogs immediately before deleting orders. The PATCH
+    // handler's fire-and-forget logging IIFE can insert new rows between the first
+    // delete (above) and this point, causing the orders DELETE to fail on the
+    // quote_activity_logs_quote_id_fkey constraint.
+    await db.delete(quoteActivityLogs).where(inArray(quoteActivityLogs.quoteId, allOrderIds));
     await db.delete(orders).where(inArray(orders.id, allOrderIds));
   }
   if (allProductIds.length > 0) {
@@ -697,5 +718,144 @@ describe("POST /api/quotes — invalid priceScope", () => {
     const [prod] = await db.select().from(products).where(eq(products.id, productId));
     expect(prod.price).toBe('10.00');
     expect((await getPersonalLists()).length).toBe(0);
+  });
+});
+
+// ─── Price history recording ──────────────────────────────────────────────────
+// productPriceHistory is an immutable audit trail written by applyPriceScopePropagation.
+// A row is inserted only for scope='all' unit-price changes (and the derived pallet
+// auto-scaling when applicable). scope='customer' and scope='invoice' must never
+// write to this table.
+
+async function getPriceHistory(productId: number) {
+  return db
+    .select()
+    .from(productPriceHistory)
+    .where(eq(productPriceHistory.productId, productId));
+}
+
+describe("Price history recording — scope 'all' unit edit", () => {
+  it('inserts one row with correct wholesalerId, productId, oldPrice, newPrice, orderId', async () => {
+    const productId = await makeProduct({ price: '10.00' });
+    const orderId = await makeQuote({ productId, quantity: 2, unitPrice: '10.00' });
+
+    const res = await patchQuote(orderId, [
+      { productId, quantity: 2, customPrice: 15, sellingType: 'units', priceScope: 'all' },
+    ]);
+    expect(res.status).toBe(200);
+
+    const rows = await getPriceHistory(productId);
+    expect(rows.length).toBe(1);
+    expect(rows[0].wholesalerId).toBe(WHOLESALER_ID);
+    expect(rows[0].productId).toBe(productId);
+    expect(rows[0].sellingType).toBe('units');
+    expect(rows[0].oldPrice).toBe('10.00');
+    expect(rows[0].newPrice).toBe('15.00');
+    expect(rows[0].orderId).toBe(orderId);
+  });
+
+  it('inserts a second row with sellingType="pallets" when pallet auto-scaling fires', async () => {
+    // Unit 10 → 12 (×1.2) with an existing pallet price of 100 → auto-scaled to 120.
+    const productId = await makeProduct({ price: '10.00', palletPrice: '100.00' });
+    const orderId = await makeQuote({ productId, quantity: 2, unitPrice: '10.00' });
+
+    const res = await patchQuote(orderId, [
+      { productId, quantity: 2, customPrice: 12, sellingType: 'units', priceScope: 'all' },
+    ]);
+    expect(res.status).toBe(200);
+
+    const rows = await getPriceHistory(productId);
+    // Two rows: one for the unit change, one for the derived pallet scaling.
+    expect(rows.length).toBe(2);
+
+    const unitRow = rows.find((r) => r.sellingType === 'units');
+    const palletRow = rows.find((r) => r.sellingType === 'pallets');
+
+    expect(unitRow).toBeDefined();
+    expect(unitRow!.oldPrice).toBe('10.00');
+    expect(unitRow!.newPrice).toBe('12.00');
+    expect(unitRow!.orderId).toBe(orderId);
+
+    expect(palletRow).toBeDefined();
+    expect(palletRow!.oldPrice).toBe('100.00');
+    expect(palletRow!.newPrice).toBe('120.00');
+    expect(palletRow!.orderId).toBe(orderId);
+  });
+
+  it('inserts only one row (no pallet row) when the product has no pallet price', async () => {
+    const productId = await makeProduct({ price: '10.00' }); // no palletPrice
+    const orderId = await makeQuote({ productId, quantity: 1, unitPrice: '10.00' });
+
+    const res = await patchQuote(orderId, [
+      { productId, quantity: 1, customPrice: 14, sellingType: 'units', priceScope: 'all' },
+    ]);
+    expect(res.status).toBe(200);
+
+    const rows = await getPriceHistory(productId);
+    expect(rows.length).toBe(1);
+    expect(rows[0].sellingType).toBe('units');
+  });
+
+  it('inserts no row when the typed price equals the catalog price (no-op)', async () => {
+    const productId = await makeProduct({ price: '10.00' });
+    const orderId = await makeQuote({ productId, quantity: 1, unitPrice: '10.00' });
+
+    const res = await patchQuote(orderId, [
+      { productId, quantity: 1, customPrice: 10, sellingType: 'units', priceScope: 'all' },
+    ]);
+    expect(res.status).toBe(200);
+
+    const rows = await getPriceHistory(productId);
+    expect(rows.length).toBe(0);
+  });
+
+  it('inserts no pallet history row for an explicit pallet-only scope="all" edit', async () => {
+    // A direct pallet edit (scope='all', sellingType='pallets') is intentionally NOT
+    // recorded in price history — only unit-price edits (and their derived pallet
+    // scaling) are recorded.
+    const productId = await makeProduct({ price: '10.00', palletPrice: '100.00' });
+    const orderId = await makeQuote({ productId, quantity: 1, unitPrice: '100.00', sellingType: 'pallets' });
+
+    const res = await patchQuote(orderId, [
+      { productId, quantity: 1, customPrice: 110, sellingType: 'pallets', priceScope: 'all' },
+    ]);
+    expect(res.status).toBe(200);
+
+    const rows = await getPriceHistory(productId);
+    expect(rows.length).toBe(0);
+  });
+});
+
+describe("Price history recording — scope 'customer' inserts no rows", () => {
+  it('writes a personal price list override but leaves productPriceHistory empty', async () => {
+    const productId = await makeProduct({ price: '10.00' });
+    const orderId = await makeQuote({ productId, quantity: 2, unitPrice: '10.00' });
+
+    const res = await patchQuote(orderId, [
+      { productId, quantity: 2, customPrice: 8, sellingType: 'units', priceScope: 'customer' },
+    ]);
+    expect(res.status).toBe(200);
+
+    // Personal list is created (scope='customer' works normally).
+    expect((await getPersonalLists()).length).toBe(1);
+
+    // But no price history row is ever written for customer-scope changes.
+    const rows = await getPriceHistory(productId);
+    expect(rows.length).toBe(0);
+  });
+});
+
+describe("Price history recording — scope 'invoice' inserts no rows", () => {
+  it('changes only the order line; productPriceHistory stays empty', async () => {
+    const productId = await makeProduct({ price: '10.00' });
+    const orderId = await makeQuote({ productId, quantity: 1, unitPrice: '10.00' });
+
+    const res = await patchQuote(orderId, [
+      { productId, quantity: 1, customPrice: 7, sellingType: 'units', priceScope: 'invoice' },
+    ]);
+    expect(res.status).toBe(200);
+
+    const rows = await getPriceHistory(productId);
+    expect(rows.length).toBe(0);
   });
 });
