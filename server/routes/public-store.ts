@@ -84,6 +84,11 @@ export function registerPublicStoreRoutes(app: Express) {
         return res.status(404).json({ message: "Store not found or not public" });
       }
 
+      // Redact PII that the wholesaler has chosen to hide
+      if (wholesaler.whatsappContactVisible === false) {
+        (wholesaler as Record<string, unknown>).phoneNumber = null;
+      }
+
       // Fetch their public products
       const publicProducts = await db
         .select({

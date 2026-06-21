@@ -765,7 +765,7 @@ function PublicStoreSettings({ user }: { user: any }) {
         deliveryRegions: regions.trim() || null,
         showOnHomepage,
         enquiriesEnabled,
-        minOrderAmount: Math.round(parseFloat(minOrderAmount || '0') * 100),
+        minOrderAmount: Math.round((parseFloat(minOrderAmount || '0') || 0) * 100),
         allowQuoteRequests,
         requireApprovalForPricing,
         allowGuestBrowsing,
