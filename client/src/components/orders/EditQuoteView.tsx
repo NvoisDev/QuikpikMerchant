@@ -410,6 +410,14 @@ export function EditQuoteView({
                             <option value="invoice">This invoice only</option>
                           </select>
                         )}
+                        {isPriceChanged(item) &&
+                          (priceScopes[getItemKey(item)] || 'all') === 'all' &&
+                          item.sellingType !== 'pallets' &&
+                          !!item.palletPrice && (
+                            <p className="text-xs text-amber-600 max-w-[10rem]">
+                              Pallet price will scale to match.
+                            </p>
+                          )}
                       </div>
                       <span className="text-sm font-medium text-green-700 ml-auto">
                         {formatMoney(item.customPrice * item.quantity)}
