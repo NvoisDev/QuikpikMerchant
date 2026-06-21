@@ -186,6 +186,20 @@ function patchQuote(orderId: number, items: any[]) {
   return request(app).patch(`/api/quotes/${orderId}`).send({ items });
 }
 
+/**
+ * Create a brand-new quote via POST /api/quotes. Uses an offline ('cash') payment
+ * method so the route stays on the no-Stripe, no-notification path (mirrors the
+ * PATCH harness). The created order id is tracked for FK-safe cleanup.
+ */
+async function postQuote(items: any[]) {
+  const res = await request(app)
+    .post('/api/quotes')
+    .send({ customerId: CUSTOMER_ID, items, paymentMethod: 'cash' });
+  // Success response is { success, orderId, ... }; track it for FK-safe cleanup.
+  if (typeof res.body?.orderId === 'number') createdOrderIds.push(res.body.orderId);
+  return res;
+}
+
 async function getPersonalLists() {
   return db.select().from(priceLists).where(and(eq(priceLists.wholesalerId, WHOLESALER_ID), eq(priceLists.isPersonal, true)));
 }
@@ -532,6 +546,130 @@ describe("PATCH /api/quotes/:id — revert to original price", () => {
       { productId, quantity: 2, customPrice: 10, sellingType: 'units', priceScope: 'invoice' },
     ]);
     expect(res.status).toBe(200);
+
+    const [prod] = await db.select().from(products).where(eq(products.id, productId));
+    expect(prod.price).toBe('10.00');
+    expect((await getPersonalLists()).length).toBe(0);
+  });
+});
+
+/**
+ * POST /api/quotes — the same per-line scope choice now applies when a wholesaler
+ * sets a price while BUILDING a new quote (not just editing one). The create and
+ * edit paths share one propagation helper, so these mirror the PATCH cases above.
+ */
+describe("POST /api/quotes — new quote, scope 'invoice'", () => {
+  it('creates the order without touching the catalog price or any price list', async () => {
+    const productId = await makeProduct({ price: '10.00' });
+
+    const res = await postQuote([
+      { productId, quantity: 2, customPrice: 8.5, sellingType: 'units', priceScope: 'invoice' },
+    ]);
+    expect(res.status).toBe(200);
+
+    const [prod] = await db.select().from(products).where(eq(products.id, productId));
+    expect(prod.price).toBe('10.00');
+    expect((await getPersonalLists()).length).toBe(0);
+  });
+
+  it('defaults to no propagation when priceScope is omitted', async () => {
+    const productId = await makeProduct({ price: '10.00' });
+
+    const res = await postQuote([
+      { productId, quantity: 1, customPrice: 7, sellingType: 'units' },
+    ]);
+    expect(res.status).toBe(200);
+
+    const [prod] = await db.select().from(products).where(eq(products.id, productId));
+    expect(prod.price).toBe('10.00');
+    expect((await getPersonalLists()).length).toBe(0);
+  });
+});
+
+describe("POST /api/quotes — new quote, scope 'customer'", () => {
+  it('writes a personal price list assigned ONLY to the addressed customer', async () => {
+    const productId = await makeProduct({ price: '10.00' });
+
+    const res = await postQuote([
+      { productId, quantity: 3, customPrice: 9, sellingType: 'units', priceScope: 'customer' },
+    ]);
+    expect(res.status).toBe(200);
+
+    const lists = await getPersonalLists();
+    expect(lists.length).toBe(1);
+    expect(lists[0].isPersonal).toBe(true);
+
+    // Assigned to this customer only — never a group.
+    const assignments = await db.select().from(priceListAssignments).where(eq(priceListAssignments.priceListId, lists[0].id));
+    expect(assignments.length).toBe(1);
+    expect(assignments[0].customerId).toBe(CUSTOMER_ID);
+    expect(assignments[0].customerGroupId).toBeNull();
+
+    const itemRows = await db.select().from(priceListItems).where(eq(priceListItems.priceListId, lists[0].id));
+    expect(itemRows.length).toBe(1);
+    expect(itemRows[0].productId).toBe(productId);
+    expect(itemRows[0].customPrice).toBe('9.00');
+    expect(itemRows[0].customPalletPrice).toBeNull();
+
+    // The per-customer price must not leak to the shared catalog.
+    const [prod] = await db.select().from(products).where(eq(products.id, productId));
+    expect(prod.price).toBe('10.00');
+  });
+});
+
+describe("POST /api/quotes — new quote, scope 'all'", () => {
+  it('updates the base UNIT price AND scales the pallet price by the same ratio', async () => {
+    const productId = await makeProduct({ price: '10.00', palletPrice: '100.00' });
+
+    // Unit 10 → 12 is ×1.2, so the pallet price scales 100 → 120.
+    const res = await postQuote([
+      { productId, quantity: 2, customPrice: 12, sellingType: 'units', priceScope: 'all' },
+    ]);
+    expect(res.status).toBe(200);
+
+    const [prod] = await db.select().from(products).where(eq(products.id, productId));
+    expect(prod.price).toBe('12.00');
+    expect(prod.palletPrice).toBe('120.00');
+    expect((await getPersonalLists()).length).toBe(0);
+  });
+
+  it('is a no-op when the typed price equals the catalog price', async () => {
+    const productId = await makeProduct({ price: '10.00' });
+
+    const res = await postQuote([
+      { productId, quantity: 2, customPrice: 10, sellingType: 'units', priceScope: 'all' },
+    ]);
+    expect(res.status).toBe(200);
+
+    const [prod] = await db.select().from(products).where(eq(products.id, productId));
+    expect(prod.price).toBe('10.00');
+    expect((await getPersonalLists()).length).toBe(0);
+  });
+});
+
+describe("POST /api/quotes — invalid priceScope", () => {
+  it('rejects an unknown priceScope with 400 and creates nothing', async () => {
+    const productId = await makeProduct({ price: '10.00' });
+
+    const res = await postQuote([
+      { productId, quantity: 1, customPrice: 9, sellingType: 'units', priceScope: 'bogus' },
+    ]);
+    expect(res.status).toBe(400);
+
+    const [prod] = await db.select().from(products).where(eq(products.id, productId));
+    expect(prod.price).toBe('10.00');
+    expect((await getPersonalLists()).length).toBe(0);
+  });
+
+  it('rejects an unknown sellingType with 400 — no catalog propagation even with scope "all"', async () => {
+    const productId = await makeProduct({ price: '10.00' });
+
+    // A malformed sellingType must be rejected up front so it can never drive a
+    // catalog price change without a matching order item / stock movement.
+    const res = await postQuote([
+      { productId, quantity: 1, customPrice: 12, sellingType: 'crates', priceScope: 'all' },
+    ]);
+    expect(res.status).toBe(400);
 
     const [prod] = await db.select().from(products).where(eq(products.id, productId));
     expect(prod.price).toBe('10.00');

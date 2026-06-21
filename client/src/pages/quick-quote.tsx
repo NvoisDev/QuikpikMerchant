@@ -89,6 +89,7 @@ interface QuoteItem {
   palletMoq?: number;
   unitStockCount?: number;
   palletStockCount?: number;
+  priceScope?: 'invoice' | 'customer' | 'all';
 }
 
 interface Customer {
@@ -709,7 +710,19 @@ export default function QuickQuote() {
         return approveResp.json();
       }
 
-      const response = await apiRequest('POST', '/api/quotes', data);
+      const body = {
+        ...data,
+        items: data.items.map(item => ({
+          ...item,
+          // Match the edit-invoice screen: only propagate a price beyond this order
+          // when the line was actually changed from its added baseline; otherwise
+          // keep it order-only ('invoice').
+          priceScope: Math.abs(item.customPrice - item.originalPrice) > 0.001
+            ? (item.priceScope || 'all')
+            : 'invoice',
+        })),
+      };
+      const response = await apiRequest('POST', '/api/quotes', body);
       if (!response.ok) {
         const err = await response.json().catch(() => ({ error: 'Failed to create invoice' }));
         type StockError = Error & { errorType?: string; productName?: string; available?: number; requested?: number };
@@ -906,6 +919,12 @@ export default function QuickQuote() {
   const updateItemPrice = (index: number, newPrice: number) => {
     const updated = [...quoteItems];
     updated[index].customPrice = newPrice;
+    setQuoteItems(updated);
+  };
+
+  const updateItemPriceScope = (index: number, scope: 'invoice' | 'customer' | 'all') => {
+    const updated = [...quoteItems];
+    updated[index].priceScope = scope;
     setQuoteItems(updated);
   };
 
@@ -2082,6 +2101,7 @@ export default function QuickQuote() {
                       setInputValues={setInputValues}
                       setCostValues={setCostValues}
                       updateItemPrice={updateItemPrice}
+                      updateItemPriceScope={updateItemPriceScope}
                       updateItemQuantity={updateItemQuantity}
                       updateItemCost={updateItemCost}
                       removeItem={removeItem}

@@ -35,6 +35,180 @@ interface QuoteEditItem {
 }
 type ExistingOrderItem = Awaited<ReturnType<typeof storage.getOrderItems>>[number] & { sellingType?: string };
 
+// A line whose manually-set price may be propagated beyond this single order.
+interface PriceScopeLine {
+  productId: number;
+  sellingType?: string;
+  customPrice: number;
+  priceScope?: 'invoice' | 'customer' | 'all';
+}
+
+// One propagated price change, returned so the caller can log it.
+interface PricePropagation {
+  productId: number;
+  sellingType: string;
+  scope: 'customer' | 'all';
+  oldPrice: number;
+  newPrice: number;
+}
+
+// Propagate manually-changed line prices to the chosen scope. Shared by the
+// new-quote (POST) and edit-invoice (PATCH) paths so both behave identically:
+//   'invoice'  → no propagation (this order only — caller passes these through harmlessly)
+//   'customer' → write into the customer's personal price list
+//   'all'      → update the product's base catalog price (a unit change also scales
+//                the pallet price by the same ratio, mirroring the product editor)
+// Only acts when the scope is 'customer'/'all' AND the typed price actually differs
+// from the relevant current price. Runs inside the caller's transaction so any
+// failure rolls the whole write back. Only the wholesaler's own products and price
+// lists are ever touched. `lines` must be pre-consolidated to one entry per
+// product+sellingType (first wins) for deterministic catalog updates.
+async function applyPriceScopePropagation(
+  trx: any,
+  opts: { wholesalerId: string; customerId: string; customerName?: string | null; lines: PriceScopeLine[] },
+): Promise<PricePropagation[]> {
+  const { wholesalerId, customerId, customerName, lines } = opts;
+  const propagations: PricePropagation[] = [];
+
+  // Lookup so a unit line set to 'all' can detect a sibling pallet line for the
+  // same product also set to 'all' (that explicit pallet edit owns the pallet
+  // price → skip auto-scaling for a deterministic result regardless of order).
+  const byKey: Record<string, PriceScopeLine> = {};
+  for (const ln of lines) byKey[`${ln.productId}:${ln.sellingType || 'units'}`] = ln;
+
+  // Find-or-create the customer's personal price list, memoised across the loop so
+  // we touch it at most once. `findPersonalList` never creates (used to read the
+  // current override); `ensurePersonalList` creates lazily on the first real write.
+  let personalListResolved = false;
+  let personalListId: number | null = null;
+  const findPersonalList = async (): Promise<number | null> => {
+    if (!personalListResolved) {
+      const existingPersonal = await trx.select({ id: priceLists.id })
+        .from(priceLists)
+        .innerJoin(priceListAssignments, eq(priceListAssignments.priceListId, priceLists.id))
+        .where(and(
+          eq(priceLists.wholesalerId, wholesalerId),
+          eq(priceLists.isPersonal, true),
+          eq(priceListAssignments.customerId, customerId),
+        ))
+        .limit(1);
+      personalListId = existingPersonal.length > 0 ? existingPersonal[0].id : null;
+      personalListResolved = true;
+    }
+    return personalListId;
+  };
+  const ensurePersonalList = async (): Promise<number> => {
+    const found = await findPersonalList();
+    if (found !== null) return found;
+    // A partial unique index (wholesaler_id, customer_id WHERE is_personal) makes this
+    // deterministic: a concurrent write for the same customer can only ever leave one
+    // personal list. onConflictDoNothing absorbs the race; we then re-read the winner.
+    const [created] = await trx.insert(priceLists).values({
+      wholesalerId,
+      customerId,
+      name: `Personal prices — ${customerName || 'Customer'}`,
+      isActive: true,
+      isPersonal: true,
+    })
+      .onConflictDoNothing({
+        target: [priceLists.wholesalerId, priceLists.customerId],
+        where: sql`${priceLists.isPersonal} = true AND ${priceLists.customerId} IS NOT NULL`,
+      })
+      .returning({ id: priceLists.id });
+    if (created) {
+      personalListId = created.id;
+      personalListResolved = true;
+      await trx.insert(priceListAssignments).values({ priceListId: created.id, customerId });
+      return created.id;
+    }
+    // Lost the race: another concurrent write created the personal list. Re-read it.
+    personalListResolved = false;
+    const winner = await findPersonalList();
+    if (winner !== null) return winner;
+    throw new Error('Failed to resolve personal price list after insert conflict');
+  };
+
+  for (const ni of lines) {
+    if (ni.priceScope !== 'customer' && ni.priceScope !== 'all') continue;
+    const [prod] = await trx.select().from(products).where(eq(products.id, ni.productId)).limit(1);
+    if (!prod) continue;
+    const sellingType = ni.sellingType || 'units';
+    const isPallet = sellingType === 'pallets';
+    const catalogPrice = isPallet ? parseFloat(prod.palletPrice || '0') : parseFloat(prod.price || '0');
+    const newPriceStr = ni.customPrice.toFixed(2);
+
+    if (ni.priceScope === 'all') {
+      // Update the product's base catalog price. No-op when it already matches.
+      if (Math.abs(catalogPrice - ni.customPrice) <= 0.001) continue;
+      if (isPallet) {
+        await trx.update(products)
+          .set({ palletPrice: newPriceStr, updatedAt: new Date() })
+          .where(eq(products.id, ni.productId));
+        propagations.push({ productId: ni.productId, sellingType, scope: 'all', oldPrice: catalogPrice, newPrice: ni.customPrice });
+      } else {
+        // A unit-price change also scales the product's pallet price by the same
+        // ratio (newPallet = oldPallet × newUnit / oldUnit). Guard against a
+        // zero/invalid old unit price, and only touch the pallet price when the
+        // product has one. If the SAME product also has a pallet line set to 'all',
+        // that explicit pallet edit owns the pallet price — skip auto-scaling.
+        const oldPallet = parseFloat(prod.palletPrice || '0');
+        const palletLineEditedForAll = byKey[`${ni.productId}:pallets`]?.priceScope === 'all';
+        const updateSet: { price: string; updatedAt: Date; palletPrice?: string } = { price: newPriceStr, updatedAt: new Date() };
+        let scaledPallet: number | null = null;
+        if (!palletLineEditedForAll && oldPallet > 0 && catalogPrice > 0) {
+          scaledPallet = parseFloat((oldPallet * (ni.customPrice / catalogPrice)).toFixed(2));
+          updateSet.palletPrice = scaledPallet.toFixed(2);
+        }
+        await trx.update(products).set(updateSet).where(eq(products.id, ni.productId));
+        propagations.push({ productId: ni.productId, sellingType, scope: 'all', oldPrice: catalogPrice, newPrice: ni.customPrice });
+        if (scaledPallet !== null && Math.abs(scaledPallet - oldPallet) > 0.001) {
+          propagations.push({ productId: ni.productId, sellingType: 'pallets', scope: 'all', oldPrice: oldPallet, newPrice: scaledPallet });
+        }
+      }
+    } else {
+      // 'customer' — write into a personal price list assigned ONLY to this customer.
+      // Compare against the customer's CURRENT override, NOT the catalog: a line set
+      // back to the catalog price must still overwrite a stale personal override, and
+      // we only no-op when this customer is already pinned to the new price.
+      const listId = await findPersonalList();
+      let existingRow: { id: number; customPrice: string | null; customPalletPrice: string | null } | undefined;
+      if (listId !== null) {
+        const rows = await trx.select({
+          id: priceListItems.id,
+          customPrice: priceListItems.customPrice,
+          customPalletPrice: priceListItems.customPalletPrice,
+        })
+          .from(priceListItems)
+          .where(and(eq(priceListItems.priceListId, listId), eq(priceListItems.productId, ni.productId)))
+          .limit(1);
+        existingRow = rows[0];
+      }
+      const existingRaw = existingRow ? (isPallet ? existingRow.customPalletPrice : existingRow.customPrice) : null;
+      const existingOverride = existingRaw != null ? parseFloat(existingRaw) : null;
+      // No-op ONLY when this customer's existing override already equals the new price.
+      if (existingOverride !== null && Math.abs(existingOverride - ni.customPrice) <= 0.001) continue;
+      const targetListId = await ensurePersonalList();
+      if (existingRow) {
+        await trx.update(priceListItems)
+          .set(isPallet ? { customPalletPrice: newPriceStr } : { customPrice: newPriceStr })
+          .where(eq(priceListItems.id, existingRow.id));
+      } else {
+        await trx.insert(priceListItems).values({
+          priceListId: targetListId,
+          productId: ni.productId,
+          customPrice: isPallet ? null : newPriceStr,
+          customPalletPrice: isPallet ? newPriceStr : null,
+        });
+      }
+      // Log the customer's prior effective price (their override if set, else catalog).
+      const oldForLog = existingOverride !== null ? existingOverride : catalogPrice;
+      propagations.push({ productId: ni.productId, sellingType, scope: 'customer', oldPrice: oldForLog, newPrice: ni.customPrice });
+    }
+  }
+
+  return propagations;
+}
+
 export function registerQuoteRoutes(app: Express): void {
   // POST /api/quotes
   app.post('/api/quotes', requireAuth, requireBooleanFeature('invoices'), requireNotViewer, async (req: any, res) => {
@@ -53,6 +227,13 @@ export function registerQuoteRoutes(app: Express): void {
         }
         if (typeof item.customPrice !== 'number' || !isFinite(item.customPrice) || item.customPrice <= 0) {
           return res.status(400).json({ error: 'Item price must be greater than zero', errorType: 'VALIDATION_ERROR' });
+        }
+        const normalizedType = item.sellingType || 'units';
+        if (!['units', 'pallets'].includes(normalizedType)) {
+          return res.status(400).json({ error: 'Invalid sellingType — must be "units" or "pallets"', errorType: 'VALIDATION_ERROR' });
+        }
+        if (item.priceScope !== undefined && !['invoice', 'customer', 'all'].includes(item.priceScope)) {
+          return res.status(400).json({ error: 'Invalid priceScope — must be "invoice", "customer" or "all"', errorType: 'VALIDATION_ERROR' });
         }
       }
 
@@ -459,6 +640,29 @@ export function registerQuoteRoutes(app: Express): void {
           const stockAfter = productNow?.stock ?? 0;
           await trx.insert(stockMovements).values({ productId: psProductId, wholesalerId, movementType: 'purchase', quantity: -psQty, unitType: 'units', stockBefore, stockAfter, reason: `Invoice order sale — ${psQty} units`, orderId: quoteOrderRow.id, customerName: quoteOrderRow.customerName ?? null, businessProfileId: quoteOrderRow.businessProfileId ?? null, batchId: psBid });
         }
+
+        // Propagate any manually-set line prices to the chosen scope ('customer' →
+        // personal price list, 'all' → base catalog). Consolidate to one entry per
+        // product+sellingType (first wins) so catalog updates are deterministic,
+        // mirroring the edit-invoice path. Atomic with the order creation above.
+        const propagationLines: Record<string, PriceScopeLine> = {};
+        for (const it of items) {
+          const key = `${it.productId}:${it.sellingType || 'units'}`;
+          if (!propagationLines[key]) {
+            propagationLines[key] = {
+              productId: it.productId,
+              sellingType: it.sellingType || 'units',
+              customPrice: it.customPrice,
+              priceScope: it.priceScope,
+            };
+          }
+        }
+        await applyPriceScopePropagation(trx, {
+          wholesalerId,
+          customerId,
+          customerName: quoteOrderRow.customerName,
+          lines: Object.values(propagationLines),
+        });
         return quoteOrderRow;
       });
 
@@ -1433,140 +1637,16 @@ export function registerQuoteRoutes(app: Express): void {
           }
         }
 
-        // 7c-bis. Propagate manually-changed line prices to the chosen scope.
-        // Only acts when the wholesaler explicitly chose 'customer'/'all' AND the typed
-        // price actually differs from the current catalog price for that selling type.
-        // Atomic with the rest of the edit: a failure here rolls back the whole edit.
-        // Find-or-create the customer's personal price list, memoised across the loop so we
-        // touch it at most once per request. `findPersonalList` never creates (used to read the
-        // current override); `ensurePersonalList` creates lazily on the first real write.
-        let personalListResolved = false;
-        let personalListId: number | null = null;
-        const findPersonalList = async (): Promise<number | null> => {
-          if (!personalListResolved) {
-            const existingPersonal = await trx.select({ id: priceLists.id })
-              .from(priceLists)
-              .innerJoin(priceListAssignments, eq(priceListAssignments.priceListId, priceLists.id))
-              .where(and(
-                eq(priceLists.wholesalerId, wholesalerId),
-                eq(priceLists.isPersonal, true),
-                eq(priceListAssignments.customerId, existingOrder.retailerId),
-              ))
-              .limit(1);
-            personalListId = existingPersonal.length > 0 ? existingPersonal[0].id : null;
-            personalListResolved = true;
-          }
-          return personalListId;
-        };
-        const ensurePersonalList = async (): Promise<number> => {
-          const found = await findPersonalList();
-          if (found !== null) return found;
-          // A partial unique index (wholesaler_id, customer_id WHERE is_personal) makes this
-          // deterministic: a concurrent edit for the same customer can only ever leave one
-          // personal list. onConflictDoNothing absorbs the race; we then re-read the winner.
-          const [created] = await trx.insert(priceLists).values({
-            wholesalerId,
-            customerId: existingOrder.retailerId,
-            name: `Personal prices — ${existingOrder.customerName || 'Customer'}`,
-            isActive: true,
-            isPersonal: true,
-          })
-            .onConflictDoNothing({
-              target: [priceLists.wholesalerId, priceLists.customerId],
-              where: sql`${priceLists.isPersonal} = true AND ${priceLists.customerId} IS NOT NULL`,
-            })
-            .returning({ id: priceLists.id });
-          if (created) {
-            personalListId = created.id;
-            personalListResolved = true;
-            await trx.insert(priceListAssignments).values({ priceListId: created.id, customerId: existingOrder.retailerId });
-            return created.id;
-          }
-          // Lost the race: another concurrent edit created the personal list. Re-read it.
-          personalListResolved = false;
-          const winner = await findPersonalList();
-          if (winner !== null) return winner;
-          throw new Error('Failed to resolve personal price list after insert conflict');
-        };
-
-        for (const ni of Object.values(newItemMap)) {
-          if (ni.priceScope !== 'customer' && ni.priceScope !== 'all') continue;
-          const [prod] = await trx.select().from(products).where(eq(products.id, ni.productId)).limit(1);
-          if (!prod) continue;
-          const isPallet = ni.sellingType === 'pallets';
-          const catalogPrice = isPallet ? parseFloat(prod.palletPrice || '0') : parseFloat(prod.price || '0');
-          const newPriceStr = ni.customPrice.toFixed(2);
-
-          if (ni.priceScope === 'all') {
-            // Update the product's base catalog price. No-op when it already matches.
-            if (Math.abs(catalogPrice - ni.customPrice) <= 0.001) continue;
-            if (isPallet) {
-              await trx.update(products)
-                .set({ palletPrice: newPriceStr, updatedAt: new Date() })
-                .where(eq(products.id, ni.productId));
-              pricePropagations.push({ productId: ni.productId, sellingType: ni.sellingType, scope: 'all', oldPrice: catalogPrice, newPrice: ni.customPrice });
-            } else {
-              // A unit-price change also scales the product's pallet price by the same
-              // ratio (newPallet = oldPallet × newUnit / oldUnit), mirroring the product
-              // editor's behaviour. Guard against a zero/invalid old unit price, and only
-              // touch the pallet price when the product actually has one.
-              // If the SAME product also has a pallet line being set to 'all' in this same
-              // edit, that explicit pallet edit owns the pallet price — skip auto-scaling so
-              // the outcome is deterministic regardless of iteration order.
-              const oldPallet = parseFloat(prod.palletPrice || '0');
-              const palletLineEditedForAll = newItemMap[`${ni.productId}:pallets`]?.priceScope === 'all';
-              const updateSet: { price: string; updatedAt: Date; palletPrice?: string } = { price: newPriceStr, updatedAt: new Date() };
-              let scaledPallet: number | null = null;
-              if (!palletLineEditedForAll && oldPallet > 0 && catalogPrice > 0) {
-                scaledPallet = parseFloat((oldPallet * (ni.customPrice / catalogPrice)).toFixed(2));
-                updateSet.palletPrice = scaledPallet.toFixed(2);
-              }
-              await trx.update(products).set(updateSet).where(eq(products.id, ni.productId));
-              pricePropagations.push({ productId: ni.productId, sellingType: ni.sellingType, scope: 'all', oldPrice: catalogPrice, newPrice: ni.customPrice });
-              if (scaledPallet !== null && Math.abs(scaledPallet - oldPallet) > 0.001) {
-                pricePropagations.push({ productId: ni.productId, sellingType: 'pallets', scope: 'all', oldPrice: oldPallet, newPrice: scaledPallet });
-              }
-            }
-          } else {
-            // 'customer' — write into a personal price list assigned ONLY to this customer.
-            // Compare against the customer's CURRENT override, NOT the catalog: a line edited
-            // back to the catalog price must still overwrite a stale personal override, and we
-            // only no-op when this customer is already pinned to the new price.
-            const listId = await findPersonalList();
-            let existingRow: { id: number; customPrice: string | null; customPalletPrice: string | null } | undefined;
-            if (listId !== null) {
-              const rows = await trx.select({
-                id: priceListItems.id,
-                customPrice: priceListItems.customPrice,
-                customPalletPrice: priceListItems.customPalletPrice,
-              })
-                .from(priceListItems)
-                .where(and(eq(priceListItems.priceListId, listId), eq(priceListItems.productId, ni.productId)))
-                .limit(1);
-              existingRow = rows[0];
-            }
-            const existingRaw = existingRow ? (isPallet ? existingRow.customPalletPrice : existingRow.customPrice) : null;
-            const existingOverride = existingRaw != null ? parseFloat(existingRaw) : null;
-            // No-op ONLY when this customer's existing override already equals the new price.
-            if (existingOverride !== null && Math.abs(existingOverride - ni.customPrice) <= 0.001) continue;
-            const targetListId = await ensurePersonalList();
-            if (existingRow) {
-              await trx.update(priceListItems)
-                .set(isPallet ? { customPalletPrice: newPriceStr } : { customPrice: newPriceStr })
-                .where(eq(priceListItems.id, existingRow.id));
-            } else {
-              await trx.insert(priceListItems).values({
-                priceListId: targetListId,
-                productId: ni.productId,
-                customPrice: isPallet ? null : newPriceStr,
-                customPalletPrice: isPallet ? newPriceStr : null,
-              });
-            }
-            // Log the customer's prior effective price (their override if set, else catalog).
-            const oldForLog = existingOverride !== null ? existingOverride : catalogPrice;
-            pricePropagations.push({ productId: ni.productId, sellingType: ni.sellingType, scope: 'customer', oldPrice: oldForLog, newPrice: ni.customPrice });
-          }
-        }
+        // 7c-bis. Propagate manually-changed line prices to the chosen scope
+        // ('customer' → the addressed customer's personal price list, 'all' → the
+        // product's base catalog price). Atomic with the rest of the edit: a failure
+        // here rolls back the whole edit. Shared with the new-quote create path.
+        pricePropagations.push(...await applyPriceScopePropagation(trx, {
+          wholesalerId,
+          customerId: existingOrder.retailerId,
+          customerName: existingOrder.customerName,
+          lines: Object.values(newItemMap),
+        }));
 
         // 7d. Update order totals and payment link
         await trx.update(orders).set({

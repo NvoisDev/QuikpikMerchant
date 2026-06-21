@@ -29,6 +29,7 @@ interface QuoteItem {
   palletMoq?: number;
   unitStockCount?: number;
   palletStockCount?: number;
+  priceScope?: 'invoice' | 'customer' | 'all';
 }
 
 interface QuoteItemCardProps {
@@ -39,6 +40,7 @@ interface QuoteItemCardProps {
   setInputValues: React.Dispatch<React.SetStateAction<Record<string, { price: string; qty: string }>>>;
   setCostValues: React.Dispatch<React.SetStateAction<Record<string, string>>>;
   updateItemPrice: (index: number, val: number) => void;
+  updateItemPriceScope: (index: number, scope: 'invoice' | 'customer' | 'all') => void;
   updateItemQuantity: (index: number, val: number) => void;
   updateItemCost: (index: number, val: number) => void;
   removeItem: (index: number) => void;
@@ -55,6 +57,7 @@ export function QuoteItemCard({
   setInputValues,
   setCostValues,
   updateItemPrice,
+  updateItemPriceScope,
   updateItemQuantity,
   updateItemCost,
   removeItem,
@@ -86,6 +89,12 @@ export function QuoteItemCard({
 
   const palletMoqViolation =
     item.sellingType === 'pallets' && item.palletMoq && item.palletMoq > 1 && liveDisplayQty < item.palletMoq;
+
+  // The price was manually changed from the price this line was added at. When true,
+  // the wholesaler can choose where the new price applies (this order / this customer
+  // / all customers), mirroring the edit-invoice screen.
+  const priceChanged = Math.abs(item.customPrice - item.originalPrice) > 0.001;
+  const priceScope = item.priceScope || 'all';
 
   return (
     <div className="p-3 bg-gray-50 rounded-lg">
@@ -230,6 +239,21 @@ export function QuoteItemCard({
           />
           {item.customPrice <= 0 && (
             <p className="text-xs text-red-500 mt-0.5">Price must be &gt; £0</p>
+          )}
+          {priceChanged && (
+            <select
+              value={priceScope}
+              onChange={(e) => updateItemPriceScope(index, e.target.value as 'invoice' | 'customer' | 'all')}
+              className="mt-1 text-xs border rounded p-1 bg-white w-full max-w-[12rem]"
+              title="Where should this new price apply?"
+            >
+              <option value="all">Update for all customers</option>
+              <option value="customer">This customer only</option>
+              <option value="invoice">This invoice only</option>
+            </select>
+          )}
+          {priceChanged && priceScope === 'all' && item.sellingType !== 'pallets' && !!item.palletPrice && (
+            <p className="text-xs text-amber-600 mt-0.5 max-w-[12rem]">Pallet price will scale to match.</p>
           )}
         </div>
         <div className="flex items-end gap-2 sm:gap-3">
