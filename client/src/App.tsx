@@ -185,6 +185,15 @@ const ContentLoader = () => (
   </div>
 );
 
+// Redirects /admin to /super-admin using wouter navigation
+function AdminRedirect() {
+  const [, setLocation] = useLocation();
+  useEffect(() => {
+    setLocation("/super-admin", { replace: true });
+  }, [setLocation]);
+  return null;
+}
+
 // Component for public routes that don't need authentication
 function PublicRoutes() {
   return (
@@ -212,7 +221,7 @@ function PublicRoutes() {
         <Route path="/blog" component={BlogSection} />
         <Route path="/terms" component={TermsOfService} />
         <Route path="/privacy" component={PrivacyPolicy} />
-        <Route path="/admin" component={() => { useEffect(() => setLocation("/super-admin"), []); return null; }} />
+        <Route path="/admin" component={AdminRedirect} />
         <Route path="/super-admin" component={SuperAdmin} />
         <Route path="/w/:slug" component={PublicStorePage} />
         <Route path="/" component={LandingPage} />
