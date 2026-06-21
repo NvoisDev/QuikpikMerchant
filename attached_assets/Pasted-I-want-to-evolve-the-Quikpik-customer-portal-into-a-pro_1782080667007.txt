@@ -1,0 +1,309 @@
+I want to evolve the Quikpik customer portal into a proper B2B wholesale buying experience while preserving all existing invoice, stock, payment, and customer flows.
+
+This should be implemented as an enhancement layer — NOT a rewrite.
+
+GOAL
+Turn the customer portal into a hybrid:
+
+* wholesale product discovery platform
+* lead generation system
+* quote request system
+* customer ordering experience
+
+while supporting both:
+
+* public visitors
+* existing retailer customers already linked to wholesalers
+
+========================================
+
+1. CUSTOMER PORTAL SETTINGS PAGE
+    ========================================
+
+In Store Setup, create a dedicated:
+“Customer Portal Settings” page.
+
+Move all existing customer-facing portal settings there.
+
+Include settings such as:
+
+* Show prices publicly
+* Enable enquiries
+* Allow quote requests
+* Allow direct checkout
+* Show stock availability
+* Require approval before pricing is shown
+* Allow guest browsing
+* WhatsApp contact visibility
+* Minimum order amount
+* Delivery/collection messaging
+* Portal visibility status (public/private)
+
+========================================
+2. PRICE VISIBILITY LOGIC
+
+Add a “Show Prices” toggle.
+
+IF PRICES ARE ENABLED:
+
+* customers can browse products normally
+* customers can add products to cart
+* customers can request quotes or checkout depending on wholesaler settings
+
+IF PRICES ARE HIDDEN:
+
+* prices are replaced with:
+    “Request Pricing”
+    or
+    “Get Trade Pricing”
+
+Clicking should open an enquiry/request form.
+
+This is critical because many wholesalers do not want public pricing visibility.
+
+========================================
+3. SMART ENQUIRY / LEAD SYSTEM
+
+The enquiry system should become intelligent.
+
+Currently every enquiry behaves like a generic lead form.
+
+I want two separate flows:
+
+A) NEW LEAD FLOW
+B) EXISTING CUSTOMER FLOW
+
+========================================
+4. NEW LEAD FLOW
+
+If the user:
+
+* is not logged in
+* does not exist in wholesaler customers
+* has no matching email/phone
+
+then treat them as a NEW LEAD.
+
+The enquiry form should:
+
+* create a lead
+* notify the wholesaler
+* store customer interest
+* optionally create pending customer record
+
+Fields:
+
+* Full name
+* Business name
+* Phone / WhatsApp
+* Email
+* Business type
+* Estimated order size
+* Quantity needed
+* Preferred contact method
+* Message
+
+This is the qualification flow.
+
+========================================
+5. EXISTING CUSTOMER FLOW
+
+If the customer:
+
+* is logged in
+    OR
+* already exists in the wholesaler customer directory
+    OR
+* matches via phone/email
+
+then the experience should change completely.
+
+DO NOT show a generic lead form.
+
+Instead:
+
+* auto-fill known information
+* simplify the UI
+* show:
+    “Request Quote”
+    or
+    “Send Order Request”
+
+This should feel like a retailer ordering workflow.
+
+========================================
+6. AUTOMATIC DRAFT INVOICE CREATION
+
+If an existing customer requests products:
+
+* automatically create a draft invoice/quote
+* attach selected products
+* include requested quantities
+* attach customer profile
+* mark status:
+    “Quote Requested”
+    or
+    “Customer Request”
+
+Wholesaler can then:
+
+* adjust pricing
+* edit quantities
+* confirm availability
+* send invoice/payment link
+
+IMPORTANT:
+DO NOT allocate stock at this stage.
+
+Stock allocation should ONLY happen during the existing approved allocation flow.
+
+========================================
+7. PRODUCT-AWARE ENQUIRIES
+
+If the user clicks:
+“Enquire about Black Eyed Beans”
+
+Then:
+
+* the selected product should auto-attach
+* quantities should prefill
+* wholesaler receives structured product requests instead of free-text messages
+
+Support:
+
+* single product enquiries
+* multi-product enquiries
+* cart-style quote requests
+
+========================================
+8. LEADS VS CUSTOMERS
+
+Separate the backend clearly into:
+
+* Leads
+* Quote Requests
+* Draft Requests
+* Customers
+
+Wholesalers must clearly understand:
+
+* cold leads
+* existing retailer requests
+* active buying intent
+
+========================================
+9. CUSTOMER EXPERIENCE IMPROVEMENTS
+
+For existing customers:
+
+* show welcome state
+* optionally show:
+    * recent orders
+    * saved products
+    * preferred fulfilment method
+    * favourite suppliers
+
+Potential future support:
+
+* reorder quickly
+* repeat previous invoice
+* saved baskets
+
+========================================
+10. MARKETPLACE VISION
+
+The portal should feel less like:
+“contact supplier”
+
+and more like:
+“modern wholesale sourcing”
+
+The long-term experience should resemble:
+
+* Faire
+* Qogita
+* Ankorstore
+
+but focused on:
+African & ethnic wholesale supply.
+
+========================================
+11. SEO & LANDING EXPERIENCE
+
+Optimise customer-facing pages heavily for SEO.
+
+Focus keywords:
+
+* African wholesale suppliers
+* African food wholesalers UK
+* ethnic wholesale suppliers
+* wholesale African groceries
+* African cash and carry
+* wholesale beans rice garri spices
+
+Improve landing copy to feel more product-led.
+
+Examples:
+Instead of:
+“Find wholesale suppliers”
+
+Use:
+“Garri, beans, rice, spices & African wholesale products”
+
+The homepage should immediately communicate:
+
+* products
+* culture
+* trade
+* wholesale sourcing
+
+========================================
+12. IMPORTANT TECHNICAL REQUIREMENTS
+
+DO NOT BREAK:
+
+* invoice flows
+* Stripe flows
+* stock allocation
+* batch tracking
+* analytics
+* customer directory logic
+* existing permissions
+* subscription gating
+* quote system
+* WhatsApp messaging
+* reporting
+
+Ensure:
+
+* no duplicate customers
+* no duplicate draft invoices
+* idempotent quote request behaviour
+* safe upgrade path
+* regression testing around:
+    * invoices
+    * stock
+    * leads
+    * draft requests
+    * customer matching
+
+========================================
+13. END GOAL
+
+Quikpik should evolve from:
+inventory + invoicing software
+
+into:
+a wholesale operating system + sourcing marketplace.
+
+The customer portal should become:
+
+* searchable
+* lead-driven
+* quote-driven
+* retailer-friendly
+* conversion-focused
+* SEO-optimised
+* mobile-first
+
+while still preserving Quikpik’s operational backbone.

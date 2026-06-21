@@ -81,7 +81,7 @@ import { db } from '../server/db';
 import {
   users, orders, orderItems, products,
   priceLists, priceListItems, priceListAssignments,
-  stockMovements, quoteActivityLogs, productBatches,
+  stockMovements, quoteActivityLogs, productBatches, productPriceHistory,
 } from '@shared/schema';
 import { registerQuoteRoutes } from '../server/routes/payments-quotes';
 
@@ -92,37 +92,60 @@ const app = express();
 app.use(express.json());
 registerQuoteRoutes(app);
 
-// Track created product/order ids so dependent rows can be removed in FK-safe order.
+// Tracking arrays kept for backward-compat but cleanup now uses wholesaler-scoped
+// queries so stale state is removed even when a test fails mid-sequence.
 const createdProductIds: number[] = [];
 const createdOrderIds: number[] = [];
 
 async function cleanup() {
-  if (createdOrderIds.length > 0) {
-    await db.delete(quoteActivityLogs).where(inArray(quoteActivityLogs.quoteId, createdOrderIds));
-    await db.delete(orderItems).where(inArray(orderItems.orderId, createdOrderIds));
+  // Resolve all orders/products for this wholesaler so the cleanup is not
+  // dependent on the tracking arrays being accurate (they can fall out of sync
+  // when a test fails before recording an id, or when a handler creates rows
+  // that are not returned to the test).
+  const allOrderRows = await db
+    .select({ id: orders.id })
+    .from(orders)
+    .where(eq(orders.wholesalerId, WHOLESALER_ID));
+  const allOrderIds = allOrderRows.map((r) => r.id);
+
+  const allProductRows = await db
+    .select({ id: products.id })
+    .from(products)
+    .where(eq(products.wholesalerId, WHOLESALER_ID));
+  const allProductIds = allProductRows.map((r) => r.id);
+
+  // Delete child rows first (FK-safe order):
+  // order children → product children → price lists → orders → products
+  if (allOrderIds.length > 0) {
+    await db.delete(quoteActivityLogs).where(inArray(quoteActivityLogs.quoteId, allOrderIds));
+    await db.delete(orderItems).where(inArray(orderItems.orderId, allOrderIds));
   }
-  if (createdProductIds.length > 0) {
-    await db.delete(stockMovements).where(inArray(stockMovements.productId, createdProductIds));
-    // Edits restore stock via batches (creating RETURN batches), and some tests seed
-    // their own batch — clear them all before the products are removed.
-    await db.delete(productBatches).where(inArray(productBatches.productId, createdProductIds));
+  if (allProductIds.length > 0) {
+    await db.delete(stockMovements).where(inArray(stockMovements.productId, allProductIds));
+    await db.delete(productBatches).where(inArray(productBatches.productId, allProductIds));
+    // productPriceHistory has a FK on products.id — must be cleared before products.
+    await db.delete(productPriceHistory).where(inArray(productPriceHistory.productId, allProductIds));
   }
-  // Personal price lists owned by the test wholesaler (assignments cascade on list delete).
-  const lists = await db.select({ id: priceLists.id }).from(priceLists).where(eq(priceLists.wholesalerId, WHOLESALER_ID));
-  const listIds = lists.map((l) => l.id);
+  // Personal price lists owned by the test wholesaler.
+  const listRows = await db
+    .select({ id: priceLists.id })
+    .from(priceLists)
+    .where(eq(priceLists.wholesalerId, WHOLESALER_ID));
+  const listIds = listRows.map((l) => l.id);
   if (listIds.length > 0) {
     await db.delete(priceListItems).where(inArray(priceListItems.priceListId, listIds));
     await db.delete(priceListAssignments).where(inArray(priceListAssignments.priceListId, listIds));
     await db.delete(priceLists).where(inArray(priceLists.id, listIds));
   }
-  if (createdOrderIds.length > 0) {
-    await db.delete(orders).where(inArray(orders.id, createdOrderIds));
-    createdOrderIds.length = 0;
+  if (allOrderIds.length > 0) {
+    await db.delete(orders).where(inArray(orders.id, allOrderIds));
   }
-  if (createdProductIds.length > 0) {
-    await db.delete(products).where(inArray(products.id, createdProductIds));
-    createdProductIds.length = 0;
+  if (allProductIds.length > 0) {
+    await db.delete(products).where(inArray(products.id, allProductIds));
   }
+  // Reset tracking arrays.
+  createdOrderIds.length = 0;
+  createdProductIds.length = 0;
 }
 
 async function makeProduct(opts: { price: string; palletPrice?: string }): Promise<number> {
