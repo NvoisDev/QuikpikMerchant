@@ -1,6 +1,6 @@
 import type { Express } from "express";
 import {
-  and, asc, count, db, desc, eq, generateProductImage, insertProductSchema, isNull, openai, or,
+  and, asc, count, db, desc, eq, generateProductImage, gte, insertProductSchema, isNull, lte, openai, or,
   products, productPriceHistory, requireAuth, requireMemberPermission, requireNotViewer, requireProductLimits, sql, storage, users, z
 } from "./shared";
 import { productBatches, stockMovements } from "@shared/schema";
@@ -131,15 +131,31 @@ export function registerProductRoutes(app: Express): void {
   });
 
   // GET /api/products/price-history — all price changes for this wholesaler
-  // Optional ?productId=N filter to scope to one product
+  // Optional ?productId=N, ?from=YYYY-MM-DD, ?to=YYYY-MM-DD filters
   app.get('/api/products/price-history', requireAuth, async (req: any, res) => {
     try {
       const wholesalerId = resolveWholesalerId(req);
       const productIdFilter = req.query.productId ? parseInt(req.query.productId as string) : null;
+      const fromParam = req.query.from as string | undefined;
+      const toParam = req.query.to as string | undefined;
 
       const conditions = [eq(productPriceHistory.wholesalerId, wholesalerId)];
       if (productIdFilter && !isNaN(productIdFilter)) {
         conditions.push(eq(productPriceHistory.productId, productIdFilter));
+      }
+      if (fromParam) {
+        const fromDate = new Date(fromParam);
+        if (!isNaN(fromDate.getTime())) {
+          fromDate.setUTCHours(0, 0, 0, 0);
+          conditions.push(gte(productPriceHistory.changedAt, fromDate));
+        }
+      }
+      if (toParam) {
+        const toDate = new Date(toParam);
+        if (!isNaN(toDate.getTime())) {
+          toDate.setUTCHours(23, 59, 59, 999);
+          conditions.push(lte(productPriceHistory.changedAt, toDate));
+        }
       }
 
       const rows = await db

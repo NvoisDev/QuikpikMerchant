@@ -166,16 +166,42 @@ interface PriceChangeRow {
 }
 
 function PriceChangesTab() {
+  const [search, setSearch] = useState('');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
+
+  const params = useMemo(() => {
+    const p = new URLSearchParams();
+    if (fromDate) p.set('from', fromDate);
+    if (toDate) p.set('to', toDate);
+    return p.toString();
+  }, [fromDate, toDate]);
+
+  const queryUrl = params ? `/api/products/price-history?${params}` : '/api/products/price-history';
+
   const { data: rows = [], isLoading } = useQuery<PriceChangeRow[]>({
-    queryKey: ['/api/products/price-history'],
+    queryKey: ['/api/products/price-history', fromDate, toDate],
+    queryFn: async () => {
+      const r = await fetch(queryUrl, { credentials: 'include' });
+      if (!r.ok) throw new Error('Failed to fetch price history');
+      return r.json();
+    },
     staleTime: 30_000,
   });
+
+  const filtered = useMemo(() => {
+    if (!search.trim()) return rows;
+    const q = search.toLowerCase();
+    return rows.filter(r => r.productName.toLowerCase().includes(q));
+  }, [rows, search]);
 
   const fmt = (val: string) => {
     const n = parseFloat(val);
     if (!isFinite(n)) return '—';
     return new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(n);
   };
+
+  const hasFilters = search.trim() || fromDate || toDate;
 
   if (isLoading) {
     return (
@@ -187,61 +213,111 @@ function PriceChangesTab() {
     );
   }
 
-  if (rows.length === 0) {
-    return (
-      <div className="text-center py-16 text-gray-400">
-        <TrendingUp className="h-10 w-10 mx-auto mb-3 opacity-30" />
-        <p className="text-sm font-medium text-gray-500">No price changes yet</p>
-        <p className="text-xs mt-1">When you update a product price via an invoice using "Apply to all orders", it will appear here.</p>
-      </div>
-    );
-  }
-
   return (
-    <div className="space-y-2">
-      <p className="text-xs text-gray-500 pb-1">Catalog price changes made via invoice price propagation (scope = all orders).</p>
-      <div className="rounded-xl border border-gray-100 overflow-hidden">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="bg-gray-50 text-xs text-gray-500 uppercase tracking-wide">
-              <th className="px-4 py-2.5 text-left font-medium">Product</th>
-              <th className="px-4 py-2.5 text-left font-medium hidden sm:table-cell">Type</th>
-              <th className="px-4 py-2.5 text-right font-medium">Old Price</th>
-              <th className="px-4 py-2.5 text-right font-medium">New Price</th>
-              <th className="px-4 py-2.5 text-right font-medium">Change</th>
-              <th className="px-4 py-2.5 text-right font-medium hidden md:table-cell">Date</th>
-              <th className="px-4 py-2.5 text-right font-medium hidden lg:table-cell">Order</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-50">
-            {rows.map((row) => {
-              const pct = ((parseFloat(row.newPrice) - parseFloat(row.oldPrice)) / parseFloat(row.oldPrice)) * 100;
-              const isUp = pct > 0;
-              return (
-                <tr key={row.id} className="bg-white hover:bg-gray-50/50 transition-colors">
-                  <td className="px-4 py-3 font-medium text-gray-800 max-w-[140px] truncate">{row.productName}</td>
-                  <td className="px-4 py-3 text-gray-500 hidden sm:table-cell capitalize">{row.sellingType}</td>
-                  <td className="px-4 py-3 text-right text-gray-500">{fmt(row.oldPrice)}</td>
-                  <td className="px-4 py-3 text-right font-medium text-gray-800">{fmt(row.newPrice)}</td>
-                  <td className={`px-4 py-3 text-right font-semibold text-xs ${isUp ? 'text-green-600' : 'text-red-500'}`}>
-                    {isUp ? '↑' : '↓'} {Math.abs(pct).toFixed(1)}%
-                  </td>
-                  <td className="px-4 py-3 text-right text-gray-400 text-xs hidden md:table-cell">
-                    {new Date(row.changedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
-                  </td>
-                  <td className="px-4 py-3 text-right hidden lg:table-cell">
-                    {row.orderId ? (
-                      <Link href={`/orders/${row.orderId}`} className="text-xs text-emerald-600 hover:underline">
-                        View order
-                      </Link>
-                    ) : null}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+    <div className="space-y-3">
+      <p className="text-xs text-gray-500">Catalog price changes made via invoice price propagation (scope = all orders).</p>
+
+      <div className="flex flex-col sm:flex-row gap-2">
+        <div className="relative flex-1">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400 pointer-events-none" />
+          <Input
+            placeholder="Search by product name…"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="pl-8 h-8 text-sm"
+          />
+        </div>
+        <div className="flex gap-2 items-center">
+          <Input
+            type="date"
+            value={fromDate}
+            onChange={e => setFromDate(e.target.value)}
+            className="h-8 text-sm w-36"
+            title="From date"
+          />
+          <span className="text-gray-400 text-xs">to</span>
+          <Input
+            type="date"
+            value={toDate}
+            onChange={e => setToDate(e.target.value)}
+            className="h-8 text-sm w-36"
+            title="To date"
+          />
+          {hasFilters && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 px-2 text-gray-400 hover:text-gray-600"
+              onClick={() => { setSearch(''); setFromDate(''); setToDate(''); }}
+            >
+              <X className="h-3.5 w-3.5" />
+            </Button>
+          )}
+        </div>
       </div>
+
+      {rows.length > 0 && (
+        <p className="text-xs text-gray-400">
+          Showing {filtered.length} of {rows.length} change{rows.length !== 1 ? 's' : ''}
+        </p>
+      )}
+
+      {filtered.length === 0 ? (
+        <div className="text-center py-16 text-gray-400">
+          <TrendingUp className="h-10 w-10 mx-auto mb-3 opacity-30" />
+          {rows.length === 0 ? (
+            <>
+              <p className="text-sm font-medium text-gray-500">No price changes yet</p>
+              <p className="text-xs mt-1">When you update a product price via an invoice using "Apply to all orders", it will appear here.</p>
+            </>
+          ) : (
+            <p className="text-sm font-medium text-gray-500">No changes match your filters</p>
+          )}
+        </div>
+      ) : (
+        <div className="rounded-xl border border-gray-100 overflow-hidden">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-gray-50 text-xs text-gray-500 uppercase tracking-wide">
+                <th className="px-4 py-2.5 text-left font-medium">Product</th>
+                <th className="px-4 py-2.5 text-left font-medium hidden sm:table-cell">Type</th>
+                <th className="px-4 py-2.5 text-right font-medium">Old Price</th>
+                <th className="px-4 py-2.5 text-right font-medium">New Price</th>
+                <th className="px-4 py-2.5 text-right font-medium">Change</th>
+                <th className="px-4 py-2.5 text-right font-medium hidden md:table-cell">Date</th>
+                <th className="px-4 py-2.5 text-right font-medium hidden lg:table-cell">Order</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-50">
+              {filtered.map((row) => {
+                const pct = ((parseFloat(row.newPrice) - parseFloat(row.oldPrice)) / parseFloat(row.oldPrice)) * 100;
+                const isUp = pct > 0;
+                return (
+                  <tr key={row.id} className="bg-white hover:bg-gray-50/50 transition-colors">
+                    <td className="px-4 py-3 font-medium text-gray-800 max-w-[140px] truncate">{row.productName}</td>
+                    <td className="px-4 py-3 text-gray-500 hidden sm:table-cell capitalize">{row.sellingType}</td>
+                    <td className="px-4 py-3 text-right text-gray-500">{fmt(row.oldPrice)}</td>
+                    <td className="px-4 py-3 text-right font-medium text-gray-800">{fmt(row.newPrice)}</td>
+                    <td className={`px-4 py-3 text-right font-semibold text-xs ${isUp ? 'text-green-600' : 'text-red-500'}`}>
+                      {isUp ? '↑' : '↓'} {Math.abs(pct).toFixed(1)}%
+                    </td>
+                    <td className="px-4 py-3 text-right text-gray-400 text-xs hidden md:table-cell">
+                      {new Date(row.changedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    </td>
+                    <td className="px-4 py-3 text-right hidden lg:table-cell">
+                      {row.orderId ? (
+                        <Link href={`/orders/${row.orderId}`} className="text-xs text-emerald-600 hover:underline">
+                          View order
+                        </Link>
+                      ) : null}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }
