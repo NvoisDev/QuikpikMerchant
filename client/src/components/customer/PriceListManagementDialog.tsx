@@ -399,6 +399,9 @@ export function PriceListManagementDialog({
   const togglePriceListExpanded = async (list: PriceListSummary) => {
     const isOpen = expandedPriceLists[list.id];
     setExpandedPriceLists(prev => ({ ...prev, [list.id]: !isOpen }));
+    if (isOpen) {
+      setExpandedPriceListSearch(prev => { const next = { ...prev }; delete next[list.id]; return next; });
+    }
     if (!isOpen && !priceListDetailCache[list.id]) {
       try {
         const res = await apiRequest('GET', `/api/price-lists/${list.id}`);
