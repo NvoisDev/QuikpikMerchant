@@ -718,11 +718,8 @@ function PublicStoreSettings({ user }: { user: any }) {
   const [description, setDescription] = useState(user?.storeDescription || '');
   const [regions, setRegions] = useState(user?.deliveryRegions || '');
   const [showOnHomepage, setShowOnHomepage] = useState(user?.showOnHomepage ?? false);
-  const [enquiriesEnabled, setEnquiriesEnabled] = useState(user?.enquiriesEnabled !== false);
   const [minOrderAmount, setMinOrderAmount] = useState(String((user?.minOrderAmount ?? 0) / 100));
-  const [allowQuoteRequests, setAllowQuoteRequests] = useState(user?.allowQuoteRequests !== false);
   const [requireApprovalForPricing, setRequireApprovalForPricing] = useState(user?.requireApprovalForPricing === true);
-  const [allowGuestBrowsing, setAllowGuestBrowsing] = useState(user?.allowGuestBrowsing !== false);
   const [whatsappContactVisible, setWhatsappContactVisible] = useState(user?.whatsappContactVisible !== false);
   const [portalAllowPayLater, setPortalAllowPayLater] = useState(user?.allowPayLater ?? false);
   const [portalDeliveryNote, setPortalDeliveryNote] = useState(user?.deliveryNote || '');
@@ -738,16 +735,13 @@ function PublicStoreSettings({ user }: { user: any }) {
     setDescription(user?.storeDescription || '');
     setRegions(user?.deliveryRegions || '');
     setShowOnHomepage(user?.showOnHomepage ?? false);
-    setEnquiriesEnabled(user?.enquiriesEnabled !== false);
     setMinOrderAmount(String((user?.minOrderAmount ?? 0) / 100));
-    setAllowQuoteRequests(user?.allowQuoteRequests !== false);
     setRequireApprovalForPricing(user?.requireApprovalForPricing === true);
-    setAllowGuestBrowsing(user?.allowGuestBrowsing !== false);
     setWhatsappContactVisible(user?.whatsappContactVisible !== false);
     setPortalAllowPayLater(user?.allowPayLater ?? false);
     setPortalDeliveryNote(user?.deliveryNote || '');
     setPortalPickupInstructions(user?.pickupInstructions || '');
-  }, [user?.storeVisibility, user?.priceDisplayMode, user?.moqVisible, user?.stockVisible, user?.packSizeVisible, user?.storeDescription, user?.deliveryRegions, user?.showOnHomepage, user?.enquiriesEnabled, user?.minOrderAmount, user?.allowQuoteRequests, user?.requireApprovalForPricing, user?.allowGuestBrowsing, user?.whatsappContactVisible, user?.allowPayLater, user?.deliveryNote, user?.pickupInstructions]);
+  }, [user?.storeVisibility, user?.priceDisplayMode, user?.moqVisible, user?.stockVisible, user?.packSizeVisible, user?.storeDescription, user?.deliveryRegions, user?.showOnHomepage, user?.minOrderAmount, user?.requireApprovalForPricing, user?.whatsappContactVisible, user?.allowPayLater, user?.deliveryNote, user?.pickupInstructions]);
 
   const storeSlug = user?.storeSlug || user?.id || '';
   const publicUrl = `${window.location.origin}/w/${storeSlug}`;
@@ -764,11 +758,11 @@ function PublicStoreSettings({ user }: { user: any }) {
         storeDescription: description.trim() || null,
         deliveryRegions: regions.trim() || null,
         showOnHomepage,
-        enquiriesEnabled,
+        enquiriesEnabled: !showPrices,
         minOrderAmount: Math.round((parseFloat(minOrderAmount || '0') || 0) * 100),
-        allowQuoteRequests,
+        allowQuoteRequests: !showPrices,
         requireApprovalForPricing,
-        allowGuestBrowsing,
+        allowGuestBrowsing: isPublic,
         whatsappContactVisible,
         allowPayLater: portalAllowPayLater,
         deliveryNote: portalDeliveryNote.trim() || null,
@@ -798,12 +792,23 @@ function PublicStoreSettings({ user }: { user: any }) {
         <Label className="text-xs font-medium text-gray-700 mb-1 block">What customers see</Label>
         <p className="text-xs text-gray-500 mb-2">Controls what approved, logged-in customers see when they browse your catalogue and place orders.</p>
         <div className="space-y-2">
-          <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
-            <div className="pr-3">
-              <p className="text-sm font-medium text-gray-900">Show prices</p>
-              <p className="text-xs text-gray-500 mt-0.5">Approved customers see unit prices and can check out. Turn off to hide pricing from everyone.</p>
+          <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+            <div className="flex items-center justify-between">
+              <div className="pr-3">
+                <p className="text-sm font-medium text-gray-900">Show prices</p>
+                <p className="text-xs text-gray-500 mt-0.5">Approved customers see unit prices and can check out. Turn off to hide pricing from everyone.</p>
+              </div>
+              <Switch checked={showPrices} onCheckedChange={setShowPrices} />
             </div>
-            <Switch checked={showPrices} onCheckedChange={setShowPrices} />
+            {showPrices && (
+              <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-200">
+                <div className="pr-3">
+                  <p className="text-sm font-medium text-gray-700">Require approval for new customers</p>
+                  <p className="text-xs text-gray-500 mt-0.5">New customers must be approved before they can see prices and check out.</p>
+                </div>
+                <Switch checked={requireApprovalForPricing} onCheckedChange={setRequireApprovalForPricing} />
+              </div>
+            )}
           </div>
           <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
             <div className="pr-3">
@@ -916,46 +921,14 @@ function PublicStoreSettings({ user }: { user: any }) {
         </div>
       )}
 
-      {/* Access & Enquiries */}
+      {/* Contact */}
       <div className="mt-6">
-        <Label className="text-xs font-medium text-gray-700 mb-1 block">Access &amp; enquiries</Label>
-        <p className="text-xs text-gray-500 mb-2">Control how customers can contact you and what they can access.</p>
-        <div className="space-y-2">
-          <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
-            <div className="pr-3">
-              <p className="text-sm font-medium text-gray-900">Allow enquiries</p>
-              <p className="text-xs text-gray-500 mt-0.5">Show "Get Trade Pricing" and "Get in touch" buttons on your store.</p>
-            </div>
-            <Switch checked={enquiriesEnabled} onCheckedChange={setEnquiriesEnabled} />
+        <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
+          <div className="pr-3">
+            <p className="text-sm font-medium text-gray-900">Show WhatsApp contact button</p>
+            <p className="text-xs text-gray-500 mt-0.5">Display your WhatsApp number as a contact option on your store.</p>
           </div>
-          <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
-            <div className="pr-3">
-              <p className="text-sm font-medium text-gray-900">Allow quote requests</p>
-              <p className="text-xs text-gray-500 mt-0.5">Customers can request a quote for any product.</p>
-            </div>
-            <Switch checked={allowQuoteRequests} onCheckedChange={setAllowQuoteRequests} />
-          </div>
-          <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
-            <div className="pr-3">
-              <p className="text-sm font-medium text-gray-900">Require approval for trade pricing</p>
-              <p className="text-xs text-gray-500 mt-0.5">New customers must be approved before seeing prices.</p>
-            </div>
-            <Switch checked={requireApprovalForPricing} onCheckedChange={setRequireApprovalForPricing} />
-          </div>
-          <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
-            <div className="pr-3">
-              <p className="text-sm font-medium text-gray-900">Allow guest browsing</p>
-              <p className="text-xs text-gray-500 mt-0.5">Let visitors browse your catalogue without registering.</p>
-            </div>
-            <Switch checked={allowGuestBrowsing} onCheckedChange={setAllowGuestBrowsing} />
-          </div>
-          <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
-            <div className="pr-3">
-              <p className="text-sm font-medium text-gray-900">Show WhatsApp contact button</p>
-              <p className="text-xs text-gray-500 mt-0.5">Display your WhatsApp number as a contact option on your store.</p>
-            </div>
-            <Switch checked={whatsappContactVisible} onCheckedChange={setWhatsappContactVisible} />
-          </div>
+          <Switch checked={whatsappContactVisible} onCheckedChange={setWhatsappContactVisible} />
         </div>
       </div>
 
