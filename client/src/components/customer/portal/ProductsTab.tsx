@@ -753,7 +753,7 @@ export function ProductsTab({
                                 <Plus className="h-3 w-3" />
                               </Button>
                             </div>
-                            {cartItemUnits && <div className="text-xs text-gray-500 mt-1 text-center">Total: <PriceDisplay price={pricing.effectivePrice * cartItemUnits.quantity} currency={wholesaler?.defaultCurrency || 'GBP'} isGuestMode={false} size="small" /></div>}
+                            {cartItemUnits && !pricesHidden && <div className="text-xs text-gray-500 mt-1 text-center">Total: <PriceDisplay price={pricing.effectivePrice * cartItemUnits.quantity} currency={wholesaler?.defaultCurrency || 'GBP'} isGuestMode={false} size="small" /></div>}
                           </div>
                         )}
 
@@ -797,7 +797,7 @@ export function ProductsTab({
                                 <Plus className="h-3 w-3" />
                               </Button>
                             </div>
-                            <div className="text-xs text-gray-500 mt-1 text-center">Total: <PriceDisplay price={parseFloat(product.palletPrice?.toString() || '0') * cartItemPallets.quantity} currency={wholesaler?.defaultCurrency || 'GBP'} isGuestMode={false} size="small" /> <span className="ml-1">({cartItemPallets.quantity} pallet{cartItemPallets.quantity > 1 ? 's' : ''} × {product.unitsPerPallet} units)</span></div>
+                            {!pricesHidden && <div className="text-xs text-gray-500 mt-1 text-center">Total: <PriceDisplay price={parseFloat(product.palletPrice?.toString() || '0') * cartItemPallets.quantity} currency={wholesaler?.defaultCurrency || 'GBP'} isGuestMode={false} size="small" /> <span className="ml-1">({cartItemPallets.quantity} pallet{cartItemPallets.quantity > 1 ? 's' : ''} × {product.unitsPerPallet} units)</span></div>}
                           </div>
                         )}
 
@@ -1138,7 +1138,7 @@ export function ProductsTab({
                                   <Plus className="h-3 w-3" />
                                 </Button>
                               </div>
-                              {cartItemUnits && <div className="text-xs text-gray-500 mt-1">Total: <PriceDisplay price={pricing.effectivePrice * cartItemUnits.quantity} currency={wholesaler?.defaultCurrency || 'GBP'} isGuestMode={false} size="small" /></div>}
+                              {cartItemUnits && !pricesHidden && <div className="text-xs text-gray-500 mt-1">Total: <PriceDisplay price={pricing.effectivePrice * cartItemUnits.quantity} currency={wholesaler?.defaultCurrency || 'GBP'} isGuestMode={false} size="small" /></div>}
                             </div>
                           )}
 
@@ -1182,7 +1182,7 @@ export function ProductsTab({
                                   <Plus className="h-3 w-3" />
                                 </Button>
                               </div>
-                              <div className="text-xs text-gray-500 mt-1">Total: <PriceDisplay price={parseFloat(product.palletPrice?.toString() || '0') * cartItemPallets.quantity} currency={wholesaler?.defaultCurrency || 'GBP'} isGuestMode={false} size="small" /> <span className="ml-1">({cartItemPallets.quantity} pallet{cartItemPallets.quantity > 1 ? 's' : ''} × {product.unitsPerPallet} units)</span></div>
+                              {!pricesHidden && <div className="text-xs text-gray-500 mt-1">Total: <PriceDisplay price={parseFloat(product.palletPrice?.toString() || '0') * cartItemPallets.quantity} currency={wholesaler?.defaultCurrency || 'GBP'} isGuestMode={false} size="small" /> <span className="ml-1">({cartItemPallets.quantity} pallet{cartItemPallets.quantity > 1 ? 's' : ''} × {product.unitsPerPallet} units)</span></div>}
                             </div>
                           )}
 
