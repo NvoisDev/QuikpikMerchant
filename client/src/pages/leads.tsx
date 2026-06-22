@@ -11,7 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import {
   Inbox, Phone, Mail, Building2, Package, MessageSquare,
   Clock, CheckCircle2, Eye, X, TrendingUp, Users, Star,
-  Settings, ShoppingCart, FileText, Save, ExternalLink,
+  Settings, ShoppingCart, FileText, Save, ExternalLink, Send,
 } from "lucide-react";
 
 interface CartItem {
@@ -87,6 +87,23 @@ function EnquiryDrawer({ enquiry, onClose }: { enquiry: StoreEnquiry; onClose: (
     },
   });
 
+  const approveMutation = useMutation({
+    mutationFn: async () => {
+      await apiRequest('POST', `/api/orders/${enquiry.orderId}/approve`);
+      await apiRequest('PATCH', `/api/public/enquiries/${enquiry.id}`, { status: 'responded' });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/public/enquiries'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/public/enquiries/new-count'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/orders'] });
+      toast({ title: "Invoice sent!", description: "The draft has been approved and the invoice emailed to the customer." });
+      onClose();
+    },
+    onError: (err: any) => {
+      toast({ title: "Approval failed", description: err?.message || "Could not approve the draft.", variant: "destructive" });
+    },
+  });
+
   const cartTotal = enquiry.cartItems?.reduce((s, i) => s + parseFloat(i.total || '0'), 0) ?? 0;
 
   return (
@@ -123,10 +140,18 @@ function EnquiryDrawer({ enquiry, onClose }: { enquiry: StoreEnquiry; onClose: (
               <p className="text-xs font-semibold text-violet-700 uppercase tracking-wide mb-2 flex items-center gap-1.5">
                 <FileText className="h-3 w-3" /> Draft Invoice
               </p>
-              <p className="text-xs text-violet-600 mb-3">A draft invoice has been created from this cart quote request. Review and send it to the customer.</p>
+              <p className="text-xs text-violet-600 mb-3">A draft invoice has been created from this cart quote request. Approve it now to send the invoice to the customer instantly, or open it first to make changes.</p>
+              <Button
+                className="w-full mb-2 bg-violet-600 hover:bg-violet-700 text-white"
+                onClick={() => approveMutation.mutate()}
+                disabled={approveMutation.isPending}
+              >
+                <Send className="h-3.5 w-3.5 mr-2" />
+                {approveMutation.isPending ? 'Approving…' : 'Approve & Send Invoice'}
+              </Button>
               <a
                 href={`/invoices?draft=${enquiry.orderId}`}
-                className="flex items-center justify-center gap-2 w-full py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-lg text-sm font-medium transition-colors"
+                className="flex items-center justify-center gap-2 w-full py-2 border border-violet-300 text-violet-700 hover:bg-violet-100 rounded-lg text-sm font-medium transition-colors"
               >
                 <ExternalLink className="h-3.5 w-3.5" /> View & Edit Draft Invoice
               </a>
