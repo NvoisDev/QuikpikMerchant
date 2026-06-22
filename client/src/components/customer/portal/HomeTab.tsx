@@ -202,6 +202,8 @@ export function HomeTab({
           customerPhone={authenticatedCustomer.phone}
           onViewAllOrders={() => setActiveTab("orders")}
           defaultCurrency={wholesaler?.defaultCurrency}
+          priceDisplayMode={priceDisplayMode}
+          onRequestQuote={onRequestQuote}
         />
       )}
 

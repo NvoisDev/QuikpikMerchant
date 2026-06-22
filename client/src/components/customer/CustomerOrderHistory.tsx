@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogClose } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Package, Clock, Check, Eye, Search, RefreshCw, ChevronLeft, ChevronRight, ChevronDown, Calendar, ShoppingBag, MapPin, Home, Building, Truck, Camera, Image as ImageIcon, Warehouse, X, AlertCircle, FileText, ShoppingCart, Download, Loader2, ArrowLeft } from "lucide-react";
+import { Package, Clock, Check, Eye, Search, RefreshCw, ChevronLeft, ChevronRight, ChevronDown, Calendar, ShoppingBag, MapPin, Home, Building, Truck, Camera, Image as ImageIcon, Warehouse, X, AlertCircle, FileText, ShoppingCart, Download, Loader2, ArrowLeft, Tag } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
@@ -765,11 +765,12 @@ export const CancellationRequestButton = ({ order, customerPhone, onSuccess, ope
   );
 };
 
-export const OrderActionsDropdown = ({ order, onViewDetails, customerPhone, onSuccess, currency, downloadingInvoiceId, onDownloadInvoice }: { order: Order, onViewDetails: () => void, customerPhone: string, onSuccess: () => void, currency: string, downloadingInvoiceId: number | null, onDownloadInvoice: () => void }) => {
+export const OrderActionsDropdown = ({ order, onViewDetails, customerPhone, onSuccess, currency, downloadingInvoiceId, onDownloadInvoice, priceDisplayMode, onRequestQuote }: { order: Order, onViewDetails: () => void, customerPhone: string, onSuccess: () => void, currency: string, downloadingInvoiceId: number | null, onDownloadInvoice: () => void, priceDisplayMode?: string, onRequestQuote?: () => void }) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [reorderOpen, setReorderOpen] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
   const canCancel = order.status !== 'cancelled' && order.status !== 'fulfilled' && order.status !== 'completed';
+  const pricesHidden = priceDisplayMode !== 'shown';
 
   const handleAction = (action: () => void) => {
     setMenuOpen(false);
@@ -789,9 +790,15 @@ export const OrderActionsDropdown = ({ order, onViewDetails, customerPhone, onSu
           <DropdownMenuItem onClick={() => handleAction(onViewDetails)}>
             <Eye className="h-4 w-4 mr-2" /> View Details
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => handleAction(() => setReorderOpen(true))}>
-            <ShoppingBag className="h-4 w-4 mr-2" /> Reorder
-          </DropdownMenuItem>
+          {pricesHidden ? (
+            <DropdownMenuItem onClick={() => handleAction(() => onRequestQuote?.())}>
+              <Tag className="h-4 w-4 mr-2" /> Get Trade Pricing
+            </DropdownMenuItem>
+          ) : (
+            <DropdownMenuItem onClick={() => handleAction(() => setReorderOpen(true))}>
+              <ShoppingBag className="h-4 w-4 mr-2" /> Reorder
+            </DropdownMenuItem>
+          )}
           <DropdownMenuItem onClick={() => handleAction(onDownloadInvoice)} disabled={downloadingInvoiceId === order.id}>
             {downloadingInvoiceId === order.id
               ? <Loader2 className="h-4 w-4 mr-2 animate-spin" />

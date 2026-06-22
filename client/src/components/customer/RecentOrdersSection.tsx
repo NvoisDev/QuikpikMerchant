@@ -24,9 +24,11 @@ interface RecentOrdersSectionProps {
   customerPhone: string;
   onViewAllOrders: () => void;
   defaultCurrency?: string;
+  priceDisplayMode?: string;
+  onRequestQuote?: () => void;
 }
 
-export function RecentOrdersSection({ wholesalerId, customerPhone, onViewAllOrders, defaultCurrency }: RecentOrdersSectionProps) {
+export function RecentOrdersSection({ wholesalerId, customerPhone, onViewAllOrders, defaultCurrency, priceDisplayMode, onRequestQuote }: RecentOrdersSectionProps) {
   const [downloadingInvoiceId, setDownloadingInvoiceId] = useState<number | null>(null);
   const [selectedOrderForDetails, setSelectedOrderForDetails] = useState<Order | null>(null);
 
@@ -147,6 +149,8 @@ export function RecentOrdersSection({ wholesalerId, customerPhone, onViewAllOrde
                 currency={defaultCurrency || 'GBP'}
                 downloadingInvoiceId={downloadingInvoiceId}
                 onDownloadInvoice={() => downloadInvoice(order)}
+                priceDisplayMode={priceDisplayMode}
+                onRequestQuote={onRequestQuote}
               />
             </div>
           </div>
