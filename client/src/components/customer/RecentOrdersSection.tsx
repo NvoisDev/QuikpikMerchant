@@ -164,6 +164,7 @@ export function RecentOrdersSection({ wholesalerId, customerPhone, onViewAllOrde
             order={selectedOrderForDetails}
             wholesalerId={wholesalerId}
             customerPhone={customerPhone}
+            priceDisplayMode={priceDisplayMode}
           />
         </Dialog>
       )}

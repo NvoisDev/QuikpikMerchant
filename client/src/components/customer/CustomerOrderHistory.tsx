@@ -23,6 +23,7 @@ export interface CustomerOrderHistoryProps {
   wholesalerId: string;
   customerPhone: string;
   currency?: string;
+  priceDisplayMode?: string;
 }
 
 export interface OrderItem {
@@ -320,7 +321,8 @@ interface ReorderPreview {
   total: string;
 }
 
-export const ReorderButton = ({ order, customerPhone, onSuccess, currency = 'GBP', open: externalOpen, onOpenChange: externalOnOpenChange }: { order: Order, customerPhone: string, onSuccess?: () => void, currency?: string, open?: boolean, onOpenChange?: (v: boolean) => void }) => {
+export const ReorderButton = ({ order, customerPhone, onSuccess, currency = 'GBP', open: externalOpen, onOpenChange: externalOnOpenChange, priceDisplayMode }: { order: Order, customerPhone: string, onSuccess?: () => void, currency?: string, open?: boolean, onOpenChange?: (v: boolean) => void, priceDisplayMode?: string }) => {
+  const pricesHidden = priceDisplayMode !== undefined && priceDisplayMode !== 'shown';
   const fmt = (amount: string | number) => formatCurrency(amount, currency);
   const [internalOpen, setInternalOpen] = useState(false);
   const isControlled = externalOpen !== undefined;
@@ -449,7 +451,7 @@ export const ReorderButton = ({ order, customerPhone, onSuccess, currency = 'GBP
                       <p className="text-xs text-gray-400 leading-tight">{item.packQuantity} × {parseFloat(String(item.unitSize))}{item.unitOfMeasure}</p>
                     )}
                     <p className="text-xs text-gray-500">
-                      {item.quantity} {item.sellingType} x {fmt(item.unitPrice)}
+                      {item.quantity} {item.sellingType}{!pricesHidden && <> x {fmt(item.unitPrice)}</>}
                     </p>
                     {(() => {
                       if (item.sellingType === 'pallets') {
@@ -466,44 +468,46 @@ export const ReorderButton = ({ order, customerPhone, onSuccess, currency = 'GBP
                       <p className="text-xs text-orange-600 mt-0.5">Stock may have changed</p>
                     )}
                   </div>
-                  <p className="text-sm font-semibold text-gray-900">{fmt(item.total)}</p>
+                  {!pricesHidden && <p className="text-sm font-semibold text-gray-900">{fmt(item.total)}</p>}
                 </div>
               ))}
             </div>
 
-            <div className="border-t pt-3 space-y-1.5">
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600">Subtotal</span>
-                <span>{fmt(preview.subtotal)}</span>
-              </div>
-              {parseFloat(preview.customerTransactionFee || '0') > 0 && (
-                <>
+            {!pricesHidden && (
+              <div className="border-t pt-3 space-y-1.5">
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">Subtotal</span>
+                  <span>{fmt(preview.subtotal)}</span>
+                </div>
+                {parseFloat(preview.customerTransactionFee || '0') > 0 && (
+                  <>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Service Fee</span>
+                      <span>{fmt(preview.customerTransactionFee)}</span>
+                    </div>
+                    <p className="text-xs text-gray-400 leading-tight">
+                      Service fee reflects current rates and may differ from your original order.
+                    </p>
+                  </>
+                )}
+                {parseFloat(preview.deliveryCost) > 0 && (
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Service Fee</span>
-                    <span>{fmt(preview.customerTransactionFee)}</span>
+                    <span className="text-gray-600">Delivery</span>
+                    <span>{fmt(preview.deliveryCost)}</span>
                   </div>
-                  <p className="text-xs text-gray-400 leading-tight">
-                    Service fee reflects current rates and may differ from your original order.
-                  </p>
-                </>
-              )}
-              {parseFloat(preview.deliveryCost) > 0 && (
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Delivery</span>
-                  <span>{fmt(preview.deliveryCost)}</span>
+                )}
+                {parseFloat(preview.shippingTotal || '0') > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Shipping</span>
+                    <span>{fmt(preview.shippingTotal)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between text-sm font-bold border-t pt-2">
+                  <span>Total</span>
+                  <span className="text-green-600">{fmt(preview.total)}</span>
                 </div>
-              )}
-              {parseFloat(preview.shippingTotal || '0') > 0 && (
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Shipping</span>
-                  <span>{fmt(preview.shippingTotal)}</span>
-                </div>
-              )}
-              <div className="flex justify-between text-sm font-bold border-t pt-2">
-                <span>Total</span>
-                <span className="text-green-600">{fmt(preview.total)}</span>
               </div>
-            </div>
+            )}
 
             <div className="flex justify-between items-center text-xs text-gray-500 bg-gray-50 p-2 rounded">
               <span>{preview.fulfillmentType === 'pickup' ? '📦 Collection' : '🚚 Delivery'}</span>
@@ -524,22 +528,31 @@ export const ReorderButton = ({ order, customerPhone, onSuccess, currency = 'GBP
                   Cancel
                 </Button>
               </DialogClose>
-              <Button 
-                className="flex-1 bg-green-600 hover:bg-green-700"
-                onClick={handleConfirmReorder}
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? (
-                  <>
-                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                    Processing...
-                  </>
-                ) : (
-                  <>
-                    💳 Pay & Reorder
-                  </>
-                )}
-              </Button>
+              {pricesHidden ? (
+                <DialogClose asChild>
+                  <Button className="flex-1 bg-green-600 hover:bg-green-700">
+                    <Tag className="h-4 w-4 mr-2" />
+                    Get Trade Pricing
+                  </Button>
+                </DialogClose>
+              ) : (
+                <Button 
+                  className="flex-1 bg-green-600 hover:bg-green-700"
+                  onClick={handleConfirmReorder}
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? (
+                    <>
+                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      💳 Pay & Reorder
+                    </>
+                  )}
+                </Button>
+              )}
             </div>
           </div>
         ) : null}
@@ -823,6 +836,7 @@ export const OrderActionsDropdown = ({ order, onViewDetails, customerPhone, onSu
         currency={currency}
         open={reorderOpen}
         onOpenChange={setReorderOpen}
+        priceDisplayMode={priceDisplayMode}
       />
       <CancellationRequestButton
         order={order}
@@ -835,7 +849,7 @@ export const OrderActionsDropdown = ({ order, onViewDetails, customerPhone, onSu
   );
 };
 
-export const OrderDetailsModal = ({ order, wholesalerId, customerPhone, currency = 'GBP' }: { order: Order, wholesalerId: string, customerPhone: string, currency?: string }) => {
+export const OrderDetailsModal = ({ order, wholesalerId, customerPhone, currency = 'GBP', priceDisplayMode }: { order: Order, wholesalerId: string, customerPhone: string, currency?: string, priceDisplayMode?: string }) => {
   const fmt = (amount: string | number) => formatCurrency(amount, currency);
   const queryClient = useQueryClient();
   // Use stored values from order data
@@ -1431,8 +1445,8 @@ const WholesalerDeliveryAddressDisplay = ({ addressId }: { addressId: number }) 
   );
 };
 
-function CustomerOrderDetailContent({ order, wholesalerId, customerPhone, currency = 'GBP', onBack }: {
-  order: Order; wholesalerId: string; customerPhone: string; currency?: string; onBack: () => void;
+function CustomerOrderDetailContent({ order, wholesalerId, customerPhone, currency = 'GBP', onBack, priceDisplayMode }: {
+  order: Order; wholesalerId: string; customerPhone: string; currency?: string; onBack: () => void; priceDisplayMode?: string;
 }) {
   const fmt = (amount: string | number) => formatCurrency(amount, currency);
   const queryClient = useQueryClient();
@@ -1898,7 +1912,7 @@ function CustomerOrderDetailContent({ order, wholesalerId, customerPhone, curren
 
         {/* Actions */}
         <div className="flex flex-wrap gap-2 pt-2 border-t">
-          <ReorderButton order={order} customerPhone={customerPhone} currency={currency} />
+          <ReorderButton order={order} customerPhone={customerPhone} currency={currency} priceDisplayMode={priceDisplayMode} />
           <CancellationRequestButton order={order} customerPhone={customerPhone} />
         </div>
       </div>
@@ -1908,7 +1922,7 @@ function CustomerOrderDetailContent({ order, wholesalerId, customerPhone, curren
   );
 }
 
-export function CustomerOrderHistory({ wholesalerId, customerPhone, currency = 'GBP' }: CustomerOrderHistoryProps) {
+export function CustomerOrderHistory({ wholesalerId, customerPhone, currency = 'GBP', priceDisplayMode }: CustomerOrderHistoryProps) {
   const fmt = (amount: string | number) => formatCurrency(amount, currency);
   const [searchTerm, setSearchTerm] = useState("");
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -2033,6 +2047,7 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone, currency = '
         customerPhone={customerPhone}
         currency={currency}
         onBack={() => setSelectedOrder(null)}
+        priceDisplayMode={priceDisplayMode}
       />
     );
   }
@@ -2261,6 +2276,7 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone, currency = '
                         currency={currency}
                         downloadingInvoiceId={downloadingInvoiceId}
                         onDownloadInvoice={() => downloadInvoice(order)}
+                        priceDisplayMode={priceDisplayMode}
                       />
                     </div>
                   </div>

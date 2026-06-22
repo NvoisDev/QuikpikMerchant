@@ -100,6 +100,7 @@ export function OrdersTab({
             wholesalerId={wholesaler.id}
             customerPhone={authenticatedCustomer.phone || authenticatedCustomer.phoneNumber || '+447507659550'}
             currency={wholesaler?.defaultCurrency || 'GBP'}
+            priceDisplayMode={wholesaler?.priceDisplayMode}
           />
         </Suspense>
       )}
