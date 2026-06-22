@@ -2341,6 +2341,7 @@ export default function CustomerPortal() {
           addToCart={addToCart}
           setCart={setCart}
           cart={cart}
+          priceDisplayMode={wholesaler?.priceDisplayMode || 'hidden'}
         />
 
         {/* First Time Address Setup Popup */}

@@ -636,18 +636,20 @@ export function ProductsTab({
                       {/* Pricing */}
                       <div className="flex items-end justify-between mt-2">
                         <div className="w-full">
-                          <PriceDisplay
-                            price={pricing.effectivePrice}
-                            originalPrice={pricing.effectivePrice !== pricing.originalPrice ? pricing.originalPrice : undefined}
-                            currency={'GBP'}
-                            isGuestMode={isTrueGuestMode}
-                            size="medium"
-                            showStrikethrough={true}
-                          />
+                          {!pricesHidden && (
+                            <PriceDisplay
+                              price={pricing.effectivePrice}
+                              originalPrice={pricing.effectivePrice !== pricing.originalPrice ? pricing.originalPrice : undefined}
+                              currency={'GBP'}
+                              isGuestMode={isTrueGuestMode}
+                              size="medium"
+                              showStrikethrough={true}
+                            />
+                          )}
                           {product.moq && product.moq > 1 && !cartItem && (
                             <p className="text-xs text-gray-500 mt-0.5">Min {product.moq} units</p>
                           )}
-                          {hasPalletPricing && !cartItemUnits && !cartItemPallets && (
+                          {!pricesHidden && hasPalletPricing && !cartItemUnits && !cartItemPallets && (
                             <p className="text-xs text-blue-600 mt-0.5 flex items-center gap-1">
                               <span>🚛</span>
                               <span>Pallet: {formatCurrency(product.palletPrice || 0)} / pallet — Min {product.palletMoq || 1}</span>
@@ -1020,15 +1022,17 @@ export function ProductsTab({
                           </div>
                         )}
                         <div className="mt-1.5">
-                          <PriceDisplay
-                            price={pricing.effectivePrice}
-                            originalPrice={pricing.effectivePrice !== pricing.originalPrice ? pricing.originalPrice : undefined}
-                            currency={wholesaler?.defaultCurrency || 'GBP'}
-                            isGuestMode={isTrueGuestMode}
-                            size="medium"
-                            showStrikethrough={true}
-                          />
-                          {hasPalletPricing && !cartItemUnits && !cartItemPallets && (
+                          {!pricesHidden && (
+                            <PriceDisplay
+                              price={pricing.effectivePrice}
+                              originalPrice={pricing.effectivePrice !== pricing.originalPrice ? pricing.originalPrice : undefined}
+                              currency={wholesaler?.defaultCurrency || 'GBP'}
+                              isGuestMode={isTrueGuestMode}
+                              size="medium"
+                              showStrikethrough={true}
+                            />
+                          )}
+                          {!pricesHidden && hasPalletPricing && !cartItemUnits && !cartItemPallets && (
                             <p className="text-xs text-blue-600 mt-0.5 flex items-center gap-1">
                               <span>🚛</span>
                               <span>Pallet: {formatCurrency(product.palletPrice || 0)} / pallet — Min {product.palletMoq || 1}</span>

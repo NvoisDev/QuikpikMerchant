@@ -270,17 +270,19 @@ export function HomeTab({
                             {product.name}
                           </h3>
                           <div className="flex items-center justify-between mt-1">
-                            <PriceDisplay
-                              price={pricing.effectivePrice}
-                              originalPrice={pricing.effectivePrice !== pricing.originalPrice ? pricing.originalPrice : undefined}
-                              currency={wholesaler?.defaultCurrency || 'GBP'}
-                              isGuestMode={isTrueGuestMode}
-                              size="medium"
-                              showStrikethrough={true}
-                            />
+                            {!pricesHidden && (
+                              <PriceDisplay
+                                price={pricing.effectivePrice}
+                                originalPrice={pricing.effectivePrice !== pricing.originalPrice ? pricing.originalPrice : undefined}
+                                currency={wholesaler?.defaultCurrency || 'GBP'}
+                                isGuestMode={isTrueGuestMode}
+                                size="medium"
+                                showStrikethrough={true}
+                              />
+                            )}
                             <span className="text-xs text-gray-400">MOQ: {product.moq}</span>
                           </div>
-                          {hasPalletPricingHome && !cartItemUnitsHome && !cartItemPalletsHome && (
+                          {!pricesHidden && hasPalletPricingHome && !cartItemUnitsHome && !cartItemPalletsHome && (
                             <p className="text-xs text-blue-600 mt-0.5 flex items-center gap-1">
                               <span>🚛</span>
                               <span>Pallet: {formatCurrency(product.palletPrice || 0)} / pallet — Min {product.palletMoq || 1}</span>
