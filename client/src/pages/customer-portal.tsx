@@ -2491,24 +2491,36 @@ export default function CustomerPortal() {
         </Dialog>
 
         {/* Floating Cart Button - Only show when authenticated and cart has items */}
-        {hasCustomerSession && !isTrueGuestMode && cart.length > 0 && (
-          <div className="fixed bottom-20 right-4 z-50">
-            <Button
-              onClick={() => {
-                const pricesHidden = (wholesaler?.priceDisplayMode || 'hidden') !== 'shown';
-                if (pricesHidden) { setShowPortalQuoteModal(true); } else { setShowCheckout(true); }
-              }}
-              className="rounded-full shadow-lg h-14 w-14 p-0 relative quick-action-pulse bg-theme-primary text-white"
-            >
-              <ShoppingCart className="h-6 w-6" />
-              {cart.length > 0 && (
+        {hasCustomerSession && !isTrueGuestMode && cart.length > 0 && (() => {
+          const hasOutOfStockInCart = cart.some(item => {
+            const fresh = (products as Product[]).find(p => p.id === item.product.id);
+            if (!fresh) return false;
+            return item.sellingType === 'pallets'
+              ? (fresh.palletStock || 0) < item.quantity
+              : (fresh.stock || 0) < item.quantity;
+          });
+          return (
+            <div className="fixed bottom-20 right-4 z-50">
+              <Button
+                onClick={() => {
+                  const pricesHidden = (wholesaler?.priceDisplayMode || 'hidden') !== 'shown';
+                  if (pricesHidden) { setShowPortalQuoteModal(true); } else { setShowCheckout(true); }
+                }}
+                className="rounded-full shadow-lg h-14 w-14 p-0 relative quick-action-pulse bg-theme-primary text-white"
+              >
+                <ShoppingCart className="h-6 w-6" />
                 <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-6 w-6 flex items-center justify-center font-bold">
                   {cart.reduce((total, item) => total + item.quantity, 0)}
                 </span>
-              )}
-            </Button>
-          </div>
-        )}
+                {hasOutOfStockInCart && (
+                  <span className="absolute -top-2 -left-2 bg-amber-400 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold shadow">
+                    !
+                  </span>
+                )}
+              </Button>
+            </div>
+          );
+        })()}
       </div>
     </div>
   );

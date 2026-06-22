@@ -576,6 +576,10 @@ export function ProductsTab({
               const cartItemPallets = cart.find(item => item.product.id === product.id && item.sellingType === 'pallets');
               const cartItem = cartItemUnits || cartItemPallets;
               const hasPalletPricing = !!(product.palletPrice && parseFloat(product.palletPrice.toString()) > 0);
+              const cartItemOutOfStock = !!(
+                (cartItemUnits && (product.stock || 0) < cartItemUnits.quantity) ||
+                (cartItemPallets && (product.palletStock || 0) < cartItemPallets.quantity)
+              );
 
               return viewMode === "grid" ? (
                 <Card key={product.id} className="group rounded-2xl overflow-hidden border border-gray-100 hover:border-[var(--theme-primary)] hover:shadow-lg transition-all duration-200 bg-white">
@@ -685,9 +689,16 @@ export function ProductsTab({
                     {/* Product Info */}
                     <div className="p-4 space-y-2">
                       <div>
-                        <h3 className="font-bold text-gray-900 text-sm leading-snug line-clamp-2 mb-1 tracking-tight">
-                          {product.name}
-                        </h3>
+                        <div className="flex items-start justify-between gap-1 mb-1">
+                          <h3 className="font-bold text-gray-900 text-sm leading-snug line-clamp-2 tracking-tight">
+                            {product.name}
+                          </h3>
+                          {cartItemOutOfStock && (
+                            <span className="flex-shrink-0 inline-flex items-center gap-0.5 text-xs font-semibold text-red-700 bg-red-100 px-1.5 py-0.5 rounded-full whitespace-nowrap">
+                              ⚠ Out of stock
+                            </span>
+                          )}
+                        </div>
                         {product.description && (
                           <p className="text-xs text-gray-500 line-clamp-2 leading-relaxed">
                             {cleanAIDescription(product.description)}
@@ -1121,7 +1132,14 @@ export function ProductsTab({
                       {/* Product Info */}
                       <div className="flex flex-col flex-1 py-1 min-w-0">
                         <div>
-                          <h3 className="font-semibold text-sm text-gray-900 line-clamp-2 mb-1">{product.name}</h3>
+                          <div className="flex items-start justify-between gap-1 mb-1">
+                            <h3 className="font-semibold text-sm text-gray-900 line-clamp-2">{product.name}</h3>
+                            {cartItemOutOfStock && (
+                              <span className="flex-shrink-0 inline-flex items-center gap-0.5 text-xs font-semibold text-red-700 bg-red-100 px-1.5 py-0.5 rounded-full whitespace-nowrap">
+                                ⚠ Out of stock
+                              </span>
+                            )}
+                          </div>
                           {product.description && (
                             <p className="text-xs text-gray-500 line-clamp-1">{cleanAIDescription(product.description)}</p>
                           )}

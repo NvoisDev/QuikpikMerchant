@@ -250,6 +250,10 @@ export function HomeTab({
               const cartItem = cartItemUnitsHome || cartItemPalletsHome;
               const hasPalletPricingHome = !!product.palletPrice && parseFloat(product.palletPrice?.toString() || '0') > 0;
               const pricing = calculatePromotionalPricing(product, product.moq);
+              const cartItemOutOfStock = !!(
+                (cartItemUnitsHome && (product.stock || 0) < cartItemUnitsHome.quantity) ||
+                (cartItemPalletsHome && (product.palletStock || 0) < cartItemPalletsHome.quantity)
+              );
 
               return (
                 <Card key={product.id} className="h-full animate-fade-in group cursor-pointer rounded-2xl overflow-hidden border border-gray-100 hover:border-gray-200 hover:shadow-md transition-all duration-200 bg-white"
@@ -284,9 +288,16 @@ export function HomeTab({
                       {/* Product Info */}
                       <div className="p-4 space-y-3">
                         <div>
-                          <h3 className="font-bold text-gray-900 text-sm line-clamp-1 tracking-tight group-hover:text-theme-primary transition-colors duration-300">
-                            {product.name}
-                          </h3>
+                          <div className="flex items-start justify-between gap-1">
+                            <h3 className="font-bold text-gray-900 text-sm line-clamp-1 tracking-tight group-hover:text-theme-primary transition-colors duration-300">
+                              {product.name}
+                            </h3>
+                            {cartItemOutOfStock && (
+                              <span className="flex-shrink-0 inline-flex items-center gap-0.5 text-xs font-semibold text-red-700 bg-red-100 px-1.5 py-0.5 rounded-full whitespace-nowrap">
+                                ⚠ Out of stock
+                              </span>
+                            )}
+                          </div>
                           <div className="flex items-center justify-between mt-1">
                             {!pricesHidden && (
                               <PriceDisplay
