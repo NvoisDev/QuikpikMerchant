@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { ShoppingCart, Banknote, History, Search, Grid, List, Package, ArrowLeft, ArrowRight, Minus, Plus, Tag, Loader2 } from "lucide-react";
+import { ShoppingCart, ShoppingBag, Banknote, History, Search, Grid, List, Package, ArrowLeft, ArrowRight, Minus, Plus, Tag, Loader2 } from "lucide-react";
 import { Package2, Hash } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -259,22 +259,37 @@ export function ProductsTab({
           </div>
         </div>
 
-        <div className="bg-white rounded-xl p-2 sm:p-3 border border-gray-100 shadow-sm">
-          <div className="flex flex-col items-center text-center gap-0.5">
-            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center bg-theme-secondary">
-              <Banknote className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-theme-primary" />
+        {/* Cart Value — hidden when prices are turned off */}
+        {!pricesHidden ? (
+          <div className="bg-white rounded-xl p-2 sm:p-3 border border-gray-100 shadow-sm">
+            <div className="flex flex-col items-center text-center gap-0.5">
+              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center bg-theme-secondary">
+                <Banknote className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-theme-primary" />
+              </div>
+              <div className="font-extrabold leading-none text-theme-primary">
+                <PriceDisplay
+                  price={cartStats.totalValue}
+                  currency={wholesaler?.defaultCurrency || 'GBP'}
+                  isGuestMode={false}
+                  size="medium"
+                />
+              </div>
+              <p className="text-[10px] text-gray-500 font-medium">Cart Total</p>
             </div>
-            <div className="font-extrabold leading-none text-theme-primary">
-              <PriceDisplay
-                price={cartStats.totalValue}
-                currency={wholesaler?.defaultCurrency || 'GBP'}
-                isGuestMode={false}
-                size="medium"
-              />
-            </div>
-            <p className="text-[10px] text-gray-500 font-medium">Cart Total</p>
           </div>
-        </div>
+        ) : (
+          <div className="bg-white rounded-xl p-2 sm:p-3 border border-gray-100 shadow-sm">
+            <div className="flex flex-col items-center text-center gap-0.5">
+              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center bg-theme-secondary">
+                <ShoppingBag className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-theme-primary" />
+              </div>
+              <p className="text-lg sm:text-xl font-extrabold leading-none text-theme-primary">
+                {cart.length}
+              </p>
+              <p className="text-[10px] text-gray-500 font-medium">Products</p>
+            </div>
+          </div>
+        )}
 
         <div className="bg-white rounded-xl p-2 sm:p-3 border border-gray-100 shadow-sm cursor-pointer" onClick={() => setActiveTab("orders")}>
           <div className="flex flex-col items-center text-center gap-0.5">

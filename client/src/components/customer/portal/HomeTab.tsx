@@ -144,7 +144,11 @@ export function HomeTab({
         {/* Cart Items */}
         <div
           className="bg-white rounded-xl p-2 sm:p-3 border border-gray-100 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
-          onClick={() => { if (!isPreviewMode && cart.length > 0) { setShowCheckout(true); } }}
+          onClick={() => {
+            if (!isPreviewMode && cart.length > 0) {
+              if (pricesHidden && onRequestQuote) { onRequestQuote(); } else { setShowCheckout(true); }
+            }
+          }}
         >
           <div className="flex flex-col items-center text-center gap-0.5">
             <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center bg-theme-secondary">
@@ -155,28 +159,42 @@ export function HomeTab({
             </p>
             <p className="text-[10px] text-gray-500 font-medium">In Cart</p>
             {cart.length > 0 && (
-              <p className="text-[10px] text-gray-400 leading-none">Tap to checkout</p>
+              <p className="text-[10px] text-gray-400 leading-none">{pricesHidden ? 'Tap to request' : 'Tap to checkout'}</p>
             )}
           </div>
         </div>
 
-        {/* Cart Value */}
-        <div className="bg-white rounded-xl p-2 sm:p-3 border border-gray-100 shadow-sm">
-          <div className="flex flex-col items-center text-center gap-0.5">
-            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center bg-theme-secondary">
-              <Banknote className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-theme-primary" />
+        {/* Cart Value — hidden when prices are turned off */}
+        {!pricesHidden ? (
+          <div className="bg-white rounded-xl p-2 sm:p-3 border border-gray-100 shadow-sm">
+            <div className="flex flex-col items-center text-center gap-0.5">
+              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center bg-theme-secondary">
+                <Banknote className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-theme-primary" />
+              </div>
+              <div className="font-extrabold leading-none text-theme-primary">
+                <PriceDisplay
+                  price={cartStats.totalValue}
+                  currency={wholesaler?.defaultCurrency || 'GBP'}
+                  isGuestMode={false}
+                  size="medium"
+                />
+              </div>
+              <p className="text-[10px] text-gray-500 font-medium">Cart Total</p>
             </div>
-            <div className="font-extrabold leading-none text-theme-primary">
-              <PriceDisplay
-                price={cartStats.totalValue}
-                currency={wholesaler?.defaultCurrency || 'GBP'}
-                isGuestMode={false}
-                size="medium"
-              />
-            </div>
-            <p className="text-[10px] text-gray-500 font-medium">Cart Total</p>
           </div>
-        </div>
+        ) : (
+          <div className="bg-white rounded-xl p-2 sm:p-3 border border-gray-100 shadow-sm">
+            <div className="flex flex-col items-center text-center gap-0.5">
+              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center bg-theme-secondary">
+                <ShoppingBag className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-theme-primary" />
+              </div>
+              <p className="text-lg sm:text-xl font-extrabold leading-none text-theme-primary">
+                {cart.length}
+              </p>
+              <p className="text-[10px] text-gray-500 font-medium">Products</p>
+            </div>
+          </div>
+        )}
 
         {/* Total Orders */}
         <div className="bg-white rounded-xl p-2 sm:p-3 border border-gray-100 shadow-sm cursor-pointer" onClick={() => setActiveTab("orders")}>

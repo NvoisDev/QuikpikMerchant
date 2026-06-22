@@ -114,6 +114,7 @@ export function CheckoutDialog({
   // Stripe account status.
   const feeConfig = wholesaler?.effectiveFeeConfig ?? liveFeeConfig ?? { percentage: 0.02, fixed: 0.70, feesEnabled: false };
   const feesEnabled = liveFeeConfig?.feesEnabled ?? false;
+  const pricesHidden = wholesaler?.priceDisplayMode !== 'shown';
 
   const defaultCollectionAddress = collectionAddresses.find((a) => a.isDefault) || collectionAddresses[0];
 
@@ -211,6 +212,7 @@ export function CheckoutDialog({
                                 return null;
                               })()}
                             </div>
+                            {!pricesHidden && (
                             <div className="text-right flex-shrink-0">
                               {cartPricing && cartPricing.effectivePrice !== cartPricing.originalPrice && (
                                 <div className="text-xs text-gray-400 line-through">
@@ -224,6 +226,7 @@ export function CheckoutDialog({
                                 size="small"
                               />
                             </div>
+                          )}
                           </div>
 
                           <div className="flex flex-wrap gap-1 mt-1">
@@ -252,12 +255,14 @@ export function CheckoutDialog({
                             )}
                           </div>
 
-                          <p className="text-xs text-gray-500 mt-1">
-                            {formatCurrency(itemPrice)} / {item.sellingType === 'pallets' ? 'pallet' : 'unit'}
-                            {cartPricing && cartPricing.effectivePrice !== cartPricing.originalPrice && (
-                              <span className="ml-1 text-gray-400 line-through">{formatCurrency(cartPricing.originalPrice)}</span>
-                            )}
-                          </p>
+                          {!pricesHidden && (
+                            <p className="text-xs text-gray-500 mt-1">
+                              {formatCurrency(itemPrice)} / {item.sellingType === 'pallets' ? 'pallet' : 'unit'}
+                              {cartPricing && cartPricing.effectivePrice !== cartPricing.originalPrice && (
+                                <span className="ml-1 text-gray-400 line-through">{formatCurrency(cartPricing.originalPrice)}</span>
+                              )}
+                            </p>
+                          )}
                         </div>
                       </div>
 
@@ -324,65 +329,69 @@ export function CheckoutDialog({
                     </div>
                   );
                 })}
-                <Separator />
+                {!pricesHidden && <Separator />}
 
-                <div className="space-y-1 text-sm">
-                  <div className="flex justify-between">
-                    <span>Product Subtotal</span>
+                {!pricesHidden && (
+                  <div className="space-y-1 text-sm">
+                    <div className="flex justify-between">
+                      <span>Product Subtotal</span>
+                      <PriceDisplay
+                        price={cartStats.subtotal}
+                        currency={wholesaler?.defaultCurrency || 'GBP'}
+                        isGuestMode={false}
+                        size="small"
+                      />
+                    </div>
+
+                    {customerData.shippingOption === 'delivery' && wholesaler?.deliveryFlatRate && parseFloat(wholesaler.deliveryFlatRate) > 0 && (
+                      <div className="flex justify-between text-blue-700">
+                        <span>Delivery</span>
+                        <PriceDisplay
+                          price={parseFloat(wholesaler.deliveryFlatRate)}
+                          currency={wholesaler?.defaultCurrency || 'GBP'}
+                          isGuestMode={false}
+                          size="small"
+                        />
+                      </div>
+                    )}
+
+                    {feesEnabled && (
+                      <div className="flex justify-between text-gray-600">
+                        <span>Service Fee</span>
+                        <PriceDisplay
+                          price={calculateCustomerFee(
+                            cartStats.subtotal,
+                            customerData.shippingOption === 'delivery' && wholesaler?.deliveryFlatRate ? parseFloat(wholesaler.deliveryFlatRate) : 0,
+                            feeConfig
+                          )}
+                          currency={wholesaler?.defaultCurrency || 'GBP'}
+                          isGuestMode={false}
+                          size="small"
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {!pricesHidden && <Separator />}
+                {!pricesHidden && (
+                  <div className="flex justify-between items-center font-semibold text-lg">
+                    <span>Total to Pay</span>
                     <PriceDisplay
-                      price={cartStats.subtotal}
+                      price={(() => {
+                        const shipping = customerData.shippingOption === 'delivery' && wholesaler?.deliveryFlatRate ? parseFloat(wholesaler.deliveryFlatRate) : 0;
+                        const fee = feesEnabled ? calculateCustomerFee(cartStats.subtotal, shipping, feeConfig) : 0;
+                        return cartStats.subtotal + shipping + fee;
+                      })()}
                       currency={wholesaler?.defaultCurrency || 'GBP'}
                       isGuestMode={false}
-                      size="small"
+                      size="medium"
                     />
                   </div>
-
-                  {customerData.shippingOption === 'delivery' && wholesaler?.deliveryFlatRate && parseFloat(wholesaler.deliveryFlatRate) > 0 && (
-                    <div className="flex justify-between text-blue-700">
-                      <span>Delivery</span>
-                      <PriceDisplay
-                        price={parseFloat(wholesaler.deliveryFlatRate)}
-                        currency={wholesaler?.defaultCurrency || 'GBP'}
-                        isGuestMode={false}
-                        size="small"
-                      />
-                    </div>
-                  )}
-
-                  {feesEnabled && (
-                    <div className="flex justify-between text-gray-600">
-                      <span>Service Fee</span>
-                      <PriceDisplay
-                        price={calculateCustomerFee(
-                          cartStats.subtotal,
-                          customerData.shippingOption === 'delivery' && wholesaler?.deliveryFlatRate ? parseFloat(wholesaler.deliveryFlatRate) : 0,
-                          feeConfig
-                        )}
-                        currency={wholesaler?.defaultCurrency || 'GBP'}
-                        isGuestMode={false}
-                        size="small"
-                      />
-                    </div>
-                  )}
-                </div>
-
-                <Separator />
-                <div className="flex justify-between items-center font-semibold text-lg">
-                  <span>Total to Pay</span>
-                  <PriceDisplay
-                    price={(() => {
-                      const shipping = customerData.shippingOption === 'delivery' && wholesaler?.deliveryFlatRate ? parseFloat(wholesaler.deliveryFlatRate) : 0;
-                      const fee = feesEnabled ? calculateCustomerFee(cartStats.subtotal, shipping, feeConfig) : 0;
-                      return cartStats.subtotal + shipping + fee;
-                    })()}
-                    currency={wholesaler?.defaultCurrency || 'GBP'}
-                    isGuestMode={false}
-                    size="medium"
-                  />
-                </div>
+                )}
               </div>
 
-              {feesEnabled && (
+              {!pricesHidden && feesEnabled && (
                 <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                   <div className="flex items-start">
                     <svg className="w-4 h-4 text-blue-600 mt-0.5 mr-2" fill="currentColor" viewBox="0 0 20 20">
@@ -560,12 +569,14 @@ export function CheckoutDialog({
                     <Label htmlFor="delivery" className="flex-1 cursor-pointer">
                       <div className="flex justify-between">
                         <span>Home delivery</span>
-                        <span className="text-blue-600 font-medium">
-                          {wholesaler?.deliveryFlatRate ? formatCurrency(wholesaler.deliveryFlatRate) : 'Arranged by supplier'}
-                        </span>
+                        {!pricesHidden && (
+                          <span className="text-blue-600 font-medium">
+                            {wholesaler?.deliveryFlatRate ? formatCurrency(wholesaler.deliveryFlatRate) : 'Arranged by supplier'}
+                          </span>
+                        )}
                       </div>
                       <p className="text-sm text-gray-600">
-                        {wholesaler?.deliveryFlatRate
+                        {!pricesHidden && wholesaler?.deliveryFlatRate
                           ? `Flat delivery fee of ${formatCurrency(wholesaler.deliveryFlatRate)} added at checkout`
                           : 'The supplier will contact you to arrange delivery and discuss costs'}
                       </p>
@@ -707,16 +718,22 @@ export function CheckoutDialog({
                   <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
                     <p className="text-sm text-blue-800 font-medium">Pay Later — No payment required now</p>
                     <p className="text-sm text-blue-700 mt-1">
-                      Your order total of{' '}
-                      <strong>
-                        {(() => {
-                          const shipping = customerData.shippingOption === 'delivery' && wholesaler?.deliveryFlatRate
-                            ? parseFloat(wholesaler.deliveryFlatRate) : 0;
-                          const fee = feesEnabled ? calculateCustomerFee(cartStats.subtotal, shipping, feeConfig) : 0;
-                          return formatCurrency(cartStats.subtotal + shipping + fee);
-                        })()}
-                      </strong>{' '}
-                      will be due on invoice. The supplier will be notified of your order.
+                      {pricesHidden ? (
+                        'Your order will be due on invoice. The supplier will be notified of your order.'
+                      ) : (
+                        <>
+                          Your order total of{' '}
+                          <strong>
+                            {(() => {
+                              const shipping = customerData.shippingOption === 'delivery' && wholesaler?.deliveryFlatRate
+                                ? parseFloat(wholesaler.deliveryFlatRate) : 0;
+                              const fee = feesEnabled ? calculateCustomerFee(cartStats.subtotal, shipping, feeConfig) : 0;
+                              return formatCurrency(cartStats.subtotal + shipping + fee);
+                            })()}
+                          </strong>{' '}
+                          will be due on invoice. The supplier will be notified of your order.
+                        </>
+                      )}
                     </p>
                   </div>
                   <Button
