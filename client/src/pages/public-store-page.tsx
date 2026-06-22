@@ -1,23 +1,22 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, Link, useSearch } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import {
   Search, MapPin, Truck, Package, ShoppingBag,
-  MessageSquare, Store, Phone, Mail, ChevronRight,
-  Tag, Users, ArrowLeft, X,
+  MessageSquare, Store, Phone, ArrowLeft, X,
+  Tag, ShoppingCart, Plus, Minus, CheckCircle, Trash2,
 } from "lucide-react";
 
 interface PublicProduct {
   id: number;
   name: string;
   description?: string | null;
-  price: string;
+  price: string | null;
   palletPrice?: string | null;
   category?: string | null;
   imageUrl?: string | null;
@@ -59,7 +58,17 @@ interface PublicWholesaler {
   phoneNumber?: string | null;
 }
 
-function formatCurrency(amount: string | number, currency = 'GBP') {
+interface CartItem {
+  productId: number;
+  name: string;
+  price: string | null;
+  imageUrl: string | null;
+  quantity: number;
+  sellingType: string;
+}
+
+function formatCurrency(amount: string | number | null, currency = 'GBP') {
+  if (amount == null) return '—';
   const n = typeof amount === 'string' ? parseFloat(amount) : amount;
   if (isNaN(n)) return '—';
   return new Intl.NumberFormat('en-GB', { style: 'currency', currency }).format(n);
@@ -93,8 +102,9 @@ function ProductCard({
   showStock,
   showPackSize,
   currency,
-  enquiriesEnabled,
-  onEnquire,
+  cartQty,
+  onAddToCart,
+  onUpdateQty,
 }: {
   product: PublicProduct;
   priceDisplayMode: string;
@@ -102,20 +112,26 @@ function ProductCard({
   showStock: boolean;
   showPackSize: boolean;
   currency: string;
-  enquiriesEnabled: boolean;
-  onEnquire: (product: PublicProduct) => void;
+  cartQty: number;
+  onAddToCart: (product: PublicProduct) => void;
+  onUpdateQty: (productId: number, qty: number) => void;
 }) {
   const showPrices = priceDisplayMode === 'shown';
   const imgSrc = product.imageUrl || (product.images && product.images[0]) || null;
+  const inCart = cartQty > 0;
 
   return (
-    <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden hover:shadow-md transition-shadow">
-      {/* Image */}
-      <div className="aspect-square bg-gray-50 flex items-center justify-center overflow-hidden">
+    <div className={`bg-white rounded-xl border shadow-sm overflow-hidden hover:shadow-md transition-shadow ${inCart ? 'border-emerald-300 ring-1 ring-emerald-200' : 'border-gray-100'}`}>
+      <div className="aspect-square bg-gray-50 flex items-center justify-center overflow-hidden relative">
         {imgSrc ? (
           <img src={imgSrc} alt={product.name} className="w-full h-full object-cover" />
         ) : (
           <Package className="h-10 w-10 text-gray-300" />
+        )}
+        {inCart && (
+          <div className="absolute top-2 right-2 bg-emerald-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] font-bold shadow">
+            {cartQty}
+          </div>
         )}
       </div>
 
@@ -125,12 +141,10 @@ function ProductCard({
         )}
         <h3 className="text-sm font-semibold text-gray-900 leading-tight line-clamp-2 mb-1">{product.name}</h3>
 
-        {/* Description snippet */}
         {product.description && (
           <p className="text-[11px] text-gray-500 line-clamp-2 mb-1 leading-snug">{product.description}</p>
         )}
 
-        {/* Weight info */}
         {showPackSize && (product.totalPackageWeight || product.packQuantity) && (() => {
           const totalW = parseFloat(product.totalPackageWeight ?? '0') || 0;
           const qty = product.packQuantity || 0;
@@ -146,7 +160,6 @@ function ProductCard({
           );
         })()}
 
-        {/* MOQ */}
         {showMoq && product.minOrderQuantity && product.minOrderQuantity > 1 && (
           <p className="text-[11px] text-amber-600 font-medium mb-1">
             Min. order: {product.minOrderQuantity} units
@@ -156,7 +169,6 @@ function ProductCard({
           <p className="text-[11px] text-gray-400 mb-1">{product.unitsPerPack} units/pack</p>
         )}
 
-        {/* Stock availability */}
         {showStock && product.stock != null && (
           (product.stock > 0 || (product.palletStock ?? 0) > 0) ? (
             <p className="text-[11px] text-emerald-600 font-medium mb-1">
@@ -167,36 +179,296 @@ function ProductCard({
           )
         )}
 
-        {/* Price / CTA */}
-        {showPrices && product.price != null ? (
-          <>
-            <p className="text-base font-bold text-gray-900 mb-3">
-              {formatCurrency(product.price, currency)}
-              <span className="text-xs font-normal text-gray-400 ml-1">/ unit</span>
-            </p>
-            {enquiriesEnabled && (
-              <Button
-                size="sm"
-                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs h-8"
-                onClick={() => onEnquire(product)}
-              >
-                <MessageSquare className="h-3 w-3 mr-1" />
-                Enquire
-              </Button>
-            )}
-          </>
-        ) : enquiriesEnabled ? (
+        {showPrices && product.price != null && (
+          <p className="text-base font-bold text-gray-900 mb-2">
+            {formatCurrency(product.price, currency)}
+            <span className="text-xs font-normal text-gray-400 ml-1">/ unit</span>
+          </p>
+        )}
+
+        {inCart ? (
+          <div className="flex items-center justify-between bg-emerald-50 rounded-lg border border-emerald-200 px-2 py-1">
+            <button
+              onClick={() => onUpdateQty(product.id, cartQty - 1)}
+              className="w-6 h-6 flex items-center justify-center rounded-full hover:bg-emerald-200 transition-colors text-emerald-700"
+            >
+              <Minus className="h-3 w-3" />
+            </button>
+            <span className="text-sm font-semibold text-emerald-800 min-w-[20px] text-center">{cartQty}</span>
+            <button
+              onClick={() => onUpdateQty(product.id, cartQty + 1)}
+              className="w-6 h-6 flex items-center justify-center rounded-full hover:bg-emerald-200 transition-colors text-emerald-700"
+            >
+              <Plus className="h-3 w-3" />
+            </button>
+          </div>
+        ) : (
           <Button
             size="sm"
             className="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs h-8"
-            onClick={() => onEnquire(product)}
+            onClick={() => onAddToCart(product)}
           >
-            <Tag className="h-3 w-3 mr-1" />
-            Get Trade Pricing
+            <ShoppingCart className="h-3 w-3 mr-1" />
+            Add to Cart
           </Button>
-        ) : (
-          <p className="text-sm text-gray-400 italic mb-3">Price on request</p>
         )}
+      </div>
+    </div>
+  );
+}
+
+function CartDrawer({
+  cart,
+  wholesaler,
+  showPrices,
+  currency,
+  onClose,
+  onUpdateQty,
+  onClearCart,
+  onRequestQuote,
+}: {
+  cart: CartItem[];
+  wholesaler: PublicWholesaler;
+  showPrices: boolean;
+  currency: string;
+  onClose: () => void;
+  onUpdateQty: (productId: number, qty: number) => void;
+  onClearCart: () => void;
+  onRequestQuote: () => void;
+}) {
+  const subtotal = cart.reduce((s, item) => {
+    const p = parseFloat(item.price ?? '0') || 0;
+    return s + p * item.quantity;
+  }, 0);
+
+  const totalItems = cart.reduce((s, i) => s + i.quantity, 0);
+
+  return (
+    <div className="fixed inset-0 z-50 flex">
+      <div className="flex-1 bg-black/50" onClick={onClose} />
+      <div className="w-full max-w-sm bg-white flex flex-col shadow-2xl">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+          <div className="flex items-center gap-2">
+            <ShoppingCart className="h-5 w-5 text-emerald-600" />
+            <h2 className="font-semibold text-gray-900">Your Cart</h2>
+            <span className="bg-emerald-100 text-emerald-700 text-xs font-semibold px-2 py-0.5 rounded-full">{totalItems}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            {cart.length > 0 && (
+              <button onClick={onClearCart} className="text-xs text-gray-400 hover:text-red-500 transition-colors">
+                Clear all
+              </button>
+            )}
+            <button onClick={onClose} className="p-1 rounded-lg hover:bg-gray-100">
+              <X className="h-5 w-5 text-gray-500" />
+            </button>
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto">
+          {cart.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-48 px-6 text-center">
+              <ShoppingCart className="h-10 w-10 text-gray-200 mb-3" />
+              <p className="text-gray-400 text-sm">Your cart is empty</p>
+              <p className="text-gray-300 text-xs mt-1">Add products to request a quote</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-gray-50">
+              {cart.map(item => (
+                <div key={item.productId} className="flex items-center gap-3 px-4 py-3">
+                  <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                    {item.imageUrl ? (
+                      <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover rounded-lg" />
+                    ) : (
+                      <Package className="h-4 w-4 text-gray-300" />
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900 leading-tight line-clamp-1">{item.name}</p>
+                    {showPrices && item.price && (
+                      <p className="text-xs text-gray-500">{formatCurrency(item.price, currency)} / unit</p>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1.5 flex-shrink-0">
+                    <button
+                      onClick={() => onUpdateQty(item.productId, item.quantity - 1)}
+                      className="w-6 h-6 flex items-center justify-center rounded-full border border-gray-200 hover:bg-gray-100 text-gray-500 transition-colors"
+                    >
+                      <Minus className="h-3 w-3" />
+                    </button>
+                    <span className="text-sm font-semibold text-gray-800 min-w-[24px] text-center">{item.quantity}</span>
+                    <button
+                      onClick={() => onUpdateQty(item.productId, item.quantity + 1)}
+                      className="w-6 h-6 flex items-center justify-center rounded-full border border-gray-200 hover:bg-gray-100 text-gray-500 transition-colors"
+                    >
+                      <Plus className="h-3 w-3" />
+                    </button>
+                    <button
+                      onClick={() => onUpdateQty(item.productId, 0)}
+                      className="ml-1 p-1 rounded hover:bg-red-50 text-gray-300 hover:text-red-400 transition-colors"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {cart.length > 0 && (
+          <div className="border-t border-gray-100 p-4 space-y-3">
+            {showPrices && (
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-gray-500">Subtotal ({totalItems} item{totalItems !== 1 ? 's' : ''})</span>
+                <span className="font-semibold text-gray-900">{formatCurrency(subtotal, currency)}</span>
+              </div>
+            )}
+            {!showPrices && (
+              <p className="text-xs text-gray-400 text-center">{totalItems} item{totalItems !== 1 ? 's' : ''} selected — submit to get pricing</p>
+            )}
+            <Button
+              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white h-11 text-sm font-semibold"
+              onClick={onRequestQuote}
+            >
+              <Tag className="h-4 w-4 mr-2" />
+              {showPrices ? 'Request Quote' : 'Get Trade Pricing'}
+            </Button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function QuoteContactModal({
+  wholesaler,
+  cart,
+  onClose,
+}: {
+  wholesaler: PublicWholesaler;
+  cart: CartItem[];
+  onClose: (cleared: boolean) => void;
+}) {
+  const { toast } = useToast();
+  const [submitted, setSubmitted] = useState(false);
+  const [form, setForm] = useState({
+    name: '',
+    phone: '',
+    email: '',
+    business: '',
+  });
+
+  const mutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest('POST', '/api/public/cart-quote', {
+        wholesalerId: wholesaler.id,
+        enquirerName: form.name.trim(),
+        enquirerPhone: form.phone.trim() || undefined,
+        enquirerEmail: form.email.trim() || undefined,
+        enquirerBusiness: form.business.trim() || undefined,
+        items: cart.map(item => ({
+          productId: item.productId,
+          quantity: item.quantity,
+          sellingType: item.sellingType,
+        })),
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      setSubmitted(true);
+    },
+    onError: () => {
+      toast({ title: "Something went wrong", description: "Please try again.", variant: "destructive" });
+    },
+  });
+
+  const canSubmit = form.name.trim() && (form.phone.trim() || form.email.trim());
+
+  if (submitted) {
+    return (
+      <div className="fixed inset-0 z-[60] bg-black/60 flex items-end sm:items-center justify-center p-0 sm:p-4">
+        <div className="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-sm p-6 text-center">
+          <div className="w-14 h-14 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-4">
+            <CheckCircle className="h-7 w-7 text-emerald-600" />
+          </div>
+          <h2 className="text-lg font-semibold text-gray-900 mb-2">Quote request sent!</h2>
+          <p className="text-sm text-gray-500 mb-1">
+            <span className="font-medium text-gray-700">{wholesaler.businessName}</span> will review your cart and get back to you.
+          </p>
+          <p className="text-xs text-gray-400 mb-6">They'll contact you on {form.phone || form.email}.</p>
+          <Button className="w-full bg-emerald-600 hover:bg-emerald-700" onClick={() => onClose(true)}>
+            Done
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="fixed inset-0 z-[60] bg-black/60 flex items-end sm:items-center justify-center p-0 sm:p-4">
+      <div className="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-sm max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between p-4 border-b">
+          <div>
+            <h2 className="font-semibold text-gray-900">Your contact details</h2>
+            <p className="text-xs text-gray-500 mt-0.5">
+              {cart.length} item{cart.length !== 1 ? 's' : ''} · {wholesaler.businessName} will contact you with pricing
+            </p>
+          </div>
+          <button onClick={() => onClose(false)} className="p-1 rounded-lg hover:bg-gray-100">
+            <X className="h-5 w-5 text-gray-500" />
+          </button>
+        </div>
+
+        <div className="p-4 space-y-3">
+          <div>
+            <label className="text-xs font-medium text-gray-700 mb-1 block">Your name *</label>
+            <Input
+              placeholder="Full name"
+              value={form.name}
+              onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+            />
+          </div>
+          <div>
+            <label className="text-xs font-medium text-gray-700 mb-1 block">Phone / WhatsApp</label>
+            <Input
+              placeholder="+44..."
+              value={form.phone}
+              onChange={e => setForm(f => ({ ...f, phone: e.target.value }))}
+            />
+          </div>
+          <div>
+            <label className="text-xs font-medium text-gray-700 mb-1 block">
+              Email {!form.phone.trim() && <span className="text-gray-400">(required if no phone)</span>}
+            </label>
+            <Input
+              placeholder="you@email.com"
+              value={form.email}
+              onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
+            />
+          </div>
+          <div>
+            <label className="text-xs font-medium text-gray-700 mb-1 block">Business name</label>
+            <Input
+              placeholder="Your shop or company"
+              value={form.business}
+              onChange={e => setForm(f => ({ ...f, business: e.target.value }))}
+            />
+          </div>
+
+          <div className="pt-1">
+            <Button
+              className="w-full bg-emerald-600 hover:bg-emerald-700"
+              disabled={!canSubmit || mutation.isPending}
+              onClick={() => mutation.mutate()}
+            >
+              {mutation.isPending ? 'Sending…' : 'Send Quote Request'}
+            </Button>
+            {!form.phone.trim() && !form.email.trim() && form.name.trim() && (
+              <p className="text-xs text-center text-amber-600 mt-2">Please add a phone number or email</p>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -279,7 +551,6 @@ function EnquiryModal({
         </div>
 
         <div className="p-4 space-y-3">
-          {/* Business details */}
           <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Your Details</p>
           <div>
             <label className="text-xs font-medium text-gray-700 mb-1 block">Your name *</label>
@@ -316,7 +587,6 @@ function EnquiryModal({
             </div>
           </div>
 
-          {/* Business info */}
           <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider pt-1">Business Info</p>
           <div>
             <label className="text-xs font-medium text-gray-700 mb-1 block">Business type</label>
@@ -341,7 +611,6 @@ function EnquiryModal({
             </select>
           </div>
 
-          {/* Enquiry */}
           <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider pt-1">Your Enquiry</p>
           {product && (
             <div>
@@ -364,7 +633,6 @@ function EnquiryModal({
             />
           </div>
 
-          {/* Preferred contact */}
           <div>
             <label className="text-xs font-medium text-gray-700 mb-1.5 block">Preferred contact method</label>
             <div className="flex gap-2">
@@ -398,14 +666,72 @@ function EnquiryModal({
   );
 }
 
+function useCart(slug: string) {
+  const key = `cart_${slug}`;
+
+  const [cart, setCartRaw] = useState<CartItem[]>(() => {
+    try {
+      const stored = localStorage.getItem(key);
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const setCart = useCallback((updater: (prev: CartItem[]) => CartItem[]) => {
+    setCartRaw(prev => {
+      const next = updater(prev);
+      try { localStorage.setItem(key, JSON.stringify(next)); } catch {}
+      return next;
+    });
+  }, [key]);
+
+  const addToCart = useCallback((product: PublicProduct) => {
+    setCart(prev => {
+      const existing = prev.find(i => i.productId === product.id);
+      if (existing) return prev.map(i => i.productId === product.id ? { ...i, quantity: i.quantity + 1 } : i);
+      return [...prev, {
+        productId: product.id,
+        name: product.name,
+        price: product.price,
+        imageUrl: product.imageUrl || (product.images?.[0] ?? null),
+        quantity: 1,
+        sellingType: 'units',
+      }];
+    });
+  }, [setCart]);
+
+  const updateQty = useCallback((productId: number, qty: number) => {
+    setCart(prev => qty <= 0
+      ? prev.filter(i => i.productId !== productId)
+      : prev.map(i => i.productId === productId ? { ...i, quantity: qty } : i)
+    );
+  }, [setCart]);
+
+  const clearCart = useCallback(() => {
+    setCart(() => []);
+  }, [setCart]);
+
+  const getQty = useCallback((productId: number) => {
+    return cart.find(i => i.productId === productId)?.quantity ?? 0;
+  }, [cart]);
+
+  const totalItems = cart.reduce((s, i) => s + i.quantity, 0);
+
+  return { cart, addToCart, updateQty, clearCart, getQty, totalItems };
+}
+
 export default function PublicStorePage() {
   const { slug } = useParams<{ slug: string }>();
   const searchString = useSearch();
   const initialQ = new URLSearchParams(searchString).get('q') || '';
   const [search, setSearch] = useState(initialQ);
   const [selectedCategory, setSelectedCategory] = useState('');
-  const [enquiryProduct, setEnquiryProduct] = useState<PublicProduct | null | 'general'>('none' as any);
   const [showEnquiry, setShowEnquiry] = useState(false);
+  const [showCart, setShowCart] = useState(false);
+  const [showQuoteContact, setShowQuoteContact] = useState(false);
+
+  const { cart, addToCart, updateQty, clearCart, getQty, totalItems } = useCart(slug ?? '');
 
   const { data, isLoading, isError } = useQuery<{ wholesaler: PublicWholesaler; products: PublicProduct[] }>({
     queryKey: [`/api/public/wholesaler/${slug}`],
@@ -419,8 +745,6 @@ export default function PublicStorePage() {
   const wholesaler = data?.wholesaler;
   const allProducts = data?.products ?? [];
 
-  // Show only categories that have products, ordered by the central platform list,
-  // with any extras (legacy/uncatalogued names) appended alphabetically.
   const presentCats = new Set(allProducts.map(p => p.category).filter(Boolean) as string[]);
   const centralNames = centralCategories.map(c => c.name);
   const categories = [
@@ -434,11 +758,6 @@ export default function PublicStorePage() {
     const matchCat = !selectedCategory || p.category === selectedCategory;
     return matchSearch && matchCat;
   });
-
-  const handleEnquire = (product: PublicProduct) => {
-    setEnquiryProduct(product);
-    setShowEnquiry(true);
-  };
 
   if (isLoading) {
     return (
@@ -469,6 +788,8 @@ export default function PublicStorePage() {
   }
 
   const currency = wholesaler.preferredCurrency || 'GBP';
+  const showPrices = wholesaler.priceDisplayMode === 'shown';
+  const enquiriesEnabled = wholesaler.enquiriesEnabled !== false;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -493,15 +814,29 @@ export default function PublicStorePage() {
                 </Button>
               </a>
             )}
-            {wholesaler.enquiriesEnabled !== false && (
+            {enquiriesEnabled && (
               <Button
                 size="sm"
-                className="bg-emerald-600 hover:bg-emerald-700 text-xs"
-                onClick={() => { setEnquiryProduct(null); setShowEnquiry(true); }}
+                variant="outline"
+                className="text-xs border-gray-200 text-gray-600 hover:bg-gray-50"
+                onClick={() => setShowEnquiry(true)}
               >
                 <MessageSquare className="h-3.5 w-3.5 mr-1" /> Get in touch
               </Button>
             )}
+            {/* Cart button */}
+            <button
+              onClick={() => setShowCart(true)}
+              className="relative flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium px-3 py-1.5 rounded-lg transition-colors"
+            >
+              <ShoppingCart className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Cart</span>
+              {totalItems > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 bg-amber-400 text-gray-900 text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
+                  {totalItems > 9 ? '9+' : totalItems}
+                </span>
+              )}
+            </button>
           </div>
         </div>
       </div>
@@ -564,7 +899,6 @@ export default function PublicStorePage() {
 
       {/* Products */}
       <div className="max-w-5xl mx-auto px-4 py-6">
-        {/* Search + filters */}
         <div className="flex flex-col sm:flex-row gap-3 mb-5">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -586,7 +920,6 @@ export default function PublicStorePage() {
           </div>
         </div>
 
-        {/* Category chips */}
         {categories.length > 0 && (
           <div className="flex flex-wrap gap-2 mb-5">
             <button
@@ -615,7 +948,6 @@ export default function PublicStorePage() {
           </div>
         )}
 
-        {/* Product grid */}
         {filtered.length === 0 ? (
           <div className="text-center py-16">
             <Package className="h-10 w-10 text-gray-300 mx-auto mb-3" />
@@ -632,14 +964,35 @@ export default function PublicStorePage() {
                 showStock={wholesaler.stockVisible === true}
                 showPackSize={wholesaler.packSizeVisible !== false}
                 currency={currency}
-                enquiriesEnabled={wholesaler.enquiriesEnabled !== false}
-                onEnquire={handleEnquire}
+                cartQty={getQty(product.id)}
+                onAddToCart={addToCart}
+                onUpdateQty={updateQty}
               />
             ))}
           </div>
         )}
 
-        {/* Powered by Quikpik footer */}
+        {/* Floating cart nudge — shown when cart has items and drawer is closed */}
+        {totalItems > 0 && !showCart && (
+          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-20">
+            <button
+              onClick={() => setShowCart(true)}
+              className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold px-5 py-3 rounded-full shadow-lg transition-colors"
+            >
+              <ShoppingCart className="h-4 w-4" />
+              View Cart · {totalItems} item{totalItems !== 1 ? 's' : ''}
+              {showPrices && (
+                <span className="opacity-80">
+                  · {formatCurrency(
+                    cart.reduce((s, i) => s + (parseFloat(i.price ?? '0') || 0) * i.quantity, 0),
+                    currency
+                  )}
+                </span>
+              )}
+            </button>
+          </div>
+        )}
+
         <div className="mt-12 pt-6 border-t border-gray-100 text-center">
           <p className="text-xs text-gray-400">
             Powered by{' '}
@@ -651,11 +1004,40 @@ export default function PublicStorePage() {
         </div>
       </div>
 
-      {/* Enquiry modal */}
+      {/* Cart drawer */}
+      {showCart && (
+        <CartDrawer
+          cart={cart}
+          wholesaler={wholesaler}
+          showPrices={showPrices}
+          currency={currency}
+          onClose={() => setShowCart(false)}
+          onUpdateQty={updateQty}
+          onClearCart={clearCart}
+          onRequestQuote={() => {
+            setShowCart(false);
+            setShowQuoteContact(true);
+          }}
+        />
+      )}
+
+      {/* Quote contact modal */}
+      {showQuoteContact && (
+        <QuoteContactModal
+          wholesaler={wholesaler}
+          cart={cart}
+          onClose={(cleared) => {
+            setShowQuoteContact(false);
+            if (cleared) clearCart();
+          }}
+        />
+      )}
+
+      {/* General enquiry modal (Get in touch) */}
       {showEnquiry && (
         <EnquiryModal
           wholesaler={wholesaler}
-          product={enquiryProduct instanceof Object && enquiryProduct !== null ? enquiryProduct as PublicProduct : null}
+          product={null}
           onClose={() => setShowEnquiry(false)}
         />
       )}

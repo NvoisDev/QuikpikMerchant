@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { db } from "../db";
-import { users, products, storeEnquiries } from "@shared/schema";
-import { eq, and, ilike, or, sql } from "drizzle-orm";
+import { users, products, storeEnquiries, orders, orderItems } from "@shared/schema";
+import { eq, and, ilike, or, sql, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { sendEmail } from "../sendgrid-service";
 import { requireAuth } from "../googleAuth";
@@ -327,6 +327,226 @@ export function registerPublicStoreRoutes(app: Express) {
       }
       console.error("Error saving enquiry:", err);
       res.status(500).json({ message: "Failed to submit enquiry" });
+    }
+  });
+
+  // POST /api/public/cart-quote
+  // Customer submits their full cart as a quote request.
+  // Creates a provisional customer + draft order with line items + a storeEnquiry linked to it.
+  app.post("/api/public/cart-quote", async (req, res) => {
+    try {
+      const schema = z.object({
+        wholesalerId: z.string().min(1),
+        enquirerName: z.string().min(1),
+        enquirerPhone: z.string().optional().transform(v => v?.trim() || null),
+        enquirerEmail: z.string().email().optional().or(z.literal('')).transform(v => v || null),
+        enquirerBusiness: z.string().optional().transform(v => v?.trim() || null),
+        items: z.array(z.object({
+          productId: z.number().int().positive(),
+          quantity: z.number().int().positive(),
+          sellingType: z.string().default('units'),
+        })).min(1),
+      });
+
+      const data = schema.parse(req.body);
+
+      if (!data.enquirerPhone && !data.enquirerEmail) {
+        return res.status(400).json({ message: "Phone or email is required" });
+      }
+
+      const [wholesaler] = await db
+        .select({
+          id: users.id,
+          storeVisibility: users.storeVisibility,
+          email: users.email,
+          businessName: users.businessName,
+          enquiriesEnabled: users.enquiriesEnabled,
+          preferredCurrency: users.preferredCurrency,
+        })
+        .from(users)
+        .where(eq(users.id, data.wholesalerId));
+
+      if (!wholesaler || wholesaler.storeVisibility !== 'public') {
+        return res.status(404).json({ message: "Store not found" });
+      }
+      if (wholesaler.enquiriesEnabled === false) {
+        return res.status(403).json({ message: "Enquiries are not currently enabled for this store" });
+      }
+
+      // Validate all products exist and belong to this wholesaler
+      const productIds = data.items.map(i => i.productId);
+      const productRows = await db
+        .select({ id: products.id, name: products.name, price: products.price, palletPrice: products.palletPrice, status: products.status, wholesalerId: products.wholesalerId })
+        .from(products)
+        .where(and(inArray(products.id, productIds), eq(products.wholesalerId, data.wholesalerId)));
+
+      const productMap = new Map(productRows.map(p => [p.id, p]));
+      for (const item of data.items) {
+        const p = productMap.get(item.productId);
+        if (!p || p.status !== 'active') {
+          return res.status(400).json({ message: `Product ${item.productId} not found or not available` });
+        }
+      }
+
+      // Find or create provisional customer — dedup by phone then email
+      let provisionalCustomer: { id: string } | undefined;
+      if (data.enquirerPhone) {
+        const [found] = await db.select({ id: users.id }).from(users).where(eq(users.phoneNumber, data.enquirerPhone)).limit(1);
+        if (found) provisionalCustomer = found;
+      }
+      if (!provisionalCustomer && data.enquirerEmail) {
+        const [found] = await db.select({ id: users.id }).from(users).where(eq(users.email, data.enquirerEmail)).limit(1);
+        if (found) provisionalCustomer = found;
+      }
+      if (!provisionalCustomer) {
+        const nameParts = data.enquirerName.trim().split(/\s+/);
+        const firstName = nameParts[0];
+        const lastName = nameParts.slice(1).join(' ') || null;
+        const [created] = await db.insert(users).values({
+          id: `lead_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          phoneNumber: data.enquirerPhone ?? null,
+          firstName,
+          lastName,
+          role: 'customer',
+          email: data.enquirerEmail ?? null,
+          businessName: data.enquirerBusiness ?? null,
+          wholesalerId: data.wholesalerId,
+        } as any).returning({ id: users.id });
+        provisionalCustomer = created;
+      }
+
+      // Build line items with prices
+      const lineItems = data.items.map(item => {
+        const p = productMap.get(item.productId)!;
+        const rawPrice = item.sellingType === 'pallets' ? (p.palletPrice ?? p.price) : p.price;
+        const unitPrice = parseFloat(rawPrice ?? '0') || 0;
+        return {
+          productId: item.productId,
+          name: p.name,
+          quantity: item.quantity,
+          unitPrice,
+          total: unitPrice * item.quantity,
+          sellingType: item.sellingType,
+        };
+      });
+
+      const subtotal = lineItems.reduce((s, l) => s + l.total, 0);
+
+      // Create draft order
+      const notes = `Quote requested via store${data.enquirerBusiness ? ` by ${data.enquirerBusiness}` : ''}`;
+      const [newOrder] = await db.insert(orders).values({
+        wholesalerId: data.wholesalerId,
+        retailerId: provisionalCustomer.id,
+        customerName: data.enquirerName,
+        customerEmail: data.enquirerEmail ?? null,
+        customerPhone: data.enquirerPhone ?? null,
+        subtotal: subtotal.toFixed(2),
+        platformFee: '0.00',
+        customerTransactionFee: '0.00',
+        vatAmount: '0.00',
+        total: subtotal.toFixed(2),
+        status: 'pending',
+        isQuote: true,
+        paymentStatus: 'unpaid',
+        notes,
+      } as any).returning({ id: orders.id });
+
+      // Insert order items (no stock reservation for quote requests)
+      if (lineItems.length > 0) {
+        await db.insert(orderItems).values(
+          lineItems.map(l => ({
+            orderId: newOrder.id,
+            productId: l.productId,
+            quantity: l.quantity,
+            unitPrice: l.unitPrice.toFixed(2),
+            total: l.total.toFixed(2),
+            sellingType: l.sellingType,
+          }))
+        );
+      }
+
+      // Snapshot cart for the enquiry record
+      const cartSnapshot = lineItems.map(l => ({
+        productId: l.productId,
+        name: l.name,
+        quantity: l.quantity,
+        unitPrice: l.unitPrice.toFixed(2),
+        total: l.total.toFixed(2),
+        sellingType: l.sellingType,
+      }));
+
+      // Create store enquiry linked to the new draft order
+      const [enquiry] = await db.insert(storeEnquiries).values({
+        wholesalerId: data.wholesalerId,
+        enquirerName: data.enquirerName,
+        enquirerEmail: data.enquirerEmail ?? null,
+        enquirerPhone: data.enquirerPhone ?? null,
+        enquirerBusiness: data.enquirerBusiness ?? null,
+        productId: null,
+        productName: null,
+        quantity: null,
+        status: 'new',
+        orderId: newOrder.id,
+        cartItems: cartSnapshot,
+      } as any).returning({ id: storeEnquiries.id });
+
+      // Email wholesaler
+      if (wholesaler.email) {
+        try {
+          const currency = wholesaler.preferredCurrency || 'GBP';
+          const fmt = (n: number) => new Intl.NumberFormat('en-GB', { style: 'currency', currency }).format(n);
+          const businessLabel = data.enquirerBusiness ? ` from ${data.enquirerBusiness}` : '';
+          const itemRows = cartSnapshot.map(l =>
+            `<tr><td style="padding:6px 12px;border-bottom:1px solid #f3f4f6">${l.name}</td><td style="padding:6px 12px;border-bottom:1px solid #f3f4f6;text-align:center">${l.quantity}</td><td style="padding:6px 12px;border-bottom:1px solid #f3f4f6;text-align:right">${fmt(parseFloat(l.unitPrice))}</td><td style="padding:6px 12px;border-bottom:1px solid #f3f4f6;text-align:right">${fmt(parseFloat(l.total))}</td></tr>`
+          ).join('');
+
+          await sendEmail({
+            to: wholesaler.email,
+            from: 'hello@quikpik.co',
+            subject: `New quote request${businessLabel} — ${cartSnapshot.length} item${cartSnapshot.length !== 1 ? 's' : ''}`,
+            html: `
+              <div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:24px">
+                <h2 style="color:#16a34a;margin-bottom:4px">New Quote Request</h2>
+                <p style="color:#6b7280;margin-bottom:20px">A customer has requested a quote from your store.</p>
+                <div style="background:#f9fafb;border-radius:12px;padding:16px;margin-bottom:16px">
+                  <p style="margin:0 0 6px"><strong>Name:</strong> ${data.enquirerName}</p>
+                  ${data.enquirerBusiness ? `<p style="margin:0 0 6px"><strong>Business:</strong> ${data.enquirerBusiness}</p>` : ''}
+                  ${data.enquirerPhone ? `<p style="margin:0 0 6px"><strong>Phone/WhatsApp:</strong> ${data.enquirerPhone}</p>` : ''}
+                  ${data.enquirerEmail ? `<p style="margin:0 0 0"><strong>Email:</strong> ${data.enquirerEmail}</p>` : ''}
+                </div>
+                <table style="width:100%;border-collapse:collapse;margin-bottom:16px">
+                  <thead>
+                    <tr style="background:#f9fafb">
+                      <th style="padding:8px 12px;text-align:left;font-size:12px;color:#6b7280">Product</th>
+                      <th style="padding:8px 12px;text-align:center;font-size:12px;color:#6b7280">Qty</th>
+                      <th style="padding:8px 12px;text-align:right;font-size:12px;color:#6b7280">Unit</th>
+                      <th style="padding:8px 12px;text-align:right;font-size:12px;color:#6b7280">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>${itemRows}</tbody>
+                  <tfoot>
+                    <tr>
+                      <td colspan="3" style="padding:8px 12px;text-align:right;font-weight:600">Subtotal</td>
+                      <td style="padding:8px 12px;text-align:right;font-weight:600">${fmt(subtotal)}</td>
+                    </tr>
+                  </tfoot>
+                </table>
+                <a href="https://quikpik.app/invoices" style="display:inline-block;background:#16a34a;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600">View Draft Invoice →</a>
+              </div>
+            `,
+          });
+        } catch (emailErr) {
+          console.warn("Failed to send cart-quote email notification:", emailErr);
+        }
+      }
+
+      res.json({ success: true, enquiryId: enquiry.id, orderId: newOrder.id });
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: err.errors });
+      }
+      console.error("Error creating cart quote:", err);
+      res.status(500).json({ message: "Failed to submit quote request" });
     }
   });
 
