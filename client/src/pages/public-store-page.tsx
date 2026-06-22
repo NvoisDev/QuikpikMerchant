@@ -324,23 +324,13 @@ function CartDrawer({
                 {showPrices ? formatCurrency(subtotal, currency) : '—'}
               </span>
             </div>
-            {showPrices ? (
-              <Button
-                disabled
-                className="w-full h-11 text-sm font-semibold cursor-not-allowed opacity-60"
-                title="Online checkout coming soon"
-              >
-                Checkout — Coming Soon
-              </Button>
-            ) : (
-              <Button
-                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white h-11 text-sm font-semibold"
-                onClick={onRequestQuote}
-              >
-                <Tag className="h-4 w-4 mr-2" />
-                Get Trade Pricing
-              </Button>
-            )}
+            <Button
+              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white h-11 text-sm font-semibold"
+              onClick={onRequestQuote}
+            >
+              <Tag className="h-4 w-4 mr-2" />
+              Get Trade Pricing
+            </Button>
           </div>
         )}
       </div>
