@@ -871,7 +871,7 @@ export function ProductsTab({
                   <CardContent className="p-3 sm:p-4">
                     <div className="flex gap-3 sm:gap-4">
                       {/* Product Image */}
-                      <div className="relative w-24 h-24 bg-white rounded-xl overflow-hidden flex-shrink-0 border border-gray-100">
+                      <div className="relative w-16 h-16 sm:w-20 sm:h-20 bg-white rounded-xl overflow-hidden flex-shrink-0 border border-gray-100">
                         {(() => {
                           const allImages = [
                             ...(product.imageUrl ? [product.imageUrl] : []),
@@ -1040,10 +1040,11 @@ export function ProductsTab({
                           )}
                         </div>
                       </div>
+                    </div>
 
-                      {/* Add to Cart Controls — pinned top-right */}
-                      <div className="flex-shrink-0 self-start flex flex-col items-end pt-1">
-                        <div className="space-y-2">
+                    {/* Action row — full width */}
+                    <div className="mt-2">
+                      <div className="space-y-2">
                           {hasPalletPricing && (cartItemUnits || cartItemPallets) && !(cartItemUnits && cartItemPallets) && (
                             <div className="flex items-center justify-between">
                               <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${cartItemUnits ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700'}`}>
@@ -1067,7 +1068,7 @@ export function ProductsTab({
 
                           {/* Units stepper (list view) */}
                           {cartItemUnits && (
-                            <div className="flex flex-col items-end">
+                            <div className="flex flex-col items-center">
                               {cartItemPallets && <p className="text-xs font-medium text-emerald-700 mb-1">📦 Units</p>}
                               <div className="flex items-center gap-2">
                                 <Button size="sm" variant="outline" onClick={() => {
@@ -1143,7 +1144,7 @@ export function ProductsTab({
 
                           {/* Pallets stepper (list view) */}
                           {cartItemPallets && hasPalletPricing && (
-                            <div className="flex flex-col items-end">
+                            <div className="flex flex-col items-center">
                               {cartItemUnits && <p className="text-xs font-medium text-blue-700 mb-1">🚛 Pallets</p>}
                               <div className="flex items-center gap-2">
                                 <Button size="sm" variant="outline" onClick={() => {
@@ -1197,7 +1198,7 @@ export function ProductsTab({
                           )}
 
                           {!cartItemUnits && !cartItemPallets && (
-                            <div className="flex flex-col items-center gap-1">
+                            <div className="flex flex-col gap-1">
                               {pricesHidden ? (
                                 <Button
                                   onClick={() => {
@@ -1211,11 +1212,10 @@ export function ProductsTab({
                                       addToCart(product as ExtendedProduct, product.moq || 1, 'units');
                                     }
                                   }}
-                                  size="sm"
-                                  className="rounded-xl font-semibold text-white px-4"
+                                  className="w-full rounded-xl font-semibold text-white"
                                   style={{background: 'var(--theme-primary)'}}
                                 >
-                                  <Tag className="h-3.5 w-3.5 mr-1.5" />
+                                  <Tag className="h-4 w-4 mr-2" />
                                   Get Trade Pricing
                                 </Button>
                               ) : (
@@ -1234,31 +1234,19 @@ export function ProductsTab({
                                       }
                                     };
                                     return (
-                                      <>
-                                        <button
-                                          onClick={handleAdd}
-                                          disabled={isOutOfStock}
-                                          className="sm:hidden w-10 h-10 rounded-full flex items-center justify-center text-white text-xl font-bold disabled:cursor-not-allowed flex-shrink-0"
-                                          style={{background: isOutOfStock ? 'rgb(156, 163, 175)' : 'var(--theme-primary)'}}
-                                          aria-label={isOutOfStock ? 'Out of stock' : 'Add to cart'}
-                                        >
-                                          <Plus className="h-5 w-5" />
-                                        </button>
-                                        <Button
-                                          onClick={handleAdd}
-                                          disabled={isOutOfStock}
-                                          size="sm"
-                                          className="hidden sm:flex rounded-xl font-semibold text-white disabled:bg-gray-400 disabled:cursor-not-allowed px-4"
-                                          style={{background: isOutOfStock ? 'rgb(156, 163, 175)' : 'var(--theme-primary)'}}
-                                        >
-                                          <ShoppingCart className="h-3.5 w-3.5 mr-1.5" />
-                                          {isOutOfStock ? 'Out of Stock' : hasPalletPricing ? 'Add to Cart →' : 'Add to Cart'}
-                                        </Button>
-                                      </>
+                                      <Button
+                                        onClick={handleAdd}
+                                        disabled={isOutOfStock}
+                                        className="w-full rounded-xl font-semibold text-white disabled:bg-gray-400 disabled:cursor-not-allowed"
+                                        style={{background: isOutOfStock ? 'rgb(156, 163, 175)' : 'var(--theme-primary)'}}
+                                      >
+                                        <ShoppingCart className="h-4 w-4 mr-2" />
+                                        {isOutOfStock ? 'Out of Stock' : hasPalletPricing ? 'Add to Cart →' : 'Add to Cart'}
+                                      </Button>
                                     );
                                   })()}
                                   {hasPalletPricing && product.stock > 0 && (
-                                    <p className="text-xs text-gray-500 text-center">units or pallets</p>
+                                    <p className="text-xs text-gray-500 text-center">Choose: units or pallets</p>
                                   )}
                                 </>
                               )}
@@ -1266,7 +1254,6 @@ export function ProductsTab({
                           )}
                         </div>
                       </div>
-                    </div>
                   </CardContent>
                 </Card>
               );
