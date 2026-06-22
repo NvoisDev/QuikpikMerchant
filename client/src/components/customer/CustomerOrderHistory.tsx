@@ -803,9 +803,6 @@ export const OrderActionsDropdown = ({ order, onViewDetails, customerPhone, onSu
           <DropdownMenuItem onClick={() => handleAction(onViewDetails)}>
             <Eye className="h-4 w-4 mr-2" /> View Details
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => handleAction(() => setReorderOpen(true))}>
-            <ShoppingBag className="h-4 w-4 mr-2" /> Reorder
-          </DropdownMenuItem>
           <DropdownMenuItem onClick={() => handleAction(onDownloadInvoice)} disabled={downloadingInvoiceId === order.id}>
             {downloadingInvoiceId === order.id
               ? <Loader2 className="h-4 w-4 mr-2 animate-spin" />
