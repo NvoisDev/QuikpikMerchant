@@ -77,6 +77,13 @@ function EnquiryDrawer({ enquiry, onClose }: { enquiry: StoreEnquiry; onClose: (
   const [showApproveConfirm, setShowApproveConfirm] = useState(false);
   const isQuoteRequest = !!enquiry.orderId;
 
+  const { data: linkedOrder, isLoading: orderLoading } = useQuery<{ status: string }>({
+    queryKey: [`/api/orders/${enquiry.orderId}`],
+    enabled: isQuoteRequest,
+    staleTime: 0,
+  });
+  const orderIsDraft = isQuoteRequest && linkedOrder?.status === 'draft';
+
   const markMutation = useMutation({
     mutationFn: (status: string) =>
       apiRequest('PATCH', `/api/public/enquiries/${enquiry.id}`, { status }),
@@ -152,14 +159,20 @@ function EnquiryDrawer({ enquiry, onClose }: { enquiry: StoreEnquiry; onClose: (
                 <FileText className="h-3 w-3" /> Draft Invoice
               </p>
               <p className="text-xs text-violet-600 mb-3">A draft invoice has been created from this cart quote request. Approve it now to send the invoice to the customer instantly, or open it first to make changes.</p>
-              <Button
-                className="w-full mb-2 bg-violet-600 hover:bg-violet-700 text-white"
-                onClick={() => setShowApproveConfirm(true)}
-                disabled={approveMutation.isPending}
-              >
-                <Send className="h-3.5 w-3.5 mr-2" />
-                {approveMutation.isPending ? 'Approving…' : 'Approve & Send Invoice'}
-              </Button>
+              {linkedOrder && linkedOrder.status !== 'draft' ? (
+                <div className="flex items-center justify-center gap-2 w-full py-2 mb-2 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-700 text-sm font-medium">
+                  <CheckCircle2 className="h-3.5 w-3.5" /> Invoice already sent
+                </div>
+              ) : (
+                <Button
+                  className="w-full mb-2 bg-violet-600 hover:bg-violet-700 text-white"
+                  onClick={() => setShowApproveConfirm(true)}
+                  disabled={approveMutation.isPending || orderLoading || !orderIsDraft}
+                >
+                  <Send className="h-3.5 w-3.5 mr-2" />
+                  {approveMutation.isPending ? 'Approving…' : 'Approve & Send Invoice'}
+                </Button>
+              )}
               <a
                 href={`/invoices?draft=${enquiry.orderId}`}
                 className="flex items-center justify-center gap-2 w-full py-2 border border-violet-300 text-violet-700 hover:bg-violet-100 rounded-lg text-sm font-medium transition-colors"
