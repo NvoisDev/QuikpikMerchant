@@ -178,7 +178,7 @@ function EnquiryDrawer({ enquiry, onClose }: { enquiry: StoreEnquiry; onClose: (
                 </Button>
               )}
               <a
-                href={`/invoices?draft=${enquiry.orderId}`}
+                href={linkedOrder && linkedOrder.status !== 'draft' ? `/orders/${enquiry.orderId}` : `/quick-quote?draftId=${enquiry.orderId}`}
                 className="flex items-center justify-center gap-2 w-full py-2 border border-violet-300 text-violet-700 hover:bg-violet-100 rounded-lg text-sm font-medium transition-colors"
               >
                 <ExternalLink className="h-3.5 w-3.5" />
