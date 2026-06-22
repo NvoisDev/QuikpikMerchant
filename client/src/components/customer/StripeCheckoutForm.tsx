@@ -33,6 +33,7 @@ const PaymentFormContent = ({
   customerTransactionFee,
   shippingCost,
   wholesaler,
+  disabled,
 }: {
   onSuccess: StripeCheckoutFormProps['onSuccess'];
   totalAmount: number;
@@ -40,6 +41,7 @@ const PaymentFormContent = ({
   customerTransactionFee: number;
   shippingCost: number;
   wholesaler: WholesalerPortal;
+  disabled?: boolean;
 }) => {
   const stripe = useStripe();
   const elements = useElements();
@@ -59,6 +61,8 @@ const PaymentFormContent = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (disabled) return;
 
     if (!isElementReady) {
       toast({ title: "Payment form is still loading", description: "Payment form is still loading, please wait a moment.", variant: "destructive" });
@@ -283,7 +287,7 @@ const PaymentFormContent = ({
 
         <Button
           type="submit"
-          disabled={!isElementReady || !stripe || isProcessing || paymentSubmitted}
+          disabled={disabled || !isElementReady || !stripe || isProcessing || paymentSubmitted}
           className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3"
         >
           {!isElementReady ? "Loading payment form…" : isProcessing ? "Processing..." : paymentSubmitted ? "Payment Submitted..." : `Pay ${formatCurrency(totalAmount, wholesaler?.defaultCurrency)}`}
@@ -305,7 +309,7 @@ const PaymentFormContent = ({
   );
 };
 
-export const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, subtotal, customerTransactionFee, shippingCost, clientSecret, publishableKey, onSuccess }: StripeCheckoutFormProps) => {
+export const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount, subtotal, customerTransactionFee, shippingCost, clientSecret, publishableKey, disabled, onSuccess }: StripeCheckoutFormProps) => {
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [stripePromise, setStripePromise] = useState<ReturnType<typeof fetchStripePromise> | null>(null);
   const { toast } = useToast();
@@ -360,6 +364,7 @@ export const StripeCheckoutForm = ({ cart, customerData, wholesaler, totalAmount
         customerTransactionFee={customerTransactionFee}
         shippingCost={shippingCost}
         wholesaler={wholesaler}
+        disabled={disabled}
       />
     </Elements>
   );

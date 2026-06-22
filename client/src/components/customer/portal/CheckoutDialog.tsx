@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
-import { Minus, Plus, Trash2, Share2, Package } from "lucide-react";
+import { Minus, Plus, Trash2, Share2, Package, AlertTriangle } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PriceDisplay } from "@/components/customer/PriceDisplay";
 import { AddressSelector } from "@/components/customer/AddressSelector";
@@ -117,6 +117,14 @@ export function CheckoutDialog({
   const pricesHidden = wholesaler?.priceDisplayMode !== 'shown';
 
   const defaultCollectionAddress = collectionAddresses.find((a) => a.isDefault) || collectionAddresses[0];
+
+  const outOfStockItems = cart.filter((item) => {
+    const stock = item.sellingType === 'pallets'
+      ? (item.product.palletStock ?? 0)
+      : (item.product.stock ?? 0);
+    return stock <= 0 || stock < item.quantity;
+  });
+  const hasStockIssues = outOfStockItems.length > 0;
 
   useEffect(() => {
     if (collectionAddresses.length > 0 && selectedCollectionAddressId === null) {
@@ -265,6 +273,25 @@ export function CheckoutDialog({
                           )}
                         </div>
                       </div>
+
+                      {(() => {
+                        const realStock = item.sellingType === 'pallets'
+                          ? (item.product.palletStock ?? 0)
+                          : (item.product.stock ?? 0);
+                        const isItemOutOfStock = realStock <= 0;
+                        const isItemInsufficient = !isItemOutOfStock && realStock < item.quantity;
+                        if (!isItemOutOfStock && !isItemInsufficient) return null;
+                        return (
+                          <div className="mt-2 flex items-start gap-1.5 p-2 bg-red-50 border border-red-200 rounded-md">
+                            <AlertTriangle className="h-3.5 w-3.5 text-red-500 flex-shrink-0 mt-0.5" />
+                            <p className="text-xs text-red-700 font-medium">
+                              {isItemOutOfStock
+                                ? `"${item.product.name}" is out of stock — please remove it to continue.`
+                                : `Only ${realStock} ${item.sellingType === 'pallets' ? 'pallets' : 'units'} available for "${item.product.name}" (you have ${item.quantity} in your basket) — please reduce the quantity or remove it.`}
+                            </p>
+                          </div>
+                        );
+                      })()}
 
                       <div className="flex items-center gap-2 mt-3 pt-2 border-t border-gray-100">
                         <div className="flex items-center gap-1">
@@ -667,6 +694,19 @@ export function CheckoutDialog({
               />
             </div>
 
+            {/* Out-of-stock blocking banner */}
+            {hasStockIssues && (
+              <div className="flex items-start gap-3 p-4 bg-red-50 border border-red-300 rounded-2xl">
+                <AlertTriangle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-semibold text-red-800 text-sm">Some items can't be fulfilled</p>
+                  <p className="text-red-700 text-sm mt-0.5">
+                    Please remove or adjust the highlighted items above before paying.
+                  </p>
+                </div>
+              </div>
+            )}
+
             {/* Payment Form */}
             <div className="bg-white p-5 rounded-2xl border border-gray-100">
               {customerData.shippingOption && wholesaler?.allowPayLater && (
@@ -738,7 +778,7 @@ export function CheckoutDialog({
                   </div>
                   <Button
                     className="w-full bg-green-600 hover:bg-green-700 text-white"
-                    disabled={isPlacingPayLaterOrder || !customerData.shippingOption || (customerData.shippingOption === 'delivery' && !customerData.selectedDeliveryAddress)}
+                    disabled={hasStockIssues || isPlacingPayLaterOrder || !customerData.shippingOption || (customerData.shippingOption === 'delivery' && !customerData.selectedDeliveryAddress)}
                     onClick={async () => {
                       if (!wholesaler?.id) return;
                       setIsPlacingPayLaterOrder(true);
@@ -858,6 +898,7 @@ export function CheckoutDialog({
                       wholesaler={wholesaler}
                       clientSecret={clientSecret}
                       publishableKey={publishableKey}
+                      disabled={hasStockIssues}
                       subtotal={cartStats.subtotal}
                       shippingCost={customerData.shippingOption === 'delivery' && wholesaler?.deliveryFlatRate ? parseFloat(wholesaler.deliveryFlatRate) : 0}
                       customerTransactionFee={feesEnabled ? calculateCustomerFee(
