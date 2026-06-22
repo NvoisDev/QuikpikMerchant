@@ -550,21 +550,23 @@ export function registerPublicStoreRoutes(app: Express) {
     }
   });
 
-  // GET /api/public/enquiries/new-count — count of unread (status='new') leads
-  app.get("/api/public/enquiries/new-count", requireAuth, async (req: any, res) => {
+  // GET /api/public/leads/new-count — lightweight count of unread leads + quote requests
+  app.get("/api/public/leads/new-count", requireAuth, async (req: any, res) => {
     try {
       const wholesalerId = req.user?.id || req.user?.claims?.sub;
       if (!wholesalerId) return res.status(401).json({ message: "Unauthorised" });
 
-      const [{ count }] = await db
-        .select({ count: sql<number>`cast(count(*) as int)` })
+      const rows = await db
+        .select({ id: storeEnquiries.id, orderId: storeEnquiries.orderId })
         .from(storeEnquiries)
         .where(and(eq(storeEnquiries.wholesalerId, wholesalerId), eq(storeEnquiries.status, 'new')));
 
-      res.json({ count: count ?? 0 });
+      const leads = rows.filter(r => !r.orderId).length;
+      const quoteRequests = rows.filter(r => !!r.orderId).length;
+      res.json({ leads, quoteRequests, total: rows.length });
     } catch (err) {
-      console.error("Error fetching enquiry count:", err);
-      res.status(500).json({ message: "Failed to fetch enquiry count" });
+      console.error("Error fetching leads new count:", err);
+      res.status(500).json({ message: "Failed to fetch count" });
     }
   });
 

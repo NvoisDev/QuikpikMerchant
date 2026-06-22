@@ -11,7 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import {
   Inbox, Phone, Mail, Building2, Package, MessageSquare,
   Clock, CheckCircle2, Eye, X, TrendingUp, Users, Star,
-  Settings, ShoppingCart, FileText, Save,
+  Settings, ShoppingCart, FileText, Save, ExternalLink,
 } from "lucide-react";
 
 interface CartItem {
@@ -64,6 +64,7 @@ function EnquiryDrawer({ enquiry, onClose }: { enquiry: StoreEnquiry; onClose: (
   const queryClient = useQueryClient();
   const [note, setNote] = useState(enquiry.wholesalerNote ?? '');
   const [noteDirty, setNoteDirty] = useState(false);
+  const isQuoteRequest = !!enquiry.orderId;
 
   const markMutation = useMutation({
     mutationFn: (status: string) =>
@@ -86,7 +87,7 @@ function EnquiryDrawer({ enquiry, onClose }: { enquiry: StoreEnquiry; onClose: (
     },
   });
 
-  const isCartQuote = enquiry.cartItems && enquiry.cartItems.length > 0;
+  const cartTotal = enquiry.cartItems?.reduce((s, i) => s + parseFloat(i.total || '0'), 0) ?? 0;
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
@@ -96,9 +97,9 @@ function EnquiryDrawer({ enquiry, onClose }: { enquiry: StoreEnquiry; onClose: (
           <div>
             <div className="flex items-center gap-2">
               <p className="font-semibold text-gray-900">{enquiry.enquirerName || 'Unknown'}</p>
-              {isCartQuote && (
-                <span className="text-[10px] bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-full px-2 py-0.5 font-medium flex items-center gap-1">
-                  <ShoppingCart className="h-2.5 w-2.5" /> Cart Quote
+              {isQuoteRequest && (
+                <span className="text-[10px] bg-violet-100 text-violet-700 border border-violet-200 rounded-full px-2 py-0.5 font-medium flex items-center gap-1">
+                  <ShoppingCart className="h-2.5 w-2.5" /> Quote Request
                 </span>
               )}
             </div>
@@ -116,20 +117,43 @@ function EnquiryDrawer({ enquiry, onClose }: { enquiry: StoreEnquiry; onClose: (
             <span className="text-xs text-gray-400">{timeAgo(enquiry.createdAt)}</span>
           </div>
 
-          {/* Linked order */}
-          {enquiry.orderId && (
-            <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-3 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <FileText className="h-4 w-4 text-indigo-500" />
-                <p className="text-sm font-medium text-indigo-800">Linked Draft Order</p>
-              </div>
-              <Link
-                href={`/orders/${enquiry.orderId}`}
-                className="text-xs text-indigo-600 font-semibold underline underline-offset-2 hover:text-indigo-800"
-                onClick={onClose}
+          {/* Draft invoice link for quote requests */}
+          {isQuoteRequest && (
+            <div className="bg-violet-50 border border-violet-200 rounded-xl p-3">
+              <p className="text-xs font-semibold text-violet-700 uppercase tracking-wide mb-2 flex items-center gap-1.5">
+                <FileText className="h-3 w-3" /> Draft Invoice
+              </p>
+              <p className="text-xs text-violet-600 mb-3">A draft invoice has been created from this cart quote request. Review and send it to the customer.</p>
+              <a
+                href={`/invoices?draft=${enquiry.orderId}`}
+                className="flex items-center justify-center gap-2 w-full py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-lg text-sm font-medium transition-colors"
               >
-                View Order #{enquiry.orderId}
-              </Link>
+                <ExternalLink className="h-3.5 w-3.5" /> View & Edit Draft Invoice
+              </a>
+            </div>
+          )}
+
+          {/* Cart items for quote requests */}
+          {isQuoteRequest && enquiry.cartItems && enquiry.cartItems.length > 0 && (
+            <div className="bg-gray-50 rounded-xl p-3">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3 flex items-center gap-1.5">
+                <ShoppingCart className="h-3 w-3" /> Requested Items ({enquiry.cartItems.length})
+              </p>
+              <div className="space-y-2">
+                {enquiry.cartItems.map((item, idx) => (
+                  <div key={idx} className="flex items-center justify-between bg-white rounded-lg px-3 py-2 border border-gray-100">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-gray-800 truncate">{item.name}</p>
+                      <p className="text-[11px] text-gray-400 capitalize">{item.sellingType} · {item.quantity} × £{parseFloat(item.unitPrice).toFixed(2)}</p>
+                    </div>
+                    <p className="text-sm font-semibold text-gray-900 ml-3">£{parseFloat(item.total).toFixed(2)}</p>
+                  </div>
+                ))}
+              </div>
+              <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-200">
+                <span className="text-xs font-semibold text-gray-600">Subtotal</span>
+                <span className="text-sm font-bold text-gray-900">£{cartTotal.toFixed(2)}</span>
+              </div>
             </div>
           )}
 
@@ -170,28 +194,8 @@ function EnquiryDrawer({ enquiry, onClose }: { enquiry: StoreEnquiry; onClose: (
             </div>
           )}
 
-          {/* Cart items (cart quote) */}
-          {isCartQuote && (
-            <div className="bg-gray-50 rounded-xl p-3 space-y-2">
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-1.5">
-                <ShoppingCart className="h-3 w-3" /> Cart Items ({enquiry.cartItems!.length})
-              </p>
-              <div className="space-y-1.5">
-                {enquiry.cartItems!.map((item, i) => (
-                  <div key={i} className="flex items-center justify-between text-xs bg-white border border-gray-100 rounded-lg px-3 py-2">
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-gray-800 truncate">{item.name}</p>
-                      <p className="text-gray-400 capitalize">{item.sellingType} · {item.quantity}x @ {item.unitPrice}</p>
-                    </div>
-                    <p className="font-semibold text-gray-900 ml-2">{item.total}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Single product interest */}
-          {!isCartQuote && (enquiry.productName || enquiry.quantity) && (
+          {/* Product interest (single-product enquiries only) */}
+          {!isQuoteRequest && (enquiry.productName || enquiry.quantity) && (
             <div className="bg-gray-50 rounded-xl p-3 space-y-2">
               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Product Interest</p>
               {enquiry.productName && (
@@ -213,7 +217,7 @@ function EnquiryDrawer({ enquiry, onClose }: { enquiry: StoreEnquiry; onClose: (
             </div>
           )}
 
-          {/* Wholesaler note */}
+          {/* Internal note */}
           <div className="bg-amber-50 border border-amber-100 rounded-xl p-3 space-y-2">
             <p className="text-xs font-semibold text-amber-700 uppercase tracking-wide">Internal Note</p>
             <Textarea
@@ -274,7 +278,10 @@ function EnquiryDrawer({ enquiry, onClose }: { enquiry: StoreEnquiry; onClose: (
   );
 }
 
+type LeadsView = 'leads' | 'quote-requests';
+
 export default function LeadsPage() {
+  const [view, setView] = useState<LeadsView>('leads');
   const [filter, setFilter] = useState<'all' | 'new' | 'viewed' | 'responded'>('all');
   const [selected, setSelected] = useState<StoreEnquiry | null>(null);
   const queryClient = useQueryClient();
@@ -318,16 +325,25 @@ export default function LeadsPage() {
     if (e.status === 'new') markViewedMutation.mutate(e.id);
   };
 
-  const newCount = enquiries.filter(e => e.status === 'new').length;
-  const filtered = filter === 'all' ? enquiries : enquiries.filter(e => e.status === filter);
+  // Split enquiries into regular leads vs cart quote requests
+  const regularLeads = enquiries.filter(e => !e.orderId);
+  const quoteRequests = enquiries.filter(e => !!e.orderId);
+
+  const activeList = view === 'leads' ? regularLeads : quoteRequests;
+  const filtered = filter === 'all' ? activeList : activeList.filter(e => e.status === filter);
+
+  const newLeadsCount = regularLeads.filter(e => e.status === 'new').length;
+  const newQuoteCount = quoteRequests.filter(e => e.status === 'new').length;
 
   return (
     <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
       <PageHeader title="Leads" description="Enquiries from your public store">
-        {newCount > 0 && (
+        {(newLeadsCount > 0 || newQuoteCount > 0) && (
           <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-2">
             <Star className="h-4 w-4 text-emerald-600" />
-            <span className="text-sm font-semibold text-emerald-700">{newCount} new</span>
+            <span className="text-sm font-semibold text-emerald-700">
+              {newLeadsCount + newQuoteCount} new
+            </span>
           </div>
         )}
       </PageHeader>
@@ -358,12 +374,48 @@ export default function LeadsPage() {
           </p>
         </div>
 
+        {/* View tabs: Leads vs Quote Requests */}
+        <div className="flex gap-2 mb-5">
+          <button
+            onClick={() => { setView('leads'); setFilter('all'); }}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors border ${
+              view === 'leads'
+                ? 'bg-primary text-white border-primary'
+                : 'bg-white border-gray-200 text-gray-600 hover:border-primary/40'
+            }`}
+          >
+            <Inbox className="h-4 w-4" />
+            Leads
+            {newLeadsCount > 0 && (
+              <span className={`text-[9px] rounded-full px-1.5 py-0.5 font-bold ${view === 'leads' ? 'bg-white/20 text-white' : 'bg-emerald-500 text-white'}`}>
+                {newLeadsCount}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => { setView('quote-requests'); setFilter('all'); }}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors border ${
+              view === 'quote-requests'
+                ? 'bg-violet-600 text-white border-violet-600'
+                : 'bg-white border-gray-200 text-gray-600 hover:border-violet-400'
+            }`}
+          >
+            <ShoppingCart className="h-4 w-4" />
+            Quote Requests
+            {newQuoteCount > 0 && (
+              <span className={`text-[9px] rounded-full px-1.5 py-0.5 font-bold ${view === 'quote-requests' ? 'bg-white/20 text-white' : 'bg-violet-500 text-white'}`}>
+                {newQuoteCount}
+              </span>
+            )}
+          </button>
+        </div>
+
         {/* Stats */}
         <div className="grid grid-cols-3 gap-3 mb-6">
           {[
-            { label: 'Total', value: enquiries.length, icon: Users, color: 'text-gray-600' },
-            { label: 'New', value: enquiries.filter(e => e.status === 'new').length, icon: Inbox, color: 'text-emerald-600' },
-            { label: 'Responded', value: enquiries.filter(e => e.status === 'responded').length, icon: CheckCircle2, color: 'text-blue-600' },
+            { label: 'Total', value: activeList.length, icon: Users, color: 'text-gray-600' },
+            { label: 'New', value: activeList.filter(e => e.status === 'new').length, icon: Inbox, color: 'text-emerald-600' },
+            { label: 'Responded', value: activeList.filter(e => e.status === 'responded').length, icon: CheckCircle2, color: 'text-blue-600' },
           ].map(({ label, value, icon: Icon, color }) => (
             <div key={label} className="bg-white border border-gray-100 rounded-xl p-3 text-center shadow-sm">
               <Icon className={`h-4 w-4 mx-auto mb-1 ${color}`} />
@@ -375,20 +427,23 @@ export default function LeadsPage() {
 
         {/* Filter tabs */}
         <div className="flex gap-2 mb-4">
-          {(['all', 'new', 'viewed', 'responded'] as const).map(f => (
-            <button
-              key={f}
-              onClick={() => setFilter(f)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium capitalize transition-colors ${
-                filter === f ? 'bg-primary text-white' : 'bg-white border border-gray-200 text-gray-600 hover:border-primary/40'
-              }`}
-            >
-              {f}
-              {f === 'new' && newCount > 0 && (
-                <span className="ml-1 bg-emerald-500 text-white text-[9px] rounded-full px-1.5 py-0.5">{newCount}</span>
-              )}
-            </button>
-          ))}
+          {(['all', 'new', 'viewed', 'responded'] as const).map(f => {
+            const newCount = activeList.filter(e => e.status === 'new').length;
+            return (
+              <button
+                key={f}
+                onClick={() => setFilter(f)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium capitalize transition-colors ${
+                  filter === f ? 'bg-primary text-white' : 'bg-white border border-gray-200 text-gray-600 hover:border-primary/40'
+                }`}
+              >
+                {f}
+                {f === 'new' && newCount > 0 && (
+                  <span className="ml-1 bg-emerald-500 text-white text-[9px] rounded-full px-1.5 py-0.5">{newCount}</span>
+                )}
+              </button>
+            );
+          })}
         </div>
 
         {/* List */}
@@ -398,9 +453,19 @@ export default function LeadsPage() {
           </div>
         ) : filtered.length === 0 ? (
           <div className="text-center py-16 bg-white rounded-2xl border border-gray-100">
-            <Inbox className="h-10 w-10 mx-auto text-gray-300 mb-3" />
-            <p className="font-medium text-gray-500">No leads yet</p>
-            <p className="text-xs text-gray-400 mt-1">Enable your public store in Settings to start receiving enquiries</p>
+            {view === 'quote-requests' ? (
+              <>
+                <ShoppingCart className="h-10 w-10 mx-auto text-gray-300 mb-3" />
+                <p className="font-medium text-gray-500">No quote requests yet</p>
+                <p className="text-xs text-gray-400 mt-1">When a customer submits a cart quote from your public store, it will appear here</p>
+              </>
+            ) : (
+              <>
+                <Inbox className="h-10 w-10 mx-auto text-gray-300 mb-3" />
+                <p className="font-medium text-gray-500">No leads yet</p>
+                <p className="text-xs text-gray-400 mt-1">Enable your public store in Settings to start receiving enquiries</p>
+              </>
+            )}
           </div>
         ) : (
           <div className="space-y-2">
@@ -409,12 +474,16 @@ export default function LeadsPage() {
                 key={e.id}
                 onClick={() => handleOpen(e)}
                 className={`w-full text-left bg-white border rounded-xl p-4 hover:shadow-md transition-all group ${
-                  e.status === 'new' ? 'border-emerald-200 shadow-sm' : 'border-gray-100'
+                  e.status === 'new'
+                    ? view === 'quote-requests' ? 'border-violet-200 shadow-sm' : 'border-emerald-200 shadow-sm'
+                    : 'border-gray-100'
                 }`}
               >
                 <div className="flex items-start gap-3">
                   <div className={`h-9 w-9 rounded-full flex items-center justify-center flex-shrink-0 text-sm font-bold ${
-                    e.status === 'new' ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500'
+                    e.status === 'new'
+                      ? view === 'quote-requests' ? 'bg-violet-100 text-violet-700' : 'bg-emerald-100 text-emerald-700'
+                      : 'bg-gray-100 text-gray-500'
                   }`}>
                     {(e.enquirerName || '?')[0].toUpperCase()}
                   </div>
@@ -422,11 +491,6 @@ export default function LeadsPage() {
                     <div className="flex items-center gap-2 flex-wrap">
                       <p className="font-semibold text-sm text-gray-900">{e.enquirerName || 'Unknown'}</p>
                       {statusBadge(e.status)}
-                      {e.cartItems && e.cartItems.length > 0 && (
-                        <span className="text-[10px] bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-full px-2 py-0.5 font-medium flex items-center gap-1">
-                          <ShoppingCart className="h-2.5 w-2.5" /> {e.cartItems.length} items
-                        </span>
-                      )}
                       {e.estimatedOrderVolume && (
                         <span className="text-[10px] bg-amber-50 text-amber-700 border border-amber-200 rounded-full px-2 py-0.5 font-medium">
                           {e.estimatedOrderVolume}
@@ -436,19 +500,17 @@ export default function LeadsPage() {
                     <p className="text-xs text-gray-500 truncate mt-0.5">
                       {e.enquirerBusiness || '—'} {e.businessType ? `· ${e.businessType}` : ''}
                     </p>
-                    {!e.cartItems?.length && e.productName && (
+                    {view === 'quote-requests' && e.cartItems && e.cartItems.length > 0 && (
+                      <p className="text-xs text-violet-600 mt-1 flex items-center gap-1">
+                        <ShoppingCart className="h-3 w-3" />
+                        {e.cartItems.length} item{e.cartItems.length !== 1 ? 's' : ''} · £{e.cartItems.reduce((s, i) => s + parseFloat(i.total || '0'), 0).toFixed(2)}
+                      </p>
+                    )}
+                    {view !== 'quote-requests' && e.productName && (
                       <p className="text-xs text-primary mt-1 truncate">
                         <Package className="h-3 w-3 inline mr-1" />{e.productName}
                       </p>
                     )}
-                    <p className="text-[10px] text-gray-400 mt-1 flex items-center gap-2 flex-wrap">
-                      {e.enquirerPhone && (
-                        <span className="flex items-center gap-0.5"><Phone className="h-2.5 w-2.5" />{e.enquirerPhone}</span>
-                      )}
-                      {e.enquirerEmail && (
-                        <span className="flex items-center gap-0.5 truncate max-w-[140px]"><Mail className="h-2.5 w-2.5" />{e.enquirerEmail}</span>
-                      )}
-                    </p>
                     {e.message && (
                       <p className="text-xs text-gray-400 mt-1 truncate">{e.message}</p>
                     )}
@@ -460,9 +522,14 @@ export default function LeadsPage() {
                     <p className="text-[10px] text-gray-400 flex items-center gap-1">
                       <Clock className="h-3 w-3" />{timeAgo(e.createdAt)}
                     </p>
-                    {e.orderId && (
-                      <p className="text-[10px] text-indigo-500 mt-1 flex items-center gap-1">
-                        <FileText className="h-3 w-3" />Order
+                    {view === 'quote-requests' && e.orderId && (
+                      <p className="text-[10px] text-violet-500 mt-1 flex items-center gap-1">
+                        <FileText className="h-3 w-3" /> Draft #{e.orderId}
+                      </p>
+                    )}
+                    {view !== 'quote-requests' && e.enquirerPhone && (
+                      <p className="text-[10px] text-gray-400 mt-1 flex items-center gap-1">
+                        <Phone className="h-3 w-3" />{e.preferredContact === 'whatsapp' ? 'WA' : 'Call'}
                       </p>
                     )}
                   </div>

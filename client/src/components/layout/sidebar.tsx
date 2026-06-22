@@ -96,13 +96,14 @@ export default function Sidebar() {
   });
   const staleOrderCount = staleOrderData?.count ?? 0;
 
-  const { data: newLeadsData } = useQuery<{ count: number }>({
-    queryKey: ["/api/public/enquiries/new-count"],
-    enabled: !!user && checkTabAccess("leads"),
+  const { data: leadsCountData } = useQuery<{ leads: number; quoteRequests: number; total: number }>({
+    queryKey: ["/api/public/leads/new-count"],
+    enabled: !!user,
     refetchInterval: 60_000,
-    staleTime: 0,
+    staleTime: 30_000,
   });
-  const newLeadsCount = newLeadsData?.count ?? 0;
+  const newLeadsTotal = leadsCountData?.total ?? 0;
+  const newQuoteRequestCount = leadsCountData?.quoteRequests ?? 0;
 
   const planTier = getBaseTier((subscriptionData as { user?: { currentPlan?: string } } | undefined)?.user?.currentPlan);
   const isPremiumUser = planTier === "premium";
@@ -216,7 +217,8 @@ export default function Sidebar() {
                 const showStaleBadge = isOrders && staleOrderCount > 0 && !isFeatureLocked;
 
                 const isLeads = item.name === "Leads";
-                const showLeadsBadge = isLeads && newLeadsCount > 0 && !isFeatureLocked;
+                const showLeadsBadge = isLeads && newLeadsTotal > 0;
+                const showQuoteRequestBadge = isLeads && newQuoteRequestCount > 0;
 
                 const itemContent = (
                   <Link
@@ -258,7 +260,7 @@ export default function Sidebar() {
                             <span className={cn("absolute -top-1 -right-1 h-2 w-2 rounded-full", showStaleBadge ? "bg-orange-500" : "bg-amber-500")} />
                           )}
                           {showLeadsBadge && dc && (
-                            <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-emerald-500" />
+                            <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-violet-500" />
                           )}
                         </span>
                         <span className={cn("flex-1 truncate", dc && "lg:hidden")}>
@@ -269,11 +271,6 @@ export default function Sidebar() {
                       {/* Badges: hidden on desktop when collapsed */}
                       {!dc && (
                         <>
-                          {showLeadsBadge && (
-                            <span className="ml-auto text-[10px] bg-emerald-500 text-white px-1.5 py-0.5 rounded-full font-bold min-w-[18px] text-center leading-4">
-                              {newLeadsCount > 99 ? "99+" : newLeadsCount}
-                            </span>
-                          )}
                           {showOrderBadge && (
                             <span className={cn("text-[10px] bg-amber-500 text-white px-1.5 py-0.5 rounded-full font-bold min-w-[18px] text-center leading-4", showLeadsBadge ? "" : "ml-auto")}>
                               {pendingOrderCount > 99 ? "99+" : pendingOrderCount}
@@ -282,6 +279,11 @@ export default function Sidebar() {
                           {showStaleBadge && (
                             <span className={cn("text-[10px] text-white px-1.5 py-0.5 rounded font-medium", showOrderBadge || showLeadsBadge ? "bg-orange-500" : "ml-auto bg-orange-500")}>
                               {staleOrderCount > 15 ? "15d+" : `${staleOrderCount} old`}
+                            </span>
+                          )}
+                          {showLeadsBadge && (
+                            <span className={cn("text-[10px] text-white px-1.5 py-0.5 rounded-full font-bold min-w-[18px] text-center leading-4", showQuoteRequestBadge ? "bg-violet-500" : "ml-auto bg-emerald-500")}>
+                              {newLeadsTotal > 99 ? "99+" : newLeadsTotal}
                             </span>
                           )}
                           {isFeatureLocked && <Lock className="h-3.5 w-3.5 text-slate-500 flex-shrink-0" />}
@@ -301,11 +303,6 @@ export default function Sidebar() {
                       {/* Mobile badges when dc=true */}
                       {dc && (
                         <span className="lg:hidden flex items-center gap-1.5">
-                          {showLeadsBadge && (
-                            <span className="text-[10px] bg-emerald-500 text-white px-1.5 py-0.5 rounded-full font-bold min-w-[18px] text-center leading-4">
-                              {newLeadsCount > 99 ? "99+" : newLeadsCount}
-                            </span>
-                          )}
                           {showOrderBadge && (
                             <span className="text-[10px] bg-amber-500 text-white px-1.5 py-0.5 rounded-full font-bold min-w-[18px] text-center leading-4">
                               {pendingOrderCount > 99 ? "99+" : pendingOrderCount}
@@ -314,6 +311,11 @@ export default function Sidebar() {
                           {showStaleBadge && (
                             <span className="text-[10px] bg-orange-500 text-white px-1.5 py-0.5 rounded font-medium">
                               {staleOrderCount > 15 ? "15d+" : `${staleOrderCount} old`}
+                            </span>
+                          )}
+                          {showLeadsBadge && (
+                            <span className={`text-[10px] text-white px-1.5 py-0.5 rounded-full font-bold min-w-[18px] text-center leading-4 ${showQuoteRequestBadge ? "bg-violet-500" : "bg-emerald-500"}`}>
+                              {newLeadsTotal > 99 ? "99+" : newLeadsTotal}
                             </span>
                           )}
                           {isFeatureLocked && <Lock className="h-3.5 w-3.5 text-slate-500 flex-shrink-0" />}
@@ -346,7 +348,7 @@ export default function Sidebar() {
                     >
                       {item.name}
                       {showSoonBadge ? " (Coming soon)" : ""}
-                      {showLeadsBadge ? ` — ${newLeadsCount} new` : ""}
+                      {showLeadsBadge ? ` — ${newLeadsTotal} new` : ""}
                       {showOrderBadge ? ` — ${pendingOrderCount} active` : ""}
                       {showStaleBadge ? ` · ${staleOrderCount} over 15 days` : ""}
                     </TooltipContent>
