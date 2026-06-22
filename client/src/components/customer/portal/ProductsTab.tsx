@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
-import { ShoppingCart, ShoppingBag, Banknote, History, Search, Grid, List, Package, ArrowLeft, ArrowRight, Minus, Plus, Tag, Loader2 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { ShoppingCart, ShoppingBag, Banknote, History, Search, Grid, List, Package, ArrowLeft, ArrowRight, Minus, Plus, Tag, Loader2, MapPin, CheckCircle } from "lucide-react";
 import { Package2, Hash } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -16,6 +17,18 @@ import { cleanAIDescription } from "@shared/utils";
 import { formatCurrency, formatWeight } from "@/lib/currencies";
 import { getPackQuantity, computePackWeightKg } from "@shared/utils/product";
 import { useToast } from "@/hooks/use-toast";
+import { AddressSearchInput, type AddressPlaceResult } from "@/components/BusinessSearchInput";
+
+interface DeliveryAddress {
+  id: number;
+  addressLine1: string;
+  addressLine2?: string | null;
+  city: string;
+  postalCode: string;
+  country?: string | null;
+  label?: string | null;
+  isDefault?: boolean | null;
+}
 
 interface ProductsTabProps {
   setActiveTab: (tab: string) => void;
@@ -119,29 +132,50 @@ export function ProductsTab({
 
   const [quoteNotes, setQuoteNotes] = useState('');
   const [isSubmittingQuote, setIsSubmittingQuote] = useState(false);
+  const [quoteAddressMode, setQuoteAddressMode] = useState<'saved' | 'new' | null>(null);
+  const [quoteDeliveryAddressId, setQuoteDeliveryAddressId] = useState<number | null>(null);
+  const [quoteNewAddress, setQuoteNewAddress] = useState<AddressPlaceResult | null>(null);
+  const [quoteNewAddressText, setQuoteNewAddressText] = useState('');
+
+  const { data: savedAddresses = [] } = useQuery<DeliveryAddress[]>({
+    queryKey: ['/api/customer/delivery-addresses'],
+    staleTime: 5 * 60 * 1000,
+    enabled: !!authenticatedCustomer,
+  });
 
   const handleSubmitQuote = async () => {
     if (cart.length === 0 || !wholesalerId) return;
     setIsSubmittingQuote(true);
     try {
+      const body: Record<string, unknown> = {
+        wholesalerId,
+        items: cart.map(item => ({
+          productId: item.product.id,
+          quantity: item.quantity,
+          sellingType: item.sellingType,
+        })),
+        notes: quoteNotes.trim() || undefined,
+      };
+      if (quoteAddressMode === 'saved' && quoteDeliveryAddressId) {
+        body.deliveryAddressId = quoteDeliveryAddressId;
+      } else if (quoteAddressMode === 'new' && quoteNewAddress) {
+        body.deliveryAddress = [quoteNewAddress.addressLine1, quoteNewAddress.city, quoteNewAddress.postalCode, quoteNewAddress.country]
+          .filter(Boolean).join(', ');
+      }
       const res = await fetch('/api/customer/cart-quote', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({
-          wholesalerId,
-          items: cart.map(item => ({
-            productId: item.product.id,
-            quantity: item.quantity,
-            sellingType: item.sellingType,
-          })),
-          notes: quoteNotes.trim() || undefined,
-        }),
+        body: JSON.stringify(body),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Failed to submit');
       setShowQuoteModal(false);
       setQuoteNotes('');
+      setQuoteAddressMode(null);
+      setQuoteDeliveryAddressId(null);
+      setQuoteNewAddress(null);
+      setQuoteNewAddressText('');
       setCart([]);
       toast({
         title: 'Quote request sent!',
@@ -161,6 +195,10 @@ export function ProductsTab({
   const handleCloseQuoteModal = () => {
     setShowQuoteModal(false);
     setQuoteNotes('');
+    setQuoteAddressMode(null);
+    setQuoteDeliveryAddressId(null);
+    setQuoteNewAddress(null);
+    setQuoteNewAddressText('');
   };
 
   return (
@@ -205,6 +243,116 @@ export function ProductsTab({
                 {authenticatedCustomer?.email && <p>{authenticatedCustomer.email}</p>}
               </div>
             </div>
+
+            {/* Delivery Address Selection */}
+            {savedAddresses.length > 0 ? (
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700 flex items-center gap-1.5">
+                  <MapPin className="w-4 h-4 text-gray-500" />
+                  Delivery address (optional)
+                </label>
+                <div className="space-y-2">
+                  {savedAddresses.map((addr) => {
+                    const isSelected = quoteAddressMode === 'saved' && quoteDeliveryAddressId === addr.id;
+                    return (
+                      <label
+                        key={addr.id}
+                        className={`flex items-start gap-3 p-3 rounded-xl border-2 cursor-pointer transition-colors ${
+                          isSelected ? 'border-green-500 bg-green-50' : 'border-gray-200 bg-gray-50 hover:border-gray-300'
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="quoteAddress"
+                          className="mt-0.5 w-4 h-4 text-green-600 flex-shrink-0"
+                          checked={isSelected}
+                          onChange={() => {
+                            setQuoteAddressMode('saved');
+                            setQuoteDeliveryAddressId(addr.id);
+                            setQuoteNewAddress(null);
+                            setQuoteNewAddressText('');
+                          }}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5 mb-0.5">
+                            {addr.label && (
+                              <span className="text-xs font-medium text-gray-600 bg-gray-200 px-1.5 py-0.5 rounded-full">
+                                {addr.label}
+                              </span>
+                            )}
+                            {addr.isDefault && (
+                              <span className="text-xs font-medium text-green-700 bg-green-100 px-1.5 py-0.5 rounded-full">
+                                Default
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-sm text-gray-800 leading-snug">
+                            {[addr.addressLine1, addr.addressLine2, addr.city, addr.postalCode].filter(Boolean).join(', ')}
+                          </p>
+                        </div>
+                        {isSelected && <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />}
+                      </label>
+                    );
+                  })}
+                  <label
+                    className={`flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-colors ${
+                      quoteAddressMode === 'new' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 bg-gray-50 hover:border-gray-300'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="quoteAddress"
+                      className="w-4 h-4 text-blue-600 flex-shrink-0"
+                      checked={quoteAddressMode === 'new'}
+                      onChange={() => {
+                        setQuoteAddressMode('new');
+                        setQuoteDeliveryAddressId(null);
+                      }}
+                    />
+                    <span className="text-sm text-gray-700 font-medium">Use a different address</span>
+                  </label>
+                  {quoteAddressMode === 'new' && (
+                    <div className="pl-7">
+                      <AddressSearchInput
+                        placeholder="Search for delivery address..."
+                        onSelect={(result) => {
+                          setQuoteNewAddress(result);
+                          setQuoteNewAddressText([result.addressLine1, result.city, result.postalCode].filter(Boolean).join(', '));
+                        }}
+                      />
+                      {quoteNewAddress && (
+                        <p className="text-xs text-green-700 mt-1.5 flex items-center gap-1">
+                          <CheckCircle className="w-3.5 h-3.5" />
+                          {quoteNewAddressText}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700 flex items-center gap-1.5">
+                  <MapPin className="w-4 h-4 text-gray-500" />
+                  Delivery address (optional)
+                </label>
+                <AddressSearchInput
+                  placeholder="Search for delivery address..."
+                  onSelect={(result) => {
+                    setQuoteAddressMode('new');
+                    setQuoteNewAddress(result);
+                    setQuoteNewAddressText([result.addressLine1, result.city, result.postalCode].filter(Boolean).join(', '));
+                  }}
+                />
+                {quoteNewAddress && (
+                  <p className="text-xs text-green-700 flex items-center gap-1">
+                    <CheckCircle className="w-3.5 h-3.5" />
+                    {quoteNewAddressText}
+                  </p>
+                )}
+              </div>
+            )}
+
             <div className="space-y-1.5">
               <label className="text-sm font-medium text-gray-700">Additional notes (optional)</label>
               <Textarea

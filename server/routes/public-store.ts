@@ -1,6 +1,6 @@
 import type { Express } from "express";
 import { db } from "../db";
-import { users, products, storeEnquiries, orders, orderItems } from "@shared/schema";
+import { users, products, storeEnquiries, orders, orderItems, deliveryAddresses } from "@shared/schema";
 import { eq, and, ilike, or, sql, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { sendEmail } from "../sendgrid-service";
@@ -569,6 +569,8 @@ export function registerPublicStoreRoutes(app: Express) {
           sellingType: z.string().default('units'),
         })).min(1),
         notes: z.string().optional().transform(v => v?.trim() || null),
+        deliveryAddressId: z.number().int().positive().optional().nullable(),
+        deliveryAddress: z.string().optional().nullable(),
       });
 
       const data = schema.parse(req.body);
@@ -649,6 +651,23 @@ export function registerPublicStoreRoutes(app: Express) {
         data.notes ? `Note: ${data.notes}` : null,
       ].filter(Boolean).join(' · ');
 
+      let resolvedDeliveryAddress: string | null = data.deliveryAddress ?? null;
+      let verifiedDeliveryAddressId: number | null = null;
+
+      if (data.deliveryAddressId) {
+        const [savedAddr] = await db
+          .select()
+          .from(deliveryAddresses)
+          .where(eq(deliveryAddresses.id, data.deliveryAddressId))
+          .limit(1);
+        if (!savedAddr || savedAddr.customerId !== customer.id) {
+          return res.status(403).json({ message: "Delivery address does not belong to this customer" });
+        }
+        verifiedDeliveryAddressId = savedAddr.id;
+        resolvedDeliveryAddress = [savedAddr.addressLine1, savedAddr.addressLine2, savedAddr.city, savedAddr.postalCode, savedAddr.country]
+          .filter(Boolean).join(', ');
+      }
+
       const [newOrder] = await db.insert(orders).values({
         wholesalerId: data.wholesalerId,
         retailerId: customer.id,
@@ -664,6 +683,8 @@ export function registerPublicStoreRoutes(app: Express) {
         isQuote: true,
         paymentStatus: 'unpaid',
         notes,
+        ...(verifiedDeliveryAddressId ? { deliveryAddressId: verifiedDeliveryAddressId } : {}),
+        ...(resolvedDeliveryAddress ? { deliveryAddress: resolvedDeliveryAddress } : {}),
       } as any).returning({ id: orders.id });
 
       if (lineItems.length > 0) {
@@ -724,6 +745,7 @@ export function registerPublicStoreRoutes(app: Express) {
                   ${customer.businessName ? `<p style="margin:0 0 6px"><strong>Business:</strong> ${customer.businessName}</p>` : ''}
                   ${customer.phoneNumber ? `<p style="margin:0 0 6px"><strong>Phone/WhatsApp:</strong> ${customer.phoneNumber}</p>` : ''}
                   ${customer.email ? `<p style="margin:0 0 0"><strong>Email:</strong> ${customer.email}</p>` : ''}
+                  ${resolvedDeliveryAddress ? `<p style="margin:6px 0 0"><strong>Delivery address:</strong> ${resolvedDeliveryAddress}</p>` : ''}
                   ${data.notes ? `<p style="margin:6px 0 0"><strong>Note:</strong> ${data.notes}</p>` : ''}
                 </div>
                 <table style="width:100%;border-collapse:collapse;margin-bottom:16px">
