@@ -90,6 +90,7 @@ function EnquiryDrawer({ enquiry, onClose }: { enquiry: StoreEnquiry; onClose: (
   const [editDeliveryCharge, setEditDeliveryCharge] = useState('0');
   const [editAddressFields, setEditAddressFields] = useState({ addressLine1: '', city: '', postalCode: '' });
   const [addressSelected, setAddressSelected] = useState(false);
+  const [selectedSavedAddressId, setSelectedSavedAddressId] = useState<number | null>(null);
   const isQuoteRequest = !!enquiry.orderId;
 
   const { data: linkedOrder, isLoading: orderLoading } = useQuery<{
@@ -100,12 +101,21 @@ function EnquiryDrawer({ enquiry, onClose }: { enquiry: StoreEnquiry; onClose: (
     fulfillmentType: string | null;
     deliveryCost: string | null;
     deliveryAddress: string | null;
+    retailerId: string | null;
   }>({
     queryKey: [`/api/orders/${enquiry.orderId}`],
     enabled: isQuoteRequest,
     staleTime: 0,
   });
+
   const orderIsDraft = isQuoteRequest && linkedOrder?.status === 'draft';
+
+  interface SavedAddress { id: number; addressLine1: string; city: string; postalCode: string; label?: string | null; }
+  const { data: savedAddresses = [] } = useQuery<SavedAddress[]>({
+    queryKey: [`/api/wholesaler/customers/${linkedOrder?.retailerId}/addresses`],
+    enabled: !!linkedOrder?.retailerId && orderIsDraft,
+    staleTime: 30000,
+  });
 
   const markMutation = useMutation({
     mutationFn: (status: string) =>
@@ -159,7 +169,7 @@ function EnquiryDrawer({ enquiry, onClose }: { enquiry: StoreEnquiry; onClose: (
   });
 
   const deliveryMutation = useMutation({
-    mutationFn: (data: { fulfillmentType: string; deliveryCharge: number; deliveryAddress: string; customAddressFields?: { addressLine1: string; city: string; postalCode: string } }) =>
+    mutationFn: (data: { fulfillmentType: string; deliveryCharge: number; deliveryAddress: string; deliveryAddressId?: number; customAddressFields?: { addressLine1: string; city: string; postalCode: string } }) =>
       apiRequest('PATCH', `/api/orders/${enquiry.orderId}/draft`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/orders/${enquiry.orderId}`] });
@@ -189,6 +199,7 @@ function EnquiryDrawer({ enquiry, onClose }: { enquiry: StoreEnquiry; onClose: (
     setEditDeliveryCharge(linkedOrder?.deliveryCost ? String(parseFloat(linkedOrder.deliveryCost)) : '0');
     setEditAddressFields({ addressLine1: '', city: '', postalCode: '' });
     setAddressSelected(false);
+    setSelectedSavedAddressId(null);
     setShowDeliveryEdit(true);
   }
 
@@ -431,11 +442,41 @@ function EnquiryDrawer({ enquiry, onClose }: { enquiry: StoreEnquiry; onClose: (
 
                           <div>
                             <Label className="text-[11px] text-gray-600 mb-1 block">Delivery Address</Label>
+
+                            {savedAddresses.length > 0 && (
+                              <div className="mb-2 space-y-1">
+                                {savedAddresses.map((addr) => (
+                                  <button
+                                    key={addr.id}
+                                    type="button"
+                                    onClick={() => {
+                                      setSelectedSavedAddressId(addr.id);
+                                      setAddressSelected(false);
+                                      setEditAddressFields({ addressLine1: addr.addressLine1, city: addr.city, postalCode: addr.postalCode });
+                                    }}
+                                    className={`w-full text-left px-2.5 py-2 rounded-lg border text-xs transition-colors ${
+                                      selectedSavedAddressId === addr.id
+                                        ? 'border-violet-400 bg-violet-50 text-violet-800'
+                                        : 'border-gray-200 bg-white text-gray-700 hover:border-violet-300'
+                                    }`}
+                                  >
+                                    <p className="font-medium">{addr.label || addr.addressLine1}</p>
+                                    {addr.label && <p className="text-gray-500">{addr.addressLine1}</p>}
+                                    <p className="text-gray-500">{[addr.city, addr.postalCode].filter(Boolean).join(', ')}</p>
+                                  </button>
+                                ))}
+                                <p className="text-[10px] text-gray-400 pt-0.5">Or search for a new address:</p>
+                              </div>
+                            )}
+
                             <AddressSearchInput
-                              onSelect={handleAddressSelect}
+                              onSelect={(result) => {
+                                handleAddressSelect(result);
+                                setSelectedSavedAddressId(null);
+                              }}
                               placeholder="Search for address…"
                             />
-                            {addressSelected && (
+                            {addressSelected && !selectedSavedAddressId && (
                               <div className="mt-1.5 p-2 bg-white border border-violet-200 rounded text-xs text-gray-700 space-y-1">
                                 <p className="font-medium">{editAddressFields.addressLine1}</p>
                                 <p className="text-gray-500">{[editAddressFields.city, editAddressFields.postalCode].filter(Boolean).join(', ')}</p>
@@ -451,16 +492,21 @@ function EnquiryDrawer({ enquiry, onClose }: { enquiry: StoreEnquiry; onClose: (
                           className="flex-1 h-7 text-xs bg-violet-600 hover:bg-violet-700 text-white"
                           disabled={deliveryMutation.isPending}
                           onClick={() => {
-                            const addressStr = addressSelected
-                              ? `${editAddressFields.addressLine1}, ${editAddressFields.city}, ${editAddressFields.postalCode}`
-                              : (linkedOrder?.deliveryAddress ?? '');
+                            const saved = savedAddresses.find(a => a.id === selectedSavedAddressId);
+                            const addressStr = saved
+                              ? `${saved.addressLine1}, ${saved.city}, ${saved.postalCode}`
+                              : addressSelected
+                                ? `${editAddressFields.addressLine1}, ${editAddressFields.city}, ${editAddressFields.postalCode}`
+                                : (linkedOrder?.deliveryAddress ?? '');
                             deliveryMutation.mutate({
                               fulfillmentType: editFulfillment,
                               deliveryCharge: parseFloat(editDeliveryCharge) || 0,
                               deliveryAddress: editFulfillment === 'delivery' ? addressStr : '',
-                              ...(editFulfillment === 'delivery' && addressSelected
-                                ? { customAddressFields: editAddressFields }
-                                : {}),
+                              ...(editFulfillment === 'delivery' && selectedSavedAddressId
+                                ? { deliveryAddressId: selectedSavedAddressId }
+                                : editFulfillment === 'delivery' && addressSelected
+                                  ? { customAddressFields: editAddressFields }
+                                  : {}),
                             });
                           }}
                         >

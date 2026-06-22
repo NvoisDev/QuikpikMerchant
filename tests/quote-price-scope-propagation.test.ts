@@ -154,6 +154,8 @@ async function cleanup() {
     await db.delete(orderItems).where(inArray(orderItems.productId, allProductIds));
   }
   if (allOrderIds.length > 0) {
+    // Delete order_items before orders to avoid FK violation on order_items_order_id_orders_id_fk.
+    await db.delete(orderItems).where(inArray(orderItems.orderId, allOrderIds));
     // Re-delete quoteActivityLogs immediately before deleting orders. The PATCH
     // handler's fire-and-forget logging IIFE can insert new rows between the first
     // delete (above) and this point, causing the orders DELETE to fail on the

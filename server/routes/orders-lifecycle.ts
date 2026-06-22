@@ -630,6 +630,30 @@ export function registerOrderLifecycleRoutes(app: Express): void {
         }
       }
 
+      // Auto-save delivery address to customer profile if one isn't linked yet (best-effort)
+      if (approvedOrder.fulfillmentType === 'delivery' && approvedOrder.deliveryAddress && !approvedOrder.deliveryAddressId && approvedOrder.retailerId) {
+        try {
+          // Parse the text address into minimal structured fields for storage
+          const parts = (approvedOrder.deliveryAddress as string).split(',').map((s: string) => s.trim());
+          const addressLine1 = parts[0] || approvedOrder.deliveryAddress as string;
+          const city = parts[1] || '';
+          const postalCode = parts[2] || '';
+          if (addressLine1 && city) {
+            const savedAddr = await storage.createDeliveryAddress({
+              customerId: approvedOrder.retailerId as string,
+              addressLine1,
+              city,
+              postalCode,
+              country: 'United Kingdom',
+              isDefault: false,
+            });
+            await db.update(orders).set({ deliveryAddressId: savedAddr.id } as any).where(eq(orders.id, approvedOrder.id));
+          }
+        } catch (addrErr) {
+          console.warn(`[approve-draft] Could not auto-save delivery address for order ${id}:`, addrErr);
+        }
+      }
+
       // Send email + WhatsApp/SMS notifications (best-effort)
       const customer = await storage.getUser(order.retailerId);
       const wholesaler = await storage.getUser(order.wholesalerId);
