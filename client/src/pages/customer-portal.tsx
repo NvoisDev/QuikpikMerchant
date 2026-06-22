@@ -2178,6 +2178,8 @@ export default function CustomerPortal() {
                 setModalQuantity={setModalQuantity}
                 setShowUnitSelectionModal={setShowUnitSelectionModal}
                 setShowStoreSwitcher={setShowStoreSwitcher}
+                priceDisplayMode={wholesaler?.priceDisplayMode || 'hidden'}
+                onRequestQuote={() => setShowPortalQuoteModal(true)}
               />
               </SectionErrorBoundary>
             </TabsContent>

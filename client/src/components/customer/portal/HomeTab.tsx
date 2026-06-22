@@ -1,4 +1,4 @@
-import { Store, ShoppingCart, Banknote, History, TrendingUp, ChevronRight, ChevronDown, ShoppingBag, Minus, Plus, Package } from "lucide-react";
+import { Store, ShoppingCart, Banknote, History, TrendingUp, ChevronRight, ChevronDown, ShoppingBag, Minus, Plus, Package, Tag } from "lucide-react";
 import { InstallBanner } from "@/components/InstallBanner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -43,6 +43,8 @@ interface HomeTabProps {
   setModalQuantity: (q: number) => void;
   setShowUnitSelectionModal: (v: boolean) => void;
   setShowStoreSwitcher: (v: boolean) => void;
+  priceDisplayMode?: string;
+  onRequestQuote?: () => void;
 }
 
 export function HomeTab({
@@ -77,7 +79,10 @@ export function HomeTab({
   setModalQuantity,
   setShowUnitSelectionModal,
   setShowStoreSwitcher,
+  priceDisplayMode,
+  onRequestQuote,
 }: HomeTabProps) {
+  const pricesHidden = priceDisplayMode !== 'shown';
   return (
     <>
       <TabQuickActions
@@ -86,6 +91,8 @@ export function HomeTab({
         setShowCheckout={setShowCheckout}
         isCreatingIntent={isCreatingIntent}
         handleLogout={handleLogout}
+        priceDisplayMode={priceDisplayMode}
+        onRequestQuote={onRequestQuote}
       />
 
       <InstallBanner />
@@ -427,10 +434,19 @@ export function HomeTab({
                               onMouseEnter={(e) => { (e.target as HTMLElement).style.opacity = '0.9'; }}
                               onMouseLeave={(e) => { (e.target as HTMLElement).style.opacity = '1'; }}
                             >
-                              <Plus className="h-3.5 w-3.5 mr-1.5" />
-                              {hasPalletPricingHome ? 'Add to Cart →' : 'Add to Cart'}
+                              {pricesHidden ? (
+                                <>
+                                  <Tag className="h-3.5 w-3.5 mr-1.5" />
+                                  Get Trade Pricing
+                                </>
+                              ) : (
+                                <>
+                                  <Plus className="h-3.5 w-3.5 mr-1.5" />
+                                  {hasPalletPricingHome ? 'Add to Cart →' : 'Add to Cart'}
+                                </>
+                              )}
                             </Button>
-                            {hasPalletPricingHome && (
+                            {hasPalletPricingHome && !pricesHidden && (
                               <p className="text-xs text-gray-500 text-center mt-1">Choose type: units or pallets</p>
                             )}
                           </div>
