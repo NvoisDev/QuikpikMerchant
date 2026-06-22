@@ -1009,18 +1009,107 @@ export async function sendCustomerInvoiceEmail(customer: any, order: any, items:
         const customerDisplayName = customer.name || (customer.firstName ? `${customer.firstName || ''} ${customer.lastName || ''}`.trim() : null) || customer.email || 'a customer';
         const isAlreadyFulfilled = order.status === 'fulfilled' || order.status === 'paid';
         const isActuallyPaid = order.paymentStatus === 'paid' || !!order.paidAt || isAlreadyFulfilled;
-        const wholesalerSubjectLabel = isDeposit ? 'Deposit Received' : isBalancePayment ? 'Balance Payment Received' : (order.isQuote && !isActuallyPaid) ? 'Invoice Sent' : (order.isQuote || isAlreadyFulfilled) ? 'Payment Received' : 'New Order Received';
-        const wholesalerBodyLabel = isDeposit
-          ? `Deposit of ${currencySymbol}${amountPaid !== null ? amountPaid.toFixed(2) : '?'} received from <strong>${customerDisplayName}</strong>. Outstanding balance: ${currencySymbol}${amountOutstanding !== null ? amountOutstanding.toFixed(2) : '?'}. Invoice attached as PDF.`
-          : isBalancePayment
-            ? (() => { const balanceTxn = order.latestPaymentAmount ? parseFloat(order.latestPaymentAmount) : amountPaid; return `Balance payment of ${currencySymbol}${balanceTxn !== null ? balanceTxn.toFixed(2) : '?'} received from <strong>${customerDisplayName}</strong>. The order is now fully paid. Invoice attached as PDF.`; })()
-            : (order.isQuote && !isActuallyPaid)
-              ? `Invoice sent to <strong>${customerDisplayName}</strong> for order ${order.orderNumber || `#${order.id}`}. Invoice attached as PDF.`
-              : (order.isQuote || isAlreadyFulfilled)
-                ? `Payment received from <strong>${customerDisplayName}</strong> for order ${order.orderNumber || `#${order.id}`}. Invoice attached as PDF.`
-                : `Placed by <strong>${customerDisplayName}</strong>. Full invoice attached as PDF.`;
-        const wholesalerHtml = `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto"><h2 style="color:#1a7a3d">${wholesalerSubjectLabel} — ${orderRef}</h2><p>${wholesalerBodyLabel}</p><p style="margin-top:24px;color:#6b7280;font-size:12px">Powered by <strong style="color:#1a7a3d">Quikpik Merchant</strong></p></div>`;
-        await sgMail.send({ to: wholesaler.email, from: 'hello@quikpik.co', ...(customer.email ? { replyTo: customer.email } : {}), subject: `${wholesalerSubjectLabel} — ${orderRef} — Invoice Attached`, html: wholesalerHtml, ...(pdfAttachment ? { attachments: [pdfAttachment] } : {}) });
+        const isPaymentReceived = !isDeposit && !isBalancePayment && (order.isQuote || isAlreadyFulfilled) && isActuallyPaid;
+        const isInvoiceSent = order.isQuote && !isActuallyPaid && !isDeposit && !isBalancePayment;
+        const wholesalerSubjectLabel = isDeposit ? 'Deposit Received' : isBalancePayment ? 'Balance Payment Received' : isInvoiceSent ? 'Invoice Sent' : isPaymentReceived ? 'Payment Received' : 'New Order Received';
+
+        const appBase = process.env.APP_URL || 'https://quikpik.app';
+        const orderLink = `${appBase}/orders/${order.id}`;
+        const viewOrderBtn = `<div style="text-align:center;margin:20px 0"><a href="${orderLink}" style="display:inline-block;background:#15803d;color:#ffffff;font-size:14px;font-weight:600;padding:12px 28px;border-radius:6px;text-decoration:none;">View Order</a></div>`;
+
+        let wholesalerHtml: string;
+
+        if (isPaymentReceived) {
+          const paidAmount = amountPaid !== null ? amountPaid.toFixed(2) : (orderTotal !== null ? orderTotal.toFixed(2) : '?');
+          wholesalerHtml = `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:0 0 24px">
+<div style="background:#15803d;padding:28px 32px;border-radius:8px 8px 0 0;text-align:center">
+  <p style="margin:0 0 6px;color:#bbf7d0;font-size:13px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase">Payment Confirmed</p>
+  <h1 style="margin:0;color:#ffffff;font-size:28px;font-weight:700">&#10003; Payment Received</h1>
+  <p style="margin:8px 0 0;color:#dcfce7;font-size:15px">${orderRef}</p>
+</div>
+<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-top:none;padding:28px 32px">
+  <table style="width:100%;border-collapse:collapse;margin-bottom:20px">
+    <tr>
+      <td style="padding:10px 14px;background:#ffffff;border:1px solid #d1fae5;border-radius:6px 0 0 6px;font-size:13px;color:#6b7280">Customer</td>
+      <td style="padding:10px 14px;background:#ffffff;border:1px solid #d1fae5;border-left:none;font-size:15px;font-weight:600;color:#111827">${customerDisplayName}</td>
+    </tr>
+    <tr>
+      <td style="padding:10px 14px;background:#ffffff;border:1px solid #d1fae5;border-top:none;border-radius:0 0 0 6px;font-size:13px;color:#6b7280">Order</td>
+      <td style="padding:10px 14px;background:#ffffff;border:1px solid #d1fae5;border-left:none;border-top:none;border-radius:0 0 6px 0;font-size:15px;font-weight:600;color:#111827">${orderRef}</td>
+    </tr>
+  </table>
+  <div style="background:#15803d;border-radius:8px;padding:20px 24px;text-align:center;margin-bottom:20px">
+    <p style="margin:0 0 4px;color:#bbf7d0;font-size:12px;text-transform:uppercase;letter-spacing:0.06em">Amount Received</p>
+    <p style="margin:0;color:#ffffff;font-size:36px;font-weight:700">${currencySymbol}${paidAmount}</p>
+  </div>
+  <p style="margin:0 0 4px;color:#374151;font-size:14px;line-height:1.6">The full payment has been received from <strong>${customerDisplayName}</strong>. The invoice PDF is attached for your records.</p>
+  ${viewOrderBtn}
+  <p style="margin:0;color:#6b7280;font-size:12px;text-align:center">Powered by <strong style="color:#15803d">Quikpik Merchant</strong></p>
+</div>
+</div>`;
+        } else if (isDeposit) {
+          const depositPaid = amountPaid !== null ? amountPaid.toFixed(2) : '?';
+          const depositOutstanding = amountOutstanding !== null ? amountOutstanding.toFixed(2) : '?';
+          wholesalerHtml = `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:0 0 24px">
+<div style="background:#b45309;padding:28px 32px;border-radius:8px 8px 0 0;text-align:center">
+  <p style="margin:0 0 6px;color:#fef3c7;font-size:13px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase">Partial Payment</p>
+  <h1 style="margin:0;color:#ffffff;font-size:26px;font-weight:700">&#10003; Deposit Received</h1>
+  <p style="margin:8px 0 0;color:#fde68a;font-size:15px">${orderRef}</p>
+</div>
+<div style="background:#fffbeb;border:1px solid #fde68a;border-top:none;padding:28px 32px">
+  <p style="margin:0 0 16px;color:#374151;font-size:14px">Deposit received from <strong>${customerDisplayName}</strong> for order ${orderRef}.</p>
+  <table style="width:100%;border-collapse:collapse;margin-bottom:20px">
+    <tr><td style="padding:8px 12px;background:#ffffff;border:1px solid #fde68a;font-size:13px;color:#6b7280">Deposit Paid</td><td style="padding:8px 12px;background:#ffffff;border:1px solid #fde68a;border-left:none;font-size:15px;font-weight:700;color:#15803d;text-align:right">${currencySymbol}${depositPaid}</td></tr>
+    <tr><td style="padding:8px 12px;background:#ffffff;border:1px solid #fde68a;border-top:none;font-size:13px;color:#6b7280">Outstanding Balance</td><td style="padding:8px 12px;background:#ffffff;border:1px solid #fde68a;border-left:none;border-top:none;font-size:15px;font-weight:700;color:#b45309;text-align:right">${currencySymbol}${depositOutstanding}</td></tr>
+  </table>
+  ${viewOrderBtn}
+  <p style="margin:0;color:#6b7280;font-size:12px;text-align:center">Powered by <strong style="color:#15803d">Quikpik Merchant</strong></p>
+</div>
+</div>`;
+        } else if (isBalancePayment) {
+          const balanceTxn = order.latestPaymentAmount ? parseFloat(order.latestPaymentAmount) : amountPaid;
+          const balanceStr = balanceTxn !== null ? balanceTxn.toFixed(2) : '?';
+          wholesalerHtml = `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:0 0 24px">
+<div style="background:#15803d;padding:28px 32px;border-radius:8px 8px 0 0;text-align:center">
+  <p style="margin:0 0 6px;color:#bbf7d0;font-size:13px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase">Fully Paid</p>
+  <h1 style="margin:0;color:#ffffff;font-size:26px;font-weight:700">&#10003; Balance Payment Received</h1>
+  <p style="margin:8px 0 0;color:#dcfce7;font-size:15px">${orderRef}</p>
+</div>
+<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-top:none;padding:28px 32px">
+  <p style="margin:0 0 16px;color:#374151;font-size:14px">Balance payment received from <strong>${customerDisplayName}</strong>. The order is now fully paid.</p>
+  <div style="background:#15803d;border-radius:8px;padding:16px 24px;text-align:center;margin-bottom:20px">
+    <p style="margin:0 0 4px;color:#bbf7d0;font-size:12px;text-transform:uppercase;letter-spacing:0.06em">Balance Paid</p>
+    <p style="margin:0;color:#ffffff;font-size:32px;font-weight:700">${currencySymbol}${balanceStr}</p>
+  </div>
+  ${viewOrderBtn}
+  <p style="margin:0;color:#6b7280;font-size:12px;text-align:center">Powered by <strong style="color:#15803d">Quikpik Merchant</strong></p>
+</div>
+</div>`;
+        } else if (isInvoiceSent) {
+          wholesalerHtml = `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:0 0 24px">
+<div style="background:#1e40af;padding:24px 32px;border-radius:8px 8px 0 0">
+  <h2 style="margin:0;color:#ffffff;font-size:22px;font-weight:700">Invoice Sent — ${orderRef}</h2>
+</div>
+<div style="background:#eff6ff;border:1px solid #bfdbfe;border-top:none;padding:24px 32px">
+  <p style="margin:0 0 12px;color:#374151;font-size:14px">Invoice sent to <strong>${customerDisplayName}</strong> for order ${orderRef}. The invoice PDF is attached for your records.</p>
+  ${viewOrderBtn.replace('background:#15803d', 'background:#1e40af')}
+  <p style="margin:0;color:#6b7280;font-size:12px">Powered by <strong style="color:#15803d">Quikpik Merchant</strong></p>
+</div>
+</div>`;
+        } else {
+          wholesalerHtml = `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:0 0 24px">
+<div style="background:#1f2937;padding:24px 32px;border-radius:8px 8px 0 0">
+  <h2 style="margin:0;color:#ffffff;font-size:22px;font-weight:700">New Order Received — ${orderRef}</h2>
+</div>
+<div style="background:#f9fafb;border:1px solid #e5e7eb;border-top:none;padding:24px 32px">
+  <p style="margin:0 0 12px;color:#374151;font-size:14px">Placed by <strong>${customerDisplayName}</strong>. Full invoice attached as PDF.</p>
+  ${viewOrderBtn.replace('background:#15803d', 'background:#1f2937')}
+  <p style="margin:0;color:#6b7280;font-size:12px">Powered by <strong style="color:#15803d">Quikpik Merchant</strong></p>
+</div>
+</div>`;
+        }
+
+        await sgMail.send({ to: wholesaler.email, from: 'hello@quikpik.co', ...(customer.email ? { replyTo: customer.email } : {}), subject: `${wholesalerSubjectLabel} — ${orderRef}`, html: wholesalerHtml, ...(pdfAttachment ? { attachments: [pdfAttachment] } : {}) });
       } catch (err: any) { console.error('⚠️ Failed to send wholesaler invoice copy (non-fatal):', err?.message); }
     }
   } catch (error) { console.error('Failed to send customer confirmation email:', error); }
