@@ -21,7 +21,7 @@ import { useToast } from "@/hooks/use-toast";
 import {
   Inbox, Phone, Mail, Building2, Package, MessageSquare,
   Clock, CheckCircle2, Eye, X, TrendingUp, Users, Star,
-  Settings, ShoppingCart, FileText, Save, ExternalLink, Send,
+  Settings, ShoppingCart, FileText, Save, ExternalLink, Send, CreditCard,
 } from "lucide-react";
 
 interface CartItem {
@@ -77,7 +77,7 @@ function EnquiryDrawer({ enquiry, onClose }: { enquiry: StoreEnquiry; onClose: (
   const [showApproveConfirm, setShowApproveConfirm] = useState(false);
   const isQuoteRequest = !!enquiry.orderId;
 
-  const { data: linkedOrder, isLoading: orderLoading } = useQuery<{ status: string }>({
+  const { data: linkedOrder, isLoading: orderLoading } = useQuery<{ status: string; paymentMethod: string | null; depositPercentage: number | null; balanceDueDays: number | null }>({
     queryKey: [`/api/orders/${enquiry.orderId}`],
     enabled: isQuoteRequest,
     staleTime: 0,
@@ -163,6 +163,31 @@ function EnquiryDrawer({ enquiry, onClose }: { enquiry: StoreEnquiry; onClose: (
                   ? 'This invoice has been approved and sent to the customer.'
                   : 'A draft invoice has been created from this cart quote request. Approve it now to send the invoice to the customer instantly, or open it first to make changes.'}
               </p>
+              {/* Payment setup summary — only show for drafts */}
+              {orderIsDraft && (
+                <div className="flex items-center gap-2 mb-3 px-3 py-2 bg-white border border-violet-200 rounded-lg">
+                  <CreditCard className="h-3.5 w-3.5 text-violet-500 flex-shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[10px] font-semibold text-violet-500 uppercase tracking-wide">Payment Setup</p>
+                    {orderLoading ? (
+                      <p className="text-xs text-gray-400">—</p>
+                    ) : (
+                      <p className="text-xs font-medium text-gray-800">
+                        {(() => {
+                          const dep = linkedOrder?.depositPercentage ?? 100;
+                          const method = linkedOrder?.paymentMethod ?? 'payment_link';
+                          const due = linkedOrder?.balanceDueDays ?? 0;
+                          const depLabel = dep === 0 ? 'Pay Later' : dep === 100 ? 'Full' : `${dep}% deposit`;
+                          const methodLabel = ({ payment_link: 'Payment Link', cash: 'Cash', bank_transfer: 'Bank Transfer', cheque: 'Cheque', card: 'Card', other: 'Other', pay_later: 'Pay Later' } as Record<string, string>)[method] ?? method;
+                          const dueLabel = ({ 0: 'Now', 7: '7 days', 14: '14 days', 30: '30 days', 60: '60 days' } as Record<number, string>)[due] ?? `${due} days`;
+                          if (dep === 0) return depLabel;
+                          return `${depLabel} · ${methodLabel} · Due: ${dueLabel}`;
+                        })()}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
               {linkedOrder && linkedOrder.status !== 'draft' ? (
                 <div className="flex items-center justify-center gap-2 w-full py-2 mb-2 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-700 text-sm font-medium">
                   <CheckCircle2 className="h-3.5 w-3.5" /> Invoice already sent
