@@ -1058,8 +1058,17 @@ export default function CustomerPortal() {
         setLastUsedShippingOption(shippingOption as 'pickup' | 'delivery');
       } else {
         const errorText = await response.text();
-        
-        // Handle specific payment configuration errors
+
+        // Parse the server error message (API returns { message: "..." })
+        let serverMessage: string | null = null;
+        try {
+          const parsed = JSON.parse(errorText);
+          serverMessage = parsed.message || parsed.error || null;
+        } catch {
+          serverMessage = errorText || null;
+        }
+
+        // Map server messages to friendly user-facing copy
         let userMessage = "Unable to set up payment. Please try again.";
         if (response.status === 500 && errorText.includes('payment_config_error')) {
           userMessage = "There's an issue with the payment setup. Please contact the business owner.";
@@ -1067,14 +1076,21 @@ export default function CustomerPortal() {
           userMessage = "Payment amount calculation error. Please refresh and try again.";
         } else if (response.status === 409 && errorText.includes('idempotency_conflict')) {
           userMessage = "Your previous payment session expired. Please refresh the page and try again.";
+        } else if (serverMessage && /insufficient stock|out of stock/i.test(serverMessage)) {
+          const match = serverMessage.match(/Insufficient stock for (.+?)\./i);
+          const productName = match ? match[1] : 'an item';
+          userMessage = `${productName} is out of stock. Please remove it from your basket and try again.`;
+        } else if (response.status === 400 && serverMessage) {
+          userMessage = serverMessage;
         }
-        
+
         toast({
           title: "Payment Setup Failed",
           description: userMessage,
           variant: "destructive",
         });
-        throw new Error(`Failed to create payment intent: ${response.status} - ${errorText}`);
+        console.error('Payment setup failed:', response.status, errorText);
+        return; // return early — don't throw, which would double-toast via the catch block below
       }
     } catch (error) {
       console.error('Error creating payment intent:', error);
@@ -1164,7 +1180,31 @@ export default function CustomerPortal() {
         setLastUsedShippingOption(shippingOption);
       } else {
         const errorText = await response.text();
-        throw new Error(`Failed to create payment intent: ${response.status} - ${errorText}`);
+
+        let serverMessage: string | null = null;
+        try {
+          const parsed = JSON.parse(errorText);
+          serverMessage = parsed.message || parsed.error || null;
+        } catch {
+          serverMessage = errorText || null;
+        }
+
+        let userMessage = "Unable to set up payment. Please try again.";
+        if (serverMessage && /insufficient stock|out of stock/i.test(serverMessage)) {
+          const match = serverMessage.match(/Insufficient stock for (.+?)\./i);
+          const productName = match ? match[1] : 'an item';
+          userMessage = `${productName} is out of stock. Please remove it from your basket and try again.`;
+        } else if (response.status === 400 && serverMessage) {
+          userMessage = serverMessage;
+        }
+
+        toast({
+          title: "Payment Setup Failed",
+          description: userMessage,
+          variant: "destructive",
+        });
+        console.error('Payment setup failed with custom data:', response.status, errorText);
+        return;
       }
     } catch (error) {
       console.error('Error creating payment intent with custom data:', error);
