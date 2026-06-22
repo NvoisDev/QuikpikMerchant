@@ -1416,6 +1416,7 @@ export class CustomerStorage extends OrderStorage {
                pickup_address, pickup_instructions, allow_pay_later,
                whatsapp_enabled, show_prices_to_wholesalers,
                timezone, phone_number, city, state, country, postal_code, street_address,
+               price_display_mode, enquiries_enabled,
                created_at, updated_at
         FROM users 
         WHERE (id = ${id} OR store_slug = ${id}) AND role = 'wholesaler'
@@ -1517,6 +1518,8 @@ export class CustomerStorage extends OrderStorage {
         pickupInstructions: wholesaler.pickup_instructions,
         allowPayLater: wholesaler.allow_pay_later || false,
         storeSlug: wholesaler.store_slug || null,
+        priceDisplayMode: (wholesaler.price_display_mode as string) || 'hidden',
+        enquiriesEnabled: wholesaler.enquiries_enabled !== false,
       };
 
       return {
