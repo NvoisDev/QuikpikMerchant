@@ -102,6 +102,7 @@ function EnquiryDrawer({ enquiry, onClose }: { enquiry: StoreEnquiry; onClose: (
     deliveryCost: string | null;
     deliveryAddress: string | null;
     retailerId: string | null;
+    items: { productId: number | null }[];
   }>({
     queryKey: [`/api/orders/${enquiry.orderId}`],
     enabled: isQuoteRequest,
@@ -558,15 +559,26 @@ function EnquiryDrawer({ enquiry, onClose }: { enquiry: StoreEnquiry; onClose: (
                 <ShoppingCart className="h-3 w-3" /> Requested Items ({enquiry.cartItems.length})
               </p>
               <div className="space-y-2">
-                {enquiry.cartItems.map((item, idx) => (
-                  <div key={idx} className="flex items-center justify-between bg-white rounded-lg px-3 py-2 border border-gray-100">
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium text-gray-800 truncate">{item.name}</p>
-                      <p className="text-[11px] text-gray-400 capitalize">{item.sellingType} · {item.quantity} × £{parseFloat(item.unitPrice).toFixed(2)}</p>
-                    </div>
-                    <p className="text-sm font-semibold text-gray-900 ml-3">£{parseFloat(item.total).toFixed(2)}</p>
-                  </div>
-                ))}
+                {(() => {
+                  const draftProductIds = linkedOrder?.items
+                    ? new Set(linkedOrder.items.map(i => i.productId).filter(id => id != null))
+                    : null;
+                  return enquiry.cartItems!.map((item, idx) => {
+                    const removed = draftProductIds != null && item.productId != null && !draftProductIds.has(item.productId);
+                    return (
+                      <div key={idx} className={`flex items-center justify-between rounded-lg px-3 py-2 border ${removed ? 'bg-gray-100 border-gray-200 opacity-60' : 'bg-white border-gray-100'}`}>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5">
+                            <p className={`text-sm font-medium truncate ${removed ? 'line-through text-gray-400' : 'text-gray-800'}`}>{item.name}</p>
+                            {removed && <span className="shrink-0 text-[10px] font-semibold bg-red-100 text-red-500 px-1.5 py-0.5 rounded-full">Removed</span>}
+                          </div>
+                          <p className="text-[11px] text-gray-400 capitalize">{item.sellingType} · {item.quantity} × £{parseFloat(item.unitPrice).toFixed(2)}</p>
+                        </div>
+                        <p className={`text-sm font-semibold ml-3 ${removed ? 'line-through text-gray-400' : 'text-gray-900'}`}>£{parseFloat(item.total).toFixed(2)}</p>
+                      </div>
+                    );
+                  });
+                })()}
               </div>
               <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-200">
                 <span className="text-xs font-semibold text-gray-600">Subtotal</span>
