@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { Link } from "wouter";
 import PageHeader from "@/components/PageHeader";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -24,7 +24,10 @@ import {
   Inbox, Phone, Mail, Building2, Package, MessageSquare,
   Clock, CheckCircle2, Eye, X, TrendingUp, Users, Star,
   Settings, ShoppingCart, FileText, Save, ExternalLink, Send, CreditCard, Pencil,
+  Truck, MapPin,
 } from "lucide-react";
+import { AddressSearchInput, type AddressPlaceResult } from "@/components/BusinessSearchInput";
+import { Input } from "@/components/ui/input";
 
 interface CartItem {
   productId: number;
@@ -81,9 +84,23 @@ function EnquiryDrawer({ enquiry, onClose }: { enquiry: StoreEnquiry; onClose: (
   const [editDeposit, setEditDeposit] = useState<string>('100');
   const [editMethod, setEditMethod] = useState<string>('payment_link');
   const [editDueDays, setEditDueDays] = useState<string>('0');
+
+  const [showDeliveryEdit, setShowDeliveryEdit] = useState(false);
+  const [editFulfillment, setEditFulfillment] = useState<'pickup' | 'delivery'>('pickup');
+  const [editDeliveryCharge, setEditDeliveryCharge] = useState('0');
+  const [editAddressFields, setEditAddressFields] = useState({ addressLine1: '', city: '', postalCode: '' });
+  const [addressSelected, setAddressSelected] = useState(false);
   const isQuoteRequest = !!enquiry.orderId;
 
-  const { data: linkedOrder, isLoading: orderLoading } = useQuery<{ status: string; paymentMethod: string | null; depositPercentage: number | null; balanceDueDays: number | null }>({
+  const { data: linkedOrder, isLoading: orderLoading } = useQuery<{
+    status: string;
+    paymentMethod: string | null;
+    depositPercentage: number | null;
+    balanceDueDays: number | null;
+    fulfillmentType: string | null;
+    deliveryCost: string | null;
+    deliveryAddress: string | null;
+  }>({
     queryKey: [`/api/orders/${enquiry.orderId}`],
     enabled: isQuoteRequest,
     staleTime: 0,
@@ -141,11 +158,38 @@ function EnquiryDrawer({ enquiry, onClose }: { enquiry: StoreEnquiry; onClose: (
     },
   });
 
+  const deliveryMutation = useMutation({
+    mutationFn: (data: { fulfillmentType: string; deliveryCharge: number; deliveryAddress: string; customAddressFields?: { addressLine1: string; city: string; postalCode: string } }) =>
+      apiRequest('PATCH', `/api/orders/${enquiry.orderId}/draft`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/orders/${enquiry.orderId}`] });
+      setShowDeliveryEdit(false);
+      toast({ title: "Delivery updated", description: "The draft invoice has been updated." });
+    },
+    onError: (err: any) => {
+      toast({ title: "Update failed", description: err?.message || "Could not update delivery details.", variant: "destructive" });
+    },
+  });
+
+  const handleAddressSelect = useCallback((result: AddressPlaceResult) => {
+    setEditAddressFields({ addressLine1: result.addressLine1, city: result.city, postalCode: result.postalCode });
+    setAddressSelected(true);
+  }, []);
+
   function openPaymentEdit() {
     setEditDeposit(String(linkedOrder?.depositPercentage ?? 100));
     setEditMethod(linkedOrder?.paymentMethod ?? 'payment_link');
     setEditDueDays(String(linkedOrder?.balanceDueDays ?? 0));
     setShowPaymentEdit(true);
+  }
+
+  function openDeliveryEdit() {
+    const ft = linkedOrder?.fulfillmentType === 'delivery' ? 'delivery' : 'pickup';
+    setEditFulfillment(ft);
+    setEditDeliveryCharge(linkedOrder?.deliveryCost ? String(parseFloat(linkedOrder.deliveryCost)) : '0');
+    setEditAddressFields({ addressLine1: '', city: '', postalCode: '' });
+    setAddressSelected(false);
+    setShowDeliveryEdit(true);
   }
 
   const cartTotal = enquiry.cartItems?.reduce((s, i) => s + parseFloat(i.total || '0'), 0) ?? 0;
@@ -306,6 +350,137 @@ function EnquiryDrawer({ enquiry, onClose }: { enquiry: StoreEnquiry; onClose: (
                   )}
                 </div>
               )}
+
+              {/* Delivery method section — only show for drafts */}
+              {orderIsDraft && (
+                <div className="mb-3">
+                  <div className="flex items-center gap-2 px-3 py-2 bg-white border border-violet-200 rounded-lg">
+                    {linkedOrder?.fulfillmentType === 'delivery'
+                      ? <Truck className="h-3.5 w-3.5 text-violet-500 flex-shrink-0" />
+                      : <MapPin className="h-3.5 w-3.5 text-violet-500 flex-shrink-0" />}
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[10px] font-semibold text-violet-500 uppercase tracking-wide">Delivery Method</p>
+                      {orderLoading ? (
+                        <p className="text-xs text-gray-400">—</p>
+                      ) : (
+                        <p className="text-xs font-medium text-gray-800">
+                          {linkedOrder?.fulfillmentType === 'delivery'
+                            ? [
+                                'Delivery',
+                                linkedOrder.deliveryCost && parseFloat(linkedOrder.deliveryCost) > 0 ? `· £${parseFloat(linkedOrder.deliveryCost).toFixed(2)}` : null,
+                                linkedOrder.deliveryAddress ? `· ${linkedOrder.deliveryAddress}` : null,
+                              ].filter(Boolean).join(' ')
+                            : 'Collection'}
+                        </p>
+                      )}
+                    </div>
+                    {!showDeliveryEdit && (
+                      <button
+                        onClick={openDeliveryEdit}
+                        className="ml-1 p-1 rounded hover:bg-violet-100 text-violet-500 flex-shrink-0"
+                        title="Edit delivery method"
+                      >
+                        <Pencil className="h-3 w-3" />
+                      </button>
+                    )}
+                  </div>
+
+                  {showDeliveryEdit && (
+                    <div className="mt-2 p-3 bg-violet-50 border border-violet-200 rounded-lg space-y-3">
+                      <p className="text-[10px] font-semibold text-violet-600 uppercase tracking-wide">Edit Delivery Method</p>
+
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setEditFulfillment('pickup')}
+                          className={`flex-1 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+                            editFulfillment === 'pickup'
+                              ? 'bg-violet-600 text-white border-violet-600'
+                              : 'bg-white text-gray-600 border-gray-200 hover:border-violet-300'
+                          }`}
+                        >
+                          <MapPin className="inline h-3 w-3 mr-1" /> Collection
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setEditFulfillment('delivery')}
+                          className={`flex-1 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+                            editFulfillment === 'delivery'
+                              ? 'bg-violet-600 text-white border-violet-600'
+                              : 'bg-white text-gray-600 border-gray-200 hover:border-violet-300'
+                          }`}
+                        >
+                          <Truck className="inline h-3 w-3 mr-1" /> Delivery
+                        </button>
+                      </div>
+
+                      {editFulfillment === 'delivery' && (
+                        <>
+                          <div>
+                            <Label className="text-[11px] text-gray-600 mb-1 block">Delivery Charge (£)</Label>
+                            <Input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={editDeliveryCharge}
+                              onChange={(e) => setEditDeliveryCharge(e.target.value)}
+                              className="h-8 text-xs"
+                              placeholder="0.00"
+                            />
+                          </div>
+
+                          <div>
+                            <Label className="text-[11px] text-gray-600 mb-1 block">Delivery Address</Label>
+                            <AddressSearchInput
+                              onSelect={handleAddressSelect}
+                              placeholder="Search for address…"
+                            />
+                            {addressSelected && (
+                              <div className="mt-1.5 p-2 bg-white border border-violet-200 rounded text-xs text-gray-700 space-y-1">
+                                <p className="font-medium">{editAddressFields.addressLine1}</p>
+                                <p className="text-gray-500">{[editAddressFields.city, editAddressFields.postalCode].filter(Boolean).join(', ')}</p>
+                              </div>
+                            )}
+                          </div>
+                        </>
+                      )}
+
+                      <div className="flex gap-2 pt-1">
+                        <Button
+                          size="sm"
+                          className="flex-1 h-7 text-xs bg-violet-600 hover:bg-violet-700 text-white"
+                          disabled={deliveryMutation.isPending}
+                          onClick={() => {
+                            const addressStr = addressSelected
+                              ? `${editAddressFields.addressLine1}, ${editAddressFields.city}, ${editAddressFields.postalCode}`
+                              : (linkedOrder?.deliveryAddress ?? '');
+                            deliveryMutation.mutate({
+                              fulfillmentType: editFulfillment,
+                              deliveryCharge: parseFloat(editDeliveryCharge) || 0,
+                              deliveryAddress: editFulfillment === 'delivery' ? addressStr : '',
+                              ...(editFulfillment === 'delivery' && addressSelected
+                                ? { customAddressFields: editAddressFields }
+                                : {}),
+                            });
+                          }}
+                        >
+                          {deliveryMutation.isPending ? 'Saving…' : 'Save'}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="flex-1 h-7 text-xs"
+                          onClick={() => setShowDeliveryEdit(false)}
+                          disabled={deliveryMutation.isPending}
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {linkedOrder && linkedOrder.status !== 'draft' ? (
                 <div className="flex items-center justify-center gap-2 w-full py-2 mb-2 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-700 text-sm font-medium">
                   <CheckCircle2 className="h-3.5 w-3.5" /> Invoice already sent

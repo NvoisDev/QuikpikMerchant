@@ -253,7 +253,7 @@ export function registerOrderLifecycleRoutes(app: Express): void {
       if (order.status !== 'draft') return res.status(400).json({ error: 'Order is not a draft' });
       if (order.wholesalerId !== wholesalerId) return res.status(403).json({ error: 'Not authorized' });
 
-      const { items, fulfillmentType, deliveryCharge, deliveryAddress, paymentMethod, businessProfileId, collectionAddressId, depositPercentage, balanceDueDays, notes } = req.body;
+      const { items, fulfillmentType, deliveryCharge, deliveryAddress, customAddressFields, paymentMethod, businessProfileId, collectionAddressId, depositPercentage, balanceDueDays, notes } = req.body;
 
       let subtotal = parseFloat(order.subtotal || '0');
       if (items && items.length > 0) {
@@ -273,13 +273,38 @@ export function registerOrderLifecycleRoutes(app: Express): void {
 
       const deliveryCostNum = deliveryCharge !== undefined ? (parseFloat(String(deliveryCharge)) || 0) : parseFloat(order.deliveryCost || '0');
 
+      // Auto-save structured delivery address to customer profile (mirrors payments-quotes.ts logic)
+      let resolvedDeliveryAddressId: number | null = null;
+      let resolvedDeliveryAddress = deliveryAddress;
+      if (fulfillmentType === 'delivery' && customAddressFields && customAddressFields.addressLine1 && customAddressFields.city && customAddressFields.postalCode && order.retailerId) {
+        try {
+          const savedAddr = await storage.createDeliveryAddress({
+            customerId: order.retailerId,
+            addressLine1: customAddressFields.addressLine1,
+            addressLine2: customAddressFields.addressLine2 ?? undefined,
+            city: customAddressFields.city,
+            state: customAddressFields.state || undefined,
+            postalCode: customAddressFields.postalCode,
+            country: 'United Kingdom',
+            label: customAddressFields.label || undefined,
+            instructions: undefined,
+            isDefault: false,
+          });
+          resolvedDeliveryAddressId = savedAddr.id;
+          resolvedDeliveryAddress = deliveryAddress || `${customAddressFields.addressLine1}, ${customAddressFields.city}, ${customAddressFields.postalCode}`;
+        } catch (addrErr) {
+          console.error('⚠️ [patch-draft] Failed to auto-save delivery address:', addrErr);
+        }
+      }
+
       await db.update(orders).set({
         subtotal: subtotal.toFixed(2),
         total: (subtotal + deliveryCostNum).toFixed(2),
         amountOutstanding: (subtotal + deliveryCostNum).toFixed(2),
         ...(fulfillmentType !== undefined ? { fulfillmentType } : {}),
         ...(deliveryCharge !== undefined ? { deliveryCost: deliveryCostNum.toFixed(2), shippingTotal: deliveryCostNum.toFixed(2) } : {}),
-        ...(deliveryAddress !== undefined ? { deliveryAddress } : {}),
+        ...(resolvedDeliveryAddress !== undefined ? { deliveryAddress: resolvedDeliveryAddress } : {}),
+        ...(resolvedDeliveryAddressId ? { deliveryAddressId: resolvedDeliveryAddressId } : {}),
         ...(paymentMethod !== undefined ? { paymentMethod } : {}),
         ...(businessProfileId !== undefined ? { businessProfileId: businessProfileId ? parseInt(String(businessProfileId)) : null } : {}),
         ...(collectionAddressId !== undefined ? { collectionAddressId: collectionAddressId ? parseInt(String(collectionAddressId)) : null } : {}),
