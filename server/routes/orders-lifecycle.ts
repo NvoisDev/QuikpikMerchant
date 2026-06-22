@@ -336,7 +336,9 @@ export function registerOrderLifecycleRoutes(app: Express): void {
 
       // Calculate proper fees & VAT (same logic as POST /api/quotes)
       const OFFLINE_METHODS_APPROVE = ['cash', 'bank_transfer', 'cheque', 'pay_later', 'other'];
-      const orderPaymentMethod = order.paymentMethod || 'bank_transfer';
+      // Use nullish coalescing so a null/missing paymentMethod defaults to 'payment_link' (attempt Stripe)
+      // rather than silently falling through to the offline bank-transfer path.
+      const orderPaymentMethod = order.paymentMethod ?? 'payment_link';
       // depositPercentage === 0 means pay-later regardless of stored payment method — matches direct quote flow
       const isPayLaterByDeposit = (order.depositPercentage ?? 100) === 0;
       const isOfflineApproval = OFFLINE_METHODS_APPROVE.includes(orderPaymentMethod) || isPayLaterByDeposit;
@@ -647,7 +649,9 @@ export function registerOrderLifecycleRoutes(app: Express): void {
             ? `\nDelivery: £${parseFloat(approvedOrder.deliveryCost!).toFixed(2)}`
             : '';
           const wholesalerContact = wholesaler.phoneNumber || wholesaler.email || '';
-          const approvedPaymentMethod = approvedOrder.paymentMethod || 'bank_transfer';
+          // Match the nullish-coalescing default used above so 'payment_link' is the fallback for
+          // legacy/null-paymentMethod orders — never silently fall through to bank_transfer instructions.
+          const approvedPaymentMethod = approvedOrder.paymentMethod ?? 'payment_link';
 
           const shortApproveUrl = approvePaymentLinkUrl
             ? await createShortPaymentLink(approvePaymentLinkUrl, order.wholesalerId, 24)
@@ -677,6 +681,10 @@ export function registerOrderLifecycleRoutes(app: Express): void {
             } else {
               message = `Hi ${customerGreeting}! ${businessName} has sent you an invoice.\n\nItems:\n${itemsList}${deliveryChargeText}\n\nTotal: £${totalDisplay}\n\nPay here: ${shortApproveUrl}\n\nLink expires in 24 hours.${wholesalerContact ? `\n\nContact ${businessName}: ${wholesalerContact}` : ''}`;
             }
+          } else if (approvedPaymentMethod === 'payment_link') {
+            // Payment link was intended but no Stripe URL was generated (Connect not set up / session failed).
+            // Never send bank-transfer instructions — send a neutral message so the customer waits for the link.
+            message = `Hi ${customerGreeting}! ${businessName} has sent you an invoice.\n\nItems:\n${itemsList}${deliveryChargeText}\n\nTotal: £${totalDisplay}\n\n${businessName} will send you a payment link shortly.${wholesalerContact ? `\n\nContact ${businessName}: ${wholesalerContact}` : ''}`;
           } else {
             // Offline payment method
             const offlineMethodDisplayName: Record<string, string> = {
