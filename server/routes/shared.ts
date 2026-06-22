@@ -681,6 +681,27 @@ export async function buildInvoicePdf(order: any, wholesaler: any, showTransacti
   if (order.collectionAddressId) {
     try { linkedCollAddr = await storage.getCollectionAddress(order.collectionAddressId); } catch (e) { console.warn('[pdf-builder] Collection address lookup failed:', e instanceof Error ? e.message : e); }
   }
+  // Resolve delivery address BEFORE entering the sync Promise callback
+  let resolvedDeliveryLines: string[] = [];
+  if (order.fulfillmentType === 'delivery') {
+    if (order.deliveryAddressId) {
+      try {
+        const da = await storage.getDeliveryAddressById(order.deliveryAddressId);
+        if (da) {
+          resolvedDeliveryLines = [da.addressLine1, da.addressLine2, da.city, da.state, da.postalCode, da.country].filter((s): s is string => !!s && s.trim() !== '');
+        }
+      } catch (e) { console.warn('[pdf-builder] Delivery address lookup failed:', e instanceof Error ? e.message : e); }
+    } else if (order.deliveryAddress && typeof order.deliveryAddress === 'string' && order.deliveryAddress.trim()) {
+      try {
+        const parsed = JSON.parse(order.deliveryAddress);
+        if (parsed && typeof parsed === 'object') {
+          resolvedDeliveryLines = [parsed.addressLine1, parsed.addressLine2, parsed.city, parsed.state, parsed.postalCode, parsed.country].filter((s): s is string => !!s && s.trim() !== '');
+        }
+      } catch {
+        resolvedDeliveryLines = [order.deliveryAddress.trim()];
+      }
+    }
+  }
   const doc = new PDFDocument({ size: 'A4', margin: 0, bufferPages: true });
   const chunks: Buffer[] = [];
   doc.on('data', (chunk: Buffer) => chunks.push(chunk));
@@ -815,6 +836,17 @@ export async function buildInvoicePdf(order: any, wholesaler: any, showTransacti
     }
     const TOTALS_W = 220, tX = MARGIN + CONTENT_W - TOTALS_W;
     let tY = rowY + 18;
+    // ── Delivery address (left of totals) ─────────────────────────────────────
+    if (resolvedDeliveryLines.length > 0) {
+      const DELIVER_COL_W = tX - MARGIN - 16;
+      let dY = rowY + 18;
+      doc.font('Helvetica-Bold').fontSize(8).fillColor(GRAY).text('DELIVER TO', MARGIN, dY, { width: DELIVER_COL_W });
+      dY += 13;
+      for (const line of resolvedDeliveryLines) {
+        doc.font('Helvetica').fontSize(9).fillColor(DARK).text(line, MARGIN, dY, { width: DELIVER_COL_W });
+        dY += doc.font('Helvetica').fontSize(9).heightOfString(line, { width: DELIVER_COL_W }) + 2;
+      }
+    }
     const drawTotRow = (label: string, value: string, bold = false) => {
       const font = bold ? 'Helvetica-Bold' : 'Helvetica', size = bold ? 12 : 10;
       doc.font(font).fontSize(size).fillColor(bold ? GREEN : GRAY).text(label, tX, tY, { width: TOTALS_W / 2 });
@@ -906,13 +938,24 @@ export async function sendCustomerInvoiceEmail(customer: any, order: any, items:
       `${customer.firstName || ''} ${customer.lastName || ''}`.trim() ||
       'Valued Customer';
     let addressComponents = { line1: '', line2: '', city: '', state: '', postalCode: '', country: '' };
-    if (order.deliveryAddressId) {
-      try {
-        const fullAddress = await storage.getDeliveryAddressById(order.deliveryAddressId);
-        if (fullAddress) {
-          addressComponents = { line1: fullAddress.addressLine1 || '', line2: fullAddress.addressLine2 || '', city: fullAddress.city || '', state: fullAddress.state || '', postalCode: fullAddress.postalCode || '', country: fullAddress.country || '' };
+    if (order.fulfillmentType === 'delivery') {
+      if (order.deliveryAddressId) {
+        try {
+          const fullAddress = await storage.getDeliveryAddressById(order.deliveryAddressId);
+          if (fullAddress) {
+            addressComponents = { line1: fullAddress.addressLine1 || '', line2: fullAddress.addressLine2 || '', city: fullAddress.city || '', state: fullAddress.state || '', postalCode: fullAddress.postalCode || '', country: fullAddress.country || '' };
+          }
+        } catch (error) { console.error('❌ EMAIL: Error fetching address components:', error); }
+      } else if (order.deliveryAddress && typeof order.deliveryAddress === 'string' && order.deliveryAddress.trim()) {
+        try {
+          const parsed = JSON.parse(order.deliveryAddress);
+          if (parsed && typeof parsed === 'object') {
+            addressComponents = { line1: parsed.addressLine1 || '', line2: parsed.addressLine2 || '', city: parsed.city || '', state: parsed.state || '', postalCode: parsed.postalCode || '', country: parsed.country || '' };
+          }
+        } catch {
+          addressComponents = { line1: order.deliveryAddress.trim(), line2: '', city: '', state: '', postalCode: '', country: '' };
         }
-      } catch (error) { console.error('❌ EMAIL: Error fetching address components:', error); }
+      }
     }
     const itemsHtml = items.map((item) => {
       const productName = item.productName || (item.product?.name) || 'Product';
