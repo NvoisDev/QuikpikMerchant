@@ -432,6 +432,7 @@ export default function CustomerPortal() {
   const [editQuantity, setEditQuantity] = useState(1);
   const [selectedSellingType, setSelectedSellingType] = useState<"units" | "pallets">("units");
   const [showCheckout, setShowCheckout] = useState(false);
+  const [showPortalQuoteModal, setShowPortalQuoteModal] = useState(false);
   const [payLaterMode, setPayLaterMode] = useState(false);
   const [isPlacingPayLaterOrder, setIsPlacingPayLaterOrder] = useState(false);
   const [showThankYou, setShowThankYou] = useState(false);
@@ -2227,6 +2228,8 @@ export default function CustomerPortal() {
                 priceDisplayMode={wholesaler?.priceDisplayMode || 'hidden'}
                 authenticatedCustomer={authenticatedCustomer}
                 wholesalerId={wholesalerId}
+                showQuoteModal={showPortalQuoteModal}
+                setShowQuoteModal={setShowPortalQuoteModal}
               />
               </SectionErrorBoundary>
             </TabsContent>
@@ -2286,7 +2289,7 @@ export default function CustomerPortal() {
         {/* Checkout Modal Dialog */}
         <SectionErrorBoundary sectionName="Checkout">
         <CheckoutDialog
-          showCheckout={showCheckout}
+          showCheckout={showCheckout && (wholesaler?.priceDisplayMode || 'hidden') === 'shown'}
           setShowCheckout={setShowCheckout}
           payLaterMode={payLaterMode}
           setPayLaterMode={setPayLaterMode}
@@ -2448,7 +2451,10 @@ export default function CustomerPortal() {
         {hasCustomerSession && !isTrueGuestMode && cart.length > 0 && (
           <div className="fixed bottom-20 right-4 z-50">
             <Button
-              onClick={() => setShowCheckout(true)}
+              onClick={() => {
+                const pricesHidden = (wholesaler?.priceDisplayMode || 'hidden') !== 'shown';
+                if (pricesHidden) { setShowPortalQuoteModal(true); } else { setShowCheckout(true); }
+              }}
               className="rounded-full shadow-lg h-14 w-14 p-0 relative quick-action-pulse bg-theme-primary text-white"
             >
               <ShoppingCart className="h-6 w-6" />

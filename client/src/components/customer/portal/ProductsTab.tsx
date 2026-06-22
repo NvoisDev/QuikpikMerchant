@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { ShoppingCart, Banknote, History, Search, Grid, List, Package, ArrowLeft, ArrowRight, Minus, Plus, Tag, Loader2, CheckCircle } from "lucide-react";
+import { ShoppingCart, Banknote, History, Search, Grid, List, Package, ArrowLeft, ArrowRight, Minus, Plus, Tag, Loader2 } from "lucide-react";
 import { Package2, Hash } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -62,6 +62,8 @@ interface ProductsTabProps {
   priceDisplayMode?: string;
   authenticatedCustomer?: AuthenticatedCustomer | null;
   wholesalerId?: string;
+  showQuoteModal: boolean;
+  setShowQuoteModal: (v: boolean) => void;
 }
 
 export function ProductsTab({
@@ -109,14 +111,14 @@ export function ProductsTab({
   priceDisplayMode,
   authenticatedCustomer,
   wholesalerId,
+  showQuoteModal,
+  setShowQuoteModal,
 }: ProductsTabProps) {
   const { toast } = useToast();
   const pricesHidden = priceDisplayMode !== 'shown';
 
-  const [showQuoteModal, setShowQuoteModal] = useState(false);
   const [quoteNotes, setQuoteNotes] = useState('');
   const [isSubmittingQuote, setIsSubmittingQuote] = useState(false);
-  const [quoteSubmitted, setQuoteSubmitted] = useState(false);
 
   const handleSubmitQuote = async () => {
     if (cart.length === 0 || !wholesalerId) return;
@@ -138,8 +140,13 @@ export function ProductsTab({
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Failed to submit');
-      setQuoteSubmitted(true);
+      setShowQuoteModal(false);
+      setQuoteNotes('');
       setCart([]);
+      toast({
+        title: 'Quote request sent!',
+        description: `${wholesaler?.businessName || 'The wholesaler'} will be in touch with pricing soon.`,
+      });
     } catch (err) {
       toast({
         title: 'Could not submit quote',
@@ -154,7 +161,6 @@ export function ProductsTab({
   const handleCloseQuoteModal = () => {
     setShowQuoteModal(false);
     setQuoteNotes('');
-    setQuoteSubmitted(false);
   };
 
   return (
@@ -172,76 +178,61 @@ export function ProductsTab({
       {/* Quote Request Modal */}
       <Dialog open={showQuoteModal} onOpenChange={(open) => { if (!open) handleCloseQuoteModal(); }}>
         <DialogContent className="sm:max-w-md">
-          {quoteSubmitted ? (
-            <div className="text-center py-6 space-y-3">
-              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto">
-                <CheckCircle className="w-8 h-8 text-green-600" />
-              </div>
-              <DialogTitle>Quote Request Sent!</DialogTitle>
-              <DialogDescription>
-                Your request has been sent to {wholesaler?.businessName || 'the wholesaler'}. They'll be in touch with pricing soon.
-              </DialogDescription>
-              <Button onClick={handleCloseQuoteModal} className="w-full rounded-xl">Done</Button>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Tag className="w-5 h-5 text-green-600" />
+              Request Trade Pricing
+            </DialogTitle>
+            <DialogDescription>
+              {wholesaler?.businessName || 'The wholesaler'} will receive your product list and contact you with pricing.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <div className="bg-gray-50 rounded-xl p-3 space-y-1.5 max-h-48 overflow-y-auto">
+              {cart.map((item, i) => (
+                <div key={i} className="flex justify-between text-sm">
+                  <span className="text-gray-700 truncate flex-1 mr-2">{item.product.name}</span>
+                  <span className="text-gray-500 flex-shrink-0">{item.quantity} {item.sellingType}</span>
+                </div>
+              ))}
             </div>
-          ) : (
-            <>
-              <DialogHeader>
-                <DialogTitle className="flex items-center gap-2">
-                  <Tag className="w-5 h-5 text-green-600" />
-                  Request Trade Pricing
-                </DialogTitle>
-                <DialogDescription>
-                  {wholesaler?.businessName || 'The wholesaler'} will receive your product list and contact you with pricing.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4 pt-2">
-                <div className="bg-gray-50 rounded-xl p-3 space-y-1.5 max-h-48 overflow-y-auto">
-                  {cart.map((item, i) => (
-                    <div key={i} className="flex justify-between text-sm">
-                      <span className="text-gray-700 truncate flex-1 mr-2">{item.product.name}</span>
-                      <span className="text-gray-500 flex-shrink-0">{item.quantity} {item.sellingType}</span>
-                    </div>
-                  ))}
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-gray-700">Your details</label>
-                  <div className="bg-gray-50 rounded-xl p-3 text-sm text-gray-600 space-y-0.5">
-                    <p className="font-medium text-gray-800">{authenticatedCustomer?.name || 'Customer'}</p>
-                    {authenticatedCustomer?.businessName && <p>{authenticatedCustomer.businessName}</p>}
-                    {authenticatedCustomer?.phone && <p>{authenticatedCustomer.phone}</p>}
-                    {authenticatedCustomer?.email && <p>{authenticatedCustomer.email}</p>}
-                  </div>
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-gray-700">Additional notes (optional)</label>
-                  <Textarea
-                    placeholder="Any special requirements, delivery preferences..."
-                    value={quoteNotes}
-                    onChange={(e) => setQuoteNotes(e.target.value)}
-                    className="resize-none rounded-xl"
-                    rows={3}
-                  />
-                </div>
-                <div className="flex gap-2">
-                  <Button variant="outline" className="flex-1 rounded-xl" onClick={handleCloseQuoteModal} disabled={isSubmittingQuote}>
-                    Cancel
-                  </Button>
-                  <Button
-                    className="flex-1 rounded-xl text-white"
-                    style={{background: 'var(--theme-primary)'}}
-                    onClick={handleSubmitQuote}
-                    disabled={isSubmittingQuote || cart.length === 0}
-                  >
-                    {isSubmittingQuote ? (
-                      <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Sending...</>
-                    ) : (
-                      <><Tag className="w-4 h-4 mr-2" />Send Request</>
-                    )}
-                  </Button>
-                </div>
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-gray-700">Your details</label>
+              <div className="bg-gray-50 rounded-xl p-3 text-sm text-gray-600 space-y-0.5">
+                <p className="font-medium text-gray-800">{authenticatedCustomer?.name || 'Customer'}</p>
+                {authenticatedCustomer?.businessName && <p>{authenticatedCustomer.businessName}</p>}
+                {authenticatedCustomer?.phone && <p>{authenticatedCustomer.phone}</p>}
+                {authenticatedCustomer?.email && <p>{authenticatedCustomer.email}</p>}
               </div>
-            </>
-          )}
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-gray-700">Additional notes (optional)</label>
+              <Textarea
+                placeholder="Any special requirements, delivery preferences..."
+                value={quoteNotes}
+                onChange={(e) => setQuoteNotes(e.target.value)}
+                className="resize-none rounded-xl"
+                rows={3}
+              />
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" className="flex-1 rounded-xl" onClick={handleCloseQuoteModal} disabled={isSubmittingQuote}>
+                Cancel
+              </Button>
+              <Button
+                className="flex-1 rounded-xl text-white"
+                style={{background: 'var(--theme-primary)'}}
+                onClick={handleSubmitQuote}
+                disabled={isSubmittingQuote || cart.length === 0}
+              >
+                {isSubmittingQuote ? (
+                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Sending...</>
+                ) : (
+                  <><Tag className="w-4 h-4 mr-2" />Send Request</>
+                )}
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
 
@@ -249,7 +240,10 @@ export function ProductsTab({
       <div className="grid grid-cols-3 gap-2">
         <div
           className="bg-white rounded-xl p-2 sm:p-3 border border-gray-100 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
-          onClick={() => { if (!isPreviewMode && cart.length > 0) { setShowCheckout(true); } }}
+          onClick={() => {
+            if (isPreviewMode || cart.length === 0) return;
+            if (pricesHidden) { setShowQuoteModal(true); } else { setShowCheckout(true); }
+          }}
         >
           <div className="flex flex-col items-center text-center gap-0.5">
             <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center bg-theme-secondary">
@@ -260,7 +254,7 @@ export function ProductsTab({
             </p>
             <p className="text-[10px] text-gray-500 font-medium">In Cart</p>
             {cart.length > 0 && (
-              <p className="text-[10px] text-gray-400 leading-none">Tap to checkout</p>
+              <p className="text-[10px] text-gray-400 leading-none">{pricesHidden ? 'Tap to request' : 'Tap to checkout'}</p>
             )}
           </div>
         </div>
