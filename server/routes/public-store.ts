@@ -550,6 +550,212 @@ export function registerPublicStoreRoutes(app: Express) {
     }
   });
 
+  // POST /api/customer/cart-quote
+  // Authenticated customer submits their cart as a quote request from the private customer portal.
+  // Unlike /api/public/cart-quote, the wholesaler does not need a public store — this is for
+  // approved customers who are already logged in and browsing with prices hidden.
+  app.post("/api/customer/cart-quote", async (req: any, res) => {
+    try {
+      const customerAuth = req.session?.customerAuth;
+      if (!customerAuth?.customerId || !customerAuth?.wholesalerId) {
+        return res.status(401).json({ message: "Not authenticated as customer" });
+      }
+
+      const schema = z.object({
+        wholesalerId: z.string().min(1),
+        items: z.array(z.object({
+          productId: z.number().int().positive(),
+          quantity: z.number().int().positive(),
+          sellingType: z.string().default('units'),
+        })).min(1),
+        notes: z.string().optional().transform(v => v?.trim() || null),
+      });
+
+      const data = schema.parse(req.body);
+
+      if (data.wholesalerId !== customerAuth.wholesalerId) {
+        return res.status(403).json({ message: "Wholesaler mismatch" });
+      }
+
+      const [wholesaler] = await db
+        .select({
+          id: users.id,
+          email: users.email,
+          businessName: users.businessName,
+          enquiriesEnabled: users.enquiriesEnabled,
+          preferredCurrency: users.preferredCurrency,
+        })
+        .from(users)
+        .where(eq(users.id, data.wholesalerId));
+
+      if (!wholesaler) {
+        return res.status(404).json({ message: "Wholesaler not found" });
+      }
+      if (wholesaler.enquiriesEnabled === false) {
+        return res.status(403).json({ message: "Enquiries are not currently enabled for this store" });
+      }
+
+      const [customer] = await db
+        .select({
+          id: users.id,
+          firstName: users.firstName,
+          lastName: users.lastName,
+          email: users.email,
+          phoneNumber: users.phoneNumber,
+          businessName: users.businessName,
+        })
+        .from(users)
+        .where(eq(users.id, customerAuth.customerId));
+
+      if (!customer) {
+        return res.status(404).json({ message: "Customer not found" });
+      }
+
+      const customerName = [customer.firstName, customer.lastName].filter(Boolean).join(' ') || 'Customer';
+
+      const productIds = data.items.map(i => i.productId);
+      const productRows = await db
+        .select({ id: products.id, name: products.name, price: products.price, palletPrice: products.palletPrice, status: products.status, wholesalerId: products.wholesalerId })
+        .from(products)
+        .where(and(inArray(products.id, productIds), eq(products.wholesalerId, data.wholesalerId)));
+
+      const productMap = new Map(productRows.map(p => [p.id, p]));
+      for (const item of data.items) {
+        const p = productMap.get(item.productId);
+        if (!p || p.status !== 'active') {
+          return res.status(400).json({ message: `Product ${item.productId} not found or not available` });
+        }
+      }
+
+      const lineItems = data.items.map(item => {
+        const p = productMap.get(item.productId)!;
+        const rawPrice = item.sellingType === 'pallets' ? (p.palletPrice ?? p.price) : p.price;
+        const unitPrice = parseFloat(rawPrice ?? '0') || 0;
+        return {
+          productId: item.productId,
+          name: p.name,
+          quantity: item.quantity,
+          unitPrice,
+          total: unitPrice * item.quantity,
+          sellingType: item.sellingType,
+        };
+      });
+
+      const subtotal = lineItems.reduce((s, l) => s + l.total, 0);
+
+      const notes = [
+        `Quote requested via customer portal`,
+        customer.businessName ? `Business: ${customer.businessName}` : null,
+        data.notes ? `Note: ${data.notes}` : null,
+      ].filter(Boolean).join(' · ');
+
+      const [newOrder] = await db.insert(orders).values({
+        wholesalerId: data.wholesalerId,
+        retailerId: customer.id,
+        customerName,
+        customerEmail: customer.email ?? null,
+        customerPhone: customer.phoneNumber ?? null,
+        subtotal: subtotal.toFixed(2),
+        platformFee: '0.00',
+        customerTransactionFee: '0.00',
+        vatAmount: '0.00',
+        total: subtotal.toFixed(2),
+        status: 'draft',
+        isQuote: true,
+        paymentStatus: 'unpaid',
+        notes,
+      } as any).returning({ id: orders.id });
+
+      if (lineItems.length > 0) {
+        await db.insert(orderItems).values(
+          lineItems.map(l => ({
+            orderId: newOrder.id,
+            productId: l.productId,
+            quantity: l.quantity,
+            unitPrice: l.unitPrice.toFixed(2),
+            total: l.total.toFixed(2),
+            sellingType: l.sellingType,
+          }))
+        );
+      }
+
+      const cartSnapshot = lineItems.map(l => ({
+        productId: l.productId,
+        name: l.name,
+        quantity: l.quantity,
+        unitPrice: l.unitPrice.toFixed(2),
+        total: l.total.toFixed(2),
+        sellingType: l.sellingType,
+      }));
+
+      const [enquiry] = await db.insert(storeEnquiries).values({
+        wholesalerId: data.wholesalerId,
+        enquirerName: customerName,
+        enquirerEmail: customer.email ?? null,
+        enquirerPhone: customer.phoneNumber ?? null,
+        enquirerBusiness: customer.businessName ?? null,
+        productId: null,
+        productName: null,
+        quantity: null,
+        status: 'new',
+        orderId: newOrder.id,
+        cartItems: cartSnapshot,
+      } as any).returning({ id: storeEnquiries.id });
+
+      if (wholesaler.email) {
+        try {
+          const currency = wholesaler.preferredCurrency || 'GBP';
+          const fmt = (n: number) => new Intl.NumberFormat('en-GB', { style: 'currency', currency }).format(n);
+          const businessLabel = customer.businessName ? ` from ${customer.businessName}` : '';
+          const itemRows = cartSnapshot.map(l =>
+            `<tr><td style="padding:6px 12px;border-bottom:1px solid #f3f4f6">${l.name}</td><td style="padding:6px 12px;border-bottom:1px solid #f3f4f6;text-align:center">${l.quantity} (${l.sellingType})</td><td style="padding:6px 12px;border-bottom:1px solid #f3f4f6;text-align:right">${fmt(parseFloat(l.unitPrice))}</td><td style="padding:6px 12px;border-bottom:1px solid #f3f4f6;text-align:right">${fmt(parseFloat(l.total))}</td></tr>`
+          ).join('');
+
+          await sendEmail({
+            to: wholesaler.email,
+            from: 'hello@quikpik.co',
+            subject: `Quote request${businessLabel} — ${customerName} (${cartSnapshot.length} item${cartSnapshot.length !== 1 ? 's' : ''})`,
+            html: `
+              <div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:24px">
+                <h2 style="color:#16a34a;margin-bottom:4px">Quote Request from Customer Portal</h2>
+                <p style="color:#6b7280;margin-bottom:20px">An existing customer is requesting trade pricing for the following items.</p>
+                <div style="background:#f9fafb;border-radius:12px;padding:16px;margin-bottom:16px">
+                  <p style="margin:0 0 6px"><strong>Name:</strong> ${customerName}</p>
+                  ${customer.businessName ? `<p style="margin:0 0 6px"><strong>Business:</strong> ${customer.businessName}</p>` : ''}
+                  ${customer.phoneNumber ? `<p style="margin:0 0 6px"><strong>Phone/WhatsApp:</strong> ${customer.phoneNumber}</p>` : ''}
+                  ${customer.email ? `<p style="margin:0 0 0"><strong>Email:</strong> ${customer.email}</p>` : ''}
+                  ${data.notes ? `<p style="margin:6px 0 0"><strong>Note:</strong> ${data.notes}</p>` : ''}
+                </div>
+                <table style="width:100%;border-collapse:collapse;margin-bottom:16px">
+                  <thead>
+                    <tr style="background:#f9fafb">
+                      <th style="padding:8px 12px;text-align:left;font-size:12px;color:#6b7280">Product</th>
+                      <th style="padding:8px 12px;text-align:center;font-size:12px;color:#6b7280">Qty</th>
+                      <th style="padding:8px 12px;text-align:right;font-size:12px;color:#6b7280">Unit</th>
+                      <th style="padding:8px 12px;text-align:right;font-size:12px;color:#6b7280">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>${itemRows}</tbody>
+                </table>
+                <a href="https://quikpik.app/invoices?draft=${newOrder.id}" style="display:inline-block;background:#16a34a;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600">View Draft Invoice →</a>
+              </div>
+            `,
+          });
+        } catch (emailErr) {
+          console.warn("Failed to send customer cart-quote email:", emailErr);
+        }
+      }
+
+      res.json({ success: true, enquiryId: enquiry.id, orderId: newOrder.id });
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: err.errors });
+      }
+      console.error("Error creating customer cart quote:", err);
+      res.status(500).json({ message: "Failed to submit quote request" });
+    }
+  });
+
   // GET /api/public/leads/new-count — lightweight count of unread leads + quote requests
   app.get("/api/public/leads/new-count", requireAuth, async (req: any, res) => {
     try {

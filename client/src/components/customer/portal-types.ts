@@ -104,6 +104,8 @@ export interface WholesalerPortal {
   postalCode?: string;
   enableDelivery?: boolean;
   effectiveFeeConfig?: { percentage: number; fixed: number };
+  priceDisplayMode?: string;
+  enquiriesEnabled?: boolean;
 }
 
 export interface AuthenticatedCustomer {

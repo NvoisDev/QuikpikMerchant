@@ -2224,6 +2224,9 @@ export default function CustomerPortal() {
                 setSelectedModalType={setSelectedModalType}
                 setModalQuantity={setModalQuantity}
                 setShowUnitSelectionModal={setShowUnitSelectionModal}
+                priceDisplayMode={wholesaler?.priceDisplayMode || 'hidden'}
+                authenticatedCustomer={authenticatedCustomer}
+                wholesalerId={wholesalerId}
               />
               </SectionErrorBoundary>
             </TabsContent>

@@ -1,18 +1,21 @@
-import { useRef } from "react";
-import { ShoppingCart, Banknote, History, Search, Grid, List, Package, ArrowLeft, ArrowRight, Minus, Plus } from "lucide-react";
+import { useRef, useState } from "react";
+import { ShoppingCart, Banknote, History, Search, Grid, List, Package, ArrowLeft, ArrowRight, Minus, Plus, Tag, Loader2, CheckCircle } from "lucide-react";
 import { Package2, Hash } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 import { CustomerProductCardSkeleton } from "@/components/customer/CustomerPortalSkeletons";
 import { PriceDisplay } from "@/components/customer/PriceDisplay";
 import { TabQuickActions } from "./TabQuickActions";
-import type { CartItem, ExtendedProduct, Product, WholesalerPortal, CustomerOrderStats, QuantitySuggestion, PromotionalPricing } from "@/components/customer/portal-types";
+import type { CartItem, ExtendedProduct, Product, WholesalerPortal, CustomerOrderStats, QuantitySuggestion, PromotionalPricing, AuthenticatedCustomer } from "@/components/customer/portal-types";
 import { cleanAIDescription } from "@shared/utils";
 import { formatCurrency, formatWeight } from "@/lib/currencies";
 import { getPackQuantity, computePackWeightKg } from "@shared/utils/product";
+import { useToast } from "@/hooks/use-toast";
 
 interface ProductsTabProps {
   setActiveTab: (tab: string) => void;
@@ -56,6 +59,9 @@ interface ProductsTabProps {
   setSelectedModalType: (t: 'units' | 'pallets' | null) => void;
   setModalQuantity: (q: number) => void;
   setShowUnitSelectionModal: (v: boolean) => void;
+  priceDisplayMode?: string;
+  authenticatedCustomer?: AuthenticatedCustomer | null;
+  wholesalerId?: string;
 }
 
 export function ProductsTab({
@@ -100,7 +106,57 @@ export function ProductsTab({
   setSelectedModalType,
   setModalQuantity,
   setShowUnitSelectionModal,
+  priceDisplayMode,
+  authenticatedCustomer,
+  wholesalerId,
 }: ProductsTabProps) {
+  const { toast } = useToast();
+  const pricesHidden = priceDisplayMode !== 'shown';
+
+  const [showQuoteModal, setShowQuoteModal] = useState(false);
+  const [quoteNotes, setQuoteNotes] = useState('');
+  const [isSubmittingQuote, setIsSubmittingQuote] = useState(false);
+  const [quoteSubmitted, setQuoteSubmitted] = useState(false);
+
+  const handleSubmitQuote = async () => {
+    if (cart.length === 0 || !wholesalerId) return;
+    setIsSubmittingQuote(true);
+    try {
+      const res = await fetch('/api/customer/cart-quote', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          wholesalerId,
+          items: cart.map(item => ({
+            productId: item.product.id,
+            quantity: item.quantity,
+            sellingType: item.sellingType,
+          })),
+          notes: quoteNotes.trim() || undefined,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Failed to submit');
+      setQuoteSubmitted(true);
+      setCart([]);
+    } catch (err) {
+      toast({
+        title: 'Could not submit quote',
+        description: err instanceof Error ? err.message : 'Something went wrong. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSubmittingQuote(false);
+    }
+  };
+
+  const handleCloseQuoteModal = () => {
+    setShowQuoteModal(false);
+    setQuoteNotes('');
+    setQuoteSubmitted(false);
+  };
+
   return (
     <>
       <TabQuickActions
@@ -109,7 +165,85 @@ export function ProductsTab({
         setShowCheckout={setShowCheckout}
         isCreatingIntent={isCreatingIntent}
         handleLogout={handleLogout}
+        priceDisplayMode={priceDisplayMode}
+        onRequestQuote={() => setShowQuoteModal(true)}
       />
+
+      {/* Quote Request Modal */}
+      <Dialog open={showQuoteModal} onOpenChange={(open) => { if (!open) handleCloseQuoteModal(); }}>
+        <DialogContent className="sm:max-w-md">
+          {quoteSubmitted ? (
+            <div className="text-center py-6 space-y-3">
+              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto">
+                <CheckCircle className="w-8 h-8 text-green-600" />
+              </div>
+              <DialogTitle>Quote Request Sent!</DialogTitle>
+              <DialogDescription>
+                Your request has been sent to {wholesaler?.businessName || 'the wholesaler'}. They'll be in touch with pricing soon.
+              </DialogDescription>
+              <Button onClick={handleCloseQuoteModal} className="w-full rounded-xl">Done</Button>
+            </div>
+          ) : (
+            <>
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <Tag className="w-5 h-5 text-green-600" />
+                  Request Trade Pricing
+                </DialogTitle>
+                <DialogDescription>
+                  {wholesaler?.businessName || 'The wholesaler'} will receive your product list and contact you with pricing.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 pt-2">
+                <div className="bg-gray-50 rounded-xl p-3 space-y-1.5 max-h-48 overflow-y-auto">
+                  {cart.map((item, i) => (
+                    <div key={i} className="flex justify-between text-sm">
+                      <span className="text-gray-700 truncate flex-1 mr-2">{item.product.name}</span>
+                      <span className="text-gray-500 flex-shrink-0">{item.quantity} {item.sellingType}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-gray-700">Your details</label>
+                  <div className="bg-gray-50 rounded-xl p-3 text-sm text-gray-600 space-y-0.5">
+                    <p className="font-medium text-gray-800">{authenticatedCustomer?.name || 'Customer'}</p>
+                    {authenticatedCustomer?.businessName && <p>{authenticatedCustomer.businessName}</p>}
+                    {authenticatedCustomer?.phone && <p>{authenticatedCustomer.phone}</p>}
+                    {authenticatedCustomer?.email && <p>{authenticatedCustomer.email}</p>}
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-gray-700">Additional notes (optional)</label>
+                  <Textarea
+                    placeholder="Any special requirements, delivery preferences..."
+                    value={quoteNotes}
+                    onChange={(e) => setQuoteNotes(e.target.value)}
+                    className="resize-none rounded-xl"
+                    rows={3}
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="outline" className="flex-1 rounded-xl" onClick={handleCloseQuoteModal} disabled={isSubmittingQuote}>
+                    Cancel
+                  </Button>
+                  <Button
+                    className="flex-1 rounded-xl text-white"
+                    style={{background: 'var(--theme-primary)'}}
+                    onClick={handleSubmitQuote}
+                    disabled={isSubmittingQuote || cart.length === 0}
+                  >
+                    {isSubmittingQuote ? (
+                      <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Sending...</>
+                    ) : (
+                      <><Tag className="w-4 h-4 mr-2" />Send Request</>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Stats Bar */}
       <div className="grid grid-cols-3 gap-2">
@@ -686,26 +820,47 @@ export function ProductsTab({
                         {/* Initial add button */}
                         {!cartItemUnits && !cartItemPallets && (
                           <div>
-                            <Button
-                              onClick={() => {
-                                if (hasPalletPricing) {
-                                  setSelectedProductForModal(product as ExtendedProduct);
-                                  setModalStep('type');
-                                  setSelectedModalType(null);
-                                  setModalQuantity(product.moq || 1);
-                                  setShowUnitSelectionModal(true);
-                                } else {
-                                  addToCart(product as ExtendedProduct, product.moq, 'units');
-                                }
-                              }}
-                              disabled={product.stock === 0 && (product.palletStock || 0) === 0}
-                              className="w-full rounded-xl font-semibold text-white disabled:bg-gray-400 disabled:cursor-not-allowed"
-                              style={{background: (product.stock === 0 && (product.palletStock || 0) === 0) ? 'rgb(156, 163, 175)' : 'var(--theme-primary)'}}
-                            >
-                              <ShoppingCart className="h-4 w-4 mr-2" />
-                              {(product.stock === 0 && (product.palletStock || 0) === 0) ? 'Out of Stock' : hasPalletPricing ? 'Add to Cart →' : 'Add to Cart'}
-                            </Button>
-                            {hasPalletPricing && product.stock > 0 && (
+                            {pricesHidden ? (
+                              <Button
+                                onClick={() => {
+                                  if (hasPalletPricing) {
+                                    setSelectedProductForModal(product as ExtendedProduct);
+                                    setModalStep('type');
+                                    setSelectedModalType(null);
+                                    setModalQuantity(product.moq || 1);
+                                    setShowUnitSelectionModal(true);
+                                  } else {
+                                    addToCart(product as ExtendedProduct, product.moq, 'units');
+                                  }
+                                }}
+                                className="w-full rounded-xl font-semibold text-white"
+                                style={{background: 'var(--theme-primary)'}}
+                              >
+                                <Tag className="h-4 w-4 mr-2" />
+                                Get Trade Pricing
+                              </Button>
+                            ) : (
+                              <Button
+                                onClick={() => {
+                                  if (hasPalletPricing) {
+                                    setSelectedProductForModal(product as ExtendedProduct);
+                                    setModalStep('type');
+                                    setSelectedModalType(null);
+                                    setModalQuantity(product.moq || 1);
+                                    setShowUnitSelectionModal(true);
+                                  } else {
+                                    addToCart(product as ExtendedProduct, product.moq, 'units');
+                                  }
+                                }}
+                                disabled={product.stock === 0 && (product.palletStock || 0) === 0}
+                                className="w-full rounded-xl font-semibold text-white disabled:bg-gray-400 disabled:cursor-not-allowed"
+                                style={{background: (product.stock === 0 && (product.palletStock || 0) === 0) ? 'rgb(156, 163, 175)' : 'var(--theme-primary)'}}
+                              >
+                                <ShoppingCart className="h-4 w-4 mr-2" />
+                                {(product.stock === 0 && (product.palletStock || 0) === 0) ? 'Out of Stock' : hasPalletPricing ? 'Add to Cart →' : 'Add to Cart'}
+                              </Button>
+                            )}
+                            {hasPalletPricing && product.stock > 0 && !pricesHidden && (
                               <p className="text-xs text-gray-500 text-center mt-1">Choose type: units or pallets</p>
                             )}
                           </div>
@@ -1045,45 +1200,69 @@ export function ProductsTab({
 
                           {!cartItemUnits && !cartItemPallets && (
                             <div className="flex flex-col items-center gap-1">
-                              {(() => {
-                                const isOutOfStock = product.stock === 0 && (product.palletStock || 0) === 0;
-                                const handleAdd = () => {
-                                  if (hasPalletPricing) {
-                                    setSelectedProductForModal(product as ExtendedProduct);
-                                    setModalStep('type');
-                                    setSelectedModalType(null);
-                                    setModalQuantity(product.moq || 1);
-                                    setShowUnitSelectionModal(true);
-                                  } else {
-                                    addToCart(product as ExtendedProduct, product.moq || 1, 'units');
-                                  }
-                                };
-                                return (
-                                  <>
-                                    <button
-                                      onClick={handleAdd}
-                                      disabled={isOutOfStock}
-                                      className="sm:hidden w-10 h-10 rounded-full flex items-center justify-center text-white text-xl font-bold disabled:cursor-not-allowed flex-shrink-0"
-                                      style={{background: isOutOfStock ? 'rgb(156, 163, 175)' : 'var(--theme-primary)'}}
-                                      aria-label={isOutOfStock ? 'Out of stock' : 'Add to cart'}
-                                    >
-                                      <Plus className="h-5 w-5" />
-                                    </button>
-                                    <Button
-                                      onClick={handleAdd}
-                                      disabled={isOutOfStock}
-                                      size="sm"
-                                      className="hidden sm:flex rounded-xl font-semibold text-white disabled:bg-gray-400 disabled:cursor-not-allowed px-4"
-                                      style={{background: isOutOfStock ? 'rgb(156, 163, 175)' : 'var(--theme-primary)'}}
-                                    >
-                                      <ShoppingCart className="h-3.5 w-3.5 mr-1.5" />
-                                      {isOutOfStock ? 'Out of Stock' : hasPalletPricing ? 'Add to Cart →' : 'Add to Cart'}
-                                    </Button>
-                                  </>
-                                );
-                              })()}
-                              {hasPalletPricing && product.stock > 0 && (
-                                <p className="text-xs text-gray-500 text-center">units or pallets</p>
+                              {pricesHidden ? (
+                                <Button
+                                  onClick={() => {
+                                    if (hasPalletPricing) {
+                                      setSelectedProductForModal(product as ExtendedProduct);
+                                      setModalStep('type');
+                                      setSelectedModalType(null);
+                                      setModalQuantity(product.moq || 1);
+                                      setShowUnitSelectionModal(true);
+                                    } else {
+                                      addToCart(product as ExtendedProduct, product.moq || 1, 'units');
+                                    }
+                                  }}
+                                  size="sm"
+                                  className="rounded-xl font-semibold text-white px-4"
+                                  style={{background: 'var(--theme-primary)'}}
+                                >
+                                  <Tag className="h-3.5 w-3.5 mr-1.5" />
+                                  Get Trade Pricing
+                                </Button>
+                              ) : (
+                                <>
+                                  {(() => {
+                                    const isOutOfStock = product.stock === 0 && (product.palletStock || 0) === 0;
+                                    const handleAdd = () => {
+                                      if (hasPalletPricing) {
+                                        setSelectedProductForModal(product as ExtendedProduct);
+                                        setModalStep('type');
+                                        setSelectedModalType(null);
+                                        setModalQuantity(product.moq || 1);
+                                        setShowUnitSelectionModal(true);
+                                      } else {
+                                        addToCart(product as ExtendedProduct, product.moq || 1, 'units');
+                                      }
+                                    };
+                                    return (
+                                      <>
+                                        <button
+                                          onClick={handleAdd}
+                                          disabled={isOutOfStock}
+                                          className="sm:hidden w-10 h-10 rounded-full flex items-center justify-center text-white text-xl font-bold disabled:cursor-not-allowed flex-shrink-0"
+                                          style={{background: isOutOfStock ? 'rgb(156, 163, 175)' : 'var(--theme-primary)'}}
+                                          aria-label={isOutOfStock ? 'Out of stock' : 'Add to cart'}
+                                        >
+                                          <Plus className="h-5 w-5" />
+                                        </button>
+                                        <Button
+                                          onClick={handleAdd}
+                                          disabled={isOutOfStock}
+                                          size="sm"
+                                          className="hidden sm:flex rounded-xl font-semibold text-white disabled:bg-gray-400 disabled:cursor-not-allowed px-4"
+                                          style={{background: isOutOfStock ? 'rgb(156, 163, 175)' : 'var(--theme-primary)'}}
+                                        >
+                                          <ShoppingCart className="h-3.5 w-3.5 mr-1.5" />
+                                          {isOutOfStock ? 'Out of Stock' : hasPalletPricing ? 'Add to Cart →' : 'Add to Cart'}
+                                        </Button>
+                                      </>
+                                    );
+                                  })()}
+                                  {hasPalletPricing && product.stock > 0 && (
+                                    <p className="text-xs text-gray-500 text-center">units or pallets</p>
+                                  )}
+                                </>
                               )}
                             </div>
                           )}
