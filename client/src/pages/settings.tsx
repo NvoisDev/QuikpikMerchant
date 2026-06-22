@@ -791,13 +791,49 @@ function PublicStoreSettings({ user }: { user: any }) {
         <ExternalLink className="h-5 w-5 text-gray-600" />
         <h3 className="text-base sm:text-lg font-medium text-gray-900">Customer Portal</h3>
       </div>
-      <p className="text-sm text-gray-500 mb-5">Make your catalogue publicly discoverable on Quikpik — anyone can browse and send an enquiry without logging in.</p>
+      <p className="text-sm text-gray-500 mb-5">Control what your customers can see and do in their portal.</p>
 
-      {/* Toggle */}
+      {/* What customers see — always visible, independent of public/private */}
+      <div className="mb-4">
+        <Label className="text-xs font-medium text-gray-700 mb-1 block">What customers see</Label>
+        <p className="text-xs text-gray-500 mb-2">Controls what approved, logged-in customers see when they browse your catalogue and place orders.</p>
+        <div className="space-y-2">
+          <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
+            <div className="pr-3">
+              <p className="text-sm font-medium text-gray-900">Show prices</p>
+              <p className="text-xs text-gray-500 mt-0.5">Approved customers see unit prices and can check out. Turn off to hide pricing from everyone.</p>
+            </div>
+            <Switch checked={showPrices} onCheckedChange={setShowPrices} />
+          </div>
+          <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
+            <div className="pr-3">
+              <p className="text-sm font-medium text-gray-900">Show minimum order quantity</p>
+              <p className="text-xs text-gray-500 mt-0.5">Show the MOQ, e.g. 'Min. order: 12 units'.</p>
+            </div>
+            <Switch checked={showMoq} onCheckedChange={setShowMoq} />
+          </div>
+          <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
+            <div className="pr-3">
+              <p className="text-sm font-medium text-gray-900">Show stock availability</p>
+              <p className="text-xs text-gray-500 mt-0.5">Show units in stock or 'Out of stock'.</p>
+            </div>
+            <Switch checked={showStock} onCheckedChange={setShowStock} />
+          </div>
+          <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
+            <div className="pr-3">
+              <p className="text-sm font-medium text-gray-900">Show pack size and weight</p>
+              <p className="text-xs text-gray-500 mt-0.5">Show units per pack and pack weight.</p>
+            </div>
+            <Switch checked={showPackSize} onCheckedChange={setShowPackSize} />
+          </div>
+        </div>
+      </div>
+
+      {/* Public discoverability — separate concern */}
       <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-200 mb-4">
         <div>
           <p className="text-sm font-medium text-gray-900">Make store public</p>
-          <p className="text-xs text-gray-500 mt-0.5">Your products become searchable on quikpik.app</p>
+          <p className="text-xs text-gray-500 mt-0.5">Anyone can find and browse your store on quikpik.app without logging in.</p>
         </div>
         <Switch
           checked={isPublic}
@@ -806,49 +842,13 @@ function PublicStoreSettings({ user }: { user: any }) {
       </div>
 
       {isPublic && (
-        <div className="space-y-4">
+        <div className="space-y-4 mb-4">
           {/* Public link */}
           <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg">
             <Link2 className="h-4 w-4 text-green-600 flex-shrink-0" />
             <a href={publicUrl} target="_blank" rel="noreferrer" className="text-sm text-green-700 font-medium hover:underline truncate">
               {publicUrl}
             </a>
-          </div>
-
-          {/* What visitors see */}
-          <div>
-            <Label className="text-xs font-medium text-gray-700 mb-1 block">What visitors see</Label>
-            <p className="text-xs text-gray-500 mb-2">Choose which details public visitors see on your store and product pages.</p>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
-                <div className="pr-3">
-                  <p className="text-sm font-medium text-gray-900">Show prices</p>
-                  <p className="text-xs text-gray-500 mt-0.5">Show unit prices instead of 'Price on request'.</p>
-                </div>
-                <Switch checked={showPrices} onCheckedChange={setShowPrices} />
-              </div>
-              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
-                <div className="pr-3">
-                  <p className="text-sm font-medium text-gray-900">Show minimum order quantity</p>
-                  <p className="text-xs text-gray-500 mt-0.5">Show the MOQ, e.g. 'Min. order: 12 units'.</p>
-                </div>
-                <Switch checked={showMoq} onCheckedChange={setShowMoq} />
-              </div>
-              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
-                <div className="pr-3">
-                  <p className="text-sm font-medium text-gray-900">Show stock availability</p>
-                  <p className="text-xs text-gray-500 mt-0.5">Show units in stock or 'Out of stock'.</p>
-                </div>
-                <Switch checked={showStock} onCheckedChange={setShowStock} />
-              </div>
-              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
-                <div className="pr-3">
-                  <p className="text-sm font-medium text-gray-900">Show pack size and weight</p>
-                  <p className="text-xs text-gray-500 mt-0.5">Show units per pack and pack weight.</p>
-                </div>
-                <Switch checked={showPackSize} onCheckedChange={setShowPackSize} />
-              </div>
-            </div>
           </div>
 
           {/* Store description */}
