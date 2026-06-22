@@ -2056,6 +2056,7 @@ export const storeEnquiries = pgTable("store_enquiries", {
   status: varchar("status", { length: 20 }).default('new'), // 'new' | 'viewed' | 'responded'
   orderId: integer("order_id").references(() => orders.id, { onDelete: 'set null' }),
   cartItems: jsonb("cart_items").$type<Array<{ productId: number; name: string; quantity: number; unitPrice: string; total: string; sellingType: string }>>(),
+  wholesalerNote: text("wholesaler_note"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

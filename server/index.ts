@@ -597,6 +597,7 @@ async function runStartupMigrations() {
     // Task #1449: Cart quote request — link store enquiries to a draft order + store cart snapshot
     `ALTER TABLE store_enquiries ADD COLUMN IF NOT EXISTS order_id INTEGER REFERENCES orders(id) ON DELETE SET NULL`,
     `ALTER TABLE store_enquiries ADD COLUMN IF NOT EXISTS cart_items JSONB`,
+    `ALTER TABLE store_enquiries ADD COLUMN IF NOT EXISTS wholesaler_note TEXT`,
   ];
   for (const stmt of migrations) {
     await db.execute(sql.raw(stmt));

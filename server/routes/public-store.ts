@@ -576,11 +576,32 @@ export function registerPublicStoreRoutes(app: Express) {
       if (!wholesalerId) return res.status(401).json({ message: "Unauthorised" });
 
       const id = parseInt(req.params.id);
-      const { status } = req.body;
+      if (!id || isNaN(id)) return res.status(400).json({ message: "Invalid id" });
+
+      const { status, wholesalerNote } = req.body;
+
+      const VALID_STATUSES = ['new', 'viewed', 'responded'];
+      if (status !== undefined && !VALID_STATUSES.includes(status)) {
+        return res.status(400).json({ message: "Invalid status value" });
+      }
+      if (wholesalerNote !== undefined && typeof wholesalerNote !== 'string') {
+        return res.status(400).json({ message: "wholesalerNote must be a string" });
+      }
+      if (wholesalerNote !== undefined && wholesalerNote.length > 2000) {
+        return res.status(400).json({ message: "wholesalerNote too long (max 2000 chars)" });
+      }
+
+      const updateData: Record<string, unknown> = {};
+      if (status !== undefined) updateData.status = status;
+      if (wholesalerNote !== undefined) updateData.wholesalerNote = wholesalerNote;
+
+      if (Object.keys(updateData).length === 0) {
+        return res.status(400).json({ message: "No fields to update" });
+      }
 
       const [updated] = await db
         .update(storeEnquiries)
-        .set({ status })
+        .set(updateData)
         .where(and(eq(storeEnquiries.id, id), eq(storeEnquiries.wholesalerId, wholesalerId)))
         .returning();
 
