@@ -7,6 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,7 +23,7 @@ import { useToast } from "@/hooks/use-toast";
 import {
   Inbox, Phone, Mail, Building2, Package, MessageSquare,
   Clock, CheckCircle2, Eye, X, TrendingUp, Users, Star,
-  Settings, ShoppingCart, FileText, Save, ExternalLink, Send, CreditCard,
+  Settings, ShoppingCart, FileText, Save, ExternalLink, Send, CreditCard, Pencil,
 } from "lucide-react";
 
 interface CartItem {
@@ -75,6 +77,10 @@ function EnquiryDrawer({ enquiry, onClose }: { enquiry: StoreEnquiry; onClose: (
   const [note, setNote] = useState(enquiry.wholesalerNote ?? '');
   const [noteDirty, setNoteDirty] = useState(false);
   const [showApproveConfirm, setShowApproveConfirm] = useState(false);
+  const [showPaymentEdit, setShowPaymentEdit] = useState(false);
+  const [editDeposit, setEditDeposit] = useState<string>('100');
+  const [editMethod, setEditMethod] = useState<string>('payment_link');
+  const [editDueDays, setEditDueDays] = useState<string>('0');
   const isQuoteRequest = !!enquiry.orderId;
 
   const { data: linkedOrder, isLoading: orderLoading } = useQuery<{ status: string; paymentMethod: string | null; depositPercentage: number | null; balanceDueDays: number | null }>({
@@ -122,6 +128,26 @@ function EnquiryDrawer({ enquiry, onClose }: { enquiry: StoreEnquiry; onClose: (
     },
   });
 
+  const paymentTermsMutation = useMutation({
+    mutationFn: (data: { depositPercentage: number; paymentMethod: string; balanceDueDays: number }) =>
+      apiRequest('PATCH', `/api/orders/${enquiry.orderId}/draft`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/orders/${enquiry.orderId}`] });
+      setShowPaymentEdit(false);
+      toast({ title: "Payment terms updated", description: "The draft invoice has been updated." });
+    },
+    onError: (err: any) => {
+      toast({ title: "Update failed", description: err?.message || "Could not update payment terms.", variant: "destructive" });
+    },
+  });
+
+  function openPaymentEdit() {
+    setEditDeposit(String(linkedOrder?.depositPercentage ?? 100));
+    setEditMethod(linkedOrder?.paymentMethod ?? 'payment_link');
+    setEditDueDays(String(linkedOrder?.balanceDueDays ?? 0));
+    setShowPaymentEdit(true);
+  }
+
   const cartTotal = enquiry.cartItems?.reduce((s, i) => s + parseFloat(i.total || '0'), 0) ?? 0;
 
   return (
@@ -165,27 +191,119 @@ function EnquiryDrawer({ enquiry, onClose }: { enquiry: StoreEnquiry; onClose: (
               </p>
               {/* Payment setup summary — only show for drafts */}
               {orderIsDraft && (
-                <div className="flex items-center gap-2 mb-3 px-3 py-2 bg-white border border-violet-200 rounded-lg">
-                  <CreditCard className="h-3.5 w-3.5 text-violet-500 flex-shrink-0" />
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[10px] font-semibold text-violet-500 uppercase tracking-wide">Payment Setup</p>
-                    {orderLoading ? (
-                      <p className="text-xs text-gray-400">—</p>
-                    ) : (
-                      <p className="text-xs font-medium text-gray-800">
-                        {(() => {
-                          const dep = linkedOrder?.depositPercentage ?? 100;
-                          const method = linkedOrder?.paymentMethod ?? 'payment_link';
-                          const due = linkedOrder?.balanceDueDays ?? 0;
-                          const depLabel = dep === 0 ? 'Pay Later' : dep === 100 ? 'Full' : `${dep}% deposit`;
-                          const methodLabel = ({ payment_link: 'Payment Link', cash: 'Cash', bank_transfer: 'Bank Transfer', cheque: 'Cheque', card: 'Card', other: 'Other', pay_later: 'Pay Later' } as Record<string, string>)[method] ?? method;
-                          const dueLabel = ({ 0: 'Now', 7: '7 days', 14: '14 days', 30: '30 days', 60: '60 days' } as Record<number, string>)[due] ?? `${due} days`;
-                          if (dep === 0) return depLabel;
-                          return `${depLabel} · ${methodLabel} · Due: ${dueLabel}`;
-                        })()}
-                      </p>
+                <div className="mb-3">
+                  <div className="flex items-center gap-2 px-3 py-2 bg-white border border-violet-200 rounded-lg">
+                    <CreditCard className="h-3.5 w-3.5 text-violet-500 flex-shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[10px] font-semibold text-violet-500 uppercase tracking-wide">Payment Setup</p>
+                      {orderLoading ? (
+                        <p className="text-xs text-gray-400">—</p>
+                      ) : (
+                        <p className="text-xs font-medium text-gray-800">
+                          {(() => {
+                            const dep = linkedOrder?.depositPercentage ?? 100;
+                            const method = linkedOrder?.paymentMethod ?? 'payment_link';
+                            const due = linkedOrder?.balanceDueDays ?? 0;
+                            const depLabel = dep === 0 ? 'Pay Later' : dep === 100 ? 'Full' : `${dep}% deposit`;
+                            const methodLabel = ({ payment_link: 'Payment Link', cash: 'Cash', bank_transfer: 'Bank Transfer', cheque: 'Cheque', card: 'Card', other: 'Other', pay_later: 'Pay Later' } as Record<string, string>)[method] ?? method;
+                            const dueLabel = ({ 0: 'Now', 7: '7 days', 14: '14 days', 30: '30 days', 60: '60 days' } as Record<number, string>)[due] ?? `${due} days`;
+                            if (dep === 0) return depLabel;
+                            return `${depLabel} · ${methodLabel} · Due: ${dueLabel}`;
+                          })()}
+                        </p>
+                      )}
+                    </div>
+                    {!showPaymentEdit && (
+                      <button
+                        onClick={openPaymentEdit}
+                        className="ml-1 p-1 rounded hover:bg-violet-100 text-violet-500 flex-shrink-0"
+                        title="Edit payment terms"
+                      >
+                        <Pencil className="h-3 w-3" />
+                      </button>
                     )}
                   </div>
+
+                  {showPaymentEdit && (
+                    <div className="mt-2 p-3 bg-violet-50 border border-violet-200 rounded-lg space-y-3">
+                      <p className="text-[10px] font-semibold text-violet-600 uppercase tracking-wide">Edit Payment Terms</p>
+
+                      <div>
+                        <Label className="text-[11px] text-gray-600 mb-1 block">Deposit</Label>
+                        <Select value={editDeposit} onValueChange={setEditDeposit}>
+                          <SelectTrigger className="h-8 text-xs">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="0">Pay Later</SelectItem>
+                            <SelectItem value="25">25% deposit</SelectItem>
+                            <SelectItem value="50">50% deposit</SelectItem>
+                            <SelectItem value="75">75% deposit</SelectItem>
+                            <SelectItem value="100">Full payment</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {editDeposit !== '0' && (
+                        <div>
+                          <Label className="text-[11px] text-gray-600 mb-1 block">Payment Method</Label>
+                          <Select value={editMethod} onValueChange={setEditMethod}>
+                            <SelectTrigger className="h-8 text-xs">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="payment_link">Payment Link</SelectItem>
+                              <SelectItem value="cash">Cash</SelectItem>
+                              <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
+                              <SelectItem value="cheque">Cheque</SelectItem>
+                              <SelectItem value="card">Card</SelectItem>
+                              <SelectItem value="other">Other</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+
+                      <div>
+                        <Label className="text-[11px] text-gray-600 mb-1 block">Balance Due</Label>
+                        <Select value={editDueDays} onValueChange={setEditDueDays}>
+                          <SelectTrigger className="h-8 text-xs">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="0">Due now</SelectItem>
+                            <SelectItem value="7">7 days</SelectItem>
+                            <SelectItem value="14">14 days</SelectItem>
+                            <SelectItem value="30">30 days</SelectItem>
+                            <SelectItem value="60">60 days</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="flex gap-2 pt-1">
+                        <Button
+                          size="sm"
+                          className="flex-1 h-7 text-xs bg-violet-600 hover:bg-violet-700 text-white"
+                          disabled={paymentTermsMutation.isPending}
+                          onClick={() => paymentTermsMutation.mutate({
+                            depositPercentage: parseInt(editDeposit),
+                            paymentMethod: editDeposit === '0' ? 'pay_later' : editMethod,
+                            balanceDueDays: parseInt(editDueDays),
+                          })}
+                        >
+                          {paymentTermsMutation.isPending ? 'Saving…' : 'Save'}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="flex-1 h-7 text-xs"
+                          onClick={() => setShowPaymentEdit(false)}
+                          disabled={paymentTermsMutation.isPending}
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
               {linkedOrder && linkedOrder.status !== 'draft' ? (
