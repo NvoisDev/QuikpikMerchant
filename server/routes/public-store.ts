@@ -531,7 +531,7 @@ export function registerPublicStoreRoutes(app: Express) {
                     </tr>
                   </tfoot>
                 </table>
-                <a href="https://quikpik.app/invoices?draft=${newOrder.id}" style="display:inline-block;background:#16a34a;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600">View Draft Invoice →</a>
+                <a href="https://quikpik.app/quick-quote?draftId=${newOrder.id}" style="display:inline-block;background:#16a34a;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600">View Draft Invoice →</a>
               </div>
             `,
           });
@@ -737,7 +737,7 @@ export function registerPublicStoreRoutes(app: Express) {
                   </thead>
                   <tbody>${itemRows}</tbody>
                 </table>
-                <a href="https://quikpik.app/invoices?draft=${newOrder.id}" style="display:inline-block;background:#16a34a;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600">View Draft Invoice →</a>
+                <a href="https://quikpik.app/quick-quote?draftId=${newOrder.id}" style="display:inline-block;background:#16a34a;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600">View Draft Invoice →</a>
               </div>
             `,
           });
