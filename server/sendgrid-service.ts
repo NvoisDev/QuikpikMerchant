@@ -298,6 +298,11 @@ export async function sendWeeklyOrderDigestEmail(data: {
     total: number;
   }>;
   newLeadsCount?: number;
+  newLeads?: Array<{
+    enquirerName: string;
+    message: string;
+    createdAt: Date;
+  }>;
 }): Promise<boolean> {
   const { wrapCustomerEmail, emailCard, emailButton, emailHeading, emailTable } = await import('./email-templates');
 
@@ -321,10 +326,22 @@ export async function sendWeeklyOrderDigestEmail(data: {
 
   const countWord = data.orders.length === 1 ? '1 order' : `${data.orders.length} orders`;
   const newLeadsCount = data.newLeadsCount ?? 0;
+  const newLeads = data.newLeads ?? [];
+
+  const leadsTableRows = newLeads.map((l) => {
+    const dateStr = new Date(l.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+    const snippet = l.message.length > 80 ? l.message.slice(0, 80).trimEnd() + '…' : l.message || '—';
+    return [escapeHtml(l.enquirerName), dateStr, escapeHtml(snippet)];
+  });
 
   const leadsSection = newLeadsCount > 0
     ? `${emailCard(
-        `<p style="margin:0 0 6px;font-weight:600;color:#1d4ed8;font-size:15px">📬 New leads this week: ${newLeadsCount}</p><p style="margin:0;font-size:14px;color:#1e40af">You received ${newLeadsCount === 1 ? 'a new enquiry' : `${newLeadsCount} new enquiries`} from your public store this week. <a href="${leadsLink}" style="color:#1d4ed8;text-decoration:underline">View your leads →</a></p>`,
+        `<p style="margin:0 0 10px;font-weight:600;color:#1d4ed8;font-size:15px">📬 New leads this week: ${newLeadsCount}</p>
+${emailTable(['Name', 'Date', 'Message'], leadsTableRows)}
+${newLeadsCount > newLeads.length
+  ? `<p style="margin:10px 0 0;font-size:13px;color:#1e40af"><a href="${leadsLink}" style="color:#1d4ed8;text-decoration:underline">View all ${newLeadsCount} leads →</a></p>`
+  : `<p style="margin:10px 0 0;font-size:13px;color:#1e40af"><a href="${leadsLink}" style="color:#1d4ed8;text-decoration:underline">View your leads →</a></p>`
+}`,
         { borderColor: '#93c5fd', bgColor: '#eff6ff' }
       )}`
     : '';

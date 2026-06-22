@@ -1,6 +1,6 @@
 import { db } from '../db';
 import { orders, users, storeEnquiries } from '@shared/schema';
-import { and, lt, gte, notInArray, eq, sql, count } from 'drizzle-orm';
+import { and, lt, gte, notInArray, eq, sql, count, desc } from 'drizzle-orm';
 import { sendWeeklyOrderDigestEmail } from '../sendgrid-service';
 
 const STALE_DAYS = 15;
@@ -79,7 +79,9 @@ async function processWholesalerDigest(
   const weekAgo = new Date();
   weekAgo.setDate(weekAgo.getDate() - 7);
 
-  const [staleOrders, leadsResult] = await Promise.all([
+  const LEADS_PREVIEW_LIMIT = 5;
+
+  const [staleOrders, leadsResult, leadsCountResult] = await Promise.all([
     db
       .select({
         id: orders.id,
@@ -98,6 +100,21 @@ async function processWholesalerDigest(
         )
       ),
     db
+      .select({
+        enquirerName: storeEnquiries.enquirerName,
+        message: storeEnquiries.message,
+        createdAt: storeEnquiries.createdAt,
+      })
+      .from(storeEnquiries)
+      .where(
+        and(
+          eq(storeEnquiries.wholesalerId, wholesaler.id),
+          gte(storeEnquiries.createdAt, weekAgo)
+        )
+      )
+      .orderBy(desc(storeEnquiries.createdAt))
+      .limit(LEADS_PREVIEW_LIMIT),
+    db
       .select({ count: count() })
       .from(storeEnquiries)
       .where(
@@ -108,7 +125,12 @@ async function processWholesalerDigest(
       ),
   ]);
 
-  const newLeadsCount = leadsResult[0]?.count ?? 0;
+  const newLeadsCount = leadsCountResult[0]?.count ?? 0;
+  const newLeads = leadsResult.map((l) => ({
+    enquirerName: l.enquirerName || 'Unknown',
+    message: l.message || '',
+    createdAt: l.createdAt!,
+  }));
 
   if (staleOrders.length === 0 && newLeadsCount === 0) return false;
 
@@ -123,6 +145,7 @@ async function processWholesalerDigest(
       total: o.total ? parseFloat(o.total) : 0,
     })),
     newLeadsCount,
+    newLeads,
   });
 
   if (sent) {
