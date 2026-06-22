@@ -297,6 +297,7 @@ export async function sendWeeklyOrderDigestEmail(data: {
     status: string;
     total: number;
   }>;
+  newLeadsCount?: number;
 }): Promise<boolean> {
   const { wrapCustomerEmail, emailCard, emailButton, emailHeading, emailTable } = await import('./email-templates');
 
@@ -316,27 +317,51 @@ export async function sendWeeklyOrderDigestEmail(data: {
 
   const appBase = process.env.APP_URL || 'https://quikpik.app';
   const ordersLink = `${appBase}/orders?status=unfulfilled`;
+  const leadsLink = `${appBase}/leads`;
 
   const countWord = data.orders.length === 1 ? '1 order' : `${data.orders.length} orders`;
+  const newLeadsCount = data.newLeadsCount ?? 0;
 
-  const body = `${emailHeading('Weekly Order Digest', { color: '#10b981', size: '22px' })}
-<p style="font-size:16px;margin:0 0 8px">Hi ${escapeHtml(data.businessName)},</p>
-<p style="margin:0 0 20px">You have <strong>${countWord}</strong> that ${data.orders.length === 1 ? 'has' : 'have'} been unfulfilled for more than 15 days. Here's a summary:</p>
+  const leadsSection = newLeadsCount > 0
+    ? `${emailCard(
+        `<p style="margin:0 0 6px;font-weight:600;color:#1d4ed8;font-size:15px">📬 New leads this week: ${newLeadsCount}</p><p style="margin:0;font-size:14px;color:#1e40af">You received ${newLeadsCount === 1 ? 'a new enquiry' : `${newLeadsCount} new enquiries`} from your public store this week. <a href="${leadsLink}" style="color:#1d4ed8;text-decoration:underline">View your leads →</a></p>`,
+        { borderColor: '#93c5fd', bgColor: '#eff6ff' }
+      )}`
+    : '';
+
+  const ordersSection = data.orders.length > 0
+    ? `<p style="margin:0 0 20px">You have <strong>${countWord}</strong> that ${data.orders.length === 1 ? 'has' : 'have'} been unfulfilled for more than 15 days. Here's a summary:</p>
 ${emailTable(['Order #', 'Customer', 'Age', 'Status', 'Value'], orderRows)}
 ${emailCard(`<p style="margin:0;color:#92400e;font-size:14px">These orders may need your attention. Fulfilling or following up on them promptly helps keep your customers happy.</p>`, { borderColor: '#f59e0b', bgColor: '#fffbeb' })}
-${emailButton('View Unfulfilled Orders', ordersLink, '#10b981')}
-<p style="margin:20px 0 4px;font-size:13px;color:#6b7280">You're receiving this because you have unfulfilled orders older than 15 days. You can turn off this digest in your <a href="${appBase}/settings?tab=notifications" style="color:#10b981;text-decoration:none">notification settings</a>.</p>`;
+${emailButton('View Unfulfilled Orders', ordersLink, '#10b981')}`
+    : '';
+
+  const body = `${emailHeading('Weekly Order Digest', { color: '#10b981', size: '22px' })}
+<p style="font-size:16px;margin:0 0 16px">Hi ${escapeHtml(data.businessName)},</p>
+${leadsSection}
+${ordersSection}
+<p style="margin:20px 0 4px;font-size:13px;color:#6b7280">You're receiving this weekly digest to keep you on top of your business activity. You can turn it off in your <a href="${appBase}/settings?tab=notifications" style="color:#10b981;text-decoration:none">notification settings</a>.</p>`;
+
+  const preheaderParts: string[] = [];
+  if (newLeadsCount > 0) preheaderParts.push(`${newLeadsCount} new lead${newLeadsCount !== 1 ? 's' : ''}`);
+  if (data.orders.length > 0) preheaderParts.push(`${countWord} awaiting fulfilment`);
+  const preheader = preheaderParts.join(' · ') || 'Your weekly business digest';
+
+  const subjectParts: string[] = [];
+  if (newLeadsCount > 0) subjectParts.push(`${newLeadsCount} new lead${newLeadsCount !== 1 ? 's' : ''}`);
+  if (data.orders.length > 0) subjectParts.push(`${countWord} awaiting fulfilment`);
+  const subject = `Weekly Digest: ${subjectParts.join(' · ') || 'Your business summary'}`;
 
   const html = wrapCustomerEmail(
     body,
     { businessName: data.businessName },
-    { preheader: `You have ${countWord} awaiting fulfilment — ${data.orders[0].orderNumber}${data.orders.length > 1 ? ' and more' : ''}` }
+    { preheader }
   );
 
   return await sendEmail({
     to: data.wholesalerEmail,
     from: 'hello@quikpik.co',
-    subject: `Weekly Digest: ${countWord} awaiting fulfilment`,
+    subject,
     html,
   });
 }

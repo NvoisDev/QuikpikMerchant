@@ -1,6 +1,6 @@
 import { db } from '../db';
-import { orders, users } from '@shared/schema';
-import { and, lt, notInArray, eq, sql } from 'drizzle-orm';
+import { orders, users, storeEnquiries } from '@shared/schema';
+import { and, lt, gte, notInArray, eq, sql, count } from 'drizzle-orm';
 import { sendWeeklyOrderDigestEmail } from '../sendgrid-service';
 
 const STALE_DAYS = 15;
@@ -76,25 +76,41 @@ async function processWholesalerDigest(
     if (daysSinceLast < 6.5) return false;
   }
 
-  const staleOrders = await db
-    .select({
-      id: orders.id,
-      orderNumber: orders.orderNumber,
-      customerName: orders.customerName,
-      createdAt: orders.createdAt,
-      status: orders.status,
-      total: orders.total,
-    })
-    .from(orders)
-    .where(
-      and(
-        eq(orders.wholesalerId, wholesaler.id),
-        lt(orders.createdAt, cutoffDate),
-        notInArray(orders.status, UNFULFILLED_STATUSES)
-      )
-    );
+  const weekAgo = new Date();
+  weekAgo.setDate(weekAgo.getDate() - 7);
 
-  if (staleOrders.length === 0) return false;
+  const [staleOrders, leadsResult] = await Promise.all([
+    db
+      .select({
+        id: orders.id,
+        orderNumber: orders.orderNumber,
+        customerName: orders.customerName,
+        createdAt: orders.createdAt,
+        status: orders.status,
+        total: orders.total,
+      })
+      .from(orders)
+      .where(
+        and(
+          eq(orders.wholesalerId, wholesaler.id),
+          lt(orders.createdAt, cutoffDate),
+          notInArray(orders.status, UNFULFILLED_STATUSES)
+        )
+      ),
+    db
+      .select({ count: count() })
+      .from(storeEnquiries)
+      .where(
+        and(
+          eq(storeEnquiries.wholesalerId, wholesaler.id),
+          gte(storeEnquiries.createdAt, weekAgo)
+        )
+      ),
+  ]);
+
+  const newLeadsCount = leadsResult[0]?.count ?? 0;
+
+  if (staleOrders.length === 0 && newLeadsCount === 0) return false;
 
   const sent = await sendWeeklyOrderDigestEmail({
     wholesalerEmail: wholesaler.email,
@@ -106,6 +122,7 @@ async function processWholesalerDigest(
       status: o.status || 'pending',
       total: o.total ? parseFloat(o.total) : 0,
     })),
+    newLeadsCount,
   });
 
   if (sent) {
