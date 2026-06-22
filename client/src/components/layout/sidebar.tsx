@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Link, useLocation } from "wouter";
+import { useToast } from "@/hooks/use-toast";
 import { getBaseTier } from "@/lib/planUtils";
 import { useAuth } from "@/hooks/useAuth";
 import { useSidebarPermissions } from "@/hooks/useSidebarPermissions";
@@ -74,6 +75,7 @@ export default function Sidebar() {
   const { checkTabAccess, permissionsLoading } = useSidebarPermissions();
   const isTeamMember = user?.role === 'team_member';
   const [upgradeModal, setUpgradeModal] = useState<{ open: boolean; feature: string }>({ open: false, feature: '' });
+  const { toast } = useToast();
 
   const { data: subscriptionData } = useQuery({
     queryKey: ["/api/subscriptions/current"],
@@ -104,6 +106,53 @@ export default function Sidebar() {
   });
   const newLeadsTotal = leadsCountData?.total ?? 0;
   const newQuoteRequestCount = leadsCountData?.quoteRequests ?? 0;
+
+  const prevLeadsTotalRef = useRef<number | null>(null);
+  const prevQuoteRequestCountRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (!user || leadsCountData === undefined) return;
+
+    const prevTotal = prevLeadsTotalRef.current;
+    const prevQuotes = prevQuoteRequestCountRef.current;
+    const currentTotal = leadsCountData.total ?? 0;
+    const currentQuotes = leadsCountData.quoteRequests ?? 0;
+
+    if (prevTotal !== null && currentTotal > prevTotal) {
+      const newQuotes = prevQuotes !== null ? currentQuotes - prevQuotes : 0;
+      const newLeads = currentTotal - prevTotal - Math.max(0, newQuotes);
+
+      let description = "";
+      if (newQuotes > 0 && newLeads > 0) {
+        description = `${newQuotes} new quote request${newQuotes > 1 ? "s" : ""} and ${newLeads} new lead${newLeads > 1 ? "s" : ""} are waiting.`;
+      } else if (newQuotes > 0) {
+        description = `${newQuotes} new quote request${newQuotes > 1 ? "s" : ""} just came in.`;
+      } else {
+        description = `${currentTotal - prevTotal} new lead${currentTotal - prevTotal > 1 ? "s" : ""} just arrived.`;
+      }
+
+      toast({
+        title: "New lead activity",
+        description,
+        duration: 6000,
+      });
+
+      if (typeof window !== "undefined" && "Notification" in window) {
+        if (Notification.permission === "granted") {
+          new Notification("Quikpik — New lead activity", { body: description, icon: "/quikpik-logo.png" });
+        } else if (Notification.permission === "default") {
+          Notification.requestPermission().then((permission) => {
+            if (permission === "granted") {
+              new Notification("Quikpik — New lead activity", { body: description, icon: "/quikpik-logo.png" });
+            }
+          });
+        }
+      }
+    }
+
+    prevLeadsTotalRef.current = currentTotal;
+    prevQuoteRequestCountRef.current = currentQuotes;
+  }, [leadsCountData, user]);
 
   const planTier = getBaseTier((subscriptionData as { user?: { currentPlan?: string } } | undefined)?.user?.currentPlan);
   const isPremiumUser = planTier === "premium";
