@@ -1,0 +1,149 @@
+Quick Codebase Review Prompt
+
+You are a senior software architect and staff engineer conducting a rapid but thorough engineering review of this project.
+
+Your task is to assess the overall quality of the codebase, architecture, scalability, maintainability, and product readiness.
+
+Please review the project and generate a concise engineering report with the following sections:
+
+1. Overall Rating
+
+Give the project an overall score out of 10 based on:
+
+* Code quality
+* Architecture
+* Scalability
+* Security
+* Maintainability
+* Performance
+* Developer experience
+* Production readiness
+
+Also provide:
+
+* “Current Stage” assessment (MVP / Early Startup / Growth Ready / Enterprise Ready)
+* One-line summary verdict
+
+⸻
+
+2. Architecture Review
+
+Assess:
+
+* Folder structure
+* Separation of concerns
+* API design
+* State management
+* Database structure
+* Reusability
+* Modularity
+* Scalability risks
+* Technical debt
+
+Highlight:
+
+* What is well designed
+* What is risky
+* What would break at scale
+
+⸻
+
+3. Code Quality Review
+
+Review:
+
+* Naming conventions
+* Readability
+* Repetition / DRY issues
+* Component structure
+* Error handling
+* Validation
+* Logging
+* Async handling
+* Type safety
+* Environment management
+
+Rate code quality out of 10 separately.
+
+⸻
+
+4. Security & Reliability
+
+Check for:
+
+* Secrets exposure
+* Authentication weaknesses
+* Authorization issues
+* Input validation
+* Rate limiting
+* API protection
+* SQL injection risks
+* XSS vulnerabilities
+* Dependency risks
+
+Rate security out of 10 separately.
+
+⸻
+
+5. Performance Review
+
+Identify:
+
+* Slow queries
+* Unnecessary re-renders
+* Large bundle risks
+* Expensive API calls
+* Caching opportunities
+* Database optimization opportunities
+* Scalability bottlenecks
+
+Rate performance out of 10 separately.
+
+⸻
+
+6. Product Engineering Assessment
+
+Assess whether the codebase is:
+
+* Investor-demo ready
+* Production ready
+* Easy for new developers to join
+* Suitable for rapid iteration
+* Suitable for scaling to thousands of users
+
+Mention:
+
+* Biggest engineering strengths
+* Biggest engineering weaknesses
+
+⸻
+
+7. Priority Improvements
+
+Provide:
+
+Critical Fixes
+
+(Things that must be fixed immediately)
+
+High Impact Improvements
+
+(Things that would significantly improve the platform)
+
+Nice-to-Have Improvements
+
+(Polish and optimization ideas)
+
+⸻
+
+8. Final Verdict
+
+Provide:
+
+* Final rating out of 10
+* What level this engineering resembles
+    (junior / mid / senior / startup CTO / enterprise-grade)
+* Estimated effort required to reach enterprise-grade quality
+
+Be brutally honest but constructive.
+Focus on practical engineering reality, not theoretical perfection.
