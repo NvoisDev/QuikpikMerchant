@@ -1008,14 +1008,17 @@ export async function sendCustomerInvoiceEmail(customer: any, order: any, items:
       try {
         const customerDisplayName = customer.name || (customer.firstName ? `${customer.firstName || ''} ${customer.lastName || ''}`.trim() : null) || customer.email || 'a customer';
         const isAlreadyFulfilled = order.status === 'fulfilled' || order.status === 'paid';
-        const wholesalerSubjectLabel = isDeposit ? 'Deposit Received' : isBalancePayment ? 'Balance Payment Received' : (order.isQuote || isAlreadyFulfilled) ? 'Payment Received' : 'New Order Received';
+        const isActuallyPaid = order.paymentStatus === 'paid' || !!order.paidAt || isAlreadyFulfilled;
+        const wholesalerSubjectLabel = isDeposit ? 'Deposit Received' : isBalancePayment ? 'Balance Payment Received' : (order.isQuote && !isActuallyPaid) ? 'Invoice Sent' : (order.isQuote || isAlreadyFulfilled) ? 'Payment Received' : 'New Order Received';
         const wholesalerBodyLabel = isDeposit
           ? `Deposit of ${currencySymbol}${amountPaid !== null ? amountPaid.toFixed(2) : '?'} received from <strong>${customerDisplayName}</strong>. Outstanding balance: ${currencySymbol}${amountOutstanding !== null ? amountOutstanding.toFixed(2) : '?'}. Invoice attached as PDF.`
           : isBalancePayment
             ? (() => { const balanceTxn = order.latestPaymentAmount ? parseFloat(order.latestPaymentAmount) : amountPaid; return `Balance payment of ${currencySymbol}${balanceTxn !== null ? balanceTxn.toFixed(2) : '?'} received from <strong>${customerDisplayName}</strong>. The order is now fully paid. Invoice attached as PDF.`; })()
-            : (order.isQuote || isAlreadyFulfilled)
-              ? `Payment received from <strong>${customerDisplayName}</strong> for order ${order.orderNumber || `#${order.id}`}. Invoice attached as PDF.`
-              : `Placed by <strong>${customerDisplayName}</strong>. Full invoice attached as PDF.`;
+            : (order.isQuote && !isActuallyPaid)
+              ? `Invoice sent to <strong>${customerDisplayName}</strong> for order ${order.orderNumber || `#${order.id}`}. Invoice attached as PDF.`
+              : (order.isQuote || isAlreadyFulfilled)
+                ? `Payment received from <strong>${customerDisplayName}</strong> for order ${order.orderNumber || `#${order.id}`}. Invoice attached as PDF.`
+                : `Placed by <strong>${customerDisplayName}</strong>. Full invoice attached as PDF.`;
         const wholesalerHtml = `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto"><h2 style="color:#1a7a3d">${wholesalerSubjectLabel} — ${orderRef}</h2><p>${wholesalerBodyLabel}</p><p style="margin-top:24px;color:#6b7280;font-size:12px">Powered by <strong style="color:#1a7a3d">Quikpik Merchant</strong></p></div>`;
         await sgMail.send({ to: wholesaler.email, from: 'hello@quikpik.co', ...(customer.email ? { replyTo: customer.email } : {}), subject: `${wholesalerSubjectLabel} — ${orderRef} — Invoice Attached`, html: wholesalerHtml, ...(pdfAttachment ? { attachments: [pdfAttachment] } : {}) });
       } catch (err: any) { console.error('⚠️ Failed to send wholesaler invoice copy (non-fatal):', err?.message); }
