@@ -158,7 +158,11 @@ function EnquiryDrawer({ enquiry, onClose }: { enquiry: StoreEnquiry; onClose: (
               <p className="text-xs font-semibold text-violet-700 uppercase tracking-wide mb-2 flex items-center gap-1.5">
                 <FileText className="h-3 w-3" /> Draft Invoice
               </p>
-              <p className="text-xs text-violet-600 mb-3">A draft invoice has been created from this cart quote request. Approve it now to send the invoice to the customer instantly, or open it first to make changes.</p>
+              <p className="text-xs text-violet-600 mb-3">
+                {linkedOrder && linkedOrder.status !== 'draft'
+                  ? 'This invoice has been approved and sent to the customer.'
+                  : 'A draft invoice has been created from this cart quote request. Approve it now to send the invoice to the customer instantly, or open it first to make changes.'}
+              </p>
               {linkedOrder && linkedOrder.status !== 'draft' ? (
                 <div className="flex items-center justify-center gap-2 w-full py-2 mb-2 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-700 text-sm font-medium">
                   <CheckCircle2 className="h-3.5 w-3.5" /> Invoice already sent
@@ -177,7 +181,8 @@ function EnquiryDrawer({ enquiry, onClose }: { enquiry: StoreEnquiry; onClose: (
                 href={`/invoices?draft=${enquiry.orderId}`}
                 className="flex items-center justify-center gap-2 w-full py-2 border border-violet-300 text-violet-700 hover:bg-violet-100 rounded-lg text-sm font-medium transition-colors"
               >
-                <ExternalLink className="h-3.5 w-3.5" /> View & Edit Draft Invoice
+                <ExternalLink className="h-3.5 w-3.5" />
+                {linkedOrder && linkedOrder.status !== 'draft' ? 'View Invoice' : 'View & Edit Draft Invoice'}
               </a>
             </div>
           )}
