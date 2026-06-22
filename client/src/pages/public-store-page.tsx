@@ -318,22 +318,29 @@ function CartDrawer({
 
         {cart.length > 0 && (
           <div className="border-t border-gray-100 p-4 space-y-3">
-            {showPrices && (
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-500">Subtotal ({totalItems} item{totalItems !== 1 ? 's' : ''})</span>
-                <span className="font-semibold text-gray-900">{formatCurrency(subtotal, currency)}</span>
-              </div>
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-gray-500">Subtotal ({totalItems} item{totalItems !== 1 ? 's' : ''})</span>
+              <span className="font-semibold text-gray-900">
+                {showPrices ? formatCurrency(subtotal, currency) : '—'}
+              </span>
+            </div>
+            {showPrices ? (
+              <Button
+                disabled
+                className="w-full h-11 text-sm font-semibold cursor-not-allowed opacity-60"
+                title="Online checkout coming soon"
+              >
+                Checkout — Coming Soon
+              </Button>
+            ) : (
+              <Button
+                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white h-11 text-sm font-semibold"
+                onClick={onRequestQuote}
+              >
+                <Tag className="h-4 w-4 mr-2" />
+                Get Trade Pricing
+              </Button>
             )}
-            {!showPrices && (
-              <p className="text-xs text-gray-400 text-center">{totalItems} item{totalItems !== 1 ? 's' : ''} selected — submit to get pricing</p>
-            )}
-            <Button
-              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white h-11 text-sm font-semibold"
-              onClick={onRequestQuote}
-            >
-              <Tag className="h-4 w-4 mr-2" />
-              {showPrices ? 'Request Quote' : 'Get Trade Pricing'}
-            </Button>
           </div>
         )}
       </div>

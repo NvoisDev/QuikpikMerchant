@@ -445,7 +445,7 @@ export function registerPublicStoreRoutes(app: Express) {
         customerTransactionFee: '0.00',
         vatAmount: '0.00',
         total: subtotal.toFixed(2),
-        status: 'pending',
+        status: 'draft',
         isQuote: true,
         paymentStatus: 'unpaid',
         notes,
@@ -503,7 +503,7 @@ export function registerPublicStoreRoutes(app: Express) {
           await sendEmail({
             to: wholesaler.email,
             from: 'hello@quikpik.co',
-            subject: `New quote request${businessLabel} — ${cartSnapshot.length} item${cartSnapshot.length !== 1 ? 's' : ''}`,
+            subject: `New quote request from ${data.enquirerName} — ${cartSnapshot.length} item${cartSnapshot.length !== 1 ? 's' : ''}`,
             html: `
               <div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:24px">
                 <h2 style="color:#16a34a;margin-bottom:4px">New Quote Request</h2>
@@ -531,7 +531,7 @@ export function registerPublicStoreRoutes(app: Express) {
                     </tr>
                   </tfoot>
                 </table>
-                <a href="https://quikpik.app/invoices" style="display:inline-block;background:#16a34a;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600">View Draft Invoice →</a>
+                <a href="https://quikpik.app/invoices?draft=${newOrder.id}" style="display:inline-block;background:#16a34a;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600">View Draft Invoice →</a>
               </div>
             `,
           });
