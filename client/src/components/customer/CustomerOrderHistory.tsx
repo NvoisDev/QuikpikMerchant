@@ -1122,21 +1122,27 @@ export const OrderDetailsModal = ({ order, wholesalerId, customerPhone, currency
                     );
                   })()}
                   <div className="text-xs text-gray-600">
-                    Quantity: {item.quantity} {item.sellingType === 'pallets' ? 'pallets' : 'units'} × {fmt(item.unitPrice)}
+                    Quantity: {item.quantity} {item.sellingType === 'pallets' ? 'pallets' : 'units'}
+                    {priceDisplayMode === 'shown' && (
+                      <> × {fmt(item.unitPrice)}</>
+                    )}
                     {(item.freeItems ?? 0) > 0 && (
                       <span className="ml-1 text-green-700 font-medium">+{item.freeItems} free</span>
                     )}
                   </div>
                 </div>
-                <div className="text-left sm:text-right flex-shrink-0">
-                  <div className="font-medium text-xs">{fmt(parseFloat(item.unitPrice) * item.quantity)}</div>
-                </div>
+                {priceDisplayMode === 'shown' && (
+                  <div className="text-left sm:text-right flex-shrink-0">
+                    <div className="font-medium text-xs">{fmt(parseFloat(item.unitPrice) * item.quantity)}</div>
+                  </div>
+                )}
               </div>
             ))}
           </div>
         </div>
 
         {/* Payment Summary */}
+        {priceDisplayMode === 'shown' ? (
         <div>
           <h3 className="font-medium mb-1 text-sm sm:text-base">Payment Summary</h3>
           <div className="bg-gray-50 p-2 sm:p-3 rounded-lg space-y-1">
@@ -1231,6 +1237,19 @@ export const OrderDetailsModal = ({ order, wholesalerId, customerPhone, currency
             )}
           </div>
         </div>
+        ) : (
+        <div className="rounded-lg border border-green-200 bg-green-50 p-4 flex items-start gap-3">
+          <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+            <span className="text-base">🏷️</span>
+          </div>
+          <div>
+            <p className="font-semibold text-green-900 text-sm">Get Trade Pricing</p>
+            <p className="text-green-800 text-xs mt-1">
+              Pricing details are available to approved trade customers. Contact the seller to get your trade account set up.
+            </p>
+          </div>
+        </div>
+        )}
 
         {/* Order Timeline */}
         <div>
@@ -1694,21 +1713,27 @@ function CustomerOrderDetailContent({ order, wholesalerId, customerPhone, curren
                     );
                   })()}
                   <div className="text-xs text-gray-600">
-                    Quantity: {item.quantity} {item.sellingType === 'pallets' ? 'pallets' : 'units'} × {fmt(item.unitPrice)}
+                    Quantity: {item.quantity} {item.sellingType === 'pallets' ? 'pallets' : 'units'}
+                    {priceDisplayMode === 'shown' && (
+                      <> × {fmt(item.unitPrice)}</>
+                    )}
                     {(item.freeItems ?? 0) > 0 && (
                       <span className="ml-1 text-green-700 font-medium">+{item.freeItems} free</span>
                     )}
                   </div>
                 </div>
-                <div className="text-left sm:text-right flex-shrink-0">
-                  <div className="font-medium text-xs">{fmt(parseFloat(item.unitPrice) * item.quantity)}</div>
-                </div>
+                {priceDisplayMode === 'shown' && (
+                  <div className="text-left sm:text-right flex-shrink-0">
+                    <div className="font-medium text-xs">{fmt(parseFloat(item.unitPrice) * item.quantity)}</div>
+                  </div>
+                )}
               </div>
             ))}
           </div>
         </div>
 
         {/* Payment Summary */}
+        {priceDisplayMode === 'shown' ? (
         <div>
           <h3 className="font-medium mb-1 text-sm sm:text-base">Payment Summary</h3>
           <div className="bg-gray-50 p-2 sm:p-3 rounded-lg space-y-1">
@@ -1778,6 +1803,19 @@ function CustomerOrderDetailContent({ order, wholesalerId, customerPhone, curren
             )}
           </div>
         </div>
+        ) : (
+        <div className="rounded-lg border border-green-200 bg-green-50 p-4 flex items-start gap-3">
+          <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+            <span className="text-base">🏷️</span>
+          </div>
+          <div>
+            <p className="font-semibold text-green-900 text-sm">Get Trade Pricing</p>
+            <p className="text-green-800 text-xs mt-1">
+              Pricing details are available to approved trade customers. Contact the seller to get your trade account set up.
+            </p>
+          </div>
+        </div>
+        )}
 
         {/* Order Timeline */}
         <div>
