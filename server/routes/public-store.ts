@@ -550,6 +550,24 @@ export function registerPublicStoreRoutes(app: Express) {
     }
   });
 
+  // GET /api/public/enquiries/new-count — count of unread (status='new') leads
+  app.get("/api/public/enquiries/new-count", requireAuth, async (req: any, res) => {
+    try {
+      const wholesalerId = req.user?.id || req.user?.claims?.sub;
+      if (!wholesalerId) return res.status(401).json({ message: "Unauthorised" });
+
+      const [{ count }] = await db
+        .select({ count: sql<number>`cast(count(*) as int)` })
+        .from(storeEnquiries)
+        .where(and(eq(storeEnquiries.wholesalerId, wholesalerId), eq(storeEnquiries.status, 'new')));
+
+      res.json({ count: count ?? 0 });
+    } catch (err) {
+      console.error("Error fetching enquiry count:", err);
+      res.status(500).json({ message: "Failed to fetch enquiry count" });
+    }
+  });
+
   // GET /api/public/enquiries — wholesaler views their own leads (auth required)
   app.get("/api/public/enquiries", requireAuth, async (req: any, res) => {
     try {

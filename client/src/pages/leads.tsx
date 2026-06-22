@@ -70,6 +70,7 @@ function EnquiryDrawer({ enquiry, onClose }: { enquiry: StoreEnquiry; onClose: (
       apiRequest('PATCH', `/api/public/enquiries/${enquiry.id}`, { status }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/public/enquiries'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/public/enquiries/new-count'] });
       toast({ title: "Updated", description: "Lead status updated." });
       onClose();
     },
@@ -306,7 +307,10 @@ export default function LeadsPage() {
 
   const markViewedMutation = useMutation({
     mutationFn: (id: number) => apiRequest('PATCH', `/api/public/enquiries/${id}`, { status: 'viewed' }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['/api/public/enquiries'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/public/enquiries'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/public/enquiries/new-count'] });
+    },
   });
 
   const handleOpen = (e: StoreEnquiry) => {
