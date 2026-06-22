@@ -7,6 +7,16 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import {
   Inbox, Phone, Mail, Building2, Package, MessageSquare,
@@ -64,6 +74,7 @@ function EnquiryDrawer({ enquiry, onClose }: { enquiry: StoreEnquiry; onClose: (
   const queryClient = useQueryClient();
   const [note, setNote] = useState(enquiry.wholesalerNote ?? '');
   const [noteDirty, setNoteDirty] = useState(false);
+  const [showApproveConfirm, setShowApproveConfirm] = useState(false);
   const isQuoteRequest = !!enquiry.orderId;
 
   const markMutation = useMutation({
@@ -143,7 +154,7 @@ function EnquiryDrawer({ enquiry, onClose }: { enquiry: StoreEnquiry; onClose: (
               <p className="text-xs text-violet-600 mb-3">A draft invoice has been created from this cart quote request. Approve it now to send the invoice to the customer instantly, or open it first to make changes.</p>
               <Button
                 className="w-full mb-2 bg-violet-600 hover:bg-violet-700 text-white"
-                onClick={() => approveMutation.mutate()}
+                onClick={() => setShowApproveConfirm(true)}
                 disabled={approveMutation.isPending}
               >
                 <Send className="h-3.5 w-3.5 mr-2" />
@@ -299,6 +310,31 @@ function EnquiryDrawer({ enquiry, onClose }: { enquiry: StoreEnquiry; onClose: (
           )}
         </div>
       </div>
+
+      <AlertDialog open={showApproveConfirm} onOpenChange={setShowApproveConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Send invoice to {enquiry.enquirerName || 'customer'}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will approve the draft and email the invoice to{' '}
+              <strong>{enquiry.enquirerName || 'the customer'}</strong>
+              {enquiry.enquirerBusiness ? ` (${enquiry.enquirerBusiness})` : ''} for{' '}
+              <strong>£{cartTotal.toFixed(2)}</strong>. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-violet-600 hover:bg-violet-700 text-white disabled:opacity-50"
+              disabled={approveMutation.isPending}
+              onClick={() => approveMutation.mutate()}
+            >
+              <Send className="h-3.5 w-3.5 mr-2" />
+              {approveMutation.isPending ? 'Sending…' : 'Send Invoice'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
