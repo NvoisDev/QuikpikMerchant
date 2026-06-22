@@ -719,7 +719,6 @@ function PublicStoreSettings({ user }: { user: any }) {
   const [regions, setRegions] = useState(user?.deliveryRegions || '');
   const [showOnHomepage, setShowOnHomepage] = useState(user?.showOnHomepage ?? false);
   const [minOrderAmount, setMinOrderAmount] = useState(String((user?.minOrderAmount ?? 0) / 100));
-  const [requireApprovalForPricing, setRequireApprovalForPricing] = useState(user?.requireApprovalForPricing === true);
   const [whatsappContactVisible, setWhatsappContactVisible] = useState(user?.whatsappContactVisible !== false);
   const [portalAllowPayLater, setPortalAllowPayLater] = useState(user?.allowPayLater ?? false);
   const [portalDeliveryNote, setPortalDeliveryNote] = useState(user?.deliveryNote || '');
@@ -736,12 +735,11 @@ function PublicStoreSettings({ user }: { user: any }) {
     setRegions(user?.deliveryRegions || '');
     setShowOnHomepage(user?.showOnHomepage ?? false);
     setMinOrderAmount(String((user?.minOrderAmount ?? 0) / 100));
-    setRequireApprovalForPricing(user?.requireApprovalForPricing === true);
     setWhatsappContactVisible(user?.whatsappContactVisible !== false);
     setPortalAllowPayLater(user?.allowPayLater ?? false);
     setPortalDeliveryNote(user?.deliveryNote || '');
     setPortalPickupInstructions(user?.pickupInstructions || '');
-  }, [user?.storeVisibility, user?.priceDisplayMode, user?.moqVisible, user?.stockVisible, user?.packSizeVisible, user?.storeDescription, user?.deliveryRegions, user?.showOnHomepage, user?.minOrderAmount, user?.requireApprovalForPricing, user?.whatsappContactVisible, user?.allowPayLater, user?.deliveryNote, user?.pickupInstructions]);
+  }, [user?.storeVisibility, user?.priceDisplayMode, user?.moqVisible, user?.stockVisible, user?.packSizeVisible, user?.storeDescription, user?.deliveryRegions, user?.showOnHomepage, user?.minOrderAmount, user?.whatsappContactVisible, user?.allowPayLater, user?.deliveryNote, user?.pickupInstructions]);
 
   const storeSlug = user?.storeSlug || user?.id || '';
   const publicUrl = `${window.location.origin}/w/${storeSlug}`;
@@ -761,7 +759,6 @@ function PublicStoreSettings({ user }: { user: any }) {
         enquiriesEnabled: !showPrices,
         minOrderAmount: Math.round((parseFloat(minOrderAmount || '0') || 0) * 100),
         allowQuoteRequests: !showPrices,
-        requireApprovalForPricing,
         allowGuestBrowsing: isPublic,
         whatsappContactVisible,
         allowPayLater: portalAllowPayLater,
@@ -800,15 +797,6 @@ function PublicStoreSettings({ user }: { user: any }) {
               </div>
               <Switch checked={showPrices} onCheckedChange={setShowPrices} />
             </div>
-            {showPrices && (
-              <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-200">
-                <div className="pr-3">
-                  <p className="text-sm font-medium text-gray-700">Require approval for new customers</p>
-                  <p className="text-xs text-gray-500 mt-0.5">New customers must be approved before they can see prices and check out.</p>
-                </div>
-                <Switch checked={requireApprovalForPricing} onCheckedChange={setRequireApprovalForPricing} />
-              </div>
-            )}
           </div>
           <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
             <div className="pr-3">

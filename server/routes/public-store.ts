@@ -67,7 +67,6 @@ export function registerPublicStoreRoutes(app: Express) {
           isInactive: users.isInactive,
           enquiriesEnabled: users.enquiriesEnabled,
           minOrderAmount: users.minOrderAmount,
-          allowQuoteRequests: users.allowQuoteRequests,
           whatsappContactVisible: users.whatsappContactVisible,
           phoneNumber: users.phoneNumber,
         })

@@ -53,7 +53,6 @@ interface PublicWholesaler {
   preferredCurrency?: string;
   enquiriesEnabled?: boolean;
   minOrderAmount?: number | null;
-  allowQuoteRequests?: boolean;
   whatsappContactVisible?: boolean;
   phoneNumber?: string | null;
 }
