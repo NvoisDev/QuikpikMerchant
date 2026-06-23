@@ -1234,6 +1234,10 @@ export const recoveryAttempts = new Map<string, { count: number; lastAttempt: nu
 
 export { ADMIN_EMAILS } from '../config';
 
+export function getAdminEmail(req: any): string | undefined {
+  return req._adminEmail || req.user?.email;
+}
+
 export async function geocodePostcode(postcode: string): Promise<{ lat: number; lng: number } | null> {
   try {
     const clean = postcode.trim().replace(/\s+/g, '').toUpperCase();

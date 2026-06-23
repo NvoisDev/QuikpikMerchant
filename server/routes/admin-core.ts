@@ -2,16 +2,12 @@ import type { Express } from "express";
 import Stripe from "stripe";
 import { ilike } from "drizzle-orm";
 import {
-  ADMIN_EMAILS, and, asc, count, db, desc, eq, geocodePostcode, getPlanLimits, getStripeClient,
+  ADMIN_EMAILS, and, asc, count, db, desc, eq, geocodePostcode, getAdminEmail, getPlanLimits, getStripeClient,
   gte, inArray, isNull, lte, or, orders, requireAuth, sql, storage,
   subscriptionAuditLogs, subscriptionPlans, SubscriptionService, teamMembers, unlockForUpgrade, userSubscriptions, users,
 } from "./shared";
 import { getProductLimit } from "../utils/plan-tier";
 import { sendWholesalerSuspendedEmail, sendWholesalerReinstatedEmail } from "../sendgrid-service";
-
-function getAdminEmail(req: any): string | undefined {
-  return req._adminEmail || req.user?.email;
-}
 
 export function registerAdminCoreRoutes(app: Express): void {
   // GET /api/admin/platform-stats

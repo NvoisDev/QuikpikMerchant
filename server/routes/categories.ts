@@ -1,12 +1,8 @@
 import type { Express } from "express";
-import { ADMIN_EMAILS, and, asc, db, eq, products, requireAuth, sql } from "./shared";
+import { ADMIN_EMAILS, and, asc, db, eq, getAdminEmail, products, requireAuth, sql } from "./shared";
 import { categories } from "@shared/schema";
 
 const MAX_CATEGORY_NAME_LENGTH = 60;
-
-function getAdminEmail(req: any): string | undefined {
-  return req._adminEmail || req.user?.email;
-}
 
 function isAdmin(req: any): boolean {
   return ADMIN_EMAILS.includes(getAdminEmail(req) || "");

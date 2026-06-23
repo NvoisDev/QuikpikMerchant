@@ -1,10 +1,6 @@
 import type { Express } from "express";
-import { ADMIN_EMAILS, requireAuth } from "./shared";
+import { ADMIN_EMAILS, getAdminEmail, requireAuth } from "./shared";
 import { getTemplateCatalog } from "../services/templateCatalog";
-
-function getAdminEmail(req: any): string | undefined {
-  return req._adminEmail || req.user?.email;
-}
 
 export function registerAdminTemplatesRoutes(app: Express): void {
   // GET /api/admin/templates — read-only preview of every platform message

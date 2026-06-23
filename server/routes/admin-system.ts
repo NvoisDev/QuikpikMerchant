@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { ilike } from "drizzle-orm";
 import {
-  ADMIN_EMAILS, and, asc, count, db, desc, eq, getStripeClient, inArray, isNull, lte, or,
+  ADMIN_EMAILS, and, asc, count, db, desc, eq, getAdminEmail, getStripeClient, inArray, isNull, lte, or,
   orders, orderItems, products, requireAuth, sql, storage, SubscriptionService,
   subscriptionPlans, userSubscriptions, users, getPlanLimits,
   stockMovements, stockUpdateNotifications, customerProfileUpdateNotifications,
@@ -18,10 +18,6 @@ import {
   teamMembers, priceLists, priceListItems, priceListAssignments,
   orderCancellationRequests,
 } from "@shared/schema";
-
-function getAdminEmail(req: any): string | undefined {
-  return req._adminEmail || req.user?.email;
-}
 
 const getExistingTables = async (): Promise<Set<string>> => {
   const result = await db.execute<{ tablename: string }>(sql`SELECT tablename FROM pg_tables WHERE schemaname = 'public'`);
@@ -731,10 +727,9 @@ export function registerAdminSystemRoutes(app: Express): void {
         <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;">
           <h2 style="color:#1a7a3d;">Welcome to Quikpik — Your Test Account is Ready</h2>
           <p>Hi ${firstName.trim()},</p>
-          <p>Your tester account has been created by the Quikpik team. Here are your login credentials:</p>
+          <p>Your tester account has been created by the Quikpik team. Use the email address below to log in. Your password will be shared with you separately by the team.</p>
           <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:16px;margin:16px 0;">
             <p style="margin:4px 0;"><strong>Email:</strong> ${emailNorm}</p>
-            <p style="margin:4px 0;"><strong>Password:</strong> ${password}</p>
           </div>
           <p>
             <a href="${appUrl}/login" style="display:inline-block;background:#1a7a3d;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:bold;">
@@ -750,7 +745,7 @@ export function registerAdminSystemRoutes(app: Express): void {
         await sendEmail({
           to: emailNorm, from: 'hello@quikpik.co',
           subject: 'Your Quikpik Tester Account', html,
-          text: `Welcome to Quikpik!\n\nHi ${firstName.trim()},\n\nYour tester account has been set up.\n\nEmail: ${emailNorm}\nPassword: ${password}\n\nLog in at: ${appUrl}/login\n\nPlease change your password after first login.`,
+          text: `Welcome to Quikpik!\n\nHi ${firstName.trim()},\n\nYour tester account has been set up.\n\nEmail: ${emailNorm}\n\nLog in at: ${appUrl}/login\n\nYour password will be shared with you separately by the team. Please change it after your first login.`,
         });
       } catch (emailErr) {
         emailSent = false;

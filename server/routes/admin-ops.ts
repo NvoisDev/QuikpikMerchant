@@ -2,15 +2,11 @@ import type { Express } from "express";
 import rateLimit from "express-rate-limit";
 import {
   ADMIN_EMAILS, adminAuditLogs, and, asc, count, db, desc, eq, formatPackDescriptor,
-  getStripeClient, gte, inArray, lte, or, orderItems, orders, products, productBatches,
+  getAdminEmail, getStripeClient, gte, inArray, lte, or, orderItems, orders, products, productBatches,
   refundAcrossPaymentIntents, requireAuth, sendCustomerInvoiceEmail, sql,
   stockMovements, subscriptionAuditLogs, customerProfileUpdateNotifications,
   systemErrorLogs, users,
 } from "./shared";
-
-function getAdminEmail(req: any): string | undefined {
-  return req._adminEmail || req.user?.email;
-}
 
 const impersonateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -224,14 +220,11 @@ export function registerAdminOpsRoutes(app: Express): void {
     try {
       if (!ADMIN_EMAILS.includes(getAdminEmail(req) || "")) return res.status(403).json({ error: 'Forbidden' });
       const { isLiveMode: liveMode, STRIPE_ENVIRONMENT: env } = await import('../stripeConfig');
-      const testKey = process.env.STRIPE_SECRET_KEY || '';
-      const liveKey = process.env.STRIPE_LIVE_SECRET_KEY || '';
       res.json({
         mode: liveMode() ? 'live' : 'test',
         environment: env,
-        testKeyConfigured: testKey.length > 0,
-        liveKeyConfigured: liveKey.length > 0,
-        keyPrefix: (liveMode() ? liveKey : testKey).slice(0, 8) + '...',
+        testKeyConfigured: (process.env.STRIPE_SECRET_KEY || '').length > 0,
+        liveKeyConfigured: (process.env.STRIPE_LIVE_SECRET_KEY || '').length > 0,
       });
     } catch (error) {
       res.status(500).json({ error: 'Failed to determine Stripe mode' });
