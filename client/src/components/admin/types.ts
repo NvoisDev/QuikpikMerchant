@@ -78,7 +78,7 @@ export interface PayoutStatusData {
   periodPayouts: Array<{ amount: number; status: string; arrivalDate: string }>;
 }
 
-export interface StripeModeData { mode: 'live' | 'test'; keyPrefix: string; }
+export interface StripeModeData { mode: 'live' | 'test'; liveConfigured: boolean; testConfigured: boolean; }
 
 export interface CustomerRow {
   id: string; name: string; businessName: string | null; email: string | null;

@@ -17,7 +17,7 @@ import type { Express } from "express";
 import rateLimit from "express-rate-limit";
 import Stripe from "stripe";
 import {
-  ADMIN_EMAILS, db, enforceNewPlanLimits, eq, or, sql, ne, inArray,
+  ADMIN_EMAILS, getAdminEmail, db, enforceNewPlanLimits, eq, or, sql, ne, inArray,
   orders, requireAuth, requireBooleanFeature, requireOwner, sendEmail, sendStripeVerifiedEmail,
   sendCustomerInvoiceEmail, storage, subscriptionAuditLogs, subscriptionPlans,
   unlockForUpgrade, userSubscriptions, users, generateDowngradeEffectiveEmail,
@@ -211,8 +211,7 @@ export function registerPaymentConnectRoutes(app: Express): void {
 
   // GET /api/webhooks/stripe/health — admin-only endpoint so monitoring can confirm the webhook is live
   app.get('/api/webhooks/stripe/health', requireAuth, (req: any, res) => {
-    const adminEmail = req._adminEmail || req.user?.email;
-    if (!ADMIN_EMAILS.includes(adminEmail || "")) {
+    if (!ADMIN_EMAILS.includes(getAdminEmail(req) || "")) {
       return res.status(403).json({ error: 'Forbidden' });
     }
 

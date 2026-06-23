@@ -143,7 +143,7 @@ export function SystemSettingsSection({ isAdmin }: { isAdmin: boolean }) {
           <div className="flex items-center gap-3">
             <div className={`w-2.5 h-2.5 rounded-full ${isLiveMode ? "bg-green-500" : "bg-amber-400"}`} />
             <span className="text-sm font-medium text-gray-800">Stripe: {stripeMode ? (isLiveMode ? "Live mode" : "Test mode") : "—"}</span>
-            {stripeMode && <span className="text-xs font-mono text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">{stripeMode.keyPrefix}</span>}
+            {stripeMode && <span className="text-xs font-mono text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">{stripeMode.liveConfigured && stripeMode.testConfigured ? "both keys" : stripeMode.liveConfigured ? "live key" : "test key"}</span>}
           </div>
           <div className="flex items-center gap-3">
             <div className="w-2.5 h-2.5 rounded-full bg-blue-400" />
