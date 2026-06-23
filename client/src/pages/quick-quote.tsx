@@ -7,6 +7,7 @@ import { formatCurrency, formatWeight } from "@/lib/currencies";
 import { getPackQuantity } from "@shared/utils/product";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
+import { AddressSearchInput } from "@/components/BusinessSearchInput";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -1561,6 +1562,17 @@ export default function QuickQuote() {
                       </div>
                       <div className="border-t pt-3">
                         <p className="text-xs font-medium text-muted-foreground mb-2">Address <span className="font-normal">(optional — appears on invoices)</span></p>
+                        <AddressSearchInput
+                          className="mb-2"
+                          placeholder="Search for an address..."
+                          onSelect={(result) => setNewCustomer((c) => ({
+                            ...c,
+                            streetAddress: result.addressLine1,
+                            city: result.city,
+                            postalCode: result.postalCode,
+                            country: result.country,
+                          }))}
+                        />
                         <div className="space-y-2">
                           <Input
                             placeholder="Address line 1"
