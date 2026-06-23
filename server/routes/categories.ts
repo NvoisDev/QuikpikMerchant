@@ -1,3 +1,18 @@
+/**
+ * ADMIN SECURITY AUDIT — categories.ts
+ * Audited: 2026-06-23
+ *
+ * Guard pattern: Admin routes use requireAuth + isAdmin() helper
+ * isAdmin(): ADMIN_EMAILS.includes(getAdminEmail(req)) — same allowlist as all other admin files
+ * getAdminEmail reads req._adminEmail (impersonation) || req.user?.email (session)
+ *
+ * Route → Guard                                              Notes
+ * ─────────────────────────────────────────────────────────────────────────
+ * GET  /api/categories                                       ⬜ PUBLIC — intentional; category list + product counts
+ * POST /api/admin/categories                                 ✅ admin-only; unique name validated (case-insensitive)
+ * PATCH /api/admin/categories/:id                            ✅ admin-only; integer id; bulk-updates product.category text
+ * DELETE /api/admin/categories/:id                           ✅ admin-only; integer id; clears product.category on delete
+ */
 import type { Express } from "express";
 import { ADMIN_EMAILS, and, asc, db, eq, getAdminEmail, products, requireAuth, sql } from "./shared";
 import { categories } from "@shared/schema";

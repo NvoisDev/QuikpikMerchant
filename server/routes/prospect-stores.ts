@@ -1,14 +1,26 @@
+/**
+ * ADMIN SECURITY AUDIT — prospect-stores.ts
+ * Audited: 2026-06-23
+ *
+ * Guard pattern: ALL routes use requireAuth + requireSuperAdmin middleware
+ * requireSuperAdmin: ADMIN_EMAILS.includes(getAdminEmail(req)) — same allowlist as all other admin files
+ * getAdminEmail reads req._adminEmail (impersonation) || req.user?.email (session)
+ *
+ * Route → Guard                                              Notes
+ * ─────────────────────────────────────────────────────────────────────────
+ * GET  /api/admin/prospect-stores                            ✅ admin-only; paginated limit/offset
+ * POST /api/admin/prospect-stores/sweep                      ✅ admin-only; external Google Places call
+ * POST /api/admin/prospect-stores                            ✅ admin-only; manual record creation
+ * PATCH /api/admin/prospect-stores/:id                       ✅ admin-only; integer id validated
+ * DELETE /api/admin/prospect-stores/:id                      ✅ admin-only; integer id validated
+ */
 import type { Express } from "express";
 import { db } from "../db";
 import { eq, desc } from "drizzle-orm";
 import { prospectStores } from "@shared/schema";
 import { requireAuth } from "../googleAuth";
-import { ADMIN_EMAILS } from "../config";
+import { ADMIN_EMAILS, getAdminEmail } from "./shared";
 import { sql } from "drizzle-orm";
-
-function getAdminEmail(req: any): string | undefined {
-  return req._adminEmail || req.user?.email;
-}
 
 function requireSuperAdmin(req: any, res: any, next: any) {
   if (!ADMIN_EMAILS.includes(getAdminEmail(req) || "")) {

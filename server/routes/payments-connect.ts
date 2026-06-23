@@ -1,3 +1,18 @@
+/**
+ * ADMIN SECURITY AUDIT — payments-connect.ts
+ * Audited: 2026-06-23
+ *
+ * This file contains one admin-email-gated route alongside many non-admin Stripe/payment routes.
+ * Guard for the admin route: requireAuth + ADMIN_EMAILS.includes(req._adminEmail || req.user?.email)
+ *
+ * Route → Guard                                              Notes
+ * ─────────────────────────────────────────────────────────────────────────
+ * GET  /api/webhooks/stripe/health                           ✅ admin-only; monitoring/health-check endpoint
+ *
+ * All other routes (webhooks, connect onboarding, payment intents, payouts) are
+ * either public Stripe webhook receivers (signature-verified) or requireAuth-scoped
+ * to the authenticated wholesaler — no admin privilege required or granted.
+ */
 import type { Express } from "express";
 import rateLimit from "express-rate-limit";
 import Stripe from "stripe";

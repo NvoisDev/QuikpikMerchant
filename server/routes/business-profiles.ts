@@ -1,11 +1,25 @@
+/**
+ * ADMIN SECURITY AUDIT — business-profiles.ts
+ * Audited: 2026-06-23
+ *
+ * Guard pattern: Admin routes use requireAuth + ADMIN_EMAILS.includes(getAdminEmail(req))
+ * Non-admin routes use requireAuth (owner-scoped) or requireNotViewer (write guard)
+ * getAdminEmail reads req._adminEmail (impersonation) || req.user?.email (session)
+ *
+ * Route → Guard                                              Notes
+ * ─────────────────────────────────────────────────────────────────────────
+ * GET  /api/business-profiles                                ✅ requireAuth; scoped to req.user / wholesalerId
+ * POST /api/business-profiles                                ✅ requireAuth + requireNotViewer; scoped to req.user
+ * PATCH /api/business-profiles/:id                           ✅ requireAuth + requireNotViewer; ownership verified before update
+ * DELETE /api/business-profiles/:id                          ✅ requireAuth + requireNotViewer; ownership verified before delete
+ * GET  /api/business-profiles/active                         ✅ requireAuth; scoped to req.user
+ * PATCH /api/admin/users/:id/legal-info                      ✅ admin-only; userId from URL param; validates field lengths
+ * PATCH /api/admin/users/:id/enable-multi-profile            ✅ admin-only; boolean validated
+ */
 import type { Express } from "express";
-import { storage, requireAuth, requireNotViewer, db, eq, users, z, ADMIN_EMAILS } from "./shared";
+import { storage, requireAuth, requireNotViewer, db, eq, users, z, ADMIN_EMAILS, getAdminEmail } from "./shared";
 import { insertBusinessProfileSchema, businessProfiles } from "@shared/schema";
 import type { BankDetails, InvoiceSignOffData } from "../storage/business-profiles";
-
-function getAdminEmail(req: any): string | undefined {
-  return req._adminEmail || req.user?.email;
-}
 
 export function registerBusinessProfileRoutes(app: Express): void {
   // GET /api/business-profiles — list profiles for the authenticated wholesaler
