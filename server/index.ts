@@ -598,6 +598,22 @@ async function runStartupMigrations() {
     `ALTER TABLE store_enquiries ADD COLUMN IF NOT EXISTS order_id INTEGER REFERENCES orders(id) ON DELETE SET NULL`,
     `ALTER TABLE store_enquiries ADD COLUMN IF NOT EXISTS cart_items JSONB`,
     `ALTER TABLE store_enquiries ADD COLUMN IF NOT EXISTS wholesaler_note TEXT`,
+    // Task #1509: Compound index audit — apply indexes that were declared in schema.ts but were
+    // never added to startup migrations (so only existed on schema-pushed envs, not production).
+    // Also add two new compound indexes identified by query analysis.
+    //
+    // orders (wholesaler_id, created_at) — covers paginated list ORDER BY created_at DESC
+    // and stale-order detection (WHERE wholesalerId AND created_at < 15 days ago)
+    `CREATE INDEX IF NOT EXISTS orders_wholesaler_created_idx ON orders (wholesaler_id, created_at)`,
+    // orders (wholesaler_id, status) — covers pending-count, stale-count, and status-filtered
+    // paginated list (WHERE wholesaler_id = ? AND status IN (...))
+    `CREATE INDEX IF NOT EXISTS orders_wholesaler_status_idx ON orders (wholesaler_id, status)`,
+    // orders (retailer_id) — covers customer-order history queries (WHERE retailer_id = ?)
+    `CREATE INDEX IF NOT EXISTS orders_retailer_idx ON orders (retailer_id)`,
+    // orders (payment_status) — supports payment-status filter and aggregation
+    `CREATE INDEX IF NOT EXISTS orders_payment_status_idx ON orders (payment_status)`,
+    // products (wholesaler_id, status) — covers product list (WHERE wholesaler_id = ? AND status = 'active')
+    `CREATE INDEX IF NOT EXISTS products_wholesaler_status_idx ON products (wholesaler_id, status)`,
   ];
   for (const stmt of migrations) {
     await db.execute(sql.raw(stmt));

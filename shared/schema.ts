@@ -592,6 +592,8 @@ export const products = pgTable("products", {
 }, (table) => ({
   wholesalerIdIdx: index("products_wholesaler_id_idx").on(table.wholesalerId),
   statusIdx: index("products_status_idx").on(table.status),
+  // Compound: covers product list (WHERE wholesalerId = ? AND status = 'active')
+  wholesalerStatusIdx: index("products_wholesaler_status_idx").on(table.wholesalerId, table.status),
 }));
 
 // Central, platform-managed product categories (single shared global list).
@@ -803,8 +805,15 @@ export const orders = pgTable("orders", {
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => [
+  // Compound: covers paginated order list (WHERE wholesalerId + ORDER BY createdAt DESC)
+  // and stale-order count (WHERE wholesalerId AND createdAt < 15 days ago)
   index("orders_wholesaler_created_idx").on(table.wholesalerId, table.createdAt),
+  // Compound: covers pending-count, stale-count, and status-filtered paginated list
+  // (WHERE wholesalerId = ? AND status IN (...))
+  index("orders_wholesaler_status_idx").on(table.wholesalerId, table.status),
+  // Covers customer order history queries (WHERE retailerId = ?)
   index("orders_retailer_idx").on(table.retailerId),
+  // Single-column supporting filters and aggregation on payment_status
   index("orders_payment_status_idx").on(table.paymentStatus),
   index("orders_status_idx").on(table.status),
   index("orders_created_at_idx").on(table.createdAt),
