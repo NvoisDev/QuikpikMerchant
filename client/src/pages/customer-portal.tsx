@@ -657,6 +657,35 @@ export default function CustomerPortal() {
     refetchOnWindowFocus: false,
   });
 
+  // Auto-remove out-of-stock items from cart whenever the product list refreshes
+  useEffect(() => {
+    if (!products.length || !cart.length) return;
+    const productMap = new Map(products.map((p: Product) => [p.id, p]));
+    const removedNames: string[] = [];
+    const updatedCart = cart.filter(item => {
+      const fresh = productMap.get(item.product.id);
+      if (!fresh) return true; // product not found in list — keep it
+      const outOfStock =
+        item.sellingType === "pallets"
+          ? (fresh.palletStock ?? 0) <= 0
+          : (fresh.stock ?? 0) <= 0;
+      if (outOfStock) {
+        removedNames.push(item.product.name);
+        return false;
+      }
+      return true;
+    });
+    if (removedNames.length > 0) {
+      setCart(updatedCart);
+      toast({
+        title: "Items removed from cart",
+        description: `${removedNames.join(", ")} ${removedNames.length === 1 ? "is" : "are"} now out of stock and ${removedNames.length === 1 ? "has" : "have"} been removed from your cart.`,
+        variant: "destructive",
+      });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [products]);
+
   // Central, platform-managed category list (shared list, ordered consistently everywhere).
   const { data: centralCategories = [] } = useQuery<{ id: number; name: string; productCount: number }[]>({
     queryKey: ["/api/categories"],
