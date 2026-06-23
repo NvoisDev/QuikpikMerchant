@@ -1,3 +1,29 @@
+/**
+ * ADMIN SECURITY AUDIT — admin-system.ts
+ * Audited: 2026-06-23
+ *
+ * Guard pattern: ALL admin routes use requireAuth + ADMIN_EMAILS.includes(getAdminEmail(req))
+ * Exception: GET /api/fee-rates is intentionally public (returns only rate percentages, no sensitive data)
+ * getAdminEmail reads req._adminEmail (impersonation) || req.user?.email (session)
+ *
+ * Route → Guard                                              Notes
+ * ─────────────────────────────────────────────────────────────────────────
+ * GET  /api/admin/plans                                      ✅ admin-only; excludes test accounts from counts
+ * POST /api/admin/plans                                      ✅ admin-only; validates price range; creates Stripe product
+ * PATCH /api/admin/plans/:id/archive                         ✅ admin-only; integer planId validated
+ * POST /api/admin/wholesalers/:id/remove-custom-pricing      ✅ admin-only; validates wholesaler role
+ * POST /api/admin/wholesalers/:id/change-plan                ✅ admin-only; validates wholesaler + plan existence
+ * GET  /api/admin/search                                     ✅ admin-only; minimum 2-char term enforced; limit 5 each
+ * GET  /api/admin/fee-config                                 ✅ admin-only
+ * POST /api/admin/fee-config                                 ✅ admin-only; percentage bounded 0–1; fixed >= 0
+ * GET  /api/fee-rates                                        ⬜ PUBLIC — intentional; returns only rate numbers
+ * POST /api/admin/cleanup-test-data                          ✅ admin-only; scoped to isTestAccount=true rows only
+ * PATCH /api/admin/users/:id/test-account                    ✅ admin-only; boolean validated
+ * GET  /api/admin/go-live-reset/preview                      ✅ admin-only; read-only count query
+ * POST /api/admin/go-live-reset                              ✅ admin-only; requires confirm='RESET'; protects admin email row
+ * POST /api/admin/create-test-account                        ✅ admin-only; marks isTestAccount=true; email omits password
+ * GET  /api/admin/products/invalid-units-per-pallet          ✅ admin-only; diagnostic read-only
+ */
 import type { Express } from "express";
 import { ilike } from "drizzle-orm";
 import {

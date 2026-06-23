@@ -1,3 +1,27 @@
+/**
+ * ADMIN SECURITY AUDIT — admin-ops.ts
+ * Audited: 2026-06-23
+ *
+ * Guard pattern: ALL routes use requireAuth + ADMIN_EMAILS.includes(getAdminEmail(req))
+ * getAdminEmail reads req._adminEmail (impersonation) || req.user?.email (session)
+ *
+ * Route → Guard                                              Notes
+ * ─────────────────────────────────────────────────────────────────────────
+ * GET  /api/admin/products                                   ✅ admin-only; cross-tenant, intentional
+ * GET  /api/admin/alerts                                     ✅ admin-only; bounded queries (limit 20)
+ * GET  /api/admin/wholesalers/:id/orders                     ✅ admin-only; limit 10, no pagination leak
+ * GET  /api/admin/orders/:id/items                           ✅ admin-only; integer orderId validated
+ * POST /api/admin/orders/:id/resend-invoice                  ✅ admin-only; integer orderId validated
+ * POST /api/admin/orders/:id/issue-refund                    ✅ admin-only; uses wholesaler stripe mode
+ * GET  /api/admin/stripe-mode                                ✅ admin-only; returns configured booleans only (no key material)
+ * GET  /api/admin/payout-status                              ✅ admin-only; platform Stripe account
+ * GET  /api/admin/activity                                   ✅ admin-only; paginated (max 100/page)
+ * GET  /api/admin/errors                                     ✅ admin-only; paginated (max 200)
+ * GET  /api/admin/service-errors                             ✅ admin-only; limit 50
+ * POST /api/admin/impersonate/exit                           ✅ admin-only; wholesalerId mismatch check + audit log
+ * POST /api/admin/impersonate/:wholesalerId                  ✅ admin-only + impersonateLimiter (5/15 min); verifies wholesaler role; audit logged
+ * GET  /api/admin/impersonate/status                         ✅ admin-only; read-only session header check
+ */
 import type { Express } from "express";
 import rateLimit from "express-rate-limit";
 import {

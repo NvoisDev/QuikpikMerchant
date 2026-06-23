@@ -1,3 +1,13 @@
+/**
+ * ADMIN SECURITY AUDIT — admin-templates.ts
+ * Audited: 2026-06-23
+ *
+ * Guard pattern: requireAuth + ADMIN_EMAILS.includes(getAdminEmail(req))
+ *
+ * Route → Guard                                              Notes
+ * ─────────────────────────────────────────────────────────────────────────
+ * GET  /api/admin/templates                                  ✅ admin-only; read-only platform template catalogue
+ */
 import type { Express } from "express";
 import { ADMIN_EMAILS, getAdminEmail, requireAuth } from "./shared";
 import { getTemplateCatalog } from "../services/templateCatalog";

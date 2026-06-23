@@ -1,3 +1,34 @@
+/**
+ * ADMIN SECURITY AUDIT — admin-core.ts
+ * Audited: 2026-06-23
+ *
+ * Guard pattern: ALL routes use requireAuth + ADMIN_EMAILS.includes(getAdminEmail(req))
+ * getAdminEmail reads req._adminEmail (impersonation) || req.user?.email (session)
+ *
+ * Route → Guard                                              Data isolation
+ * ─────────────────────────────────────────────────────────────────────────
+ * GET  /api/admin/platform-stats                             ✅ admin-only; no per-wholesaler param
+ * GET  /api/admin/wholesalers                                ✅ admin-only; returns all, intentional
+ * GET  /api/admin/revenue                                    ✅ admin-only; filters by isTestAccount
+ * PATCH /api/admin/wholesalers/:id/customer-fee-override     ✅ admin-only; validates wholesaler role
+ * PATCH /api/admin/wholesalers/:id/custom-pricing            ✅ admin-only; validates wholesaler role
+ * PATCH /api/admin/wholesalers/:id/toggle-status             ✅ admin-only; validates wholesaler role
+ * PATCH /api/admin/wholesalers/:id/toggle-test-account       ✅ admin-only; validates wholesaler role
+ * PATCH /api/admin/wholesalers/:id/toggle-inactive           ✅ admin-only; validates wholesaler role
+ * PATCH /api/admin/wholesalers/:id/toggle-show-on-homepage   ✅ admin-only; validates wholesaler role
+ * PATCH /api/admin/wholesalers/:id/custom-subscription-pricing ✅ admin-only; validates wholesaler role
+ * PATCH /api/admin/wholesalers/:id/custom-fee                ✅ admin-only; validates wholesaler role
+ * GET  /api/admin/customers/map                              ✅ admin-only; no tenant param accepted
+ * PATCH /api/admin/customers/:id/type                        ✅ admin-only; role validated
+ * POST /api/admin/customers/geocode-all                      ✅ admin-only; bulk op, no tenant scope needed
+ * GET  /api/admin/customers                                  ✅ admin-only; returns all customers
+ * GET  /api/admin/customers/:id/orders                       ✅ admin-only; no wholesaler scoping (cross-tenant by design)
+ * PATCH /api/admin/customers/:id/flag                        ✅ admin-only; is_suspicious flag
+ * POST /api/admin/subscriptions/activate                     ✅ admin-only; validates user before mutating
+ * POST /api/admin/subscriptions/sync-by-customer             ✅ admin-only; validates user before mutating
+ * GET  /api/admin/stock-reconcile                            ✅ admin-only; cross-tenant read, intentional
+ * POST /api/admin/subscriptions/backfill-stripe              ✅ admin-only; bulk backfill
+ */
 import type { Express } from "express";
 import Stripe from "stripe";
 import { ilike } from "drizzle-orm";
