@@ -45,6 +45,9 @@ import {
   AlertTriangle,
   Trash2,
 } from "lucide-react";
+import {
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
+} from "recharts";
 import { CustomerOrderHistory } from "@/components/customer/CustomerOrderHistory";
 import CustomerInvitationModal from "@/components/CustomerInvitationModal";
 import { SubscriptionUpgradeModal } from "@/components/subscription/SubscriptionUpgradeModal";
@@ -165,6 +168,8 @@ interface PriceChangeRow {
   changedAt: string;
 }
 
+const PRICE_CHART_COLORS = ['#16a34a', '#2563eb', '#d97706', '#dc2626', '#7c3aed', '#0891b2', '#be185d', '#65a30d'];
+
 function PriceChangesTab() {
   const [search, setSearch] = useState('');
   const [fromDate, setFromDate] = useState('');
@@ -202,6 +207,52 @@ function PriceChangesTab() {
   };
 
   const hasFilters = search.trim() || fromDate || toDate;
+
+  const { chartData, chartKeys } = useMemo(() => {
+    if (filtered.length === 0) return { chartData: [] as Record<string, any>[], chartKeys: [] as string[] };
+
+    const seriesKey = (r: PriceChangeRow) =>
+      r.sellingType === 'units' ? r.productName : `${r.productName} (${r.sellingType})`;
+
+    const sorted = [...filtered].sort(
+      (a, b) => new Date(a.changedAt).getTime() - new Date(b.changedAt).getTime(),
+    );
+
+    const allKeys = [...new Set(sorted.map(seriesKey))].slice(0, 8);
+
+    const points: Array<{ ts: number; label: string; key: string; price: number }> = [];
+    const seen = new Set<string>();
+
+    for (const row of sorted) {
+      const key = seriesKey(row);
+      if (!allKeys.includes(key)) continue;
+      const ts = new Date(row.changedAt).getTime();
+      const label = new Date(row.changedAt).toLocaleDateString('en-GB', {
+        day: 'numeric', month: 'short', year: '2-digit',
+      });
+      if (!seen.has(key)) {
+        seen.add(key);
+        points.push({ ts: ts - 86_400_000, label: 'Before', key, price: parseFloat(row.oldPrice) });
+      }
+      points.push({ ts, label, key, price: parseFloat(row.newPrice) });
+    }
+
+    const tsLabelMap = new Map<number, string>();
+    for (const p of points) {
+      if (!tsLabelMap.has(p.ts)) tsLabelMap.set(p.ts, p.label);
+    }
+
+    const tsArr = [...tsLabelMap.keys()].sort((a, b) => a - b);
+    const chartData = tsArr.map(ts => {
+      const obj: Record<string, any> = { ts, label: tsLabelMap.get(ts) };
+      for (const p of points) {
+        if (p.ts === ts) obj[p.key] = p.price;
+      }
+      return obj;
+    });
+
+    return { chartData, chartKeys: allKeys };
+  }, [filtered]);
 
   if (isLoading) {
     return (
@@ -260,6 +311,49 @@ function PriceChangesTab() {
         <p className="text-xs text-gray-400">
           Showing {filtered.length} of {rows.length} change{rows.length !== 1 ? 's' : ''}
         </p>
+      )}
+
+      {chartData.length >= 2 && (
+        <div className="rounded-xl border border-gray-100 bg-white p-4">
+          <ResponsiveContainer width="100%" height={200}>
+            <LineChart data={chartData} margin={{ top: 5, right: 12, left: 0, bottom: 5 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
+              <XAxis
+                dataKey="label"
+                tick={{ fontSize: 10, fill: '#9ca3af' }}
+                tickLine={false}
+                axisLine={false}
+              />
+              <YAxis
+                tickFormatter={(v) => `£${v}`}
+                tick={{ fontSize: 10, fill: '#9ca3af' }}
+                tickLine={false}
+                axisLine={false}
+                width={48}
+              />
+              <Tooltip
+                formatter={(v: any, name: string) => [`£${Number(v).toFixed(2)}`, name]}
+                contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e5e7eb', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}
+                labelStyle={{ fontWeight: 600, marginBottom: 4 }}
+              />
+              {chartKeys.length > 1 && (
+                <Legend wrapperStyle={{ fontSize: 11, paddingTop: 8 }} />
+              )}
+              {chartKeys.map((key, i) => (
+                <Line
+                  key={key}
+                  type="monotone"
+                  dataKey={key}
+                  stroke={PRICE_CHART_COLORS[i % PRICE_CHART_COLORS.length]}
+                  strokeWidth={2}
+                  dot={{ r: 3, strokeWidth: 0 }}
+                  activeDot={{ r: 5 }}
+                  connectNulls
+                />
+              ))}
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
       )}
 
       {filtered.length === 0 ? (
