@@ -230,6 +230,7 @@ export default function OrdersFresh() {
   });
   const [isDeletingDraft, setIsDeletingDraft] = useState<number | null>(null);
   const [isApprovingDraft, setIsApprovingDraft] = useState<number | null>(null);
+  const [isSharingDraft, setIsSharingDraft] = useState<number | null>(null);
   const [reminderDismissed, setReminderDismissed] = useState(false);
   const { toast } = useToast();
 
@@ -322,6 +323,33 @@ export default function OrdersFresh() {
   const paymentStatusRef = useRef('');
   const statusFilterRef = useRef('');
   const staleFilterRef = useRef(false);
+
+  const handleShareDraft = async (draftId: number) => {
+    const pdfUrl = `/api/orders/${draftId}/invoice`;
+    setIsSharingDraft(draftId);
+    try {
+      if (typeof navigator.share === 'function') {
+        try {
+          const resp = await fetch(pdfUrl);
+          const blob = await resp.blob();
+          const file = new File([blob], `draft-invoice-${draftId}.pdf`, { type: 'application/pdf' });
+          if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            await navigator.share({ files: [file], title: 'Draft Invoice' });
+          } else {
+            await navigator.share({ url: window.location.origin + pdfUrl, title: 'Draft Invoice' });
+          }
+        } catch (shareErr: any) {
+          if (shareErr?.name !== 'AbortError') {
+            window.open(pdfUrl, '_blank');
+          }
+        }
+      } else {
+        window.open(pdfUrl, '_blank');
+      }
+    } finally {
+      setIsSharingDraft(null);
+    }
+  };
 
   const handleDeleteDraft = async (draftId: number) => {
     if (!window.confirm('Delete this draft invoice?')) return;
@@ -1322,6 +1350,16 @@ export default function OrdersFresh() {
                       className="text-slate-600 border-slate-200 hover:bg-slate-50"
                     >
                       Edit
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={isSharingDraft === draft.id}
+                      onClick={() => handleShareDraft(draft.id)}
+                      className="text-blue-600 border-blue-200 hover:bg-blue-50"
+                      title="Share draft PDF"
+                    >
+                      {isSharingDraft === draft.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Share2 className="h-3.5 w-3.5" />}
                     </Button>
                     <Button
                       size="sm"
