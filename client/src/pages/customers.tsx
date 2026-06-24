@@ -283,7 +283,7 @@ function PriceChangesTab() {
             type="date"
             value={fromDate}
             onChange={e => setFromDate(e.target.value)}
-            className="h-8 text-sm w-36"
+            className="h-8 text-sm w-28 sm:w-36"
             title="From date"
           />
           <span className="text-gray-400 text-xs">to</span>
@@ -291,7 +291,7 @@ function PriceChangesTab() {
             type="date"
             value={toDate}
             onChange={e => setToDate(e.target.value)}
-            className="h-8 text-sm w-36"
+            className="h-8 text-sm w-28 sm:w-36"
             title="To date"
           />
           {hasFilters && (
@@ -373,13 +373,13 @@ function PriceChangesTab() {
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-gray-50 text-xs text-gray-500 uppercase tracking-wide">
-                <th className="px-4 py-2.5 text-left font-medium">Product</th>
-                <th className="px-4 py-2.5 text-left font-medium hidden sm:table-cell">Type</th>
-                <th className="px-4 py-2.5 text-right font-medium">Old Price</th>
-                <th className="px-4 py-2.5 text-right font-medium">New Price</th>
-                <th className="px-4 py-2.5 text-right font-medium">Change</th>
-                <th className="px-4 py-2.5 text-right font-medium hidden md:table-cell">Date</th>
-                <th className="px-4 py-2.5 text-right font-medium hidden lg:table-cell">Order</th>
+                <th className="px-2 sm:px-4 py-2.5 text-left font-medium">Product</th>
+                <th className="px-2 sm:px-4 py-2.5 text-left font-medium hidden sm:table-cell">Type</th>
+                <th className="px-2 sm:px-4 py-2.5 text-right font-medium hidden sm:table-cell">Old Price</th>
+                <th className="px-2 sm:px-4 py-2.5 text-right font-medium">New Price</th>
+                <th className="px-2 sm:px-4 py-2.5 text-right font-medium">Change</th>
+                <th className="px-2 sm:px-4 py-2.5 text-right font-medium hidden md:table-cell">Date</th>
+                <th className="px-2 sm:px-4 py-2.5 text-right font-medium hidden lg:table-cell">Order</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
@@ -388,17 +388,17 @@ function PriceChangesTab() {
                 const isUp = pct > 0;
                 return (
                   <tr key={row.id} className="bg-white hover:bg-gray-50/50 transition-colors">
-                    <td className="px-4 py-3 font-medium text-gray-800 max-w-[140px] truncate">{row.productName}</td>
-                    <td className="px-4 py-3 text-gray-500 hidden sm:table-cell capitalize">{row.sellingType}</td>
-                    <td className="px-4 py-3 text-right text-gray-500">{fmt(row.oldPrice)}</td>
-                    <td className="px-4 py-3 text-right font-medium text-gray-800">{fmt(row.newPrice)}</td>
-                    <td className={`px-4 py-3 text-right font-semibold text-xs ${isUp ? 'text-green-600' : 'text-red-500'}`}>
+                    <td className="px-2 sm:px-4 py-3 font-medium text-gray-800 max-w-[120px] sm:max-w-none truncate">{row.productName}</td>
+                    <td className="px-2 sm:px-4 py-3 text-gray-500 hidden sm:table-cell capitalize">{row.sellingType}</td>
+                    <td className="px-2 sm:px-4 py-3 text-right text-gray-500 hidden sm:table-cell">{fmt(row.oldPrice)}</td>
+                    <td className="px-2 sm:px-4 py-3 text-right font-medium text-gray-800">{fmt(row.newPrice)}</td>
+                    <td className={`px-2 sm:px-4 py-3 text-right font-semibold text-xs ${isUp ? 'text-green-600' : 'text-red-500'}`}>
                       {isUp ? '↑' : '↓'} {Math.abs(pct).toFixed(1)}%
                     </td>
-                    <td className="px-4 py-3 text-right text-gray-400 text-xs hidden md:table-cell">
+                    <td className="px-2 sm:px-4 py-3 text-right text-gray-400 text-xs hidden md:table-cell">
                       {new Date(row.changedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
                     </td>
-                    <td className="px-4 py-3 text-right hidden lg:table-cell">
+                    <td className="px-2 sm:px-4 py-3 text-right hidden lg:table-cell">
                       {row.orderId ? (
                         <Link href={`/orders/${row.orderId}`} className="text-xs text-emerald-600 hover:underline">
                           View order
