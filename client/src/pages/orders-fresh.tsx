@@ -1787,8 +1787,8 @@ export default function OrdersFresh() {
                         </div>
                       )}
                   <Card className={`cursor-pointer transition-shadow ${order.status === 'cancelled' ? 'bg-gray-50 border-gray-200 opacity-70 hover:shadow-sm' : `hover:shadow-md ${selectedOrderIds.has(order.id) ? 'ring-2 ring-emerald-400' : ''}`}`} onClick={() => loadOrderDetails(order)}>
-                    <CardContent className="p-4">
-                      <div className="flex justify-between items-start mb-3">
+                    <CardContent className="p-3">
+                      <div className="flex justify-between items-start mb-2">
                         <div className="flex items-start gap-2">
                           {!isViewer && (
                             <div onClick={(e) => e.stopPropagation()} className="pt-0.5">
@@ -1805,7 +1805,7 @@ export default function OrdersFresh() {
                             </div>
                           )}
                           <div>
-                            <div className="font-semibold text-sm">{order.orderNumber || `#${order.id}`}</div>
+                            <div className="font-semibold text-xs">{order.orderNumber || `#${order.id}`}</div>
                             <div className="text-xs text-gray-500">{new Date(order.createdAt).toLocaleDateString()}</div>
                             {(() => { const due = getBalanceDueDate(order); return due ? <div className="text-xs text-amber-600 font-medium">Due {due.toLocaleDateString('en-GB')}</div> : null; })()}
                             {order.businessProfileName && (
@@ -1817,19 +1817,19 @@ export default function OrdersFresh() {
                         </div>
                         <div className="text-right flex items-center gap-2">
                           <div>
-                            <div className={`font-semibold ${order.status === 'cancelled' ? 'line-through text-gray-400' : ''}`}>{formatMoney(calculateNetAmount(order))}</div>
+                            <div className={`font-semibold text-sm ${order.status === 'cancelled' ? 'line-through text-gray-400' : ''}`}>{formatMoney(calculateNetAmount(order))}</div>
                             <div className="text-xs text-gray-500">{isStripePayment(order) ? 'After fee' : 'No fee'}</div>
                           </div>
-                          <Eye className="h-4 w-4 text-gray-400" />
+                          <Eye className="h-3.5 w-3.5 text-gray-400" />
                         </div>
                       </div>
 
                       <div className="mb-2">
-                        <div className="font-medium text-sm">{order.retailer?.businessName || (`${order.retailer?.firstName || ''} ${order.retailer?.lastName || ''}`.trim()) || order.customerName || 'Unknown'}</div>
+                        <div className="font-medium text-xs">{order.retailer?.businessName || (`${order.retailer?.firstName || ''} ${order.retailer?.lastName || ''}`.trim()) || order.customerName || 'Unknown'}</div>
                         <div className="text-xs text-gray-500">{order.customerEmail}</div>
                       </div>
 
-                      <div className="flex flex-wrap gap-2 mb-3">
+                      <div className="flex flex-wrap gap-1.5 mb-2">
                         {(() => {
                           const refAmt = parseFloat(order.amountRefunded || '0');
                           const paidAmt = parseFloat(order.amountPaid || '0');
