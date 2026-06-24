@@ -1,0 +1,138 @@
+Redesign the “Price Changes” page to feel like a modern analytics dashboard rather than a basic report table.
+
+The goal is to make price movement feel visual, premium, and instantly understandable on mobile.
+
+Current issues:
+
+* The graph feels cramped and hard to interpret
+* Too many legend items stacked vertically
+* The table dominates the experience
+* There’s no clear visual hierarchy
+* The UI feels more like admin tooling than a polished B2B analytics product
+* Mobile responsiveness needs improvement
+
+Use the attached screenshots as the current state reference.
+
+Design direction:
+Take inspiration from modern SaaS analytics dashboards and financial apps:
+
+* smooth curved line charts
+* soft gradients
+* clean spacing
+* floating cards
+* subtle shadows
+* segmented date filters
+* modern data visualisation patterns
+* mobile-first layouts
+
+Key redesign requirements:
+
+1. Replace the current graph with a modern interactive analytics card
+
+* Use a rounded card container
+* Add soft shadow + subtle border
+* Increase padding and breathing room
+* Use smooth curved lines instead of rigid lines
+* Add hover/tap tooltips
+* Add light gradient fills beneath lines
+* Use animated transitions where possible
+* Mobile optimised
+
+2. Add analytics header area above the graph
+    Include:
+
+* “Price Movement Analytics”
+* Total products changed
+* Average price increase/decrease %
+* Biggest mover
+* Date range selector
+
+Style this similar to Stripe / Linear / Vercel dashboards.
+
+3. Improve graph readability
+    Current legend is too crowded.
+
+Instead:
+
+* Show only top products by default
+* Add expandable legend or filter chips
+* Allow toggling products on/off
+* Use cleaner colour balancing
+* Prevent overlapping labels
+* Add better Y-axis scaling
+
+4. Introduce segmented time filters
+    Use modern pill-style selectors:
+
+* 7D
+* 30D
+* 90D
+* 1Y
+* Custom
+
+These should sit above the chart like modern finance apps.
+
+5. Improve mobile layout
+    The current table overflows and truncates heavily.
+
+On mobile:
+
+* Convert rows into stacked cards
+* Product name prominent
+* Old price → new price visual
+* % change badge
+* Timestamp
+* Up/down indicators
+* Better spacing
+
+Desktop can retain a table layout.
+
+6. Introduce visual movement indicators
+    Examples:
+
+* green upward trend
+* red downward trend
+* mini sparkline beside product
+* animated change badges
+* subtle arrows/icons
+
+7. Improve hierarchy and spacing
+
+* Reduce visual clutter
+* Increase whitespace
+* Make cards feel modular
+* Separate filters, analytics, chart, and history into distinct sections
+
+8. Technical requirements
+
+* Do NOT break existing functionality
+* Keep all existing filtering/search logic
+* Keep current API/data structure compatible
+* Keep mobile responsiveness
+* Maintain accessibility
+* Avoid heavy chart libraries if unnecessary
+* Prefer performant rendering
+
+9. Suggested implementation ideas
+
+* Recharts or Tremor-style analytics UI
+* Glassmorphism-lite cards
+* Animated chart transitions
+* Responsive analytics grid
+* Collapsible legends
+* Sticky filter bar on mobile
+
+10. Final UX goal
+    The page should feel like:
+    “live wholesale pricing intelligence”
+
+—not a static admin report.
+
+It should look polished enough that a wholesaler immediately understands:
+
+* what changed
+* by how much
+* which products moved most
+* and overall pricing trends at a glance
+
+without needing to read a dense table.
