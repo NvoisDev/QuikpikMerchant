@@ -870,14 +870,20 @@ export default function OrdersFresh() {
   const getDateLabel = (dateStr: string) => {
     const date = new Date(dateStr);
     const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const orderDay = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    const ukParts = (d: Date) => {
+      const p = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(d);
+      return { year: +p.find(x => x.type === 'year')!.value, month: +p.find(x => x.type === 'month')!.value - 1, day: +p.find(x => x.type === 'day')!.value };
+    };
+    const ukNow = ukParts(now);
+    const ukDate = ukParts(date);
+    const today = new Date(ukNow.year, ukNow.month, ukNow.day);
+    const orderDay = new Date(ukDate.year, ukDate.month, ukDate.day);
     const diffDays = Math.floor((today.getTime() - orderDay.getTime()) / (1000 * 60 * 60 * 24));
 
     if (diffDays === 0) return 'Today';
     if (diffDays === 1) return 'Yesterday';
-    if (diffDays < 7) return date.toLocaleDateString('en-GB', { weekday: 'long' });
-    return date.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined });
+    if (diffDays < 7) return date.toLocaleDateString('en-GB', { weekday: 'long', timeZone: 'Europe/London' });
+    return date.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Europe/London', year: ukDate.year !== ukNow.year ? 'numeric' : undefined });
   };
 
   const displayedOrders = filteredByPicking.length;
@@ -1806,7 +1812,7 @@ export default function OrdersFresh() {
                           )}
                           <div>
                             <div className="font-semibold text-xs">{order.orderNumber || `#${order.id}`}</div>
-                            <div className="text-xs text-gray-500">{new Date(order.createdAt).toLocaleDateString()}</div>
+                            <div className="text-xs text-gray-500">{new Date(order.createdAt).toLocaleDateString('en-GB', { timeZone: 'Europe/London' })}</div>
                             {(() => { const due = getBalanceDueDate(order); return due ? <div className="text-xs text-amber-600 font-medium">Due {due.toLocaleDateString('en-GB')}</div> : null; })()}
                             {order.businessProfileName && (
                               <Badge className="mt-0.5 bg-blue-50 text-blue-700 border border-blue-200 text-xs font-normal px-1.5 py-0" variant="outline">
