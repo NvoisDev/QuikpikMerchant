@@ -31,7 +31,7 @@
  */
 import type { Express } from "express";
 import Stripe from "stripe";
-import { ilike } from "drizzle-orm";
+import { ilike, isNotNull } from "drizzle-orm";
 import {
   ADMIN_EMAILS, and, asc, count, db, desc, eq, geocodePostcode, getAdminEmail, getPlanLimits, getStripeClient,
   gte, inArray, isNull, lte, or, orders, requireAuth, sql, storage,
@@ -67,7 +67,7 @@ export function registerAdminCoreRoutes(app: Express): void {
           createdAt: orders.createdAt,
         }).from(orders)
           .innerJoin(users, eq(orders.wholesalerId, users.id))
-          .where(and(eq(users.isTestAccount, false), eq(users.isInactive, false))),
+          .where(and(eq(users.isTestAccount, false), eq(users.isInactive, false), isNotNull(orders.orderNumber))),
         db.select({ count: count() }).from(users)
           .where(and(eq(users.role, 'wholesaler'), gte(users.createdAt, monthStart), eq(users.isTestAccount, false), eq(users.isInactive, false))),
         db.select({ planId: subscriptionPlans.planId, monthlyPrice: subscriptionPlans.monthlyPrice, billingInterval: subscriptionPlans.billingInterval })
