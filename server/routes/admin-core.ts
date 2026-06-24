@@ -48,7 +48,13 @@ export function registerAdminCoreRoutes(app: Express): void {
 
       const now = new Date();
       const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      // Compute midnight Europe/London as a UTC timestamp (handles BST +1 and GMT +0 automatically)
+      const todayStart = (() => {
+        const ukDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/London' }).format(now);
+        const refUTC = new Date(ukDate + 'T00:00:00Z');
+        const ukH = +new Intl.DateTimeFormat('en-US', { timeZone: 'Europe/London', hour: 'numeric', hourCycle: 'h23' }).format(refUTC);
+        return new Date(refUTC.getTime() - ukH * 3_600_000);
+      })();
 
       const [allWholesalers, allOrdersData, newWholesalers, planRows, subPlanRows] = await Promise.all([
         db.select({ id: users.id, subscriptionTier: users.subscriptionTier, archived: users.archived, subscriptionStatus: users.subscriptionStatus, showOnHomepage: users.showOnHomepage })
