@@ -8,3 +8,4 @@
 - [Public storefront visibility](public-storefront-visibility.md) — hideable storefront fields (price/MOQ/stock/pack) must be redacted server-side in both public endpoints, not just gated in the UI.
 - [React Query render-gating needs a fetch timeout](react-query-render-gating-timeout.md) — bare fetch w/o AbortController can stall → isLoading sticks true → permanent blank page; impersonation is a global window.fetch monkeypatch.
 - [DDL via startup migrations](db-ddl-startup-migrations.md) — db:push needs a TTY (fails here); add idempotent DDL+seeds to server/index.ts migrations array; also declare tables/indexes in schema.ts.
+- [Testing account — never use real wholesalers](testing-account.md) — all test data must go to the Quikpik Test Account only; never create products/orders in real wholesaler accounts.
