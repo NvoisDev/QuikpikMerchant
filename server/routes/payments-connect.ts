@@ -17,7 +17,7 @@ import type { Express } from "express";
 import rateLimit from "express-rate-limit";
 import Stripe from "stripe";
 import {
-  ADMIN_EMAILS, getAdminEmail, db, enforceNewPlanLimits, eq, or, sql, ne, inArray,
+  ADMIN_EMAILS, getAdminEmail, db, enforceNewPlanLimits, eq, or, sql, ne, inArray, and, isNull,
   orders, requireAuth, requireBooleanFeature, requireOwner, sendEmail, sendStripeVerifiedEmail,
   sendCustomerInvoiceEmail, storage, subscriptionAuditLogs, subscriptionPlans,
   unlockForUpgrade, userSubscriptions, users, generateDowngradeEffectiveEmail,
@@ -882,6 +882,11 @@ export function registerPaymentConnectRoutes(app: Express): void {
               context: { priceId: subPriceId, unitAmount, customerId: subCustId, userId: subUser.id },
               severity: 'warning',
             }).catch(() => {});
+            // Persist the price ID so future webhooks resolve without guessing
+            await db.update(subscriptionPlans)
+              .set({ stripePriceId: subPriceId })
+              .where(and(eq(subscriptionPlans.planId, subPlanId), isNull(subscriptionPlans.stripePriceId)))
+              .catch(() => {});
           }
         }
 
@@ -1026,6 +1031,11 @@ export function registerPaymentConnectRoutes(app: Express): void {
               context: { priceId: invPriceId, unitAmount: invUnitAmount, customerId: invCustId, userId: invUser.id },
               severity: 'warning',
             }).catch(() => {});
+            // Persist the price ID so future webhooks resolve without guessing
+            await db.update(subscriptionPlans)
+              .set({ stripePriceId: invPriceId })
+              .where(and(eq(subscriptionPlans.planId, invPlanId), isNull(subscriptionPlans.stripePriceId)))
+              .catch(() => {});
           }
         }
 
