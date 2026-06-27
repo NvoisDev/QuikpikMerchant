@@ -271,8 +271,24 @@ function MarketplaceSearch() {
   return (
     <section
       className="relative border-b border-gray-100 py-12 sm:py-16 pb-16 sm:pb-20 overflow-hidden"
-      style={{ backgroundImage: 'url(/hero-buyer-bg.jpg)', backgroundSize: 'cover', backgroundPosition: 'center 30%' }}
     >
+      {/* Optimised background image — WebP with JPEG fallback */}
+      <picture>
+        <source
+          type="image/webp"
+          srcSet="/hero-buyer-bg-800w.webp 800w, /hero-buyer-bg-1280w.webp 1280w, /hero-buyer-bg-1920w.webp 1920w"
+          sizes="100vw"
+        />
+        <img
+          src="/hero-buyer-bg-1280w.jpg"
+          alt=""
+          aria-hidden="true"
+          className="absolute inset-0 w-full h-full object-cover"
+          style={{ objectPosition: 'center 30%' }}
+          fetchpriority="high"
+          decoding="async"
+        />
+      </picture>
       {/* Dark overlay for contrast */}
       <div className="absolute inset-0 bg-black/55" />
       <div className="relative max-w-3xl mx-auto px-4 sm:px-6">
@@ -617,11 +633,22 @@ export default function LandingPage() {
                 {/* BUYER — Right photo */}
                 <div className="flex-shrink-0 w-full max-w-xs sm:max-w-sm lg:max-w-md mx-auto lg:mx-0">
                   <div className="relative rounded-2xl overflow-hidden shadow-2xl aspect-[4/5]">
-                    <img
-                      src="/hero-buyer.jpg"
-                      alt="Buyer browsing wholesale products"
-                      className="w-full h-full object-cover object-center"
-                    />
+                    <picture>
+                      <source
+                        type="image/webp"
+                        srcSet="/hero-buyer-400w.webp 400w, /hero-buyer-800w.webp 800w"
+                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 384px, 448px"
+                      />
+                      <img
+                        src="/hero-buyer-800w.jpg"
+                        alt="Buyer browsing wholesale products"
+                        className="w-full h-full object-cover object-center"
+                        width="448"
+                        height="560"
+                        fetchpriority="high"
+                        decoding="async"
+                      />
+                    </picture>
                     <div className="absolute inset-0 bg-gradient-to-t from-gray-950/30 via-transparent to-transparent" />
                   </div>
                 </div>
