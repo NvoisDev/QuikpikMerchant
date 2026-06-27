@@ -1364,6 +1364,11 @@ export function registerQuoteRoutes(app: Express): void {
           // Session charge amount (in pence): for part_paid it's the remaining outstanding, otherwise the deposit
           const sessionChargeForConnect = isPartPaid ? newAmountOutstanding : depositAmount;
           const wholesalerSessionAmount = Math.round(sessionChargeForConnect * (wholesalerTotal / (total || 1)) * 100);
+          const prevOrders = await db.select({ id: orders.id }).from(orders)
+            .where(and(eq(orders.retailerId, existingOrder.retailerId || ''), eq(orders.wholesalerId, wholesalerId), ne(orders.id, quoteId)))
+            .limit(1);
+          const isReturning = prevOrders.length > 0;
+
           const baseUrl = process.env.NODE_ENV === 'production'
             ? 'https://quikpik.app'
             : (process.env.REPLIT_DEV_DOMAIN
