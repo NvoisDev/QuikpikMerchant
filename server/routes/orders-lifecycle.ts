@@ -1316,6 +1316,69 @@ export function registerOrderLifecycleRoutes(app: Express): void {
     }
   });
 
+  // PATCH /api/orders/:id/discount — apply a manual flat discount to an invoice
+  app.patch('/api/orders/:id/discount', requireAuth, requireBooleanFeature('order_management'), requireNotViewer, requireMemberPermission('orders'), async (req: any, res) => {
+    try {
+      const orderId = parseInt(req.params.id);
+      if (isNaN(orderId)) return res.status(400).json({ error: 'Invalid order ID' });
+
+      const wholesalerId = resolveWholesalerId(req);
+
+      const { discount, note } = req.body;
+      const parsedDiscount = parseFloat(discount);
+      if (isNaN(parsedDiscount) || parsedDiscount < 0) {
+        return res.status(400).json({ error: 'Discount must be a non-negative number' });
+      }
+
+      const [order] = await db.select().from(orders).where(eq(orders.id, orderId)).limit(1);
+      if (!order) return res.status(404).json({ error: 'Order not found' });
+      if (order.wholesalerId !== wholesalerId) return res.status(403).json({ error: 'Not authorised' });
+      if (order.paymentStatus === 'paid') return res.status(400).json({ error: 'Cannot discount a fully paid order' });
+      if (order.status === 'cancelled') return res.status(400).json({ error: 'Cannot discount a cancelled order' });
+
+      const subtotal = parseFloat(order.subtotal || '0');
+      const deliveryCost = parseFloat(order.deliveryCost || '0');
+      if (parsedDiscount > subtotal + deliveryCost + 0.01) {
+        return res.status(400).json({ error: `Discount cannot exceed the order total (£${(subtotal + deliveryCost).toFixed(2)})` });
+      }
+
+      // Undo the previous discount from the stored total, then apply the new one
+      const prevDiscount = parseFloat(String(order.invoiceDiscount || '0'));
+      const currentTotal = parseFloat(order.total || '0');
+      const newTotal = Math.max(0, currentTotal + prevDiscount - parsedDiscount);
+
+      const amountPaid = parseFloat(order.amountPaid || '0');
+      const newOutstanding = Math.max(0, newTotal - amountPaid);
+      const newPaymentStatus = newOutstanding <= 0.01 ? 'paid' : (amountPaid > 0.01 ? 'part_paid' : 'unpaid');
+
+      const updateData: Record<string, any> = {
+        invoiceDiscount: parsedDiscount.toFixed(2),
+        invoiceDiscountNote: (note && note.trim()) || null,
+        total: newTotal.toFixed(2),
+        amountOutstanding: newOutstanding.toFixed(2),
+        paymentStatus: newPaymentStatus,
+      };
+
+      // Expire any existing Stripe link — the total changed so it's stale
+      if (order.stripePaymentLinkId) {
+        try {
+          const stripe = getStripeClient(Boolean(req.user.isTestAccount));
+          await stripe.checkout.sessions.expire(order.stripePaymentLinkId).catch(() => {});
+        } catch { /* best effort */ }
+        updateData.stripePaymentLinkId = null;
+        updateData.stripePaymentLinkUrl = null;
+      }
+
+      await db.update(orders).set(updateData).where(eq(orders.id, orderId));
+      const [updatedOrder] = await db.select().from(orders).where(eq(orders.id, orderId)).limit(1);
+
+      return res.json({ success: true, order: updatedOrder });
+    } catch (error) {
+      console.error('❌ apply-discount error:', error);
+      return res.status(500).json({ error: 'Failed to apply discount' });
+    }
+  });
+
   // PUT /api/orders/:id/items-prepared
   app.put("/api/orders/:id/items-prepared", requireAuth, requireBooleanFeature('order_management'), requireNotViewer, requireMemberPermission('orders'), async (req, res) => {
     try {

@@ -106,9 +106,12 @@ interface Order {
   paymentStatus?: string;
   paymentMethod?: string;
   stripePaymentLinkUrl?: string;
+  stripePaymentLinkId?: string | null;
   customerTransactionFee?: string;
   vatAmount?: string;
   vatRateApplied?: string;
+  invoiceDiscount?: string | null;
+  invoiceDiscountNote?: string | null;
   wholesalerBusinessName?: string;
   businessProfileId?: number | null;
   businessProfileName?: string | null;
@@ -268,12 +271,14 @@ const isOfflineOrder = (order: Order): boolean =>
 const calculateNetAmount = (order: Order) => {
   const subtotal = parseFloat(order.subtotal || '0');
   const deliveryCost = parseFloat(order.deliveryCost || '0');
+  const invoiceDiscount = parseFloat(order.invoiceDiscount || '0');
+  const base = Math.max(0, subtotal + deliveryCost - invoiceDiscount);
   // Truly offline orders (no Stripe payment signals) never incur a platform fee
-  if (isOfflineOrder(order)) return subtotal + deliveryCost;
+  if (isOfflineOrder(order)) return base;
   // Only deduct what is actually stored — never fall back to a default rate
   const actualPlatformFee = parseFloat(order.platformFee || '0');
-  if (actualPlatformFee <= 0) return subtotal + deliveryCost;
-  return (subtotal + deliveryCost) - actualPlatformFee;
+  if (actualPlatformFee <= 0) return base;
+  return Math.max(0, base - actualPlatformFee);
 };
 
 export default function OrderDetail() {
@@ -314,6 +319,11 @@ export default function OrderDetail() {
   const [markAsPaidMethod, setMarkAsPaidMethod] = useState('cash');
   const [markAsPaidNote, setMarkAsPaidNote] = useState('');
   const [isMarkingPaid, setIsMarkingPaid] = useState(false);
+
+  const [isDiscountOpen, setIsDiscountOpen] = useState(false);
+  const [discountAmount, setDiscountAmount] = useState('');
+  const [discountNote, setDiscountNote] = useState('');
+  const [isApplyingDiscount, setIsApplyingDiscount] = useState(false);
 
   const [showEditMode, setShowEditMode] = useState(false);
   const [editItems, setEditItems] = useState<EditItem[]>([]);
@@ -1016,6 +1026,48 @@ export default function OrderDetail() {
     }
   };
 
+  const handleApplyDiscount = async () => {
+    if (!order) return;
+    const parsed = parseFloat(discountAmount);
+    if (isNaN(parsed) || parsed < 0) {
+      toast({ title: 'Invalid amount', description: 'Please enter a valid discount amount', variant: 'destructive' });
+      return;
+    }
+    setIsApplyingDiscount(true);
+    try {
+      const response = await fetch(`/api/orders/${order.id}/discount`, {
+        method: 'PATCH',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ discount: parsed, note: discountNote }),
+      });
+      const data = await response.json();
+      if (response.ok && data.success) {
+        setOrder({
+          ...order,
+          invoiceDiscount: data.order.invoiceDiscount,
+          invoiceDiscountNote: data.order.invoiceDiscountNote,
+          total: data.order.total,
+          amountOutstanding: data.order.amountOutstanding,
+          paymentStatus: data.order.paymentStatus,
+          stripePaymentLinkId: data.order.stripePaymentLinkId,
+          stripePaymentLinkUrl: data.order.stripePaymentLinkUrl,
+        });
+        setIsDiscountOpen(false);
+        toast({
+          title: parsed > 0 ? 'Discount applied' : 'Discount removed',
+          description: parsed > 0 ? `${formatMoney(parsed)} discount applied to the invoice.` : 'Invoice discount cleared.',
+        });
+      } else {
+        toast({ title: 'Error', description: data.error || 'Failed to apply discount', variant: 'destructive' });
+      }
+    } catch {
+      toast({ title: 'Error', description: 'Failed to apply discount', variant: 'destructive' });
+    } finally {
+      setIsApplyingDiscount(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="bg-white min-h-screen flex items-center justify-center">
@@ -1628,6 +1680,14 @@ export default function OrderDetail() {
                   <span>{formatMoney(parseFloat(order.deliveryCost || '0'))}</span>
                 </div>
               )}
+              {parseFloat(order.invoiceDiscount || '0') > 0 && (
+                <div className="flex justify-between text-red-600 font-medium">
+                  <span>
+                    Discount{order.invoiceDiscountNote ? ` (${order.invoiceDiscountNote})` : ''}
+                  </span>
+                  <span>-{formatMoney(parseFloat(order.invoiceDiscount || '0'))}</span>
+                </div>
+              )}
               {parseFloat(order.vatAmount || '0') > 0 && (() => {
                 const vat = parseFloat(order.vatAmount || '0');
                 const storedRate = parseFloat(order.vatRateApplied || '0');
@@ -1748,6 +1808,23 @@ export default function OrderDetail() {
               >
                 <DollarSign className="h-4 w-4 mr-1.5" />
                 Record Offline Payment
+              </Button>
+            )}
+
+            {/* Manual invoice discount */}
+            {order.paymentStatus !== 'paid' && order.status !== 'cancelled' && !isViewer && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="w-full border-orange-400 text-orange-600 hover:bg-orange-50 min-h-[44px]"
+                onClick={() => {
+                  setDiscountAmount(parseFloat(order.invoiceDiscount || '0') > 0 ? String(parseFloat(order.invoiceDiscount || '0')) : '');
+                  setDiscountNote(order.invoiceDiscountNote || '');
+                  setIsDiscountOpen(true);
+                }}
+              >
+                <Minus className="h-4 w-4 mr-1.5" />
+                {parseFloat(order.invoiceDiscount || '0') > 0 ? 'Edit Discount' : 'Apply Discount'}
               </Button>
             )}
 
@@ -2271,6 +2348,59 @@ export default function OrderDetail() {
             >
               Confirm
             </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Apply Discount Dialog ─────────────────────────────────────────── */}
+      <Dialog open={isDiscountOpen} onOpenChange={setIsDiscountOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Minus className="h-4 w-4 text-orange-500" />
+              Apply Discount
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-1">
+            <p className="text-sm text-gray-500">
+              Enter a flat amount to deduct from invoice{' '}
+              <span className="font-medium text-gray-800">{order.orderNumber || `#${order.id}`}</span>.
+              Set to 0 to remove an existing discount.
+            </p>
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Discount amount</label>
+              <Input
+                type="number"
+                min="0"
+                step="0.01"
+                value={discountAmount}
+                onChange={(e) => setDiscountAmount(e.target.value)}
+                placeholder="0.00"
+                className="text-sm"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Reason (optional)</label>
+              <Input
+                type="text"
+                value={discountNote}
+                onChange={(e) => setDiscountNote(e.target.value)}
+                placeholder="e.g. Loyalty discount"
+                className="text-sm"
+              />
+            </div>
+            <div className="flex gap-2 pt-1">
+              <Button variant="outline" className="flex-1" onClick={() => setIsDiscountOpen(false)} disabled={isApplyingDiscount}>
+                Cancel
+              </Button>
+              <Button
+                className="flex-1 bg-orange-500 hover:bg-orange-600 text-white"
+                onClick={handleApplyDiscount}
+                disabled={isApplyingDiscount || discountAmount === ''}
+              >
+                {isApplyingDiscount ? 'Applying...' : 'Apply Discount'}
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>

@@ -651,9 +651,10 @@ export async function buildInvoicePdf(order: any, wholesaler: any, showTransacti
   const deliveryCost = parseFloat(order.deliveryCost || '0');
   const vatAmount = parseFloat(order.vatAmount || '0');
   const txFee = showTransactionFee ? parseFloat(order.customerTransactionFee || '0') : 0;
+  const invoiceDiscount = parseFloat(order.invoiceDiscount || '0');
   const grandTotal = showTransactionFee
-    ? parseFloat(order.total || '0') || (subtotal + vatAmount + deliveryCost + txFee)
-    : subtotal + vatAmount + deliveryCost;
+    ? parseFloat(order.total || '0') || Math.max(0, subtotal + vatAmount + deliveryCost + txFee - invoiceDiscount)
+    : Math.max(0, subtotal + vatAmount + deliveryCost - invoiceDiscount);
   const logoUrl = getEmailLogoUrl(wholesaler.id, wholesaler.logoType, wholesaler.logoUrl);
   const initials = businessName.split(' ').map((w: string) => w[0] || '').join('').toUpperCase().slice(0, 2) || '??';
   let logoBuffer: Buffer | null = null;
@@ -861,6 +862,13 @@ export async function buildInvoicePdf(order: any, wholesaler: any, showTransacti
       drawTotRow(`VAT (${vatRatePct}%)`, fmt(vatAmount));
     }
     if (showTransactionFee && txFee > 0) drawTotRow('Service Fee', fmt(txFee));
+    if (invoiceDiscount > 0) {
+      const discountLabel = order.invoiceDiscountNote ? `Discount (${order.invoiceDiscountNote})` : 'Discount';
+      const font = 'Helvetica', size = 10;
+      doc.font(font).fontSize(size).fillColor('#dc2626').text(discountLabel, tX, tY, { width: TOTALS_W / 2 });
+      doc.font(font).fontSize(size).fillColor('#dc2626').text(`-${fmt(invoiceDiscount)}`, tX + TOTALS_W / 2, tY, { width: TOTALS_W / 2, align: 'right' });
+      tY += 17;
+    }
     doc.moveTo(tX, tY - 4).lineTo(tX + TOTALS_W, tY - 4).strokeColor(GREEN).lineWidth(1.5).stroke();
     tY += 4;
     drawTotRow('Total', fmt(grandTotal), true);

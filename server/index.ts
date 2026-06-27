@@ -614,6 +614,9 @@ async function runStartupMigrations() {
     `CREATE INDEX IF NOT EXISTS orders_payment_status_idx ON orders (payment_status)`,
     // products (wholesaler_id, status) — covers product list (WHERE wholesaler_id = ? AND status = 'active')
     `CREATE INDEX IF NOT EXISTS products_wholesaler_status_idx ON products (wholesaler_id, status)`,
+    // Manual invoice discount — wholesaler can knock a flat amount off an invoice
+    `ALTER TABLE orders ADD COLUMN IF NOT EXISTS invoice_discount DECIMAL(10,2) NOT NULL DEFAULT 0.00`,
+    `ALTER TABLE orders ADD COLUMN IF NOT EXISTS invoice_discount_note TEXT`,
   ];
   for (const stmt of migrations) {
     await db.execute(sql.raw(stmt));

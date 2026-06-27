@@ -802,6 +802,10 @@ export const orders = pgTable("orders", {
   // to a partial index but compatible with Drizzle's onConflictDoNothing target syntax).
   idempotencyKey: varchar("idempotency_key", { length: 64 }),
 
+  // Manual invoice-level discount applied by the wholesaler
+  invoiceDiscount: decimal("invoice_discount", { precision: 10, scale: 2 }).default("0.00"),
+  invoiceDiscountNote: text("invoice_discount_note"),
+
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => [
