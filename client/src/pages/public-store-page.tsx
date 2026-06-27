@@ -772,38 +772,6 @@ export default function PublicStorePage() {
     return matchSearch && matchCat;
   });
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-10 h-10 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-          <p className="text-gray-500 text-sm">Loading store…</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (isError || !wholesaler) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center max-w-sm px-4">
-          <Store className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-          <h1 className="text-xl font-semibold text-gray-900 mb-2">Store not found</h1>
-          <p className="text-gray-500 text-sm mb-6">This store may be private or the link may have changed.</p>
-          <Link href="/">
-            <Button variant="outline">
-              <ArrowLeft className="h-4 w-4 mr-2" /> Back to Quikpik
-            </Button>
-          </Link>
-        </div>
-      </div>
-    );
-  }
-
-  const currency = wholesaler.preferredCurrency || 'GBP';
-  const showPrices = wholesaler.priceDisplayMode === 'shown';
-  const enquiriesEnabled = wholesaler.enquiriesEnabled !== false;
-
   useEffect(() => {
     if (!wholesaler) return;
 
@@ -867,6 +835,38 @@ export default function PublicStorePage() {
       document.getElementById('store-ld-json')?.remove();
     };
   }, [wholesaler, allProducts]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-10 h-10 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+          <p className="text-gray-500 text-sm">Loading store…</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (isError || !wholesaler) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center max-w-sm px-4">
+          <Store className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+          <h1 className="text-xl font-semibold text-gray-900 mb-2">Store not found</h1>
+          <p className="text-gray-500 text-sm mb-6">This store may be private or the link may have changed.</p>
+          <Link href="/">
+            <Button variant="outline">
+              <ArrowLeft className="h-4 w-4 mr-2" /> Back to Quikpik
+            </Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  const currency = wholesaler.preferredCurrency || 'GBP';
+  const showPrices = wholesaler.priceDisplayMode === 'shown';
+  const enquiriesEnabled = wholesaler.enquiriesEnabled !== false;
 
   return (
     <div className="min-h-screen bg-gray-50">
