@@ -455,8 +455,8 @@ export class ProductStorage extends UserStorageBase {
     await db.delete(templateProducts).where(eq(templateProducts.productId, id));
     await db.delete(productPerformanceSummary).where(eq(productPerformanceSummary.productId, id));
     await db.delete(stockUpdateNotifications).where(eq(stockUpdateNotifications.productId, id));
-    await db.execute(sql`DELETE FROM customer_promotional_offers WHERE product_id = ${id}`);
-    await db.execute(sql`DELETE FROM promotion_analytics WHERE product_id = ${id}`);
+    try { await db.execute(sql`DELETE FROM customer_promotional_offers WHERE product_id = ${id}`); } catch { /* table may not exist */ }
+    try { await db.execute(sql`DELETE FROM promotion_analytics WHERE product_id = ${id}`); } catch { /* table may not exist */ }
     // Clear nullable FK references in analytics tables
     await db.execute(sql`UPDATE users SET most_ordered_product_id = NULL WHERE most_ordered_product_id = ${id}`);
     // Finally delete the product
