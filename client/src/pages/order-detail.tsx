@@ -1205,7 +1205,7 @@ export default function OrderDetail() {
             </p>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
-            {order.isQuote && order.status === 'pending' && order.paymentStatus !== 'paid' && !isViewer && (
+            {order.isQuote && ['pending', 'processing', 'ready_for_collection', 'fulfilled'].includes(order.status) && order.paymentStatus !== 'paid' && !isViewer && (
               <Button
                 variant="ghost"
                 size="sm"
