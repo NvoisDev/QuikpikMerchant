@@ -1,0 +1,49 @@
+name,description,price,promoPrice,promoActive,currency,moq,stock,category,imageUrl,priceVisible,status,unit,unitFormat,sellingFormat,unitsPerPallet,palletPrice,palletMoq,palletStock,palletWeight,temperatureRequirement,contentCategory,specialHandling_fragile,specialHandling_perishable,specialHandling_hazardous,deliveryOptions_pickup,deliveryOptions_delivery
+Bags of Blacked Beans,,30.00,,false,GBP,1,0,Groceries & Food,,true,active,,,units,,,,,,ambient,food,false,false,false,true,true
+Bags of Honey Beans,,32.00,,false,GBP,1,0,Groceries & Food,,true,active,,,units,,,,,,ambient,food,false,false,false,true,true
+Ola Ola,,124.00,,false,GBP,1,0,Groceries & Food,,true,active,,4.4kg x10,units,,,,,,ambient,food,false,false,false,true,true
+Ola Ola,,124.00,,false,GBP,1,0,Groceries & Food,,true,active,,1.4kg x11,units,,,,,,ambient,food,false,false,false,true,true
+Fanta,,23.00,,false,GBP,1,0,Beverages & Drinks,,true,active,,,units,,,,,,ambient,food,false,false,false,true,true
+Sprite,,12.00,,false,GBP,1,0,Beverages & Drinks,,true,active,,,units,,,,,,ambient,food,false,false,false,true,true
+Maltina Can,,11.00,,false,GBP,1,0,Beverages & Drinks,,true,active,,,units,,,,,,ambient,food,false,false,false,true,true
+Malt Guinness,,11.00,,false,GBP,1,0,Beverages & Drinks,,true,active,,,units,,,,,,ambient,food,false,false,false,true,true
+Golden Morn,,14.00,,false,GBP,1,0,Groceries & Food,,true,active,,300g x12,units,,,,,,ambient,food,false,false,false,true,true
+Golden Morn,,16.00,,false,GBP,1,0,Groceries & Food,,true,active,,950g x6,units,,,,,,ambient,food,false,false,false,true,true
+Golden Morn,,16.00,,false,GBP,1,0,Groceries & Food,,true,active,,600g x6,units,,,,,,ambient,food,false,false,false,true,true
+Onga Seasoning Classic,,,,,GBP,1,0,Groceries & Food,,false,active,,,units,,,,,,ambient,food,false,false,false,true,true
+Dudu Osun,,,,,GBP,1,0,Health & Beauty,,false,active,,,units,,,,,,ambient,other,false,false,false,true,true
+Tetmosol,,,,,GBP,1,0,Health & Beauty,,false,active,,x12,units,,,,,,ambient,other,false,false,false,true,true
+Tom Tom,,,,,GBP,1,0,Groceries & Food,,false,active,,24 bags x129g,units,,,,,,ambient,food,false,false,false,true,true
+Maggi Star Cubes,,21.00,,false,GBP,1,0,Groceries & Food,,true,active,,,units,,,,,,ambient,food,false,false,false,true,true
+Checkers Banana,,14.50,,false,GBP,1,0,Groceries & Food,,true,active,,2kg x2,units,,,,,,ambient,food,false,false,false,true,true
+Checkers Vanilla Custard,,12.00,,false,GBP,1,0,Groceries & Food,,true,active,,1kg x4,units,,,,,,ambient,food,false,false,false,true,true
+Badia Jollof Rice Seasoning,,,,,GBP,1,0,Groceries & Food,,false,active,,,units,,,,,,ambient,food,false,false,false,true,true
+De Rica,,,,,GBP,1,0,Groceries & Food,,false,active,,210g,units,,,,,,ambient,food,false,false,false,true,true
+De Rica,,,,,GBP,1,0,Groceries & Food,,false,active,,400g,units,,,,,,ambient,food,false,false,false,true,true
+Nigerian Coke,,22.00,,false,GBP,1,0,Beverages & Drinks,,true,active,,,units,,,,,,ambient,food,false,false,false,true,true
+Peanuts,,,,,GBP,1,0,Groceries & Food,,false,active,,150g x22,units,,,,,,ambient,food,false,false,false,true,true
+Flex Peanut,,,,,GBP,1,0,Groceries & Food,,false,active,,256g x12,units,,,,,,ambient,food,false,false,false,true,true
+Olu Olu Palm Oil,,51.00,,false,GBP,1,0,Groceries & Food,,true,active,,2 Litre x8,units,,,,,,ambient,food,false,false,false,true,true
+Indomie Onions,,7.00,,false,GBP,1,0,Groceries & Food,,true,active,,,units,,,,,,ambient,food,false,false,false,true,true
+Indomie Chicken,,8.00,,false,GBP,1,0,Groceries & Food,,true,active,,,units,,,,,,ambient,food,false,false,false,true,true
+Grandios Pap,,26.00,,false,GBP,1,0,Groceries & Food,,true,active,,100g,units,,,,,,ambient,food,false,false,false,true,true
+Grandios Pap,,26.00,,false,GBP,1,0,Groceries & Food,,true,active,,500g,units,,,,,,ambient,food,false,false,false,true,true
+Funbat A,,,,,GBP,1,0,Health & Beauty,,false,active,,,units,,,,,,ambient,other,false,false,false,true,true
+Epiderm,,,,,GBP,1,0,Health & Beauty,,false,active,,,units,,,,,,ambient,other,false,false,false,true,true
+Golden Penny,,,,,GBP,1,0,Groceries & Food,,false,active,,5kg,units,,,,,,ambient,food,false,false,false,true,true
+Honeywell Semolina,,,,,GBP,1,0,Groceries & Food,,false,active,,2kg,units,,,,,,ambient,food,false,false,false,true,true
+Honeywell Semolina,,,,,GBP,1,0,Groceries & Food,,false,active,,5kg,units,,,,,,ambient,food,false,false,false,true,true
+Alabukun,,,,,GBP,1,0,Health & Beauty,,false,active,,,units,,,,,,ambient,other,false,false,false,true,true
+Lion Curry,,,,,GBP,1,0,Groceries & Food,,false,active,,,units,,,,,,ambient,food,false,false,false,true,true
+Lion Thyme,,,,,GBP,1,0,Groceries & Food,,false,active,,,units,,,,,,ambient,food,false,false,false,true,true
+Olu Olu Plantain Chips,,15.50,,false,GBP,1,0,Groceries & Food,,true,active,,,units,,,,,,ambient,food,false,false,false,true,true
+Knorr Chicken,,23.00,,false,GBP,1,0,Groceries & Food,,true,active,,,units,,,,,,ambient,food,false,false,false,true,true
+Knorr Beef,,22.00,,false,GBP,1,0,Groceries & Food,,true,active,,,units,,,,,,ambient,food,false,false,false,true,true
+Tiger Blade,,,,,GBP,1,0,Health & Beauty,,false,active,,,units,,,,,,ambient,other,false,false,false,true,true
+Schweppes Chapman,,12.00,,false,GBP,1,0,Beverages & Drinks,,true,active,,,units,,,,,,ambient,food,false,false,false,true,true
+Cashew Nut,,50.00,,false,GBP,1,0,Groceries & Food,,true,active,,,units,,,,,,ambient,food,false,false,false,true,true
+Honeywell Semolina,,13.99,,false,GBP,1,0,Groceries & Food,,true,active,,5 x 2kg,units,,,,,,ambient,food,false,false,false,true,true
+Jumbo Fish,,38.00,,false,GBP,1,0,Groceries & Food,,true,active,,,units,,,,,,ambient,food,false,false,false,true,true
+Jumbo Chicken,,38.00,,false,GBP,1,0,Groceries & Food,,true,active,,,units,,,,,,ambient,food,false,false,false,true,true
+Jumbo Crayfish,,38.00,,false,GBP,1,0,Groceries & Food,,true,active,,,units,,,,,,ambient,food,false,false,false,true,true
+Karaole Balm,,13.00,,false,GBP,1,0,Health & Beauty,,true,active,,x12,units,,,,,,ambient,other,false,false,false,true,true

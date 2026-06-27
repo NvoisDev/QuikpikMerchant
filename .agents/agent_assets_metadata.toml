@@ -17,3 +17,9 @@ id = "8csSA29qF6z2FuQJ1wTjD"
 uri = "file://haq-global-stock-summary.xlsx"
 type = "table"
 title = "Haq Global — Stock Summary (All Products)"
+
+[[outputs]]
+id = "NCh0CbxQSZvQBfSaM8S7V"
+uri = "file://products-upload.csv"
+type = "table"
+title = "Wholesaler Product Upload (48 products)"
