@@ -1752,7 +1752,7 @@ export default function OrderDetail() {
             )}
 
             {/* Quote payment status + payment link */}
-            {order.isQuote && (() => {
+            {(order.isQuote || parseFloat(order.amountPaid || '0') > 0) && (() => {
               const productTotal = parseFloat(order.subtotal || '0') + parseFloat(order.deliveryCost || '0');
               const amountPaidRaw = parseFloat(order.amountPaid || '0');
               const wholesalerPaid = isStripePayment(order)
@@ -1948,13 +1948,15 @@ export default function OrderDetail() {
                       <div className={`text-xs ${hasPaid ? 'font-medium text-gray-900' : 'text-gray-500'}`}>
                         {hasDeposit
                           ? (hasPaid ? `Deposit received (${order.depositPercentage}%)` : `Awaiting deposit (${order.depositPercentage}%)`)
-                          : (hasPaid ? 'Payment received' : 'Awaiting payment')}
+                          : (hasPaid
+                              ? (parseFloat(order.amountPaid || '0') < pTotal - 0.01 ? 'Partial payment received' : 'Payment received')
+                              : 'Awaiting payment')}
                       </div>
                       {hasPaid && (
                         <div className="text-xs text-gray-500">
                           {hasDeposit
                             ? formatMoney(pTotal * ((order.depositPercentage || 0) / 100))
-                            : formatMoney(pTotal)}
+                            : formatMoney(parseFloat(order.amountPaid || '0'))}
                           {' · '}{new Date(order.createdAt).toLocaleDateString()}
                         </div>
                       )}
