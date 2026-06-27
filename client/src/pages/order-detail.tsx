@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 import { useAuth, type AuthUser } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useCurrency } from "@/hooks/useCurrency";
 import { getOfflinePaymentDefaultAmount } from "@/lib/order-payment-balances";
 import { QuoteActivityLog } from "@/components/orders/QuoteActivityLog";
@@ -1053,6 +1053,7 @@ export default function OrderDetail() {
         onSaved={(updatedOrder) => {
           if (updatedOrder) setOrder(updatedOrder);
           setShowEditMode(false);
+          queryClient.invalidateQueries({ queryKey: [`/api/orders/${order.id}/picking`] });
         }}
       />
     );
