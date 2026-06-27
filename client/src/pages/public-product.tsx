@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { formatNumber } from "@/lib/utils";
 import { useRoute } from "wouter";
+import { useCanonical, useNoIndex } from "@/hooks/useCanonical";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -70,7 +71,9 @@ export default function PublicProductPage() {
   });
   const [inquirySubmitted, setInquirySubmitted] = useState(false);
 
-  const { data: product, isLoading } = useQuery<PublicProduct>({
+  useCanonical(params?.slug ? `/product/${params.slug}` : "/");
+
+  const { data: product, isLoading, isError } = useQuery<PublicProduct>({
     queryKey: [`/api/public/products/${params?.slug}`],
     queryFn: async () => {
       const response = await fetch(`/api/public/products/${params?.slug}`);
@@ -79,6 +82,8 @@ export default function PublicProductPage() {
     },
     enabled: !!params?.slug,
   });
+
+  useNoIndex(isError || (!isLoading && !product));
 
   // Update page title, meta description, and structured data for SEO
   useEffect(() => {

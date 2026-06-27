@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, useLocation } from "wouter";
+import { useCanonical } from "@/hooks/useCanonical";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -64,6 +65,8 @@ export default function WelcomePage() {
   const { wholesalerId } = useParams<{ wholesalerId: string }>();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+
+  useCanonical(wholesalerId ? `/welcome/${wholesalerId}` : "/");
 
   const [wholesaler, setWholesaler] = useState<WholesalerInfo | null>(null);
   const [loadingWholesaler, setLoadingWholesaler] = useState(true);

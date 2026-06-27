@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link } from "wouter";
 import { blogPosts, BLOG_CATEGORIES } from "@/data/blog-posts";
+import { useCanonical } from "@/hooks/useCanonical";
 import { ArrowRight, Clock, Calendar, Search, ChevronRight, BookOpen } from "lucide-react";
 
 function formatDate(dateStr: string) {
@@ -137,6 +138,8 @@ export default function BlogPage() {
   const [activeCategory, setActiveCategory] = useState("All");
   const [newsletterEmail, setNewsletterEmail] = useState("");
   const [newsletterSubmitted, setNewsletterSubmitted] = useState(false);
+
+  useCanonical("/blog");
 
   useEffect(() => {
     const prev = document.title;

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, Link, useSearch } from "wouter";
+import { useCanonical, useNoIndex } from "@/hooks/useCanonical";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
@@ -741,6 +742,8 @@ export default function PublicStorePage() {
 
   const { cart, addToCart, updateQty, clearCart, getQty, totalItems } = useCart(slug ?? '');
 
+  useCanonical(slug ? `/w/${slug}` : "/");
+
   const { data, isLoading, isError } = useQuery<{ wholesaler: PublicWholesaler; products: PublicProduct[] }>({
     queryKey: [`/api/public/wholesaler/${slug}`],
     enabled: !!slug,
@@ -752,6 +755,8 @@ export default function PublicStorePage() {
 
   const wholesaler = data?.wholesaler;
   const allProducts = data?.products ?? [];
+
+  useNoIndex(isError || (!isLoading && !wholesaler));
 
   const presentCats = new Set(allProducts.map(p => p.category).filter(Boolean) as string[]);
   const centralNames = centralCategories.map(c => c.name);

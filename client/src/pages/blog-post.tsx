@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRoute, Link } from "wouter";
 import { blogPosts } from "@/data/blog-posts";
+import { useCanonical, useNoIndex } from "@/hooks/useCanonical";
 import type { ContentBlock } from "@/data/blog-posts";
 import { ArrowLeft, Clock, Calendar, BookOpen, ChevronRight, ArrowRight } from "lucide-react";
 
@@ -152,6 +153,9 @@ export default function BlogPostPage() {
     () => blogPosts.find(p => p.slug === params?.slug),
     [params?.slug]
   );
+
+  useCanonical(post ? `/blog/${post.slug}` : "/blog");
+  useNoIndex(!post);
 
   const relatedPosts = useMemo(() => {
     if (!post) return [];

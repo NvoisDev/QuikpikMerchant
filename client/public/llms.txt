@@ -1,0 +1,20 @@
+# Quikpik
+
+Quikpik is a B2B wholesale platform that helps wholesalers manage products, orders, invoices, inventory, customers, and marketing.
+
+## Public pages
+
+- Homepage: https://quikpik.app/
+- Blog (QuikTips & Insights): https://quikpik.app/blog
+- Terms of Service: https://quikpik.app/terms
+- Privacy Policy: https://quikpik.app/privacy
+
+## Dynamic public content
+
+- Wholesaler storefronts: https://quikpik.app/w/{slug}
+- Public product pages: https://quikpik.app/product/{slug}
+- Wholesaler welcome pages: https://quikpik.app/welcome/{id}
+
+## Sitemap
+
+https://quikpik.app/sitemap.xml

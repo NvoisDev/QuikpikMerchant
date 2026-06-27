@@ -1,6 +1,7 @@
 import { Link } from "wouter";
 import logoSrc from "@assets/Quikpik_1773118173684.png";
 import heroSrc from "@assets/ChatGPT_Image_May_16,_2026,_10_28_14_PM_1778966955144.png";
+import { useCanonical } from "@/hooks/useCanonical";
 
 const GREEN = "#1a7a3d";
 
@@ -93,6 +94,7 @@ const sections = [
 ];
 
 export default function PrivacyPolicy() {
+  useCanonical("/privacy");
   return (
     <>
       <title>Privacy Policy — Quikpik</title>

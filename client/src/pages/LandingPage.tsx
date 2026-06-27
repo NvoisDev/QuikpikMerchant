@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useCanonical } from "@/hooks/useCanonical";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -422,6 +423,9 @@ export default function LandingPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeAudience, setActiveAudience] = useState<'retailer' | 'wholesaler'>('retailer');
   const [homepageWholesalers, setHomepageWholesalers] = useState<HomepageWholesaler[]>([]);
+
+  useCanonical("/");
+
   const handleGetStarted = () => { window.location.href = "/signup"; };
   const handleLogin = () => { window.location.href = "/login"; };
   const handleCustomerLogin = () => { window.location.href = "/customer-login"; };
