@@ -73,6 +73,14 @@ function formatCurrency(amount: string | number | null, currency = 'GBP') {
   return new Intl.NumberFormat('en-GB', { style: 'currency', currency }).format(n);
 }
 
+function slugify(text: string): string {
+  return text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+}
+
+function productSlug(name: string, id: number): string {
+  return `${slugify(name)}-${id}`;
+}
+
 function getInitials(name: string) {
   return name.split(' ').map(w => w[0]).filter(Boolean).slice(0, 2).join('').toUpperCase();
 }
@@ -119,9 +127,11 @@ function ProductCard({
   const imgSrc = product.imageUrl || (product.images && product.images[0]) || null;
   const inCart = cartQty > 0;
 
+  const href = `/product/${productSlug(product.name, product.id)}`;
+
   return (
     <div className={`bg-white rounded-xl border shadow-sm overflow-hidden hover:shadow-md transition-shadow ${inCart ? 'border-emerald-300 ring-1 ring-emerald-200' : 'border-gray-100'}`}>
-      <div className="aspect-square bg-gray-50 flex items-center justify-center overflow-hidden relative">
+      <a href={href} className="block aspect-square bg-gray-50 flex items-center justify-center overflow-hidden relative" tabIndex={-1} aria-label={product.name}>
         {imgSrc ? (
           <img src={imgSrc} alt={product.name} className="w-full h-full object-cover" />
         ) : (
@@ -132,13 +142,15 @@ function ProductCard({
             {cartQty}
           </div>
         )}
-      </div>
+      </a>
 
       <div className="p-3">
         {product.category && (
           <p className="text-[10px] text-emerald-600 font-semibold uppercase tracking-wide mb-1">{product.category}</p>
         )}
-        <h3 className="text-sm font-semibold text-gray-900 leading-tight line-clamp-2 mb-1">{product.name}</h3>
+        <a href={href} className="hover:text-emerald-700 transition-colors">
+          <h3 className="text-sm font-semibold text-gray-900 leading-tight line-clamp-2 mb-1">{product.name}</h3>
+        </a>
 
         {product.description && (
           <p className="text-[11px] text-gray-500 line-clamp-2 mb-1 leading-snug">{product.description}</p>
@@ -786,6 +798,70 @@ export default function PublicStorePage() {
   const currency = wholesaler.preferredCurrency || 'GBP';
   const showPrices = wholesaler.priceDisplayMode === 'shown';
   const enquiriesEnabled = wholesaler.enquiriesEnabled !== false;
+
+  useEffect(() => {
+    if (!wholesaler) return;
+
+    const origin = window.location.origin;
+    const storeUrl = `${origin}/store/${wholesaler.storeSlug ?? wholesaler.id}`;
+
+    const serviceTypes: string[] = [];
+    if (wholesaler.enableDelivery) serviceTypes.push('DeliveryService');
+    if (wholesaler.enablePickup) serviceTypes.push('PickupInStore');
+
+    const businessEntity: Record<string, unknown> = {
+      "@context": "https://schema.org",
+      "@type": ["Store", "LocalBusiness"],
+      "name": wholesaler.businessName,
+      "url": storeUrl,
+    };
+
+    if (wholesaler.storeDescription) businessEntity["description"] = wholesaler.storeDescription;
+    if (wholesaler.logoUrl) businessEntity["image"] = wholesaler.logoUrl;
+    if (wholesaler.city || wholesaler.country) {
+      businessEntity["address"] = {
+        "@type": "PostalAddress",
+        ...(wholesaler.city ? { "addressLocality": wholesaler.city } : {}),
+        ...(wholesaler.country ? { "addressCountry": wholesaler.country } : {}),
+      };
+    }
+    if (wholesaler.phoneNumber && wholesaler.whatsappContactVisible !== false) {
+      businessEntity["telephone"] = wholesaler.phoneNumber;
+    }
+    if (wholesaler.deliveryRegions) businessEntity["areaServed"] = wholesaler.deliveryRegions;
+    if (serviceTypes.length > 0) businessEntity["hasOfferCatalog"] = { "@type": "OfferCatalog", "name": `${wholesaler.businessName} Wholesale Catalog` };
+
+    const itemListElements = allProducts.map((p, idx) => ({
+      "@type": "ListItem",
+      "position": idx + 1,
+      "url": `${origin}/product/${productSlug(p.name, p.id)}`,
+      "name": p.name,
+      ...(p.category ? { "description": p.category } : {}),
+    }));
+
+    const schemas: unknown[] = [businessEntity];
+    if (itemListElements.length > 0) {
+      schemas.push({
+        "@context": "https://schema.org",
+        "@type": "ItemList",
+        "name": `${wholesaler.businessName} Product Catalog`,
+        "url": storeUrl,
+        "numberOfItems": itemListElements.length,
+        "itemListElement": itemListElements,
+      });
+    }
+
+    const existingEl = document.getElementById('store-ld-json');
+    const el = existingEl ?? document.createElement('script');
+    el.id = 'store-ld-json';
+    (el as HTMLScriptElement).type = 'application/ld+json';
+    el.textContent = JSON.stringify(schemas);
+    if (!existingEl) document.head.appendChild(el);
+
+    return () => {
+      document.getElementById('store-ld-json')?.remove();
+    };
+  }, [wholesaler, allProducts]);
 
   return (
     <div className="min-h-screen bg-gray-50">

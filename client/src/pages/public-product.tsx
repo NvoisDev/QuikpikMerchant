@@ -80,7 +80,7 @@ export default function PublicProductPage() {
     enabled: !!params?.slug,
   });
 
-  // Update page title and meta description for SEO
+  // Update page title, meta description, and structured data for SEO
   useEffect(() => {
     if (product) {
       document.title = `${product.name} - Wholesale Supplier | Quikpik`;
@@ -91,7 +91,67 @@ export default function PublicProductPage() {
           `Premium ${product.name} available for wholesale from ${product.wholesaler.businessName}. ${product.description.slice(0, 120)}...`
         );
       }
+
+      const availability = product.availability === 'Out of Stock'
+        ? 'https://schema.org/OutOfStock'
+        : 'https://schema.org/InStock';
+
+      const productSchema: Record<string, unknown> = {
+        "@context": "https://schema.org",
+        "@type": "Product",
+        "name": product.name,
+        "description": product.description || undefined,
+        "category": product.category || undefined,
+        "image": product.images.length > 0 ? product.images : undefined,
+        "url": window.location.href,
+        "seller": {
+          "@type": "Organization",
+          "name": product.wholesaler.businessName,
+          ...(product.wholesaler.location ? { "address": { "@type": "PostalAddress", "addressLocality": product.wholesaler.location } } : {}),
+        },
+      };
+
+      if (product.priceVisible !== false && product.price != null) {
+        const offer: Record<string, unknown> = {
+          "@type": "Offer",
+          "priceCurrency": "GBP",
+          "price": parseFloat(product.price).toFixed(2),
+          "availability": availability,
+          "seller": {
+            "@type": "Organization",
+            "name": product.wholesaler.businessName,
+          },
+        };
+        if (product.moqVisible !== false && product.minOrderQuantity != null) {
+          offer["eligibleQuantity"] = {
+            "@type": "QuantitativeValue",
+            "minValue": product.minOrderQuantity,
+            "unitCode": "C62",
+          };
+        }
+        productSchema["offers"] = offer;
+      } else {
+        productSchema["offers"] = {
+          "@type": "Offer",
+          "availability": product.stockVisible === true ? availability : "https://schema.org/InStock",
+          "seller": {
+            "@type": "Organization",
+            "name": product.wholesaler.businessName,
+          },
+        };
+      }
+
+      const existingEl = document.getElementById('product-ld-json');
+      const el = existingEl ?? document.createElement('script');
+      el.id = 'product-ld-json';
+      (el as HTMLScriptElement).type = 'application/ld+json';
+      el.textContent = JSON.stringify(productSchema);
+      if (!existingEl) document.head.appendChild(el);
     }
+
+    return () => {
+      document.getElementById('product-ld-json')?.remove();
+    };
   }, [product]);
 
   const handleInquirySubmit = async (e: React.FormEvent) => {
