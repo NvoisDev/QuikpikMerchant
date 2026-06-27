@@ -3,6 +3,8 @@ import { createServer, type Server } from "http";
 import { setupAuth } from "./replitAuth";
 import compression from "compression";
 import cookieParser from "cookie-parser";
+import fs from "fs";
+import path from "path";
 import { performanceMiddleware } from "./middleware/performance";
 import { registerSystemRoutes } from "./routes/system";
 import { registerAuthRoutes } from "./routes/auth";
@@ -23,6 +25,7 @@ import { registerBusinessProfileRoutes } from "./routes/business-profiles";
 import { registerCollectionAddressRoutes } from "./routes/collection-addresses";
 import { registerPublicStoreRoutes } from "./routes/public-store";
 import { logServerError } from "./lib/errorLogger";
+import { getRouteMeta, injectMeta } from "./seo";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   console.log(`🔧 Registering routes... Express env: ${app.get('env')}, NODE_ENV: ${process.env.NODE_ENV}`);
@@ -53,6 +56,68 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerBusinessProfileRoutes(app);
   registerCollectionAddressRoutes(app);
   registerPublicStoreRoutes(app);
+
+  // ---------------------------------------------------------------------------
+  // SEO metadata injection for public HTML routes
+  // ---------------------------------------------------------------------------
+  // This middleware intercepts GET requests for public pages (/, /blog, /blog/:slug,
+  // /w/:slug, /product/:slug, /welcome/:wholesalerId, /terms, /privacy) and injects
+  // route-specific <title>, <meta>, OG, and Twitter tags into the HTML shell before
+  // it is delivered to the client.
+  //
+  // This runs BEFORE Vite's catch-all so crawlers and social preview bots receive
+  // meaningful head tags in the initial HTTP response without executing JavaScript.
+  // ---------------------------------------------------------------------------
+  const PUBLIC_HTML_PATTERNS = [
+    /^\/$/,
+    /^\/blog(\/[^/]+)?$/,
+    /^\/terms$/,
+    /^\/privacy$/,
+    /^\/w\/[^/]+$/,
+    /^\/product\/[^/]+$/,
+    /^\/welcome\/[^/]+$/,
+  ];
+
+  app.get("*", async (req: Request, res: Response, next: NextFunction) => {
+    const pathname = req.path;
+
+    // Only intercept HTML routes — skip API requests and static assets
+    if (pathname.startsWith("/api/") || pathname.includes(".")) {
+      return next();
+    }
+
+    const isPublic = PUBLIC_HTML_PATTERNS.some((re) => re.test(pathname));
+    if (!isPublic) return next();
+
+    try {
+      // Locate the appropriate index.html:
+      //   dev  → client/index.html  (source; Vite processes JS on-demand)
+      //   prod → server/public/index.html  (pre-built output)
+      const isDev = app.get("env") === "development";
+      const htmlPath = isDev
+        ? path.resolve(import.meta.dirname, "..", "client", "index.html")
+        : path.resolve(import.meta.dirname, "public", "index.html");
+
+      if (!fs.existsSync(htmlPath)) return next();
+
+      const template = await fs.promises.readFile(htmlPath, "utf-8");
+      const meta = await getRouteMeta(pathname);
+      const html = injectMeta(template, meta);
+
+      res
+        .status(200)
+        .set({
+          "Content-Type": "text/html",
+          "Cache-Control": "no-cache, no-store, must-revalidate",
+          Pragma: "no-cache",
+          Expires: "0",
+        })
+        .end(html);
+    } catch (err) {
+      console.error("[seo] Failed to inject metadata for", pathname, err);
+      next();
+    }
+  });
 
   // Global error middleware — captures unhandled route errors and persists them to system_error_logs
   app.use(async (err: Error, req: Request, res: Response, _next: NextFunction) => {
