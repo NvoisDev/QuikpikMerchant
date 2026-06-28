@@ -617,6 +617,46 @@ async function runStartupMigrations() {
     // Manual invoice discount — wholesaler can knock a flat amount off an invoice
     `ALTER TABLE orders ADD COLUMN IF NOT EXISTS invoice_discount DECIMAL(10,2) NOT NULL DEFAULT 0.00`,
     `ALTER TABLE orders ADD COLUMN IF NOT EXISTS invoice_discount_note TEXT`,
+    // product_performance_summary — campaign analytics rollup per product; was missing from
+    // production because it was added to schema.ts without a startup migration.
+    // deleteProduct() references this table, causing a "relation does not exist" crash.
+    `CREATE TABLE IF NOT EXISTS product_performance_summary (
+      id SERIAL PRIMARY KEY,
+      wholesaler_id VARCHAR NOT NULL REFERENCES users(id),
+      product_id INTEGER NOT NULL REFERENCES products(id),
+      total_campaigns INTEGER DEFAULT 0,
+      active_campaigns INTEGER DEFAULT 0,
+      total_promotion_views INTEGER DEFAULT 0,
+      total_promotion_orders INTEGER DEFAULT 0,
+      total_promotion_revenue DECIMAL(12,2) DEFAULT '0.00',
+      total_revenue_loss DECIMAL(12,2) DEFAULT '0.00',
+      average_discount_percentage DECIMAL(5,2) DEFAULT '0.00',
+      best_performing_campaign_id VARCHAR,
+      best_conversion_rate DECIMAL(5,2) DEFAULT '0.00',
+      regular_price_orders INTEGER DEFAULT 0,
+      regular_price_revenue DECIMAL(12,2) DEFAULT '0.00',
+      promotion_effectiveness VARCHAR DEFAULT 'unknown',
+      last_updated TIMESTAMP DEFAULT NOW(),
+      created_at TIMESTAMP DEFAULT NOW()
+    )`,
+    // stock_update_notifications — campaign stock alert notifications per product; also
+    // missing from production. deleteProduct() deletes from this table unconditionally.
+    `CREATE TABLE IF NOT EXISTS stock_update_notifications (
+      id SERIAL PRIMARY KEY,
+      product_id INTEGER NOT NULL REFERENCES products(id),
+      campaign_id INTEGER REFERENCES broadcasts(id),
+      template_campaign_id INTEGER REFERENCES template_campaigns(id),
+      wholesaler_id VARCHAR NOT NULL REFERENCES users(id),
+      notification_type VARCHAR NOT NULL,
+      previous_stock INTEGER,
+      new_stock INTEGER,
+      previous_price VARCHAR,
+      new_price VARCHAR,
+      messages_sent INTEGER DEFAULT 0,
+      status VARCHAR DEFAULT 'pending',
+      sent_at TIMESTAMP,
+      created_at TIMESTAMP NOT NULL DEFAULT NOW()
+    )`,
   ];
   for (const stmt of migrations) {
     await db.execute(sql.raw(stmt));
