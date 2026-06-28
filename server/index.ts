@@ -719,17 +719,25 @@ async function runStartupMigrations() {
       created_at TIMESTAMP NOT NULL DEFAULT NOW()
     )`,
     // Idempotent FK repair: existing deployments that already have the table
-    // will have a plain (no-action) FK.  Upgrade it to CASCADE so single-order
-    // and bulk-delete paths can safely delete the orders row without first
-    // manually cleaning up campaign_orders.
-    `DO $$ BEGIN
-      IF EXISTS (
-        SELECT 1 FROM pg_constraint
-        WHERE conname = 'campaign_orders_order_id_fkey'
-          AND confdeltype != 'c'
-      ) THEN
-        ALTER TABLE campaign_orders DROP CONSTRAINT campaign_orders_order_id_fkey;
-        ALTER TABLE campaign_orders ADD CONSTRAINT campaign_orders_order_id_fkey
+    // will have a plain (no-action) FK named by Drizzle as
+    // campaign_orders_order_id_orders_id_fk (or the legacy manual name
+    // campaign_orders_order_id_fkey).  Upgrade whichever variant exists to
+    // CASCADE so single-order and bulk-delete paths can safely delete the
+    // orders row without first manually cleaning up campaign_orders.
+    `DO $$ DECLARE
+      v_conname TEXT;
+    BEGIN
+      SELECT conname INTO v_conname
+      FROM pg_constraint
+      WHERE conname IN (
+        'campaign_orders_order_id_orders_id_fk',
+        'campaign_orders_order_id_fkey'
+      )
+        AND confdeltype != 'c'
+      LIMIT 1;
+      IF v_conname IS NOT NULL THEN
+        EXECUTE 'ALTER TABLE campaign_orders DROP CONSTRAINT ' || quote_ident(v_conname);
+        ALTER TABLE campaign_orders ADD CONSTRAINT campaign_orders_order_id_orders_id_fk
           FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE;
       END IF;
     END $$`,
