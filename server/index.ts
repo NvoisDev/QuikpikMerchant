@@ -706,6 +706,33 @@ async function runStartupMigrations() {
     `CREATE INDEX IF NOT EXISTS system_errors_type_idx ON system_error_logs (error_type)`,
     `CREATE INDEX IF NOT EXISTS system_errors_created_at_idx ON system_error_logs (created_at)`,
     `CREATE INDEX IF NOT EXISTS system_errors_wholesaler_id_idx ON system_error_logs (wholesaler_id)`,
+    // campaign_orders — links orders back to the campaign that generated them.
+    // Must be created here so that fresh deployments have the table before any
+    // order-deletion path runs; without it an FK violation would surface only
+    // after a later db:push created the table.  ON DELETE CASCADE means the row
+    // is removed automatically when the parent order is deleted.
+    `CREATE TABLE IF NOT EXISTS campaign_orders (
+      id SERIAL PRIMARY KEY,
+      order_id INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+      campaign_id INTEGER REFERENCES template_campaigns(id),
+      template_id INTEGER REFERENCES message_templates(id),
+      created_at TIMESTAMP NOT NULL DEFAULT NOW()
+    )`,
+    // Idempotent FK repair: existing deployments that already have the table
+    // will have a plain (no-action) FK.  Upgrade it to CASCADE so single-order
+    // and bulk-delete paths can safely delete the orders row without first
+    // manually cleaning up campaign_orders.
+    `DO $$ BEGIN
+      IF EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'campaign_orders_order_id_fkey'
+          AND confdeltype != 'c'
+      ) THEN
+        ALTER TABLE campaign_orders DROP CONSTRAINT campaign_orders_order_id_fkey;
+        ALTER TABLE campaign_orders ADD CONSTRAINT campaign_orders_order_id_fkey
+          FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE;
+      END IF;
+    END $$`,
   ];
   for (const stmt of migrations) {
     await db.execute(sql.raw(stmt));

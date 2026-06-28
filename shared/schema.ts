@@ -1059,7 +1059,7 @@ export const templateCampaigns = pgTable("template_campaigns", {
 // Enhanced orders to track campaign source
 export const campaignOrders = pgTable("campaign_orders", {
   id: serial("id").primaryKey(),
-  orderId: integer("order_id").notNull().references(() => orders.id),
+  orderId: integer("order_id").notNull().references(() => orders.id, { onDelete: "cascade" }),
   campaignId: integer("campaign_id").references(() => templateCampaigns.id),
   templateId: integer("template_id").references(() => messageTemplates.id),
   createdAt: timestamp("created_at").defaultNow().notNull(),
