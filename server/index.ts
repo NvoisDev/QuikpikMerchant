@@ -733,6 +733,65 @@ async function runStartupMigrations() {
           FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE;
       END IF;
     END $$`,
+    // customer_insights — nullable FK to products(id) via most_ordered_product_id.
+    // Without this CREATE TABLE the try/catch in deleteProduct() silently swallows
+    // "relation does not exist" instead of nulling the column, leaving a latent FK
+    // violation risk once the table is eventually created by a future migration run.
+    `CREATE TABLE IF NOT EXISTS customer_insights (
+      id SERIAL PRIMARY KEY,
+      wholesaler_id VARCHAR NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      customer_id VARCHAR NOT NULL,
+      customer_name VARCHAR,
+      customer_email VARCHAR,
+      total_orders INTEGER DEFAULT 0,
+      total_spent DECIMAL(12,2) DEFAULT '0.00',
+      average_order_value DECIMAL(10,2) DEFAULT '0.00',
+      last_order_date TIMESTAMP,
+      first_order_date TIMESTAMP,
+      days_since_last_order INTEGER DEFAULT 0,
+      campaigns_received INTEGER DEFAULT 0,
+      campaigns_opened INTEGER DEFAULT 0,
+      purchases_from_campaigns INTEGER DEFAULT 0,
+      favorite_category VARCHAR,
+      most_ordered_product_id INTEGER REFERENCES products(id),
+      total_unique_products INTEGER DEFAULT 0,
+      loyalty_score INTEGER DEFAULT 0,
+      risk_level VARCHAR DEFAULT 'low',
+      customer_tier VARCHAR DEFAULT 'standard',
+      predicted_next_order_date TIMESTAMP,
+      churn_risk DECIMAL(5,2) DEFAULT '0.00',
+      recommended_products JSONB DEFAULT '[]',
+      last_updated TIMESTAMP DEFAULT NOW(),
+      created_at TIMESTAMP DEFAULT NOW()
+    )`,
+    `CREATE INDEX IF NOT EXISTS customer_insights_wholesaler_id_idx ON customer_insights (wholesaler_id)`,
+    `CREATE INDEX IF NOT EXISTS customer_insights_customer_id_idx ON customer_insights (customer_id)`,
+    // business_intelligence — nullable FK to products(id) via top_selling_product_id.
+    // Same rationale as customer_insights above.
+    `CREATE TABLE IF NOT EXISTS business_intelligence (
+      id SERIAL PRIMARY KEY,
+      wholesaler_id VARCHAR NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      report_date TIMESTAMP NOT NULL,
+      report_type VARCHAR NOT NULL,
+      total_revenue DECIMAL(12,2) DEFAULT '0.00',
+      total_orders INTEGER DEFAULT 0,
+      average_order_value DECIMAL(10,2) DEFAULT '0.00',
+      top_selling_product_id INTEGER REFERENCES products(id),
+      top_selling_product_revenue DECIMAL(12,2) DEFAULT '0.00',
+      total_products_sold INTEGER DEFAULT 0,
+      new_customers INTEGER DEFAULT 0,
+      returning_customers INTEGER DEFAULT 0,
+      customer_retention_rate DECIMAL(5,2) DEFAULT '0.00',
+      campaigns_sent INTEGER DEFAULT 0,
+      campaign_revenue DECIMAL(12,2) DEFAULT '0.00',
+      campaign_conversion_rate DECIMAL(5,2) DEFAULT '0.00',
+      revenue_growth_rate DECIMAL(5,2) DEFAULT '0.00',
+      order_growth_rate DECIMAL(5,2) DEFAULT '0.00',
+      customer_growth_rate DECIMAL(5,2) DEFAULT '0.00',
+      created_at TIMESTAMP DEFAULT NOW()
+    )`,
+    `CREATE INDEX IF NOT EXISTS business_intelligence_wholesaler_id_idx ON business_intelligence (wholesaler_id)`,
+    `CREATE INDEX IF NOT EXISTS business_intelligence_report_date_idx ON business_intelligence (report_date)`,
   ];
   for (const stmt of migrations) {
     await db.execute(sql.raw(stmt));
