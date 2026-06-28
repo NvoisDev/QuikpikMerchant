@@ -657,6 +657,55 @@ async function runStartupMigrations() {
       sent_at TIMESTAMP,
       created_at TIMESTAMP NOT NULL DEFAULT NOW()
     )`,
+    // stock_alerts — low/out-of-stock notifications per product; written unconditionally
+    // by checkAndCreateStockAlerts (customers.ts) and createStockAlert (broadcasts.ts).
+    // Was missing from startup migrations, causing "relation does not exist" on first
+    // stock-check after a fresh production deployment.
+    `CREATE TABLE IF NOT EXISTS stock_alerts (
+      id SERIAL PRIMARY KEY,
+      product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+      wholesaler_id VARCHAR NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      alert_type VARCHAR NOT NULL DEFAULT 'low_stock',
+      current_stock INTEGER NOT NULL,
+      threshold INTEGER NOT NULL,
+      is_read BOOLEAN NOT NULL DEFAULT FALSE,
+      is_resolved BOOLEAN NOT NULL DEFAULT FALSE,
+      notification_sent BOOLEAN NOT NULL DEFAULT FALSE,
+      created_at TIMESTAMP DEFAULT NOW(),
+      resolved_at TIMESTAMP
+    )`,
+    `CREATE INDEX IF NOT EXISTS stock_alerts_product_id_idx ON stock_alerts (product_id)`,
+    `CREATE INDEX IF NOT EXISTS stock_alerts_wholesaler_id_idx ON stock_alerts (wholesaler_id)`,
+    `CREATE INDEX IF NOT EXISTS stock_alerts_is_resolved_idx ON stock_alerts (wholesaler_id, is_resolved)`,
+    // admin_audit_logs — tracks impersonation start/exit; written unconditionally from
+    // admin-ops.ts. Missing from startup migrations caused "relation does not exist" on
+    // the first impersonation action after a fresh production deployment.
+    `CREATE TABLE IF NOT EXISTS admin_audit_logs (
+      id SERIAL PRIMARY KEY,
+      admin_email VARCHAR NOT NULL,
+      action VARCHAR NOT NULL,
+      target_wholesaler_id VARCHAR REFERENCES users(id) ON DELETE SET NULL,
+      metadata JSONB DEFAULT '{}',
+      created_at TIMESTAMP NOT NULL DEFAULT NOW()
+    )`,
+    `CREATE INDEX IF NOT EXISTS admin_audit_admin_email_idx ON admin_audit_logs (admin_email)`,
+    `CREATE INDEX IF NOT EXISTS admin_audit_created_at_idx ON admin_audit_logs (created_at)`,
+    // system_error_logs — platform error log; inserts in errorLogger.ts and
+    // payments-connect.ts are all wrapped in .catch(() => {}) so the table being absent
+    // is already safe, but creating it here ensures logs are actually persisted on new
+    // production deployments rather than silently dropped.
+    `CREATE TABLE IF NOT EXISTS system_error_logs (
+      id SERIAL PRIMARY KEY,
+      error_type VARCHAR NOT NULL,
+      message TEXT NOT NULL,
+      context JSONB DEFAULT '{}',
+      wholesaler_id VARCHAR REFERENCES users(id) ON DELETE SET NULL,
+      severity VARCHAR NOT NULL DEFAULT 'error',
+      created_at TIMESTAMP NOT NULL DEFAULT NOW()
+    )`,
+    `CREATE INDEX IF NOT EXISTS system_errors_type_idx ON system_error_logs (error_type)`,
+    `CREATE INDEX IF NOT EXISTS system_errors_created_at_idx ON system_error_logs (created_at)`,
+    `CREATE INDEX IF NOT EXISTS system_errors_wholesaler_id_idx ON system_error_logs (wholesaler_id)`,
   ];
   for (const stmt of migrations) {
     await db.execute(sql.raw(stmt));
