@@ -19,7 +19,7 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   Eye, Mail, CreditCard, Building2, Info, FileText, UserCheck,
-  ToggleLeft, ToggleRight, UserPlus, Percent, LogIn, Globe, AlertTriangle,
+  ToggleLeft, ToggleRight, UserPlus, Percent, LogIn, Globe, AlertTriangle, ShieldCheck,
 } from "lucide-react";
 import { format } from "date-fns";
 import { formatDateTime } from "@shared/utils/date";
@@ -208,6 +208,20 @@ export function WholesalersSection({ wholesalers, wholesalersLoading, isAdmin }:
       queryClient.invalidateQueries({ queryKey: ["/api/admin/wholesalers"] });
       setSelectedWholesaler(prev => prev ? { ...prev, showOnHomepage: _data.showOnHomepage } : prev);
       toast({ title: _data.showOnHomepage ? "Added to homepage strip" : "Removed from homepage strip" });
+    },
+    onError: (e: Error) => toast({ title: e.message, variant: "destructive" }),
+  });
+
+  const toggleVerified = useMutation({
+    mutationFn: async (id: string) => {
+      const r = await apiRequest("PATCH", `/api/admin/wholesalers/${id}/toggle-verified`);
+      if (!r.ok) { const e = await r.json(); throw new Error(e.error || "Failed"); }
+      return r.json() as Promise<{ id: string; isVerified: boolean }>;
+    },
+    onSuccess: (_data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/wholesalers"] });
+      setSelectedWholesaler(prev => prev ? { ...prev, isVerified: _data.isVerified } : prev);
+      toast({ title: _data.isVerified ? "Verified badge awarded" : "Verified badge removed" });
     },
     onError: (e: Error) => toast({ title: e.message, variant: "destructive" }),
   });
@@ -409,6 +423,16 @@ export function WholesalersSection({ wholesalers, wholesalersLoading, isAdmin }:
                               <TooltipContent side="top" className="text-xs">On homepage strip but has no logo uploaded — will render as a blank slot</TooltipContent>
                             </Tooltip>
                           )}
+                          {w.isVerified && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 cursor-default">
+                                  <ShieldCheck className="h-2.5 w-2.5" />Verified
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent side="top" className="text-xs">Business reviewed and approved by Quikpik</TooltipContent>
+                            </Tooltip>
+                          )}
                         </div>
                         <p className="text-xs text-gray-400">{w.email}</p>
                       </TableCell>
@@ -584,6 +608,30 @@ export function WholesalersSection({ wholesalers, wholesalersLoading, isAdmin }:
                       : "Never"}
                   </p>
                 </div>
+              </div>
+
+              <div className="border-t border-gray-100 pt-3">
+                <p className="text-xs font-semibold text-gray-700 mb-2">Verified Badge</p>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <ShieldCheck className={`h-4 w-4 ${selectedWholesaler.isVerified ? "text-emerald-600" : "text-gray-300"}`} />
+                    <span className="text-xs text-gray-700">
+                      {selectedWholesaler.isVerified
+                        ? `Verified${selectedWholesaler.verifiedAt ? ` on ${format(new Date(selectedWholesaler.verifiedAt), "dd MMM yyyy")}` : ""}`
+                        : "Not verified"}
+                    </span>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant={selectedWholesaler.isVerified ? "outline" : "default"}
+                    className={`h-7 text-xs ${selectedWholesaler.isVerified ? "border-red-200 text-red-600 hover:bg-red-50" : "bg-emerald-600 hover:bg-emerald-700 text-white"}`}
+                    disabled={toggleVerified.isPending}
+                    onClick={() => toggleVerified.mutate(selectedWholesaler.id)}
+                  >
+                    {toggleVerified.isPending ? "Saving…" : selectedWholesaler.isVerified ? "Remove badge" : "Award badge"}
+                  </Button>
+                </div>
+                <p className="text-xs text-gray-400 mt-1">The green verified badge appears publicly on the wholesaler's store page and marketplace listing.</p>
               </div>
 
               <div className="border-t border-gray-100 pt-3">

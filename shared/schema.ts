@@ -278,6 +278,12 @@ export const users = pgTable("users", {
   isTestAccount: boolean("is_test_account").default(false), // Internal test accounts — hidden from wholesaler views and analytics
   isInactive: boolean("is_inactive").default(false), // Churned/dormant wholesalers — excluded from stats; store shown as offline
 
+  // Verified badge — admin-awarded trust signal shown publicly on store pages
+  isVerified: boolean("is_verified").default(false),
+  verifiedAt: timestamp("verified_at"),
+  verifiedBy: varchar("verified_by"), // admin email that granted the badge
+  verificationNotes: text("verification_notes"), // internal admin notes
+
   lastLoginAt: timestamp("last_login_at"), // Stamped on every successful Google OAuth login
   lastSeenAt: timestamp("last_seen_at"), // Updated by presence ping every 60 s
   lastRealUserActivityAt: timestamp("last_real_user_activity_at"), // Updated only by real user actions — never by super admin impersonation

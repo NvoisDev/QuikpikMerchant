@@ -69,6 +69,7 @@ export function registerPublicStoreRoutes(app: Express) {
           minOrderAmount: users.minOrderAmount,
           whatsappContactVisible: users.whatsappContactVisible,
           phoneNumber: users.phoneNumber,
+          isVerified: users.isVerified,
         })
         .from(users)
         .where(

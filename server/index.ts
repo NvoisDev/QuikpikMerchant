@@ -812,6 +812,11 @@ async function runStartupMigrations() {
         FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE;
     EXCEPTION WHEN duplicate_object THEN NULL;
     END $$`,
+    // Wholesaler verified badge — admin-awarded trust signal (isVerified + metadata columns)
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS is_verified BOOLEAN NOT NULL DEFAULT FALSE`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS verified_at TIMESTAMP`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS verified_by VARCHAR`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_notes TEXT`,
   ];
   for (const stmt of migrations) {
     await db.execute(sql.raw(stmt));

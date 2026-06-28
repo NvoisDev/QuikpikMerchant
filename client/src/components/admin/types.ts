@@ -51,6 +51,8 @@ export interface WholesalerRow {
   customPricePlanId?: string | null;
   customPricePlanIdAnnual?: string | null;
   customPricePlanIdMonthly?: string | null;
+  isVerified?: boolean;
+  verifiedAt?: string | null;
 }
 
 export interface RevenueTotals {
