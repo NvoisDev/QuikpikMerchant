@@ -677,7 +677,14 @@ export function registerAdminCoreRoutes(app: Express): void {
         verificationNotes: verified ? (notes ?? null) : null,
       }).where(eq(users.id, req.params.id));
       console.log(`[admin] isVerified set to ${verified} for ${targetUser[0].email} by ${adminEmail}`);
-      res.json({ id: req.params.id, isVerified: verified });
+      const now = new Date();
+      res.json({
+        id: req.params.id,
+        isVerified: verified,
+        verifiedAt: verified ? now.toISOString() : null,
+        verifiedBy: verified ? adminEmail : null,
+        verificationNotes: verified ? (notes ?? null) : null,
+      });
     } catch (error) {
       console.error('Admin verify error:', error);
       res.status(500).json({ error: 'Failed to update verified status' });

@@ -217,17 +217,16 @@ export function WholesalersSection({ wholesalers, wholesalersLoading, isAdmin }:
     mutationFn: async ({ id, verified, notes }: { id: string; verified: boolean; notes?: string }) => {
       const r = await apiRequest("PATCH", `/api/admin/wholesalers/${id}/verify`, { verified, notes: notes || undefined });
       if (!r.ok) { const e = await r.json(); throw new Error(e.error || "Failed"); }
-      return r.json() as Promise<{ id: string; isVerified: boolean }>;
+      return r.json() as Promise<{ id: string; isVerified: boolean; verifiedAt: string | null; verifiedBy: string | null; verificationNotes: string | null }>;
     },
-    onSuccess: (_data, variables) => {
+    onSuccess: (_data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/wholesalers"] });
-      const adminEmail = "";
       setSelectedWholesaler(prev => prev ? {
         ...prev,
         isVerified: _data.isVerified,
-        verifiedAt: _data.isVerified ? new Date().toISOString() : null,
-        verifiedBy: _data.isVerified ? (prev.verifiedBy ?? adminEmail) : null,
-        verificationNotes: _data.isVerified ? (variables.notes ?? prev.verificationNotes ?? null) : null,
+        verifiedAt: _data.verifiedAt ?? null,
+        verifiedBy: _data.verifiedBy ?? null,
+        verificationNotes: _data.verificationNotes ?? null,
       } : prev);
       if (_data.isVerified) setVerifyNotesInput("");
       toast({ title: _data.isVerified ? "Verified badge awarded" : "Verified badge removed" });
