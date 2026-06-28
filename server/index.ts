@@ -792,6 +792,18 @@ async function runStartupMigrations() {
     )`,
     `CREATE INDEX IF NOT EXISTS business_intelligence_wholesaler_id_idx ON business_intelligence (wholesaler_id)`,
     `CREATE INDEX IF NOT EXISTS business_intelligence_report_date_idx ON business_intelligence (report_date)`,
+    // FK repair: order_cancellation_requests.order_id had no ON DELETE action, so
+    // deleting an order that had a customer cancellation request would fail with a
+    // FK violation. Upgrade to CASCADE so the request row is removed automatically
+    // when its parent order is deleted.
+    `DO $$ BEGIN
+      ALTER TABLE order_cancellation_requests
+        DROP CONSTRAINT IF EXISTS order_cancellation_requests_order_id_fkey;
+      ALTER TABLE order_cancellation_requests
+        ADD CONSTRAINT order_cancellation_requests_order_id_fkey
+        FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE;
+    EXCEPTION WHEN duplicate_object THEN NULL;
+    END $$`,
   ];
   for (const stmt of migrations) {
     await db.execute(sql.raw(stmt));

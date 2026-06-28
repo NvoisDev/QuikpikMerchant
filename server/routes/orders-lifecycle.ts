@@ -335,6 +335,7 @@ export function registerOrderLifecycleRoutes(app: Express): void {
       if (order.wholesalerId !== wholesalerId) return res.status(403).json({ error: 'Not authorized' });
 
       await db.delete(orderItems).where(eq(orderItems.orderId, id));
+      await db.delete(orderCancellationRequests).where(eq(orderCancellationRequests.orderId, id));
       await db.delete(orders).where(eq(orders.id, id));
 
       res.json({ success: true });
@@ -2371,10 +2372,14 @@ export function registerOrderLifecycleRoutes(app: Express): void {
 
       const orderIdsToDelete = ordersToDelete.map(order => order.id);
 
-      // Delete campaign orders first (optional link — failures are intentionally tolerated)
+      // Delete campaign orders and cancellation requests first (CASCADE handles these in DB,
+      // but explicit pre-delete is belt-and-suspenders for any env where migrations haven't run yet)
       try {
         await db.delete(campaignOrders).where(inArray(campaignOrders.orderId, orderIdsToDelete));
       } catch (_) { /* campaignOrders rows may not exist for every order */ }
+      try {
+        await db.delete(orderCancellationRequests).where(inArray(orderCancellationRequests.orderId, orderIdsToDelete));
+      } catch (_) { /* cancellation request rows may not exist for every order */ }
 
       // Restore stock + delete order data in one atomic transaction to prevent partial state
       const ordersFullData = await db.select().from(orders).where(inArray(orders.id, orderIdsToDelete));

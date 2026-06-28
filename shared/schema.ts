@@ -968,7 +968,7 @@ export function cancellationRefundTypeToEmailStatus(
 // Order cancellation requests (customer-initiated, within 24hr window)
 export const orderCancellationRequests = pgTable("order_cancellation_requests", {
   id: serial("id").primaryKey(),
-  orderId: integer("order_id").notNull().references(() => orders.id),
+  orderId: integer("order_id").notNull().references(() => orders.id, { onDelete: "cascade" }),
   customerId: varchar("customer_id").notNull().references(() => users.id),
   wholesalerId: varchar("wholesaler_id").notNull().references(() => users.id),
   reasonCategory: varchar("reason_category", { length: 50 }).notNull(),
