@@ -10,8 +10,9 @@ import { useToast } from "@/hooks/use-toast";
 import {
   Search, MapPin, Truck, Package, ShoppingBag,
   MessageSquare, Store, Phone, ArrowLeft, X,
-  Tag, ShoppingCart, Plus, Minus, CheckCircle, Trash2, ShieldCheck,
+  Tag, ShoppingCart, Plus, Minus, CheckCircle, Trash2,
 } from "lucide-react";
+import { VerifiedBadge } from "@/components/VerifiedBadge";
 
 interface PublicProduct {
   id: number;
@@ -938,11 +939,7 @@ export default function PublicStorePage() {
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <h1 className="text-xl sm:text-2xl font-bold text-gray-900">{wholesaler.businessName}</h1>
-                {wholesaler.isVerified && (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200" title="Business reviewed and approved by Quikpik">
-                    <ShieldCheck className="h-3 w-3" />Verified
-                  </span>
-                )}
+                {wholesaler.isVerified && <VerifiedBadge />}
               </div>
               {wholesaler.storeTagline && (
                 <p className="text-gray-500 text-sm mt-0.5">{wholesaler.storeTagline}</p>

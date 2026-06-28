@@ -1356,6 +1356,7 @@ export class CustomerStorage extends OrderStorage {
         streetAddress: users.streetAddress,
         createdAt: users.createdAt,
         updatedAt: users.updatedAt,
+        isVerified: users.isVerified,
       })
       .from(users)
       .where(and(...whereConditions));

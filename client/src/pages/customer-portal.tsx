@@ -28,6 +28,7 @@ import {
 
 // Optimized imports and lazy loading
 import { LazyOrderHistory, LazyThankYouPage, ComponentLoader } from "@/components/LazyComponents";
+import { VerifiedBadge } from "@/components/VerifiedBadge";
 import Logo from "@/components/ui/logo";
 import { CustomerAuth } from "@/components/customer/CustomerAuth";
 import CustomerHelp from "@/components/customer/CustomerHelp";
@@ -353,7 +354,7 @@ export default function CustomerPortal() {
   };
 
   // Fetch available wholesalers for search - registration-aware for authenticated customers
-  const { data: availableWholesalers = [], isLoading: wholesalersLoading } = useQuery<{ id: string; businessName?: string; firstName?: string; lastName?: string; logoType?: string; logoUrl?: string; storeTagline?: string; location?: string; isAccessible?: boolean; canRequestAccess?: boolean }[]>({
+  const { data: availableWholesalers = [], isLoading: wholesalersLoading } = useQuery<{ id: string; businessName?: string; firstName?: string; lastName?: string; logoType?: string; logoUrl?: string; storeTagline?: string; location?: string; isAccessible?: boolean; canRequestAccess?: boolean; isVerified?: boolean }[]>({
     queryKey: [
       authenticatedCustomer?.phone ? "/api/customer-accessible-wholesalers" : "/api/marketplace/wholesalers", 
       authenticatedCustomer?.phone, 
@@ -1746,15 +1747,18 @@ export default function CustomerPortal() {
                 </div>
               )}
               <div className="min-w-0">
-                <h1 className="text-base font-extrabold text-gray-950 truncate leading-tight tracking-tight">
-                  {wholesalerLoading ? (
-                    <span className="text-gray-400">Loading...</span>
-                  ) : wholesalerError ? (
-                    "Store Unavailable"
-                  ) : (
-                    wholesaler?.businessName || "Wholesale Store"
-                  )}
-                </h1>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h1 className="text-base font-extrabold text-gray-950 truncate leading-tight tracking-tight">
+                    {wholesalerLoading ? (
+                      <span className="text-gray-400">Loading...</span>
+                    ) : wholesalerError ? (
+                      "Store Unavailable"
+                    ) : (
+                      wholesaler?.businessName || "Wholesale Store"
+                    )}
+                  </h1>
+                  {wholesaler?.isVerified && <VerifiedBadge />}
+                </div>
                 {wholesaler?.storeTagline && (
                   <p className="text-xs text-gray-500 truncate leading-tight hidden sm:block">
                     {wholesaler.storeTagline}
@@ -1937,7 +1941,10 @@ export default function CustomerPortal() {
                     }}
                   />
                   <div className="flex-1 min-w-0">
-                    <h4 className="font-semibold text-gray-900 text-sm">{wholesalerItem.businessName || "Business"}</h4>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <h4 className="font-semibold text-gray-900 text-sm">{wholesalerItem.businessName || "Business"}</h4>
+                      {wholesalerItem.isVerified && <VerifiedBadge />}
+                    </div>
                     {wholesalerItem.storeTagline && <p className="text-xs text-gray-500 truncate">{wholesalerItem.storeTagline}</p>}
                     {wholesalerItem.location && (
                       <p className="text-xs text-gray-400 flex items-center mt-0.5">

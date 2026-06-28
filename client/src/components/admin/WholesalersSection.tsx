@@ -212,15 +212,24 @@ export function WholesalersSection({ wholesalers, wholesalersLoading, isAdmin }:
     onError: (e: Error) => toast({ title: e.message, variant: "destructive" }),
   });
 
-  const toggleVerified = useMutation({
-    mutationFn: async (id: string) => {
-      const r = await apiRequest("PATCH", `/api/admin/wholesalers/${id}/toggle-verified`);
+  const [verifyNotesInput, setVerifyNotesInput] = useState("");
+  const setVerify = useMutation({
+    mutationFn: async ({ id, verified, notes }: { id: string; verified: boolean; notes?: string }) => {
+      const r = await apiRequest("PATCH", `/api/admin/wholesalers/${id}/verify`, { verified, notes: notes || undefined });
       if (!r.ok) { const e = await r.json(); throw new Error(e.error || "Failed"); }
       return r.json() as Promise<{ id: string; isVerified: boolean }>;
     },
-    onSuccess: (_data) => {
+    onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/wholesalers"] });
-      setSelectedWholesaler(prev => prev ? { ...prev, isVerified: _data.isVerified } : prev);
+      const adminEmail = "";
+      setSelectedWholesaler(prev => prev ? {
+        ...prev,
+        isVerified: _data.isVerified,
+        verifiedAt: _data.isVerified ? new Date().toISOString() : null,
+        verifiedBy: _data.isVerified ? (prev.verifiedBy ?? adminEmail) : null,
+        verificationNotes: _data.isVerified ? (variables.notes ?? prev.verificationNotes ?? null) : null,
+      } : prev);
+      if (_data.isVerified) setVerifyNotesInput("");
       toast({ title: _data.isVerified ? "Verified badge awarded" : "Verified badge removed" });
     },
     onError: (e: Error) => toast({ title: e.message, variant: "destructive" }),
@@ -612,7 +621,7 @@ export function WholesalersSection({ wholesalers, wholesalersLoading, isAdmin }:
 
               <div className="border-t border-gray-100 pt-3">
                 <p className="text-xs font-semibold text-gray-700 mb-2">Verified Badge</p>
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
                     <ShieldCheck className={`h-4 w-4 ${selectedWholesaler.isVerified ? "text-emerald-600" : "text-gray-300"}`} />
                     <span className="text-xs text-gray-700">
@@ -625,12 +634,29 @@ export function WholesalersSection({ wholesalers, wholesalersLoading, isAdmin }:
                     size="sm"
                     variant={selectedWholesaler.isVerified ? "outline" : "default"}
                     className={`h-7 text-xs ${selectedWholesaler.isVerified ? "border-red-200 text-red-600 hover:bg-red-50" : "bg-emerald-600 hover:bg-emerald-700 text-white"}`}
-                    disabled={toggleVerified.isPending}
-                    onClick={() => toggleVerified.mutate(selectedWholesaler.id)}
+                    disabled={setVerify.isPending}
+                    onClick={() => setVerify.mutate({ id: selectedWholesaler.id, verified: !selectedWholesaler.isVerified, notes: verifyNotesInput || undefined })}
                   >
-                    {toggleVerified.isPending ? "Saving…" : selectedWholesaler.isVerified ? "Remove badge" : "Award badge"}
+                    {setVerify.isPending ? "Saving…" : selectedWholesaler.isVerified ? "Remove badge" : "Award badge"}
                   </Button>
                 </div>
+                {selectedWholesaler.isVerified && selectedWholesaler.verifiedBy && (
+                  <p className="text-xs text-gray-500 mb-1">By: {selectedWholesaler.verifiedBy}</p>
+                )}
+                {selectedWholesaler.isVerified && selectedWholesaler.verificationNotes && (
+                  <p className="text-xs text-gray-500 italic mb-1">"{selectedWholesaler.verificationNotes}"</p>
+                )}
+                {!selectedWholesaler.isVerified && (
+                  <div className="mt-1">
+                    <input
+                      type="text"
+                      placeholder="Optional note (reason for verification)…"
+                      value={verifyNotesInput}
+                      onChange={e => setVerifyNotesInput(e.target.value)}
+                      className="w-full text-xs border border-gray-200 rounded px-2 py-1 focus:outline-none focus:border-emerald-400"
+                    />
+                  </div>
+                )}
                 <p className="text-xs text-gray-400 mt-1">The green verified badge appears publicly on the wholesaler's store page and marketplace listing.</p>
               </div>
 

@@ -16,7 +16,7 @@
  * PATCH /api/admin/wholesalers/:id/toggle-test-account       ✅ admin-only; validates wholesaler role
  * PATCH /api/admin/wholesalers/:id/toggle-inactive           ✅ admin-only; validates wholesaler role
  * PATCH /api/admin/wholesalers/:id/toggle-show-on-homepage   ✅ admin-only; validates wholesaler role
- * PATCH /api/admin/wholesalers/:id/toggle-verified            ✅ admin-only; validates wholesaler role
+ * PATCH /api/admin/wholesalers/:id/verify                     ✅ admin-only; validates wholesaler role; body { verified, notes? }
  * PATCH /api/admin/wholesalers/:id/custom-subscription-pricing ✅ admin-only; validates wholesaler role
  * PATCH /api/admin/wholesalers/:id/custom-fee                ✅ admin-only; validates wholesaler role
  * GET  /api/admin/customers/map                              ✅ admin-only; no tenant param accepted
@@ -290,6 +290,8 @@ export function registerAdminCoreRoutes(app: Express): void {
           customPricePlanIdMonthly: (w as any).customPricePlanIdMonthly ?? null,
           isVerified: w.isVerified ?? false,
           verifiedAt: w.verifiedAt ?? null,
+          verifiedBy: w.verifiedBy ?? null,
+          verificationNotes: w.verificationNotes ?? null,
         };
       }).sort((a, b) => {
         if (a.isTestAccount !== b.isTestAccount) return a.isTestAccount ? 1 : -1;
@@ -657,26 +659,28 @@ export function registerAdminCoreRoutes(app: Express): void {
     }
   });
 
-  // PATCH /api/admin/wholesalers/:id/toggle-verified
-  app.patch('/api/admin/wholesalers/:id/toggle-verified', requireAuth, async (req: any, res) => {
+  // PATCH /api/admin/wholesalers/:id/verify  — explicit set/unset with optional notes
+  app.patch('/api/admin/wholesalers/:id/verify', requireAuth, async (req: any, res) => {
     try {
       if (!ADMIN_EMAILS.includes(getAdminEmail(req) || "")) return res.status(403).json({ error: 'Forbidden' });
+      const { verified, notes } = req.body as { verified: boolean; notes?: string };
+      if (typeof verified !== 'boolean') return res.status(400).json({ error: 'verified (boolean) is required' });
       const targetUser = await db.select().from(users).where(eq(users.id, req.params.id)).limit(1);
       if (!targetUser.length || targetUser[0].role !== 'wholesaler') {
         return res.status(404).json({ error: 'Wholesaler not found' });
       }
-      const newValue = !(targetUser[0].isVerified ?? false);
       const adminEmail = getAdminEmail(req) || req.user?.email || '';
       await db.update(users).set({
-        isVerified: newValue,
-        verifiedAt: newValue ? new Date() : null,
-        verifiedBy: newValue ? adminEmail : null,
+        isVerified: verified,
+        verifiedAt: verified ? new Date() : null,
+        verifiedBy: verified ? adminEmail : null,
+        verificationNotes: verified ? (notes ?? null) : null,
       }).where(eq(users.id, req.params.id));
-      console.log(`[admin] isVerified toggled to ${newValue} for ${targetUser[0].email} by ${adminEmail}`);
-      res.json({ id: req.params.id, isVerified: newValue });
+      console.log(`[admin] isVerified set to ${verified} for ${targetUser[0].email} by ${adminEmail}`);
+      res.json({ id: req.params.id, isVerified: verified });
     } catch (error) {
-      console.error('Admin toggle-verified error:', error);
-      res.status(500).json({ error: 'Failed to toggle verified status' });
+      console.error('Admin verify error:', error);
+      res.status(500).json({ error: 'Failed to update verified status' });
     }
   });
 
