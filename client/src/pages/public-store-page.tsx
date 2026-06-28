@@ -551,9 +551,12 @@ function EnquiryModal({
       <div className="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-md max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between p-4 border-b">
           <div>
-            <h2 className="font-semibold text-gray-900">
-              {product ? `Enquire about ${product.name}` : `Contact ${wholesaler.businessName}`}
-            </h2>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h2 className="font-semibold text-gray-900">
+                {product ? `Enquire about ${product.name}` : `Contact ${wholesaler.businessName}`}
+              </h2>
+              {wholesaler.isVerified && <VerifiedBadge />}
+            </div>
             <p className="text-xs text-gray-500 mt-0.5">We'll pass your details to the wholesaler</p>
           </div>
           <button onClick={onClose} className="p-1 rounded-lg hover:bg-gray-100">

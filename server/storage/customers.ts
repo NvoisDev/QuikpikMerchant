@@ -1418,6 +1418,7 @@ export class CustomerStorage extends OrderStorage {
                whatsapp_enabled, show_prices_to_wholesalers,
                timezone, phone_number, city, state, country, postal_code, street_address,
                price_display_mode, enquiries_enabled,
+               is_verified,
                created_at, updated_at
         FROM users 
         WHERE (id = ${id} OR store_slug = ${id}) AND role = 'wholesaler'
@@ -1521,6 +1522,7 @@ export class CustomerStorage extends OrderStorage {
         storeSlug: wholesaler.store_slug || null,
         priceDisplayMode: (wholesaler.price_display_mode as string) || 'hidden',
         enquiriesEnabled: wholesaler.enquiries_enabled !== false,
+        isVerified: wholesaler.is_verified === true || wholesaler.is_verified === 1,
       };
 
       return {
