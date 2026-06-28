@@ -458,7 +458,7 @@ export class ProductStorage extends UserStorageBase {
     try { await db.execute(sql`DELETE FROM customer_promotional_offers WHERE product_id = ${id}`); } catch { /* table may not exist */ }
     try { await db.execute(sql`DELETE FROM promotion_analytics WHERE product_id = ${id}`); } catch { /* table may not exist */ }
     // Clear nullable FK references in analytics tables
-    await db.execute(sql`UPDATE users SET most_ordered_product_id = NULL WHERE most_ordered_product_id = ${id}`);
+    try { await db.execute(sql`UPDATE users SET most_ordered_product_id = NULL WHERE most_ordered_product_id = ${id}`); } catch { /* column may not exist in all envs */ }
     // business_intelligence.top_selling_product_id — nullable FK with no ON DELETE action;
     // must be cleared before the product row is deleted or Postgres will raise a FK violation.
     // Wrapped in try/catch because the table may not exist in all environments.
