@@ -817,6 +817,10 @@ async function runStartupMigrations() {
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS verified_at TIMESTAMP`,
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS verified_by VARCHAR`,
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_notes TEXT`,
+    // Self-healing cleanup: remove any zz_test_* products left behind by test runs
+    // that crashed before their afterAll cleanup could fire. Runs on every startup;
+    // safe to run repeatedly (deletes 0 rows when nothing is stale).
+    `DELETE FROM products WHERE name LIKE 'zz_test%'`,
   ];
   for (const stmt of migrations) {
     await db.execute(sql.raw(stmt));
