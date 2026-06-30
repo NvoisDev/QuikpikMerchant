@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { Link, useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -13,7 +13,7 @@ import { useAuth, type AuthUser } from "@/hooks/useAuth";
 import ProductCard from "@/components/product-card";
 import { ContextualHelpBubble } from "@/components/ContextualHelpBubble";
 import { helpContent } from "@/data/whatsapp-help-content";
-import { Plus, Search, Download, Grid, List, Package, Upload, AlertTriangle, Lock, LockOpen, Tag, PackagePlus, Pencil, Copy, Trash2 } from "lucide-react";
+import { Plus, Search, Download, Grid, List, Package, Upload, AlertTriangle, Lock, LockOpen, Tag, PackagePlus, Pencil, Copy, Trash2, TrendingUp, X } from "lucide-react";
 import type { Product, PromotionalOffer } from "@shared/schema";
 import { formatCurrency, formatNumber } from "@/lib/currencies";
 import { useCurrency } from "@/hooks/useCurrency";
@@ -32,6 +32,331 @@ import type { BulkUploadRow, ProductBatch, StockMovement } from "@/components/pr
 import ProductFormDialog, { type ProductFormData } from "@/components/products/ProductFormDialog";
 import DownloadProductsModal from "@/components/products/DownloadProductsModal";
 import { productMatchesFilters } from "@/pages/product-filters";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+
+interface PriceChangeRow {
+  id: number;
+  productId: number | null;
+  productName: string;
+  sellingType: string;
+  oldPrice: string;
+  newPrice: string;
+  orderId: number | null;
+  changedAt: string;
+}
+
+const PRICE_CHART_COLORS = ['#16a34a', '#2563eb', '#d97706', '#dc2626', '#7c3aed', '#0891b2', '#be185d', '#65a30d'];
+
+function PriceTrackerTab() {
+  const [search, setSearch] = useState('');
+  const [timePeriod, setTimePeriod] = useState<'7D' | '30D' | '90D' | 'All'>('All');
+  const [hiddenKeys, setHiddenKeys] = useState<Set<string>>(new Set());
+
+  const fromDate = useMemo(() => {
+    if (timePeriod === 'All') return '';
+    const d = new Date();
+    const days = timePeriod === '7D' ? 7 : timePeriod === '30D' ? 30 : 90;
+    d.setDate(d.getDate() - days);
+    return d.toISOString().split('T')[0];
+  }, [timePeriod]);
+
+  const queryUrl = fromDate ? `/api/products/price-history?from=${fromDate}` : '/api/products/price-history';
+
+  const { data: rows = [], isLoading } = useQuery<PriceChangeRow[]>({
+    queryKey: ['/api/products/price-history', fromDate],
+    queryFn: async () => {
+      const r = await fetch(queryUrl, { credentials: 'include' });
+      if (!r.ok) throw new Error('Failed to fetch price history');
+      return r.json();
+    },
+    staleTime: 30_000,
+  });
+
+  const filtered = useMemo(() => {
+    if (!search.trim()) return rows;
+    const q = search.toLowerCase();
+    return rows.filter(r => r.productName.toLowerCase().includes(q));
+  }, [rows, search]);
+
+  const fmt = (val: string) => {
+    const n = parseFloat(val);
+    if (!isFinite(n)) return '—';
+    return new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(n);
+  };
+
+  const kpis = useMemo(() => {
+    if (filtered.length === 0) return null;
+    const uniqueProducts = new Set(filtered.map(r => r.productName)).size;
+    let sumPct = 0, biggestPct = 0;
+    let biggestMoverRow: PriceChangeRow | null = null;
+    for (const r of filtered) {
+      const pct = ((parseFloat(r.newPrice) - parseFloat(r.oldPrice)) / parseFloat(r.oldPrice)) * 100;
+      sumPct += pct;
+      if (Math.abs(pct) > Math.abs(biggestPct)) { biggestPct = pct; biggestMoverRow = r; }
+    }
+    return { uniqueProducts, avg: sumPct / filtered.length, biggestMoverRow, biggestPct };
+  }, [filtered]);
+
+  const { chartData, chartKeys } = useMemo(() => {
+    if (filtered.length === 0) return { chartData: [] as Record<string, any>[], chartKeys: [] as string[] };
+    const seriesKey = (r: PriceChangeRow) =>
+      r.sellingType === 'units' ? r.productName : `${r.productName} (${r.sellingType})`;
+    const sorted = [...filtered].sort((a, b) => new Date(a.changedAt).getTime() - new Date(b.changedAt).getTime());
+    const allKeys = [...new Set(sorted.map(seriesKey))].slice(0, 8);
+    const points: Array<{ ts: number; label: string; key: string; price: number }> = [];
+    const seen = new Set<string>();
+    for (const row of sorted) {
+      const key = seriesKey(row);
+      if (!allKeys.includes(key)) continue;
+      const ts = new Date(row.changedAt).getTime();
+      const label = new Date(row.changedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: '2-digit' });
+      if (!seen.has(key)) {
+        seen.add(key);
+        points.push({ ts: ts - 86_400_000, label: 'Before', key, price: parseFloat(row.oldPrice) });
+      }
+      points.push({ ts, label, key, price: parseFloat(row.newPrice) });
+    }
+    const tsLabelMap = new Map<number, string>();
+    for (const p of points) { if (!tsLabelMap.has(p.ts)) tsLabelMap.set(p.ts, p.label); }
+    const tsArr = [...tsLabelMap.keys()].sort((a, b) => a - b);
+    const chartData = tsArr.map(ts => {
+      const obj: Record<string, any> = { ts, label: tsLabelMap.get(ts) };
+      for (const p of points) { if (p.ts === ts) obj[p.key] = p.price; }
+      return obj;
+    });
+    return { chartData, chartKeys: allKeys };
+  }, [filtered]);
+
+  const toggleKey = (key: string) => {
+    setHiddenKeys(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      return next;
+    });
+  };
+
+  if (isLoading) {
+    return (
+      <div className="space-y-3">
+        <div className="h-16 bg-gray-100 rounded-xl animate-pulse" />
+        <div className="h-48 bg-gray-100 rounded-xl animate-pulse" />
+        {[0, 1, 2].map(i => <div key={i} className="h-16 bg-gray-100 rounded-xl animate-pulse" />)}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+        <div>
+          <h3 className="text-sm font-semibold text-gray-800">Price Movement</h3>
+          <p className="text-xs text-gray-400">Catalog changes via invoice propagation</p>
+        </div>
+        <div className="flex items-center gap-1 sm:ml-auto">
+          {(['7D', '30D', '90D', 'All'] as const).map(p => (
+            <button
+              key={p}
+              onClick={() => setTimePeriod(p)}
+              className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${
+                timePeriod === p ? 'bg-emerald-600 text-white shadow-sm' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+              }`}
+            >
+              {p}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {kpis && (
+        <div className="grid grid-cols-3 gap-2">
+          <div className="rounded-xl bg-gray-50 border border-gray-100 px-3 py-2.5">
+            <p className="text-xs text-gray-400 mb-0.5">Products</p>
+            <p className="text-xl font-bold text-gray-800">{kpis.uniqueProducts}</p>
+          </div>
+          <div className="rounded-xl bg-gray-50 border border-gray-100 px-3 py-2.5">
+            <p className="text-xs text-gray-400 mb-0.5">Avg Move</p>
+            <p className={`text-xl font-bold ${kpis.avg >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+              {kpis.avg >= 0 ? '+' : ''}{kpis.avg.toFixed(1)}%
+            </p>
+          </div>
+          <div className="rounded-xl bg-gray-50 border border-gray-100 px-3 py-2.5 overflow-hidden">
+            <p className="text-xs text-gray-400 mb-0.5">Top Mover</p>
+            <p className="text-sm font-semibold text-gray-800 truncate leading-tight">
+              {kpis.biggestMoverRow?.productName ?? '—'}
+            </p>
+          </div>
+        </div>
+      )}
+
+      <div className="relative">
+        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400 pointer-events-none" />
+        <Input
+          placeholder="Search by product name…"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          className="pl-8 h-8 text-sm"
+        />
+        {search && (
+          <button onClick={() => setSearch('')} className="absolute right-2.5 top-1/2 -translate-y-1/2">
+            <X className="h-3.5 w-3.5 text-gray-400 hover:text-gray-600" />
+          </button>
+        )}
+      </div>
+
+      {rows.length > 0 && filtered.length !== rows.length && (
+        <p className="text-xs text-gray-400">Showing {filtered.length} of {rows.length} changes</p>
+      )}
+
+      {chartData.length >= 2 && (
+        <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
+          <div className="flex flex-wrap gap-1.5 mb-4">
+            {chartKeys.map((key, i) => {
+              const color = PRICE_CHART_COLORS[i % PRICE_CHART_COLORS.length];
+              const isHidden = hiddenKeys.has(key);
+              return (
+                <button
+                  key={key}
+                  onClick={() => toggleKey(key)}
+                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border transition-all ${
+                    isHidden ? 'border-gray-200 text-gray-400 bg-white' : 'border-transparent text-white'
+                  }`}
+                  style={isHidden ? {} : { backgroundColor: color }}
+                >
+                  <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: color }} />
+                  {key}
+                </button>
+              );
+            })}
+          </div>
+          <ResponsiveContainer width="100%" height={220}>
+            <AreaChart data={chartData} margin={{ top: 5, right: 8, left: 0, bottom: 5 }}>
+              <defs>
+                {chartKeys.map((key, i) => (
+                  <linearGradient key={key} id={`pcgrad-${i}`} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor={PRICE_CHART_COLORS[i % PRICE_CHART_COLORS.length]} stopOpacity={0.18} />
+                    <stop offset="95%" stopColor={PRICE_CHART_COLORS[i % PRICE_CHART_COLORS.length]} stopOpacity={0} />
+                  </linearGradient>
+                ))}
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
+              <XAxis dataKey="label" tick={{ fontSize: 10, fill: '#9ca3af' }} tickLine={false} axisLine={false} />
+              <YAxis tickFormatter={v => `£${v}`} tick={{ fontSize: 10, fill: '#9ca3af' }} tickLine={false} axisLine={false} width={44} />
+              <Tooltip
+                formatter={(v: any, name: string) => [`£${Number(v).toFixed(2)}`, name]}
+                contentStyle={{ fontSize: 12, borderRadius: 10, border: '1px solid #e5e7eb', boxShadow: '0 4px 16px rgba(0,0,0,0.08)', padding: '8px 12px' }}
+                labelStyle={{ fontWeight: 600, marginBottom: 4 }}
+              />
+              {chartKeys.map((key, i) => (
+                <Area
+                  key={key}
+                  type="monotone"
+                  dataKey={key}
+                  stroke={PRICE_CHART_COLORS[i % PRICE_CHART_COLORS.length]}
+                  strokeWidth={2}
+                  fill={`url(#pcgrad-${i})`}
+                  dot={{ r: 3, strokeWidth: 0, fill: PRICE_CHART_COLORS[i % PRICE_CHART_COLORS.length] }}
+                  activeDot={{ r: 5 }}
+                  connectNulls
+                  hide={hiddenKeys.has(key)}
+                />
+              ))}
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+
+      {filtered.length === 0 ? (
+        <div className="text-center py-16 text-gray-400">
+          <TrendingUp className="h-10 w-10 mx-auto mb-3 opacity-30" />
+          {rows.length === 0 ? (
+            <>
+              <p className="text-sm font-medium text-gray-500">No price changes yet</p>
+              <p className="text-xs mt-1">When you update a product price via an invoice using "Apply to all orders", it will appear here.</p>
+            </>
+          ) : (
+            <p className="text-sm font-medium text-gray-500">No changes match your filters</p>
+          )}
+        </div>
+      ) : (
+        <>
+          <div className="sm:hidden space-y-2">
+            {filtered.map(row => {
+              const pct = ((parseFloat(row.newPrice) - parseFloat(row.oldPrice)) / parseFloat(row.oldPrice)) * 100;
+              const isUp = pct > 0;
+              return (
+                <div key={row.id} className="bg-white rounded-xl border border-gray-100 p-3 shadow-sm">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-gray-800 text-sm leading-snug">{row.productName}</p>
+                      <p className="text-xs text-gray-400 mt-0.5 capitalize">
+                        {row.sellingType} · {new Date(row.changedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      </p>
+                    </div>
+                    <span className={`shrink-0 inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-xs font-bold ${isUp ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-500'}`}>
+                      {isUp ? '↑' : '↓'} {Math.abs(pct).toFixed(1)}%
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 mt-2 pt-2 border-t border-gray-50">
+                    <span className="text-xs text-gray-400 line-through">{fmt(row.oldPrice)}</span>
+                    <span className="text-gray-300 text-xs">→</span>
+                    <span className="text-sm font-bold text-gray-800">{fmt(row.newPrice)}</span>
+                    {row.orderId && (
+                      <Link href={`/orders/${row.orderId}`} className="ml-auto text-xs text-emerald-600 font-medium">
+                        View order →
+                      </Link>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="hidden sm:block rounded-xl border border-gray-100 overflow-hidden">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-gray-50 text-xs text-gray-500 uppercase tracking-wide">
+                  <th className="px-4 py-2.5 text-left font-medium">Product</th>
+                  <th className="px-4 py-2.5 text-left font-medium">Type</th>
+                  <th className="px-4 py-2.5 text-right font-medium">Old Price</th>
+                  <th className="px-4 py-2.5 text-right font-medium">New Price</th>
+                  <th className="px-4 py-2.5 text-right font-medium">Change</th>
+                  <th className="px-4 py-2.5 text-right font-medium hidden md:table-cell">Date</th>
+                  <th className="px-4 py-2.5 text-right font-medium hidden lg:table-cell">Order</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {filtered.map(row => {
+                  const pct = ((parseFloat(row.newPrice) - parseFloat(row.oldPrice)) / parseFloat(row.oldPrice)) * 100;
+                  const isUp = pct > 0;
+                  return (
+                    <tr key={row.id} className="bg-white hover:bg-gray-50/50 transition-colors">
+                      <td className="px-4 py-3 font-medium text-gray-800">{row.productName}</td>
+                      <td className="px-4 py-3 text-gray-500 capitalize">{row.sellingType}</td>
+                      <td className="px-4 py-3 text-right text-gray-500">{fmt(row.oldPrice)}</td>
+                      <td className="px-4 py-3 text-right font-medium text-gray-800">{fmt(row.newPrice)}</td>
+                      <td className={`px-4 py-3 text-right font-semibold text-xs ${isUp ? 'text-emerald-600' : 'text-red-500'}`}>
+                        {isUp ? '↑' : '↓'} {Math.abs(pct).toFixed(1)}%
+                      </td>
+                      <td className="px-4 py-3 text-right text-gray-400 text-xs hidden md:table-cell">
+                        {new Date(row.changedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      </td>
+                      <td className="px-4 py-3 text-right hidden lg:table-cell">
+                        {row.orderId ? (
+                          <Link href={`/orders/${row.orderId}`} className="text-xs text-emerald-600 hover:underline">View order</Link>
+                        ) : null}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
 
 type ProductWithBatches = Product & {
   batchCount?: number;
@@ -45,6 +370,7 @@ export default function ProductManagement() {
   const [, navigate] = useLocation();
   const { setMobileTopBarActions } = useSidebarContext();
   const { toast } = useToast();
+  const [activeProductTab, setActiveProductTab] = useState<'catalog' | 'price-tracker'>('catalog');
 
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -714,7 +1040,34 @@ export default function ProductManagement() {
           </Link>
         )}
       </PageHeader>
-      <div className="px-4 sm:px-6 py-5">
+      {/* Tab bar */}
+      <div className="border-b border-slate-100 px-4 sm:px-6">
+        <div className="flex gap-1 -mb-px">
+          <button
+            onClick={() => setActiveProductTab('catalog')}
+            className={`flex items-center gap-1.5 px-3 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+              activeProductTab === 'catalog'
+                ? 'border-emerald-600 text-emerald-700'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            <Package className="h-4 w-4" />
+            Catalog
+          </button>
+          <button
+            onClick={() => setActiveProductTab('price-tracker')}
+            className={`flex items-center gap-1.5 px-3 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+              activeProductTab === 'price-tracker'
+                ? 'border-emerald-600 text-emerald-700'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            <TrendingUp className="h-4 w-4" />
+            Price Tracker
+          </button>
+        </div>
+      </div>
+      <div className={`px-4 sm:px-6 py-5 ${activeProductTab !== 'catalog' ? 'hidden' : ''}`}>
         {planLimits?.cancelAtPeriodEnd && (planLimits.usage.products > 2) && (
           <div className="mb-3 flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
             <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-amber-500" />
@@ -1176,6 +1529,12 @@ export default function ProductManagement() {
           </div>
         )}
       </div>
+
+      {activeProductTab === 'price-tracker' && (
+        <div className="px-4 sm:px-6 py-5">
+          <PriceTrackerTab />
+        </div>
+      )}
 
       <StockManagementDialog
         open={!!stockProduct}
