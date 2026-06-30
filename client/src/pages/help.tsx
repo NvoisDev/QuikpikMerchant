@@ -298,6 +298,39 @@ Quikpik automatically picks stock in **FEFO order**: when a customer orders a pr
 - Check the Expiring Soon panel on your dashboard regularly
 - Mark affected products as Out of Stock if a batch has already expired and you want to prevent orders
         `
+      },
+      {
+        title: "Price Tracker",
+        content: `
+### Price Tracker
+
+The Products page has two tabs at the top: **Catalog** (your full product list) and **Price Tracker** (a history of every price change across your catalog).
+
+#### What Is the Price Tracker?
+
+The Price Tracker automatically records every time a product price is updated — giving you a complete, timestamped log of price movements so you can see exactly how your pricing has evolved over time.
+
+#### What It Shows
+
+Each entry in the Price Tracker displays:
+- **Product name** — which product had its price changed
+- **Old price → New price** — the price before and after the change
+- **Change amount** — how much the price moved (shown as an increase or decrease)
+- **Date** — when the change was made
+
+Entries are listed most recent first, so the latest price changes are always at the top.
+
+#### How to Use It
+1. Go to **Products** in the sidebar
+2. Click the **Price Tracker** tab at the top of the page
+3. Browse the full history of price changes across your catalog
+
+#### Why It's Useful
+- Review past pricing decisions before making new ones
+- Track how prices have evolved over time across your range
+- Spot unintended price changes quickly
+- Use as a reference when discussing pricing terms with customers
+        `
       }
     ]
   },
@@ -1371,6 +1404,131 @@ Use the **Marketplace** page in the sidebar, or go to **/marketplace**, to view 
 - Keep product names, images, descriptions, MOQ, and stock levels up to date
 - Use customer groups and price lists to manage customer-specific selling terms
 - Review access requests from customers who discover your store
+        `
+      },
+      {
+        title: "Wholesaler Verified Badge",
+        content: `
+### Wholesaler Verified Badge
+
+The Verified Badge is a green **"Verified"** label awarded by the Quikpik team to wholesalers who have been reviewed and confirmed as trusted sellers on the platform.
+
+#### What It Means
+
+A Verified badge signals to customers that this wholesaler has been independently reviewed and approved by Quikpik. It cannot be self-awarded — only the Quikpik admin team can grant or remove it.
+
+#### Where the Badge Appears
+
+Once awarded, the Verified badge is shown automatically in:
+- **Your public store page** — displayed in the store header next to your business name, visible to all visitors including guests
+- **The customer portal header** — customers see it when they are browsing or shopping in your store
+- **Marketplace listings** — shown on your seller listing when retailers are discovering stores to connect with
+- **The store enquiry modal** — visible when a retailer opens your store details to request access
+
+#### How to Get Verified
+
+Contact the Quikpik team at **hello@quikpik.co** and request a verification review. The team will review your account activity, and if approved, the badge is awarded — typically with a brief note confirming what was verified.
+
+#### For Admin Users
+
+The Quikpik Admin Control Centre (accessible to Quikpik staff only) includes a verification tool in the Wholesalers section. Admins can:
+- Award or remove the Verified badge from any wholesaler account
+- Add internal verification notes when granting the badge
+- See the date verification was granted and which admin approved it
+        `
+      },
+      {
+        title: "How Retailers Discover Your Store",
+        content: `
+### The Retailer Discovery Journey
+
+When a retailer (your potential customer) searches for wholesalers on Quikpik, here is the step-by-step experience they go through — and what you can do to make a strong first impression.
+
+#### Step 1: Finding Stores
+
+Retailers access the marketplace through the Quikpik customer portal. They see a list of participating wholesaler stores. Each listing shows:
+- Your business name and logo
+- A short description of what you sell
+- Your **Verified badge** (if awarded)
+- A button to view your store or request access
+
+#### Step 2: Guest Browsing
+
+If you have **guest browsing enabled**, retailers can explore your product catalog without being registered. What they can see as a guest:
+- ✅ Product names, images, descriptions, and category
+- ✅ Minimum order quantities (MOQ)
+- ❌ Prices — hidden until they are an approved customer
+- ❌ Stock levels — hidden until approved
+- ❌ Add to cart / place order — requires approval
+
+This lets retailers assess whether your products are a good fit before committing to a registration request.
+
+> To enable or disable guest browsing, go to **Settings → Store Settings** and toggle the guest browsing option.
+
+#### Step 3: Requesting Access
+
+When a retailer is ready to register, they click **"Request Access"** on your store page. They fill in a short form with their name, business name, phone number, and a brief message. The request is sent directly to you.
+
+#### Step 4: You Receive the Request
+
+You are notified of new access requests via:
+- **Notification bell** (top-right of every page) — shows a count of pending Customer Requests
+- **Email notification** — sent to your account email
+
+#### Step 5: You Approve or Decline
+
+Open the notification panel and click **Customer Requests** to review all pending requests. From there you can approve or decline each one. Approved retailers are immediately added to your customer database and receive a welcome message.
+
+#### Making a Strong First Impression
+- **Upload a clear logo** — it appears on your store listing and store header
+- **Write a concise store description** — helps retailers understand what you specialise in
+- **Keep products up to date** — active products with images and accurate MOQ build confidence
+- **Enable guest browsing** — retailers are far more likely to request access after they've been able to browse your range
+- **Earn your Verified badge** — contact hello@quikpik.co to request a verification review
+        `
+      },
+      {
+        title: "Managing Registration Requests",
+        content: `
+### Handling Incoming Registration Requests
+
+When a retailer discovers your store in the marketplace and clicks "Request Access", their details land in your registration request queue. Here is how to review and act on them.
+
+#### Where to Find Requests
+
+**Option 1 — Notification Bell:**
+1. Click the **bell icon** in the top-right corner of any page
+2. Look for the **Customer Requests** section
+3. The red badge on the bell shows the total count of items needing attention across all notification types
+4. Click a request to review it
+
+**Option 2 — Customers page:**
+1. Go to **Customers** in the sidebar
+2. Open the **Directory** tab
+3. Pending registration requests are shown at the top of the list with a "Pending" label
+
+#### What Each Request Shows
+- Retailer's name and business name
+- Phone number (used for SMS authentication)
+- Email address (if provided)
+- Their message / reason for wanting access
+- Date the request was submitted
+
+#### Approving a Request
+1. Open the request
+2. Click **"Approve"**
+3. The retailer is immediately added to your customer database
+4. A **welcome message** is automatically sent to them via email and WhatsApp (if configured), including your store link and instructions for signing in
+
+You can also move approved retailers into a customer group or assign a price list straight away from their customer profile.
+
+#### Declining a Request
+Click **"Decline"** to reject the request. The retailer is not added to your customer database and does not receive a notification. If you want to let them know they were declined, reach out directly using the contact details on the request.
+
+#### Best Practices
+- **Respond quickly** — retailers who request access are actively looking to buy. A fast response increases the chance they start ordering from you
+- **Check the message** — retailers often explain what they are looking for in their request message, helping you decide whether they are a good fit
+- **Approve then group** — once approved, assign them to the right customer group (e.g. Retail, Trade, New Accounts) so their pricing and terms are set correctly from day one
         `
       }
     ]
