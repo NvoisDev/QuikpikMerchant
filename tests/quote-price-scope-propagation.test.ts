@@ -98,6 +98,27 @@ const createdProductIds: number[] = [];
 const createdOrderIds: number[] = [];
 
 async function cleanup() {
+  // Broad name-based sweep: removes any zz_test% products that were left behind
+  // in ANY account by a previous crashed run (e.g. when WHOLESALER_ID was
+  // different in an older version of this test file). This runs before the
+  // narrower wholesaler-scoped cleanup below so the FK-safe deletion order is
+  // maintained even for stray rows that belong to real wholesaler accounts.
+  await db.execute(sql`UPDATE order_items SET batch_id = NULL
+    WHERE batch_id IN (
+      SELECT pb.id FROM product_batches pb
+      JOIN products p ON p.id = pb.product_id
+      WHERE p.name LIKE 'zz_test%'
+    )`);
+  await db.execute(sql`DELETE FROM stock_movements
+    WHERE product_id IN (SELECT id FROM products WHERE name LIKE 'zz_test%')`);
+  await db.execute(sql`DELETE FROM product_batches
+    WHERE product_id IN (SELECT id FROM products WHERE name LIKE 'zz_test%')`);
+  await db.execute(sql`DELETE FROM product_price_history
+    WHERE product_id IN (SELECT id FROM products WHERE name LIKE 'zz_test%')`);
+  await db.execute(sql`DELETE FROM order_items
+    WHERE product_id IN (SELECT id FROM products WHERE name LIKE 'zz_test%')`);
+  await db.execute(sql`DELETE FROM products WHERE name LIKE 'zz_test%'`);
+
   // Resolve all orders/products for this wholesaler so the cleanup is not
   // dependent on the tracking arrays being accurate (they can fall out of sync
   // when a test fails before recording an id, or when a handler creates rows

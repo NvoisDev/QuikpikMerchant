@@ -279,7 +279,11 @@ export default function OrdersFresh() {
   const [markAsPaidMethod, setMarkAsPaidMethod] = useState('cash');
   const [markAsPaidNote, setMarkAsPaidNote] = useState('');
   const [isMarkingPaid, setIsMarkingPaid] = useState(false);
-  
+
+  const [isMarkAsUnpaidOpen, setIsMarkAsUnpaidOpen] = useState(false);
+  const [markAsUnpaidOrder, setMarkAsUnpaidOrder] = useState<Order | null>(null);
+  const [isMarkingUnpaid, setIsMarkingUnpaid] = useState(false);
+
   // Cancellation requests state
   const [cancellationRequests, setCancellationRequests] = useState<any[]>([]);
   const [showCancellationRequests, setShowCancellationRequests] = useState(false);
@@ -771,6 +775,36 @@ export default function OrdersFresh() {
       toast({ title: 'Error', description: 'Failed to record payment', variant: 'destructive' });
     } finally {
       setIsMarkingPaid(false);
+    }
+  };
+
+  const handleMarkAsUnpaid = async () => {
+    if (!markAsUnpaidOrder) return;
+    setIsMarkingUnpaid(true);
+    try {
+      const response = await fetch(`/api/orders/${markAsUnpaidOrder.id}/mark-as-unpaid`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      const data = await response.json();
+      if (response.ok && data.success) {
+        setOrders(orders.map(o => o.id === markAsUnpaidOrder.id ? {
+          ...o,
+          amountPaid: data.order.amountPaid,
+          amountOutstanding: data.order.amountOutstanding,
+          paymentStatus: data.order.paymentStatus,
+          status: data.order.status,
+        } : o));
+        setIsMarkAsUnpaidOpen(false);
+        toast({ title: 'Payment undone', description: 'The payment record has been reset to unpaid.' });
+      } else {
+        toast({ title: 'Error', description: data.error || 'Failed to undo payment', variant: 'destructive' });
+      }
+    } catch {
+      toast({ title: 'Error', description: 'Failed to undo payment', variant: 'destructive' });
+    } finally {
+      setIsMarkingUnpaid(false);
     }
   };
 
@@ -1779,6 +1813,15 @@ export default function OrdersFresh() {
                                   Mark as Paid
                                 </DropdownMenuItem>
                               )}
+                              {order.paymentStatus !== 'unpaid' && !(order as any).stripePaymentIntentId && order.status !== 'cancelled' && (
+                                <DropdownMenuItem
+                                  onClick={(e) => { e.stopPropagation(); setMarkAsUnpaidOrder(order); setIsMarkAsUnpaidOpen(true); }}
+                                  className="text-red-600 focus:text-red-700 cursor-pointer"
+                                >
+                                  <RotateCcw className="h-3.5 w-3.5 mr-2" />
+                                  Undo Payment
+                                </DropdownMenuItem>
+                              )}
                               {order.status !== 'ready_for_collection' && (
                                 <DropdownMenuItem
                                   onClick={(e) => { e.stopPropagation(); markReadyForCollection(order.id); }}
@@ -2103,6 +2146,44 @@ export default function OrdersFresh() {
                 disabled={isMarkingPaid || !markAsPaidAmount}
               >
                 {isMarkingPaid ? 'Recording...' : 'Record Payment'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Undo Payment Confirmation Dialog */}
+      <Dialog open={isMarkAsUnpaidOpen} onOpenChange={setIsMarkAsUnpaidOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <RotateCcw className="h-4 w-4 text-red-500" />
+              Undo Payment
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-1">
+            {markAsUnpaidOrder && (
+              <p className="text-sm text-gray-600">
+                This will reset the payment record for order{' '}
+                <span className="font-medium text-gray-900">
+                  {markAsUnpaidOrder.orderNumber || `#${markAsUnpaidOrder.id}`}
+                </span>{' '}
+                back to unpaid. Any partial payments recorded will also be cleared.
+              </p>
+            )}
+            <p className="text-xs text-gray-400">
+              Only use this if the payment was recorded by mistake. You can re-record the correct payment afterwards.
+            </p>
+            <div className="flex gap-2 pt-1">
+              <Button variant="outline" className="flex-1" onClick={() => setIsMarkAsUnpaidOpen(false)} disabled={isMarkingUnpaid}>
+                Cancel
+              </Button>
+              <Button
+                className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+                onClick={handleMarkAsUnpaid}
+                disabled={isMarkingUnpaid}
+              >
+                {isMarkingUnpaid ? 'Undoing...' : 'Undo Payment'}
               </Button>
             </div>
           </div>

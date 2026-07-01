@@ -1317,6 +1317,48 @@ export function registerOrderLifecycleRoutes(app: Express): void {
     }
   });
 
+  // POST /api/orders/:id/mark-as-unpaid — undo an offline payment recording
+  app.post('/api/orders/:id/mark-as-unpaid', requireAuth, requireBooleanFeature('order_management'), requireNotViewer, requireMemberPermission('orders'), async (req: any, res) => {
+    try {
+      const orderId = parseInt(req.params.id);
+      if (isNaN(orderId)) return res.status(400).json({ error: 'Invalid order ID' });
+
+      const wholesalerId = resolveWholesalerId(req);
+
+      const [order] = await db.select().from(orders).where(eq(orders.id, orderId)).limit(1);
+      if (!order) return res.status(404).json({ error: 'Order not found' });
+      if (order.wholesalerId !== wholesalerId) return res.status(403).json({ error: 'Not authorised' });
+      if (order.status === 'cancelled') return res.status(400).json({ error: 'Cannot modify a cancelled order' });
+      if (order.paymentStatus === 'unpaid') return res.status(400).json({ error: 'Order is already unpaid' });
+      if (order.stripePaymentIntentId) {
+        return res.status(400).json({ error: 'This order was paid via Stripe. Use the refund flow to reverse it.' });
+      }
+
+      // Reset all payment fields back to the unpaid state.
+      // order.total is authoritative — it reflects any recalculations done at
+      // mark-as-paid time (VAT, delivery, stripped fees).
+      const updateData: Record<string, any> = {
+        amountPaid: '0.00',
+        amountOutstanding: order.total,
+        paymentStatus: 'unpaid',
+      };
+
+      // If the order status was auto-promoted from 'confirmed' → 'paid' by the
+      // mark-as-paid handler, roll it back to 'confirmed'.
+      if (order.status === 'paid') {
+        updateData.status = 'confirmed';
+      }
+
+      await db.update(orders).set(updateData).where(eq(orders.id, orderId));
+      const [updatedOrder] = await db.select().from(orders).where(eq(orders.id, orderId)).limit(1);
+
+      return res.json({ success: true, order: updatedOrder });
+    } catch (error) {
+      console.error('❌ mark-as-unpaid error:', error);
+      return res.status(500).json({ error: 'Failed to undo payment' });
+    }
+  });
+
   // PATCH /api/orders/:id/discount — apply a manual flat discount to an invoice
   app.patch('/api/orders/:id/discount', requireAuth, requireBooleanFeature('order_management'), requireNotViewer, requireMemberPermission('orders'), async (req: any, res) => {
     try {

@@ -320,6 +320,9 @@ export default function OrderDetail() {
   const [markAsPaidNote, setMarkAsPaidNote] = useState('');
   const [isMarkingPaid, setIsMarkingPaid] = useState(false);
 
+  const [isMarkAsUnpaidOpen, setIsMarkAsUnpaidOpen] = useState(false);
+  const [isMarkingUnpaid, setIsMarkingUnpaid] = useState(false);
+
   const [isDiscountOpen, setIsDiscountOpen] = useState(false);
   const [discountAmount, setDiscountAmount] = useState('');
   const [discountNote, setDiscountNote] = useState('');
@@ -1023,6 +1026,36 @@ export default function OrderDetail() {
       toast({ title: 'Error', description: 'Failed to record payment', variant: 'destructive' });
     } finally {
       setIsMarkingPaid(false);
+    }
+  };
+
+  const handleMarkAsUnpaid = async () => {
+    if (!order) return;
+    setIsMarkingUnpaid(true);
+    try {
+      const response = await fetch(`/api/orders/${order.id}/mark-as-unpaid`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      const data = await response.json();
+      if (response.ok && data.success) {
+        setOrder({
+          ...order,
+          amountPaid: data.order.amountPaid,
+          amountOutstanding: data.order.amountOutstanding,
+          paymentStatus: data.order.paymentStatus,
+          status: data.order.status,
+        });
+        setIsMarkAsUnpaidOpen(false);
+        toast({ title: 'Payment undone', description: 'The payment record has been reset to unpaid.' });
+      } else {
+        toast({ title: 'Error', description: data.error || 'Failed to undo payment', variant: 'destructive' });
+      }
+    } catch {
+      toast({ title: 'Error', description: 'Failed to undo payment', variant: 'destructive' });
+    } finally {
+      setIsMarkingUnpaid(false);
     }
   };
 
@@ -1811,6 +1844,19 @@ export default function OrderDetail() {
               </Button>
             )}
 
+            {/* Undo offline payment — only for non-Stripe paid orders */}
+            {order.paymentStatus !== 'unpaid' && !order.stripePaymentIntentId && order.status !== 'cancelled' && !isViewer && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="w-full border-red-300 text-red-600 hover:bg-red-50 min-h-[44px]"
+                onClick={() => setIsMarkAsUnpaidOpen(true)}
+              >
+                <RotateCcw className="h-4 w-4 mr-1.5" />
+                Undo Payment
+              </Button>
+            )}
+
             {/* Manual invoice discount */}
             {order.paymentStatus !== 'paid' && order.status !== 'cancelled' && !isViewer && (
               <Button
@@ -2461,6 +2507,40 @@ export default function OrderDetail() {
               </Button>
               <Button className="flex-1 bg-green-600 hover:bg-green-700" onClick={handleMarkAsPaid} disabled={isMarkingPaid || !markAsPaidAmount}>
                 {isMarkingPaid ? 'Recording...' : 'Record Payment'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Undo Payment Confirmation Dialog ─────────────────────────────────── */}
+      <Dialog open={isMarkAsUnpaidOpen} onOpenChange={setIsMarkAsUnpaidOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <RotateCcw className="h-4 w-4 text-red-500" />
+              Undo Payment
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-1">
+            <p className="text-sm text-gray-600">
+              This will reset the payment record for order{' '}
+              <span className="font-medium text-gray-900">{order.orderNumber || `#${order.id}`}</span>{' '}
+              back to unpaid. Any partial payments recorded will also be cleared.
+            </p>
+            <p className="text-xs text-gray-400">
+              Only use this if the payment was recorded by mistake. You can re-record the correct payment afterwards.
+            </p>
+            <div className="flex gap-2 pt-1">
+              <Button variant="outline" className="flex-1" onClick={() => setIsMarkAsUnpaidOpen(false)} disabled={isMarkingUnpaid}>
+                Cancel
+              </Button>
+              <Button
+                className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+                onClick={handleMarkAsUnpaid}
+                disabled={isMarkingUnpaid}
+              >
+                {isMarkingUnpaid ? 'Undoing...' : 'Undo Payment'}
               </Button>
             </div>
           </div>
