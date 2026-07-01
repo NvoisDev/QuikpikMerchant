@@ -1629,7 +1629,7 @@ export default function CustomerPortal() {
   }
 
   // Show loading while wholesaler data is being fetched - prevents rendering with undefined wholesaler
-  if (wholesalerLoading && wholesalerId && !isEnhancedPreviewMode) {
+  if ((wholesalerLoading || (productsLoading && products.length === 0)) && wholesalerId && !isEnhancedPreviewMode) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="flex flex-col items-center space-y-4">
