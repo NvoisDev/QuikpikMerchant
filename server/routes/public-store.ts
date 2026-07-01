@@ -138,6 +138,7 @@ export function registerPublicStoreRoutes(app: Express) {
         packQuantity: showPackSize ? p.packQuantity : null,
       }));
 
+      res.set('Cache-Control', 'public, max-age=30, stale-while-revalidate=60');
       res.json({ wholesaler, products: sanitizedProducts });
     } catch (err) {
       console.error("Error fetching public wholesaler:", err);
