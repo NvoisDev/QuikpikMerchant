@@ -283,6 +283,29 @@ export class SubscriptionService {
   }
 
   /**
+   * Delete any pending proration invoice items for a customer before a plan change.
+   * Prevents stacking of proration debits/credits when users switch plans multiple times
+   * (e.g. accidentally upgrade then immediately downgrade back).
+   */
+  private static async clearPendingProrationItems(stripe: Stripe, customerId: string): Promise<void> {
+    try {
+      const pendingItems = await stripe.invoiceItems.list({
+        customer: customerId,
+        pending: true,
+        limit: 100,
+      });
+      const prorationItems = pendingItems.data.filter(item => item.proration);
+      if (prorationItems.length > 0) {
+        console.log(`🧹 Clearing ${prorationItems.length} stale proration item(s) for customer ${customerId} before plan change`);
+        await Promise.all(prorationItems.map(item => stripe.invoiceItems.del(item.id)));
+      }
+    } catch (err) {
+      // Non-fatal — log a warning but don't block the plan change itself
+      console.warn('⚠️ Could not clear pending proration items (continuing anyway):', err);
+    }
+  }
+
+  /**
    * Create or update a subscription - handles both new subscriptions and plan changes
    */
   static async createSubscription(stripeCustomerId: string, priceId: string, isTestAccount: boolean): Promise<Stripe.Subscription> {
@@ -295,10 +318,13 @@ export class SubscriptionService {
       });
 
       if (subscriptions.data.length > 0) {
+        // Clear any stale proration items from previous plan changes before switching
+        await SubscriptionService.clearPendingProrationItems(stripe, stripeCustomerId);
+
         // If a subscription exists, update it to the new price
         const subscription = subscriptions.data[0];
         const updatedSubscription = await stripe.subscriptions.update(subscription.id, {
-          proration_behavior: 'always_invoice', // Handle pro-rated billing
+          proration_behavior: 'none', // No new proration items — stale ones already cleared above
           items: [{
             id: subscription.items.data[0].id,
             price: priceId, // Switch to the new plan's price ID
@@ -336,7 +362,11 @@ export class SubscriptionService {
     try {
       // Get the current subscription
       const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-      
+
+      // Clear any stale proration items from previous plan changes before creating new ones.
+      // Without this, repeated upgrades/downgrades stack extra line items on the upcoming invoice.
+      await SubscriptionService.clearPendingProrationItems(stripe, subscription.customer as string);
+
       // Update subscription with immediate proration.
       // cancel_at_period_end is explicitly cleared so that upgrading re-commits the
       // customer to the subscription — a pending cancellation should not survive a
@@ -383,7 +413,10 @@ export class SubscriptionService {
     try {
       // Get the current subscription
       const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-      
+
+      // Clear any stale proration items left over from a previous plan change before proceeding.
+      await SubscriptionService.clearPendingProrationItems(stripe, subscription.customer as string);
+
       // Update subscription with no proration — user simply pays the new (lower) rate
       // from the next billing date. Using 'create_prorations' caused duplicate proration
       // items if the endpoint was retried (e.g. stripeSubscriptionId missing from DB on
