@@ -991,7 +991,7 @@ export default function LandingPage() {
                 {/* Right accordion */}
                 <div className="flex-1 bg-white rounded-2xl border border-gray-100 shadow-sm px-6 divide-y divide-gray-100">
                   {[
-                    { q: "How does the ordering process work?",       a: "Browse products from your supplier's store, add items to your cart, and check out securely by card. You'll receive an order confirmation by email." },
+                    { q: "How does the ordering process work?",       a: "It depends on how your supplier has set up their store. If prices are shown: browse products, add to your cart, and request your order — the wholesaler confirms and sends you an invoice to pay. If no prices are shown: add items to your cart to request a trade price quote, and the wholesaler will follow up with a personalised offer. Either way, prices displayed are indicative and subject to final confirmation by the wholesaler." },
                     { q: "Where will my goods come from?",            a: "Your order is fulfilled directly by the African wholesaler whose store you're shopping from. Suppliers ship across the continent — delivery areas are confirmed at checkout." },
                     { q: "Do prices include tax?",                    a: "Prices shown are trade prices. Any applicable taxes or duties vary by country and are shown clearly at checkout before you confirm your order." },
                     { q: "What is a minimum order quantity (MOQ)?",   a: "Some products require a minimum number of units per order. The MOQ is shown on each product card and is set by the supplier." },
