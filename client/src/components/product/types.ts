@@ -34,6 +34,7 @@ export interface BulkUploadRow {
   category: string;
   imageUrl: string;
   priceVisible: boolean;
+  hiddenFromPublic: boolean;
   status: string;
   unit: string;
   unitFormat: string;

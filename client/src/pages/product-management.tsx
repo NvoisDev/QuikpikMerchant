@@ -1333,6 +1333,9 @@ export default function ProductManagement() {
                           {product.stock > 0 && product.stock <= (product.lowStockThreshold || 50) && (
                             <Badge className="text-xs bg-amber-500 text-white">Low Stock</Badge>
                           )}
+                          {product.hiddenFromPublic && (
+                            <Badge variant="outline" className="text-xs text-gray-500 border-gray-400">Hidden from public</Badge>
+                          )}
                         </div>
                         <div className="flex flex-wrap items-center gap-1.5 mt-1">
                           <Badge variant="secondary" className="text-xs">{product.category}</Badge>

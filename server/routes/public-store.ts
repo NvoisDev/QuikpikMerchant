@@ -113,7 +113,8 @@ export function registerPublicStoreRoutes(app: Express) {
         .where(
           and(
             eq(products.wholesalerId, wholesaler.id),
-            eq(products.status, 'active')
+            eq(products.status, 'active'),
+            eq(products.hiddenFromPublic, false)
           )
         )
         .orderBy(products.name);
@@ -159,6 +160,7 @@ export function registerPublicStoreRoutes(app: Express) {
         eq(users.storeVisibility, 'public'),
         eq(users.isInactive, false),
         eq(products.status, 'active'),
+        eq(products.hiddenFromPublic, false),
       ] as any[];
 
       if (q) {
@@ -210,6 +212,7 @@ export function registerPublicStoreRoutes(app: Express) {
             eq(users.storeVisibility, 'public'),
             eq(users.isInactive, false),
             eq(products.status, 'active'),
+            eq(products.hiddenFromPublic, false),
             sql`${products.category} is not null and ${products.category} != ''`
           )
         )

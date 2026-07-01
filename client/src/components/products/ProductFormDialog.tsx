@@ -34,6 +34,7 @@ export const productFormSchema = z.object({
   imageUrl: z.string().url("Must be a valid URL").optional().or(z.literal("")),
   images: z.array(z.string()).optional(),
   priceVisible: z.boolean(),
+  hiddenFromPublic: z.boolean(),
   status: z.enum(["active", "inactive", "out_of_stock"]),
   packQuantity: z.union([z.string(), z.number()]).optional().transform((val) => val ? val.toString() : undefined),
   unitOfMeasure: z.string().optional(),
@@ -154,6 +155,7 @@ export default function ProductFormDialog({
       imageUrl: "",
       images: [],
       priceVisible: true,
+      hiddenFromPublic: false,
       status: "active",
       packQuantity: "",
       unitOfMeasure: "",
@@ -215,6 +217,7 @@ export default function ProductFormDialog({
             imageUrl: editingProduct.imageUrl || "",
             images: Array.isArray(editingProduct.images) ? editingProduct.images : [],
             priceVisible: editingProduct.priceVisible !== false,
+            hiddenFromPublic: Boolean(editingProduct.hiddenFromPublic),
             status: editingProduct.status || "active",
             packQuantity: String(editingProduct.packQuantity || ""),
             unitOfMeasure: editingProduct.unitOfMeasure || "",
@@ -1214,6 +1217,28 @@ export default function ProductFormDialog({
                       <FormLabel>Exclude from Delivery</FormLabel>
                       <div className="text-sm text-muted-foreground">
                         Check if this product should only be available for pickup
+                      </div>
+                    </div>
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="hiddenFromPublic"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                    <FormControl>
+                      <input
+                        type="checkbox"
+                        checked={field.value}
+                        onChange={field.onChange}
+                        className="mt-1"
+                      />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                      <FormLabel>Hide from Public Store</FormLabel>
+                      <div className="text-sm text-muted-foreground">
+                        Approved customers can still see this product
                       </div>
                     </div>
                   </FormItem>
