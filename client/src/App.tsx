@@ -351,10 +351,25 @@ function Router() {
   }
 }
 
+function UpdateBanner({ onRefresh }: { onRefresh: () => void }) {
+  return (
+    <div className="fixed top-0 left-0 right-0 z-[9999] bg-green-600 text-white text-sm flex items-center justify-between px-4 py-2 shadow-md">
+      <span>A new version of Quikpik is ready.</span>
+      <button
+        onClick={onRefresh}
+        className="ml-4 bg-white text-green-700 font-semibold text-xs px-3 py-1 rounded hover:bg-green-50 transition-colors"
+      >
+        Refresh now
+      </button>
+    </div>
+  );
+}
+
 function AppInner() {
-  useVersionCheck();
+  const updateAvailable = useVersionCheck();
   return (
     <>
+      {updateAvailable && <UpdateBanner onRefresh={() => window.location.reload()} />}
       <OfflineBanner />
       <Router />
       <Toaster />

@@ -1,9 +1,10 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const POLL_INTERVAL_MS = 60_000;
 
 export function useVersionCheck() {
   const knownVersion = useRef<number | null>(null);
+  const [updateAvailable, setUpdateAvailable] = useState(false);
 
   useEffect(() => {
     let timer: ReturnType<typeof setInterval>;
@@ -16,7 +17,7 @@ export function useVersionCheck() {
         if (knownVersion.current === null) {
           knownVersion.current = version;
         } else if (version !== knownVersion.current) {
-          window.location.reload();
+          setUpdateAvailable(true);
         }
       } catch {
         // network blip — ignore, try again next interval
@@ -27,4 +28,6 @@ export function useVersionCheck() {
     timer = setInterval(check, POLL_INTERVAL_MS);
     return () => clearInterval(timer);
   }, []);
+
+  return updateAvailable;
 }
