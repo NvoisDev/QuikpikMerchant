@@ -608,7 +608,7 @@ export async function buildInvoicePdf(order: any, wholesaler: any, showTransacti
   const PDFDocument = (await import('pdfkit')).default;
   const currency = wholesaler.preferredCurrency || 'GBP';
   const currencySymbol = getCurrencySymbol(currency);
-  const fmt = (n: number) => `${currencySymbol}${n.toFixed(2)}`;
+  const fmt = (n: number) => `${currencySymbol}${n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}`;
   const customerName = order.retailer
     ? (`${order.retailer.firstName || ''} ${order.retailer.lastName || ''}`.trim() || order.retailer.businessName || order.customerName || 'Customer')
     : (order.customerName || 'Customer');
