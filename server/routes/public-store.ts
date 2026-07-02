@@ -70,6 +70,8 @@ export function registerPublicStoreRoutes(app: Express) {
           whatsappContactVisible: users.whatsappContactVisible,
           phoneNumber: users.phoneNumber,
           isVerified: users.isVerified,
+          ownerFirstName: users.firstName,
+          ownerLastName: users.lastName,
         })
         .from(users)
         .where(

@@ -58,6 +58,8 @@ interface PublicWholesaler {
   whatsappContactVisible?: boolean;
   phoneNumber?: string | null;
   isVerified?: boolean;
+  ownerFirstName?: string | null;
+  ownerLastName?: string | null;
 }
 
 interface CartItem {
@@ -944,6 +946,11 @@ export default function PublicStorePage() {
                 <h1 className="text-xl sm:text-2xl font-bold text-gray-900">{wholesaler.businessName}</h1>
                 {wholesaler.isVerified && <VerifiedBadge />}
               </div>
+              {(wholesaler.ownerFirstName || wholesaler.ownerLastName) && (
+                <p className="text-xs text-gray-400 mt-0.5">
+                  {[wholesaler.ownerFirstName, wholesaler.ownerLastName].filter(Boolean).join(' ')}
+                </p>
+              )}
               {wholesaler.storeTagline && (
                 <p className="text-gray-500 text-sm mt-0.5">{wholesaler.storeTagline}</p>
               )}
