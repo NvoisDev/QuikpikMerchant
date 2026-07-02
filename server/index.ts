@@ -618,6 +618,7 @@ async function runStartupMigrations() {
     `ALTER TABLE orders ADD COLUMN IF NOT EXISTS invoice_discount DECIMAL(10,2) NOT NULL DEFAULT 0.00`,
     `ALTER TABLE orders ADD COLUMN IF NOT EXISTS invoice_discount_note TEXT`,
     `ALTER TABLE products ADD COLUMN IF NOT EXISTS hidden_from_public BOOLEAN NOT NULL DEFAULT FALSE`,
+    `ALTER TABLE products ADD COLUMN IF NOT EXISTS view_count INTEGER NOT NULL DEFAULT 0`,
     // product_performance_summary — campaign analytics rollup per product; was missing from
     // production because it was added to schema.ts without a startup migration.
     // deleteProduct() references this table, causing a "relation does not exist" crash.

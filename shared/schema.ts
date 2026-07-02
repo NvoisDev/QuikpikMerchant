@@ -542,6 +542,7 @@ export const products = pgTable("products", {
   status: varchar("status").notNull().default("active"), // 'active' | 'inactive' | 'out_of_stock' | 'locked'
   priceVisible: boolean("price_visible").notNull().default(true),
   hiddenFromPublic: boolean("hidden_from_public").notNull().default(false),
+  viewCount: integer("view_count").notNull().default(0),
   editCount: integer("edit_count").notNull().default(0), // Track number of edits made
   
   // Core Inventory Configuration - Following Base Unit Logic

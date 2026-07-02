@@ -1067,6 +1067,11 @@ export function registerProductRoutes(app: Express): void {
         return res.status(404).json({ message: "Product not found" });
       }
 
+      // Increment view counter (fire-and-forget — don't block the response)
+      db.execute(
+        sql`UPDATE products SET view_count = view_count + 1 WHERE id = ${productId}`
+      ).catch(() => {});
+
       const images: string[] = [];
       if (product.images && Array.isArray(product.images)) {
         images.push(...(product.images as string[]));
@@ -1079,7 +1084,7 @@ export function registerProductRoutes(app: Express): void {
           ? "Out of Stock"
           : (product.stock ?? 0) < 20
           ? `Low Stock — ${product.stock} units left`
-          : "In Stock — Available Now";
+          : "In Stock";
 
       const location = [wholesaler.city, wholesaler.country].filter(Boolean).join(', ') || 'United Kingdom';
 
@@ -1100,10 +1105,8 @@ export function registerProductRoutes(app: Express): void {
           id: wholesaler.id,
           businessName: wholesaler.businessName || `${wholesaler.firstName || ''} ${wholesaler.lastName || ''}`.trim() || 'Supplier',
           location,
-          rating: 5.0,
-          totalReviews: 0,
-          phoneNumber: wholesaler.businessPhone || wholesaler.phoneNumber || undefined,
-          email: wholesaler.businessEmail || wholesaler.email || undefined,
+          storeSlug: wholesaler.storeSlug || null,
+          phoneNumber: wholesaler.whatsappContactVisible !== false ? (wholesaler.businessPhone || wholesaler.phoneNumber || undefined) : undefined,
         },
         specifications: {},
         availability: stockVisible ? availability : null,
@@ -1115,7 +1118,7 @@ export function registerProductRoutes(app: Express): void {
         moqVisible,
         stockVisible,
         packSizeVisible,
-        views: 0,
+        views: product.viewCount ?? 0,
         lastUpdated: product.updatedAt?.toISOString() ?? new Date().toISOString(),
       });
     } catch (error) {
