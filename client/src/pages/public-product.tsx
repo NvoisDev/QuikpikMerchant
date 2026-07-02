@@ -67,7 +67,7 @@ export default function PublicProductPage() {
       const ref = document.referrer;
       if (ref) {
         const url = new URL(ref);
-        if (url.hostname === window.location.hostname && url.pathname.startsWith('/store/')) {
+        if (url.hostname === window.location.hostname && url.pathname.startsWith('/w/')) {
           setReferrerHref(url.pathname + url.search);
         }
       }
@@ -169,8 +169,8 @@ export default function PublicProductPage() {
   };
 
   const constructedStoreHref = product?.wholesaler?.storeSlug
-    ? `/store/${product.wholesaler.storeSlug}`
-    : product?.wholesaler?.id ? `/store/${product.wholesaler.id}` : '/';
+    ? `/w/${product.wholesaler.storeSlug}`
+    : product?.wholesaler?.id ? `/w/${product.wholesaler.id}` : '/';
   const storeHref = referrerHref ?? constructedStoreHref;
 
   if (isLoading) {
