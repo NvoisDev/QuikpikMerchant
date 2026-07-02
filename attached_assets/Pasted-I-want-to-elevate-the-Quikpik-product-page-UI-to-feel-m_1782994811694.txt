@@ -1,0 +1,94 @@
+I want to elevate the Quikpik product page UI to feel more like a modern B2B commerce intelligence platform rather than just a catalog listing.
+
+Current design foundation is good, but I want the experience to feel more premium, data-driven, and interactive.
+
+Goals:
+
+* Make product pages feel intelligent and dynamic
+* Improve trust and marketplace credibility
+* Introduce lightweight analytics visuals
+* Reduce empty space and improve visual hierarchy
+* Make Quikpik feel like the operating system for wholesale commerce
+
+Requested improvements:
+
+1. Product Hero Section
+
+* Reduce excess whitespace around product image
+* Add image carousel/swipe support
+* Add subtle shadows/gradient background
+* Support product badges:
+    * Verified Supplier
+    * Trending
+    * Fast Moving
+    * Low Stock
+
+2. Stock & Demand Intelligence
+    Replace static stock cards with insight-driven cards:
+
+* Current stock
+* Sales velocity
+* Demand trend
+* Tiny sparkline/line graph visual
+* Example:
+    “8 units left”
+    “Selling faster this week ↑18%”
+
+3. Modern Analytics UI
+    Incorporate modern line graph / sparkline design patterns similar to fintech dashboards:
+
+* Smooth curved lines
+* Soft gradients
+* Minimal axis clutter
+* Interactive hover states
+* Compact embedded graphs inside cards
+
+4. CTA Hierarchy
+    Primary CTA:
+
+* Request Invoice
+
+Secondary CTA:
+
+* WhatsApp Supplier
+
+Additional lightweight actions:
+
+* Save Product
+* Share Product
+* Track Price
+
+5. Trust & Marketplace Signals
+    Add support for:
+
+* Verified wholesaler badge
+* Delivery coverage
+* Response time
+* Repeat buyer %
+* Fulfilment speed
+* Retailer trust indicators
+
+6. Motion & Micro-interactions
+    Add subtle:
+
+* hover states
+* graph animations
+* skeleton loaders
+* button depth
+* smooth transitions
+
+7. Overall Direction
+    The UI direction should evolve toward:
+    “Bloomberg / Stripe / Linear / modern fintech analytics”
+    combined with
+    “B2B wholesale marketplace”
+
+The experience should feel:
+
+* premium
+* intelligent
+* trustworthy
+* data-rich
+* operationally powerful
+
+Focus heavily on mobile responsiveness and clean card-based layouts.
