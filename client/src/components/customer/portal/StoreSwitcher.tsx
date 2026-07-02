@@ -107,6 +107,11 @@ export function StoreSwitcher({
                   <p className={`font-semibold text-sm ${isActive ? 'text-theme-primary' : 'text-gray-900'}`}>
                     {w.businessName || 'Business'}
                   </p>
+                  {(w.firstName || w.lastName) && (
+                    <p className="text-xs text-gray-400 truncate">
+                      {[w.firstName, w.lastName].filter(Boolean).join(' ')}
+                    </p>
+                  )}
                   {w.storeTagline && <p className="text-xs text-gray-500 truncate">{w.storeTagline}</p>}
                 </div>
                 {isActive && (
