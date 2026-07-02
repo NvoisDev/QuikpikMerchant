@@ -59,7 +59,21 @@ export default function PublicProductPage() {
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState({ name: '', phone: '', business: '', message: '' });
+  const [referrerHref, setReferrerHref] = useState<string | null>(null);
   const { toast } = useToast();
+
+  useEffect(() => {
+    try {
+      const ref = document.referrer;
+      if (ref) {
+        const url = new URL(ref);
+        if (url.hostname === window.location.hostname && url.pathname.startsWith('/store/')) {
+          setReferrerHref(url.pathname + url.search);
+        }
+      }
+    } catch {
+    }
+  }, []);
 
   useCanonical(params?.slug ? `/product/${params.slug}` : "/");
 
@@ -154,9 +168,10 @@ export default function PublicProductPage() {
     }
   };
 
-  const storeHref = product?.wholesaler?.storeSlug
+  const constructedStoreHref = product?.wholesaler?.storeSlug
     ? `/store/${product.wholesaler.storeSlug}`
     : product?.wholesaler?.id ? `/store/${product.wholesaler.id}` : '/';
+  const storeHref = referrerHref ?? constructedStoreHref;
 
   if (isLoading) {
     return (
@@ -257,16 +272,16 @@ export default function PublicProductPage() {
             </div>
 
             {/* Name */}
-            <h1 className="text-2xl font-bold text-gray-900 leading-snug">{product.name}</h1>
+            <h1 className="text-lg font-bold text-gray-900 leading-snug">{product.name}</h1>
 
             {/* Price */}
             {showPrice ? (
-              <p className="text-2xl font-bold text-emerald-600">
+              <p className="text-base font-bold text-emerald-600">
                 {formatCurrency(parseFloat(product.price), 'GBP')}
                 <span className="text-sm font-normal text-gray-400 ml-2">per unit</span>
               </p>
             ) : (
-              <p className="text-lg font-medium text-gray-400 italic">Price on request</p>
+              <p className="text-sm font-medium text-gray-400 italic">Price on request</p>
             )}
 
             {/* Description */}
