@@ -1205,9 +1205,7 @@ export function registerQuoteRoutes(app: Express): void {
       if (existingOrder.wholesalerId !== wholesalerId) {
         return res.status(403).json({ error: 'Access denied' });
       }
-      if (!existingOrder.isQuote) {
-        return res.status(400).json({ error: 'Only invoices can be edited' });
-      }
+
       const EDITABLE_STATUSES = ['pending', 'processing', 'ready_for_collection', 'fulfilled'];
       if (!EDITABLE_STATUSES.includes(existingOrder.status)) {
         return res.status(400).json({ error: `Invoice cannot be edited — current status is "${existingOrder.status}"` });
