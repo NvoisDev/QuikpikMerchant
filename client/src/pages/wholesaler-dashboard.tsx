@@ -556,7 +556,7 @@ export default function WholesalerDashboard() {
                             ? <Loader2 className="h-3 w-3 animate-spin" />
                             : <Download className="h-3 w-3" />
                           }
-                          <span className="hidden sm:inline">Price List</span>
+                          <span>Download Price List</span>
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-36">
