@@ -48,7 +48,6 @@ import {
 import { CustomerOrderHistory } from "@/components/customer/CustomerOrderHistory";
 import CustomerInvitationModal from "@/components/CustomerInvitationModal";
 import { SubscriptionUpgradeModal } from "@/components/subscription/SubscriptionUpgradeModal";
-import { PriceListManagementDialog } from "@/components/customer/PriceListManagementDialog";
 import { CustomerGroupsTab } from "@/components/customer/CustomerGroupsTab";
 import { CustomerMergeDialog } from "@/components/customer/CustomerMergeDialog";
 import { AddToPriceListDialog } from "@/components/customer/AddToPriceListDialog";
@@ -165,7 +164,7 @@ export default function Customers() {
   // Get tab from URL parameter or default to "address-book"
   const urlParams = new URLSearchParams(location.split('?')[1] || '');
   const tabFromUrl = urlParams.get('tab');
-  const defaultTab = tabFromUrl && ['groups', 'address-book', 'price-lists'].includes(tabFromUrl) ? tabFromUrl : 'address-book';
+  const defaultTab = tabFromUrl && ['groups', 'address-book'].includes(tabFromUrl) ? tabFromUrl : 'address-book';
   const [activeTab, setActiveTab] = useState(defaultTab);
 
   // Address book state
@@ -182,9 +181,6 @@ export default function Customers() {
   // Invitation modal state
   const [isInvitationModalOpen, setIsInvitationModalOpen] = useState(false);
 
-  // Price list filter (set by address-book badge click, read by PriceListManagementDialog)
-  const [priceListFilterCustomer, setPriceListFilterCustomer] = useState<{ id: string; name: string } | null>(null);
-
   // Add to price list dialog
   const [priceListTarget, setPriceListTarget] = useState<{ id: string; name: string } | null>(null);
 
@@ -192,9 +188,6 @@ export default function Customers() {
   const [isMergeDialogOpen, setIsMergeDialogOpen] = useState(false);
   const [mergeInitialDuplicates, setMergeInitialDuplicates] = useState<Customer[]>([]);
   const [mergeInitialMode, setMergeInitialMode] = useState<'automatic' | 'manual'>('manual');
-
-  // Price list URL param (passed to PriceListManagementDialog)
-  const priceListIdFromUrl = Number(urlParams.get('priceListId')) || null;
 
   // Forms
   const editCustomerForm = useForm<EditCustomerFormData>({
@@ -227,7 +220,7 @@ export default function Customers() {
     if (result.country) addCustomerForm.setValue('country', result.country, opts);
   }, [addCustomerForm]);
 
-  // Plan limits — used by CustomerGroupsTab and PriceListManagementDialog
+  // Plan limits — used by CustomerGroupsTab
   const { data: planLimits, isLoading: planLimitsLoading } = useQuery<{
     plan: string;
     limits: { products: number; broadcasts: number; teamMembers: number; customGroups: number; priceLists: number };
@@ -237,7 +230,7 @@ export default function Customers() {
     staleTime: 5 * 60 * 1000,
   });
 
-  // Customer Groups (shared with CustomerGroupsTab and PriceListManagementDialog)
+  // Customer Groups (shared with CustomerGroupsTab)
   const { data: customerGroups = [], isLoading: isLoadingGroups } = useQuery<CustomerGroup[]>({
     queryKey: ['/api/customer-groups'],
     staleTime: 10 * 60 * 1000,
@@ -763,7 +756,7 @@ export default function Customers() {
 
       <div className="space-y-4 sm:space-y-6 p-4 sm:p-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 sm:space-y-6">
-          <TabsList className="grid w-full grid-cols-3 h-auto bg-slate-100 p-1 rounded-xl">
+          <TabsList className="grid w-full grid-cols-2 h-auto bg-slate-100 p-1 rounded-xl">
             <TabsTrigger value="address-book" className="flex items-center justify-center space-x-1 sm:space-x-2 py-2 sm:py-3 rounded-lg data-[state=active]:bg-white data-[state=active]:text-emerald-700 data-[state=active]:shadow-sm">
               <Contact className="h-3 w-3 sm:h-4 sm:w-4" />
               <span className="text-xs sm:text-sm">Directory</span>
@@ -771,10 +764,6 @@ export default function Customers() {
             <TabsTrigger value="groups" className="flex items-center justify-center space-x-1 sm:space-x-2 py-2 sm:py-3 rounded-lg data-[state=active]:bg-white data-[state=active]:text-emerald-700 data-[state=active]:shadow-sm">
               <Users className="h-3 w-3 sm:h-4 sm:w-4" />
               <span className="text-xs sm:text-sm">Groups</span>
-            </TabsTrigger>
-            <TabsTrigger value="price-lists" className="flex items-center justify-center space-x-1 sm:space-x-2 py-2 sm:py-3 rounded-lg data-[state=active]:bg-white data-[state=active]:text-emerald-700 data-[state=active]:shadow-sm">
-              <Tag className="h-3 w-3 sm:h-4 sm:w-4" />
-              <span className="text-xs sm:text-sm">Price Lists</span>
             </TabsTrigger>
           </TabsList>
 
@@ -951,11 +940,7 @@ export default function Customers() {
                             className="text-[10px] py-0 px-1.5 cursor-pointer hover:bg-blue-100 hover:text-blue-700 transition-colors shrink-0"
                             onClick={(e) => {
                               e.stopPropagation();
-                              setPriceListFilterCustomer({
-                                id: customer.id,
-                                name: `${customer.firstName || 'Unknown'} ${customer.lastName || ''}`.trim(),
-                              });
-                              setActiveTab('price-lists');
+                              navigate(`/products?tab=price-lists`);
                             }}
                             title={priceListCustomerSummary[customer.id].names.join(', ')}
                           >
@@ -1069,21 +1054,6 @@ export default function Customers() {
               planLimitsLoading={planLimitsLoading}
               customerGroups={customerGroups}
               isLoadingGroups={isLoadingGroups}
-            />
-          </TabsContent>
-
-          {/* Price Lists Tab */}
-          <TabsContent value="price-lists" className="space-y-4 sm:space-y-6">
-            <PriceListManagementDialog
-              customers={customers}
-              user={user ?? null}
-              customerGroups={customerGroups}
-              planLimits={planLimits}
-              planLimitsLoading={planLimitsLoading}
-              priceListIdFromUrl={priceListIdFromUrl}
-              onActivatePriceListsTab={() => setActiveTab('price-lists')}
-              filterCustomer={priceListFilterCustomer}
-              onFilterChange={setPriceListFilterCustomer}
             />
           </TabsContent>
 

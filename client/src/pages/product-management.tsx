@@ -34,6 +34,7 @@ import DownloadProductsModal from "@/components/products/DownloadProductsModal";
 import { productMatchesFilters } from "@/pages/product-filters";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { PriceListManagementDialog } from "@/components/customer/PriceListManagementDialog";
 
 interface PriceChangeRow {
   id: number;
@@ -367,10 +368,17 @@ export default function ProductManagement() {
   const { formatMoney } = useCurrency();
   const { user } = useAuth();
   const isViewer = (user as AuthUser)?.teamMemberRole === 'viewer';
-  const [, navigate] = useLocation();
+  const [location, navigate] = useLocation();
   const { setMobileTopBarActions } = useSidebarContext();
   const { toast } = useToast();
-  const [activeProductTab, setActiveProductTab] = useState<'catalog' | 'price-tracker'>('catalog');
+  const [activeProductTab, setActiveProductTab] = useState<'catalog' | 'price-tracker' | 'price-lists'>(() => {
+    const tab = new URLSearchParams(location.includes('?') ? location.split('?')[1] : '').get('tab');
+    if (tab === 'price-lists') return 'price-lists';
+    if (tab === 'price-tracker') return 'price-tracker';
+    return 'catalog';
+  });
+  const [priceListFilterCustomer, setPriceListFilterCustomer] = useState<{ id: string; name: string } | null>(null);
+  const priceListIdFromUrl = Number(new URLSearchParams(location.includes('?') ? location.split('?')[1] : '').get('priceListId')) || null;
 
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -467,13 +475,25 @@ export default function ProductManagement() {
 
   const { data: planLimits, isLoading: planLimitsLoading } = useQuery<{
     plan: string;
-    limits: { products: number; broadcasts: number; teamMembers: number };
-    usage: { products: number; broadcasts: number; teamMembers: number };
+    limits: { products: number; broadcasts: number; teamMembers: number; customGroups: number; priceLists: number };
+    usage: { products: number; broadcasts: number; teamMembers: number; priceLists: number };
     cancelAtPeriodEnd: boolean;
     subscriptionPeriodEnd: string | null;
   }>({
     queryKey: ['/api/subscriptions/plan-limits'],
     staleTime: 5 * 60 * 1000,
+  });
+
+  const { data: plCustomers = [] } = useQuery<any[]>({
+    queryKey: ['/api/customers'],
+    staleTime: 5 * 60 * 1000,
+    enabled: activeProductTab === 'price-lists',
+  });
+
+  const { data: plCustomerGroups = [] } = useQuery<any[]>({
+    queryKey: ['/api/customer-groups'],
+    staleTime: 5 * 60 * 1000,
+    enabled: activeProductTab === 'price-lists',
   });
 
   const handleFormDialogClose = useCallback(() => {
@@ -1065,6 +1085,17 @@ export default function ProductManagement() {
             <TrendingUp className="h-4 w-4" />
             Price Tracker
           </button>
+          <button
+            onClick={() => setActiveProductTab('price-lists')}
+            className={`flex items-center gap-1.5 px-3 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+              activeProductTab === 'price-lists'
+                ? 'border-emerald-600 text-emerald-700'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            <Tag className="h-4 w-4" />
+            Price Lists
+          </button>
         </div>
       </div>
       <div className={`px-4 sm:px-6 py-5 ${activeProductTab !== 'catalog' ? 'hidden' : ''}`}>
@@ -1536,6 +1567,22 @@ export default function ProductManagement() {
       {activeProductTab === 'price-tracker' && (
         <div className="px-4 sm:px-6 py-5">
           <PriceTrackerTab />
+        </div>
+      )}
+
+      {activeProductTab === 'price-lists' && (
+        <div className="px-4 sm:px-6 py-5">
+          <PriceListManagementDialog
+            customers={plCustomers}
+            user={user ?? null}
+            customerGroups={plCustomerGroups}
+            planLimits={planLimits}
+            planLimitsLoading={planLimitsLoading}
+            priceListIdFromUrl={priceListIdFromUrl}
+            onActivatePriceListsTab={() => setActiveProductTab('price-lists')}
+            filterCustomer={priceListFilterCustomer}
+            onFilterChange={setPriceListFilterCustomer}
+          />
         </div>
       )}
 
