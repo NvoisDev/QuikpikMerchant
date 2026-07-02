@@ -317,7 +317,7 @@ export default function PublicProductPage() {
             {showPackSize && (
               <div className="flex items-center justify-between py-2.5 px-3 bg-white rounded-xl border border-gray-100 text-sm">
                 <span className="text-gray-500">Pack size</span>
-                <span className="text-gray-800 font-medium">{product.packQuantity} × {product.unitSize}{product.unitOfMeasure}</span>
+                <span className="text-gray-800 font-medium">{product.packQuantity} × {parseFloat(String(product.unitSize))}{product.unitOfMeasure}</span>
               </div>
             )}
 
