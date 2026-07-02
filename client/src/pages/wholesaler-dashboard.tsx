@@ -6,7 +6,7 @@ import { AnimatedCard, AnimatedCardContent, AnimatedCardHeader, AnimatedCardTitl
 import { Button } from "@/components/ui/button";
 import { AnimatedButton } from "@/components/ui/animated-button";
 import { Badge } from "@/components/ui/badge";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth, type AuthUser } from "@/hooks/useAuth";
 import { useOnboarding } from "@/hooks/useOnboarding";
 import { formatNumber } from "@/lib/utils";
 import { formatCurrency } from "@/lib/currencies";
@@ -41,7 +41,9 @@ import {
   Tag,
   CheckCircle,
   Info,
-  Percent
+  Percent,
+  Download,
+  Loader2
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -206,6 +208,30 @@ function MarginOverview() {
 export default function WholesalerDashboard() {
   const { user, isLoading: authLoading } = useAuth();
   const { toast } = useToast();
+  const isViewer = (user as AuthUser)?.teamMemberRole === 'viewer';
+  const [isDownloadingPriceList, setIsDownloadingPriceList] = useState(false);
+
+  const handleDownloadPriceList = async () => {
+    if (isDownloadingPriceList) return;
+    setIsDownloadingPriceList(true);
+    try {
+      const res = await fetch('/api/products/catalogue-export?format=xlsx', { credentials: 'include' });
+      if (!res.ok) throw new Error('Failed to generate price list');
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'price-list.xlsx';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch {
+      toast({ title: 'Download failed', description: 'Could not generate price list. Please try again.', variant: 'destructive' });
+    } finally {
+      setIsDownloadingPriceList(false);
+    }
+  };
   
   // Early return if auth is still loading
   if (authLoading || !user) {
@@ -512,9 +538,26 @@ export default function WholesalerDashboard() {
                 <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900">
                   Hello, {user?.firstName || user?.businessName?.split(' ')[0] || 'Wholesaler'} 👋
                 </h1>
-                <p className="text-base sm:text-lg text-gray-900 opacity-80">
-                  Your business performance at a glance
-                </p>
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-base sm:text-lg text-gray-900 opacity-80">
+                    Your business performance at a glance
+                  </p>
+                  {!isViewer && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleDownloadPriceList}
+                      disabled={isDownloadingPriceList}
+                      className="shrink-0 text-gray-400 hover:text-emerald-700 hover:bg-emerald-50 h-7 px-2 text-xs font-normal gap-1"
+                    >
+                      {isDownloadingPriceList
+                        ? <Loader2 className="h-3 w-3 animate-spin" />
+                        : <Download className="h-3 w-3" />
+                      }
+                      <span className="hidden sm:inline">Price List</span>
+                    </Button>
+                  )}
+                </div>
               </div>
 
               
