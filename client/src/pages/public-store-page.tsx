@@ -927,13 +927,13 @@ export default function PublicStorePage() {
 
       {/* Back breadcrumb */}
       <div className="max-w-5xl mx-auto px-4 pt-3 pb-1">
-        <button
-          onClick={() => window.history.length > 1 ? window.history.back() : (window.location.href = '/')}
+        <a
+          href="/"
           className="inline-flex items-center gap-1 text-sm text-gray-400 hover:text-gray-700 transition-colors"
         >
           <ArrowLeft className="h-3.5 w-3.5" />
-          Back to suppliers
-        </button>
+          Home
+        </a>
       </div>
 
       {/* Store header */}
