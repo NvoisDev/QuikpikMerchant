@@ -272,11 +272,11 @@ export default function PublicProductPage() {
             </div>
 
             {/* Name */}
-            <h1 className="text-lg font-bold text-gray-900 leading-snug">{product.name}</h1>
+            <h1 className="text-xl font-bold text-gray-900 leading-snug">{product.name}</h1>
 
             {/* Price */}
             {showPrice ? (
-              <p className="text-base font-bold text-emerald-600">
+              <p className="text-lg font-bold text-emerald-600">
                 {formatCurrency(parseFloat(product.price), 'GBP')}
                 <span className="text-sm font-normal text-gray-400 ml-2">per unit</span>
               </p>
