@@ -47,6 +47,7 @@ import {
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { DynamicTooltip, HelpTooltip, InfoTooltip } from "@/components/ui/dynamic-tooltip";
 
@@ -211,17 +212,17 @@ export default function WholesalerDashboard() {
   const isViewer = (user as AuthUser)?.teamMemberRole === 'viewer';
   const [isDownloadingPriceList, setIsDownloadingPriceList] = useState(false);
 
-  const handleDownloadPriceList = async () => {
+  const handleDownloadPriceList = async (format: 'xlsx' | 'pdf' = 'xlsx') => {
     if (isDownloadingPriceList) return;
     setIsDownloadingPriceList(true);
     try {
-      const res = await fetch('/api/products/catalogue-export?format=xlsx', { credentials: 'include' });
+      const res = await fetch(`/api/products/catalogue-export?format=${format}`, { credentials: 'include' });
       if (!res.ok) throw new Error('Failed to generate price list');
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'price-list.xlsx';
+      a.download = `price-list.${format}`;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -543,19 +544,30 @@ export default function WholesalerDashboard() {
                     Your business performance at a glance
                   </p>
                   {!isViewer && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleDownloadPriceList}
-                      disabled={isDownloadingPriceList}
-                      className="shrink-0 text-gray-400 hover:text-emerald-700 hover:bg-emerald-50 h-7 px-2 text-xs font-normal gap-1"
-                    >
-                      {isDownloadingPriceList
-                        ? <Loader2 className="h-3 w-3 animate-spin" />
-                        : <Download className="h-3 w-3" />
-                      }
-                      <span className="hidden sm:inline">Price List</span>
-                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          disabled={isDownloadingPriceList}
+                          className="shrink-0 text-gray-400 hover:text-emerald-700 hover:bg-emerald-50 h-7 px-2 text-xs font-normal gap-1"
+                        >
+                          {isDownloadingPriceList
+                            ? <Loader2 className="h-3 w-3 animate-spin" />
+                            : <Download className="h-3 w-3" />
+                          }
+                          <span className="hidden sm:inline">Price List</span>
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-36">
+                        <DropdownMenuItem onClick={() => handleDownloadPriceList('xlsx')} className="text-xs cursor-pointer">
+                          Download XLSX
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleDownloadPriceList('pdf')} className="text-xs cursor-pointer">
+                          Download PDF
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   )}
                 </div>
               </div>
