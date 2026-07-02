@@ -64,6 +64,7 @@ const LeadsPage = lazy(() => import("@/pages/leads"));
 const Blog = lazy(() => import("@/pages/blog"));
 const BlogPost = lazy(() => import("@/pages/blog-post"));
 const PriceListDetail = lazy(() => import("@/pages/price-list-detail"));
+const SavedProducts = lazy(() => import("@/pages/saved-products"));
 
 import AppLayout from "@/components/layout/app-layout";
 import SubscriptionExpiredWall from "@/components/SubscriptionExpiredWall";
@@ -202,6 +203,7 @@ function PublicRoutes() {
         <Route path="/campaign/:id" component={CampaignPreviewSection} />
         <Route path="/marketplace/product/:id" component={ProductOrderSection} />
         <Route path="/product/:slug" component={PublicProductSection} />
+        <Route path="/saved" component={() => <SectionErrorBoundary sectionName="Saved products"><SavedProducts /></SectionErrorBoundary>} />
         <Route path="/customer/payment-success" component={PaymentSuccess} />
         <Route path="/customer/:id" component={({ params }) => { const [, setLocation] = useLocation(); useEffect(() => { setLocation(`/welcome/${params.id}`, { replace: true }); }, [params.id]); return null; }} />
         <Route path="/welcome/:wholesalerId" component={WelcomeSection} />
@@ -319,7 +321,7 @@ function Router() {
     );
   }
   
-  const publicRoutes = ['/login', '/customer-login', '/signup', '/signup-complete', '/auth-success', '/team-invitation', '/forgot-password', '/reset-password', '/super-admin', '/terms', '/privacy'];
+  const publicRoutes = ['/login', '/customer-login', '/signup', '/signup-complete', '/auth-success', '/team-invitation', '/forgot-password', '/reset-password', '/super-admin', '/terms', '/privacy', '/saved'];
   const isPublicRoute = location.startsWith('/campaign/') || 
     location.startsWith('/marketplace/product/') || 
     location.startsWith('/customer/') || 

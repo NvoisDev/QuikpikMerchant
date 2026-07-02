@@ -16,9 +16,11 @@ import {
   CheckCircle,
   TrendingUp,
   AlertTriangle,
+  Heart,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/currencies";
 import { cleanAIDescription } from "@shared/utils";
+import { useSavedProducts } from "@/hooks/useSavedProducts";
 
 interface PublicProduct {
   id: string;
@@ -74,6 +76,7 @@ export default function PublicProductPage() {
   const [referrerHref, setReferrerHref] = useState<string | null>(null);
   const carouselRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+  const { isSaved, toggleSave, saved } = useSavedProducts();
 
   useEffect(() => {
     try {
@@ -202,6 +205,31 @@ export default function PublicProductPage() {
     : "/";
   const storeHref = referrerHref ?? constructedStoreHref;
 
+  const productSaved = product ? isSaved(product.id) : false;
+
+  function handleToggleSave() {
+    if (!product) return;
+    const wasAlreadySaved = isSaved(product.id);
+    toggleSave({
+      id: product.id,
+      slug: params?.slug ?? product.id,
+      name: product.name,
+      price: product.price,
+      priceVisible: product.priceVisible !== false,
+      category: product.category ?? "",
+      image: product.images[0] ?? null,
+      wholesalerName: product.wholesaler.businessName,
+      wholesalerSlug: product.wholesaler.storeSlug ?? product.wholesaler.id,
+      savedAt: Date.now(),
+    });
+    toast({
+      title: wasAlreadySaved ? "Removed from saved" : "Product saved",
+      description: wasAlreadySaved
+        ? undefined
+        : "View all your saved products any time.",
+    });
+  }
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50">
@@ -264,6 +292,31 @@ export default function PublicProductPage() {
             <ArrowLeft className="h-4 w-4 flex-shrink-0" />
             <span className="truncate">Back to {product.wholesaler.businessName}</span>
           </a>
+          {/* Save / heart button */}
+          <button
+            onClick={handleToggleSave}
+            aria-label={productSaved ? "Remove from saved" : "Save product"}
+            className={`flex-shrink-0 p-1.5 rounded-full transition-colors ${
+              productSaved
+                ? "text-rose-500 bg-rose-50 hover:bg-rose-100"
+                : "text-gray-400 hover:text-rose-500 hover:bg-rose-50"
+            }`}
+          >
+            <Heart className={`h-5 w-5 ${productSaved ? "fill-rose-500" : ""}`} />
+          </button>
+          {/* Saved list badge */}
+          {saved.length > 0 && (
+            <a
+              href="/saved"
+              className="flex-shrink-0 relative"
+              aria-label={`View ${saved.length} saved products`}
+            >
+              <Heart className="h-4 w-4 text-gray-300 hover:text-rose-400 transition-colors" />
+              <span className="absolute -top-1.5 -right-1.5 bg-rose-500 text-white text-[9px] font-bold rounded-full h-3.5 w-3.5 flex items-center justify-center leading-none">
+                {saved.length > 9 ? "9+" : saved.length}
+              </span>
+            </a>
+          )}
           <a href="/" className="flex items-center gap-1 hover:opacity-80 transition-opacity flex-shrink-0">
             <img src="/quikpik-logo.png" alt="Quikpik" className="h-4 w-4 object-contain" />
             <span className="text-xs font-semibold text-emerald-600">Quikpik</span>
