@@ -1902,14 +1902,23 @@ export default function OrderDetail() {
               const invoiceDiscount = parseFloat(order.invoiceDiscount || '0');
               const productTotal = Math.max(0, parseFloat(order.subtotal || '0') + parseFloat(order.deliveryCost || '0') - invoiceDiscount);
               const amountPaidRaw = parseFloat(order.amountPaid || '0');
-              const wholesalerPaid = isStripePayment(order)
-                ? (() => {
-                    const customerTotal = parseFloat(order.total || '0');
-                    const paymentRatio = customerTotal > 0 ? amountPaidRaw / customerTotal : 0;
-                    return productTotal * paymentRatio;
-                  })()
-                : Math.min(amountPaidRaw, productTotal);
-              const wholesalerOutstanding = order.status === 'cancelled' ? 0 : Math.max(0, productTotal - wholesalerPaid);
+              // When paymentStatus is 'paid', always show full productTotal as Amount Paid
+              // and £0 outstanding — this is the safety net for any post-settlement change
+              // to order.total (e.g. retroactive discount or item edit) that would otherwise
+              // make the ratio formula produce a phantom outstanding even though the badge
+              // says Paid.  For part_paid (deposit) orders the ratio formula is still used.
+              const wholesalerPaid = order.paymentStatus === 'paid'
+                ? productTotal
+                : isStripePayment(order)
+                  ? (() => {
+                      const customerTotal = parseFloat(order.total || '0');
+                      const paymentRatio = customerTotal > 0 ? amountPaidRaw / customerTotal : 0;
+                      return productTotal * paymentRatio;
+                    })()
+                  : Math.min(amountPaidRaw, productTotal);
+              const wholesalerOutstanding = (order.status === 'cancelled' || order.paymentStatus === 'paid')
+                ? 0
+                : Math.max(0, productTotal - wholesalerPaid);
 
               return (
                 <div className="border-t pt-3 space-y-3">

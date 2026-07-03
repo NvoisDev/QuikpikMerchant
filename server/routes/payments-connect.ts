@@ -80,7 +80,10 @@ async function settleOrderPayment(params: {
   await db.update(orders)
     .set({
       amountPaid: cumulativePaid.toFixed(2),
-      amountOutstanding: newAmountOutstanding.toFixed(2),
+      // Store exactly 0.00 when paymentStatus is 'paid' so the DB is unambiguous.
+      // newAmountOutstanding may be up to 0.01 (within the paid threshold) due to
+      // pence rounding; clamping it avoids a tiny residual that could confuse displays.
+      amountOutstanding: paymentStatus === 'paid' ? '0.00' : newAmountOutstanding.toFixed(2),
       paymentStatus,
       status: paymentStatus === 'paid'
         ? (existingOrder.status === 'fulfilled' ? 'fulfilled' : 'confirmed')

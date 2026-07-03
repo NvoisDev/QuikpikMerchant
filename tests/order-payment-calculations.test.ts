@@ -182,6 +182,37 @@ describe('calculateStripePaymentSettlement', () => {
     expect(result.paymentStatus).toBe('paid');
     expect(result.cumulativePaid).toBeCloseTo(233.10, 2);
   });
+
+  // INV-118 regression: the settlement function itself must NEVER produce a 'paid'
+  // status when amountPaid < order.total by more than 0.01.  The phantom outstanding
+  // balance seen on the order-detail page can only arise from order.total changing
+  // *after* settlement (e.g. retroactive discount or item edit).  This test confirms
+  // the contradictory DB state cannot be created by calculateStripePaymentSettlement.
+  it('marks order part_paid — not paid — when stripe amount is £2.55 short of order total (INV-118 root-cause guard)', () => {
+    // subtotal=140, invoiceDiscount=5, fee=1.40 → order.total=136.40
+    // If the session somehow charged only £132.45 (2.55 short), settlement must NOT mark 'paid'.
+    const result = calculateStripePaymentSettlement(
+      { total: '136.40', amountPaid: '0.00' },
+      13245, // £132.45 — £3.95 short of £136.40
+    );
+
+    expect(result.paymentStatus).toBe('part_paid');
+    expect(result.newAmountOutstanding).toBeCloseTo(3.95, 2);
+    expect(result.cumulativePaid).toBe(132.45);
+  });
+
+  it('pays a discounted order in full when session.amount_total equals the fee-inclusive total', () => {
+    // INV-118 correct path: subtotal=140, invoiceDiscount=5, fee=1.40 → total=136.40
+    // Session is created for 136.40, customer pays → no phantom balance.
+    const result = calculateStripePaymentSettlement(
+      { total: '136.40', amountPaid: '0.00' },
+      13640, // £136.40 — exact match
+    );
+
+    expect(result.paymentStatus).toBe('paid');
+    expect(result.newAmountOutstanding).toBe(0);
+    expect(result.cumulativePaid).toBe(136.40);
+  });
 });
 
 describe('isPaymentIntentAlreadyRecorded — payment_intent.succeeded ordering-race guard', () => {
