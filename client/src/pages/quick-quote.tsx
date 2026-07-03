@@ -401,6 +401,23 @@ export default function QuickQuote() {
     }
     if (draftForEdit.items && draftForEdit.items.length > 0) {
       const prefilled: QuoteItem[] = draftForEdit.items.map((item: any) => {
+        // Misc charge item — reconstruct from customLabel/itemNotes (no product needed)
+        if (!item.productId && item.customLabel) {
+          const price = parseFloat(item.unitPrice) || 0;
+          return {
+            stableId: `charge-draft-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+            productId: null,
+            customLabel: item.customLabel,
+            itemNotes: item.itemNotes || undefined,
+            isMiscCharge: true,
+            originalPrice: price,
+            customPrice: price,
+            quantity: item.quantity,
+            sellingType: 'units' as const,
+            costPrice: 0,
+            weightKg: 0,
+          } as QuoteItem;
+        }
         const product = products.find((p: any) => p.id === item.productId);
         if (!product) return null;
         const price = parseFloat(item.unitPrice);

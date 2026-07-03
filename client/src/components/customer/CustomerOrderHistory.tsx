@@ -40,6 +40,9 @@ export interface OrderItem {
   palletWeight?: string | number | null;
   unitWeight?: string | number | null;
   quantityInPack?: number | null;
+  isMiscCharge?: boolean;
+  customLabel?: string | null;
+  itemNotes?: string | null;
 }
 
 export interface Order {
@@ -446,8 +449,14 @@ export const ReorderButton = ({ order, customerPhone, onSuccess, currency = 'GBP
               {preview.items.map((item, index) => (
                 <div key={index} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
                   <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-900">{item.productName}</p>
-                    {item.packQuantity && item.packQuantity > 1 && item.unitSize && item.unitOfMeasure && (
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <p className="text-sm font-medium text-gray-900">{item.isMiscCharge ? (item.customLabel || item.productName) : item.productName}</p>
+                      {item.isMiscCharge && <span className="inline-flex items-center text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full font-medium">Charge</span>}
+                    </div>
+                    {item.isMiscCharge && item.itemNotes && (
+                      <p className="text-xs text-gray-400 italic">{item.itemNotes}</p>
+                    )}
+                    {!item.isMiscCharge && item.packQuantity && item.packQuantity > 1 && item.unitSize && item.unitOfMeasure && (
                       <p className="text-xs text-gray-400 leading-tight">{item.packQuantity} × {parseFloat(String(item.unitSize))}{item.unitOfMeasure}</p>
                     )}
                     <p className="text-xs text-gray-500">
@@ -1087,8 +1096,14 @@ export const OrderDetailsModal = ({ order, wholesalerId, customerPhone, currency
             {order.items.map((item, index) => (
               <div key={index} className="flex flex-col sm:flex-row sm:justify-between sm:items-center p-2 bg-gray-50 rounded-lg gap-1 sm:gap-0">
                 <div className="flex-1 min-w-0">
-                  <div className="font-medium text-xs break-words">{item.productName}</div>
-                  {item.unitSize && item.unitOfMeasure && (
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <div className="font-medium text-xs break-words">{item.isMiscCharge ? (item.customLabel || item.productName) : item.productName}</div>
+                    {item.isMiscCharge && <span className="inline-flex items-center text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full font-medium">Charge</span>}
+                  </div>
+                  {item.isMiscCharge && item.itemNotes && (
+                    <div className="text-xs text-gray-400 italic">{item.itemNotes}</div>
+                  )}
+                  {!item.isMiscCharge && item.unitSize && item.unitOfMeasure && (
                     <div className="text-xs text-gray-400">
                       {item.packQuantity && item.packQuantity > 1
                         ? `${item.packQuantity} × ${formatWeight(item.unitSize)}${item.unitOfMeasure}`
@@ -1661,8 +1676,14 @@ function CustomerOrderDetailContent({ order, wholesalerId, customerPhone, curren
             {order.items.map((item, index) => (
               <div key={index} className="flex flex-col sm:flex-row sm:justify-between sm:items-center p-2 bg-gray-50 rounded-lg gap-1 sm:gap-0">
                 <div className="flex-1 min-w-0">
-                  <div className="font-medium text-xs break-words">{item.productName}</div>
-                  {item.unitSize && item.unitOfMeasure && (
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <div className="font-medium text-xs break-words">{item.isMiscCharge ? (item.customLabel || item.productName) : item.productName}</div>
+                    {item.isMiscCharge && <span className="inline-flex items-center text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full font-medium">Charge</span>}
+                  </div>
+                  {item.isMiscCharge && item.itemNotes && (
+                    <div className="text-xs text-gray-400 italic">{item.itemNotes}</div>
+                  )}
+                  {!item.isMiscCharge && item.unitSize && item.unitOfMeasure && (
                     <div className="text-xs text-gray-400">
                       {item.packQuantity && item.packQuantity > 1
                         ? `${item.packQuantity} × ${formatWeight(item.unitSize)}${item.unitOfMeasure}`

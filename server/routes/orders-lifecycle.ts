@@ -176,6 +176,27 @@ export function registerOrderLifecycleRoutes(app: Express): void {
       let subtotal = 0;
       const orderItemsList: any[] = [];
       for (const item of items) {
+        // Misc charge item (no productId) — insert directly without product lookup
+        if (!item.productId) {
+          if (!item.customLabel || !String(item.customLabel).trim()) {
+            return res.status(400).json({ error: 'Charge items must have a label' });
+          }
+          const unitPrice = typeof item.customPrice === 'number' ? item.customPrice : 0;
+          const itemTotal = unitPrice * item.quantity;
+          subtotal += itemTotal;
+          orderItemsList.push({
+            productId: null,
+            quantity: item.quantity,
+            unitPrice: unitPrice.toFixed(2),
+            total: itemTotal.toFixed(2),
+            sellingType: 'units',
+            appliedOfferLabel: null,
+            freeItems: 0,
+            customLabel: String(item.customLabel).trim(),
+            itemNotes: item.itemNotes ? String(item.itemNotes).trim() : null,
+          });
+          continue;
+        }
         const product = await storage.getProduct(item.productId);
         if (!product || product.wholesalerId !== wholesalerId) {
           return res.status(400).json({ error: `Product ${item.productId} not found` });
@@ -260,6 +281,15 @@ export function registerOrderLifecycleRoutes(app: Express): void {
         subtotal = 0;
         const newItems: any[] = [];
         for (const item of items) {
+          // Misc charge item — no product lookup needed
+          if (!item.productId) {
+            if (!item.customLabel || !String(item.customLabel).trim()) continue;
+            const unitPrice = typeof item.customPrice === 'number' ? item.customPrice : 0;
+            const itemTotal = unitPrice * item.quantity;
+            subtotal += itemTotal;
+            newItems.push({ orderId: id, productId: null, quantity: item.quantity, unitPrice: unitPrice.toFixed(2), total: itemTotal.toFixed(2), sellingType: 'units', appliedOfferLabel: null, freeItems: 0, customLabel: String(item.customLabel).trim(), itemNotes: item.itemNotes ? String(item.itemNotes).trim() : null });
+            continue;
+          }
           const product = await storage.getProduct(item.productId);
           if (!product || product.wholesalerId !== wholesalerId) continue;
           const unitPrice = typeof item.customPrice === 'number' ? item.customPrice : parseFloat(product.price);
