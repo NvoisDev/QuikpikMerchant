@@ -117,9 +117,13 @@ export function RecentOrdersSection({ wholesalerId, customerPhone, onViewAllOrde
                 </Badge>
               )}
               {order.paymentStatus && !isCancelled && (
-                <Badge className={`${getPaymentStatusColor(order.paymentStatus)} text-xs`}>
-                  {getPaymentStatusLabel(order.paymentStatus)}
-                </Badge>
+                order.status === 'draft' ? (
+                  <Badge className="bg-gray-100 text-gray-600 text-xs">Draft</Badge>
+                ) : (
+                  <Badge className={`${getPaymentStatusColor(order.paymentStatus)} text-xs`}>
+                    {getPaymentStatusLabel(order.paymentStatus)}
+                  </Badge>
+                )
               )}
               <Badge variant="outline" className={`text-xs ${isCancelled ? 'bg-gray-100 text-gray-400 border-gray-300' : order.isQuote ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : 'bg-teal-50 text-teal-700 border-teal-200'}`}>
                 {order.isQuote ? <><FileText className="h-3 w-3 mr-1" /> Invoice</> : <><ShoppingCart className="h-3 w-3 mr-1" /> Online</>}

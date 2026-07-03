@@ -901,6 +901,8 @@ export const OrderDetailsModal = ({ order, wholesalerId, customerPhone, currency
               <Badge className="bg-purple-100 text-purple-800 text-xs">
                 Refunded
               </Badge>
+            ) : order.status === 'draft' ? (
+              <Badge className="bg-gray-100 text-gray-600 text-xs">Draft</Badge>
             ) : (
               <Badge className={`${getPaymentStatusColor(order.paymentStatus || 'paid')} text-xs`}>
                 {getPaymentStatusLabel(order.paymentStatus || 'paid')}
@@ -1496,6 +1498,8 @@ function CustomerOrderDetailContent({ order, wholesalerId, customerPhone, curren
             </Badge>
             {order.amountRefunded && parseFloat(order.amountRefunded) > 0 ? (
               <Badge className="bg-purple-100 text-purple-800 text-xs">Refunded</Badge>
+            ) : order.status === 'draft' ? (
+              <Badge className="bg-gray-100 text-gray-600 text-xs">Draft</Badge>
             ) : (
               <Badge className={`${getPaymentStatusColor(order.paymentStatus || 'paid')} text-xs`}>
                 {getPaymentStatusLabel(order.paymentStatus || 'paid')}
@@ -2250,6 +2254,8 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone, currency = '
                       <Badge className="bg-purple-100 text-purple-800 text-xs">
                         Refunded
                       </Badge>
+                    ) : order.status === 'draft' ? (
+                      <Badge className="bg-gray-100 text-gray-600 text-xs">Draft</Badge>
                     ) : (
                       <Badge className={`${getPaymentStatusColor(order.paymentStatus || 'unpaid')} text-xs`}>
                         {getPaymentStatusLabel(order.paymentStatus || 'unpaid')}

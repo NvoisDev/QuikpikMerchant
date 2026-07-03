@@ -1171,10 +1171,12 @@ export default function CustomerDetail() {
                 order.status === "cancelled" ? XCircle : Clock;
               const isCancelled = order.status === "cancelled";
               const paymentColor =
+                order.status === "draft" ? "bg-gray-100 text-gray-600" :
                 order.paymentStatus === "paid" ? "bg-green-100 text-green-800" :
                 order.paymentStatus === "part_paid" ? "bg-amber-100 text-amber-800" :
                 "bg-red-100 text-red-800";
               const paymentLabel =
+                order.status === "draft" ? "Draft" :
                 order.paymentStatus === "paid" ? "Paid" :
                 order.paymentStatus === "part_paid" ? "Part Paid" : "Unpaid";
               return (
