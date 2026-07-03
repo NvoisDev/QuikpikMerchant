@@ -2147,9 +2147,20 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone, currency = '
                 </div>
               </div>
             ) : (
-              <p className="text-gray-500">
-                Unable to load order history. Please try again later.
-              </p>
+              <div className="space-y-3">
+                <AlertCircle className="h-10 w-10 mx-auto text-gray-400" />
+                <p className="text-gray-600 font-medium">Could not load orders</p>
+                <p className="text-sm text-gray-400">There was a problem fetching your order history.</p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => refetch()}
+                  className="mt-2 text-emerald-600 border-emerald-600 hover:bg-emerald-50"
+                >
+                  <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
+                  Tap to retry
+                </Button>
+              </div>
             )}
           </div>
         </CardContent>

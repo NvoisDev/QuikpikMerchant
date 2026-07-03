@@ -4,7 +4,7 @@ import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog } from "@/components/ui/dialog";
-import { ShoppingCart, Truck, MapPin, FileText } from "lucide-react";
+import { ShoppingCart, Truck, MapPin, FileText, RefreshCw } from "lucide-react";
 import {
   Order,
   getStatusColor,
@@ -56,18 +56,39 @@ export function RecentOrdersSection({ wholesalerId, customerPhone, onViewAllOrde
     }
   };
 
-  const { data: recentOrders = [] } = useQuery({
+  const { data: recentOrders = [], isError, refetch } = useQuery({
     queryKey: [`/api/customer-orders`, wholesalerId, customerPhone, 'recent'],
     queryFn: async () => {
       const encodedPhone = encodeURIComponent(customerPhone);
       const response = await fetch(`/api/customer-orders/${wholesalerId}/${encodedPhone}?limit=3`, {
         credentials: 'include',
       });
-      if (!response.ok) return [];
+      if (!response.ok) throw new Error('Failed to load recent orders');
       return response.json();
     },
     enabled: !!wholesalerId && !!customerPhone,
+    retry: 1,
   });
+
+  if (isError) {
+    return (
+      <div className="bg-white rounded-lg p-6 border">
+        <h2 className="text-xl font-bold text-gray-900 mb-4">Recent Orders</h2>
+        <div className="flex flex-col items-center gap-3 py-4 text-center">
+          <p className="text-gray-500 text-sm">Could not load your recent orders.</p>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => refetch()}
+            className="text-emerald-600 border-emerald-600 hover:bg-emerald-50"
+          >
+            <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
+            Tap to retry
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   if (recentOrders.length === 0) return null;
 
