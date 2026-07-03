@@ -461,6 +461,7 @@ export default function QuickQuote() {
   }, [draftForEdit?.id, customers.length, products.length]);
 
   const paymentMethodInitialized = useRef(false);
+  const createQuoteInFlightRef = useRef(false);
   useEffect(() => {
     if (stripeConnectStatus === undefined) return;
     if (!paymentMethodInitialized.current) {
@@ -772,6 +773,7 @@ export default function QuickQuote() {
       return response.json();
     },
     onSuccess: async (data) => {
+      createQuoteInFlightRef.current = false;
       setCreatedQuote({
         id: data.orderId,
         orderNumber: data.orderNumber,
@@ -830,6 +832,7 @@ export default function QuickQuote() {
           : (error.message || "Something went wrong, please try again"),
         variant: "destructive",
       });
+      createQuoteInFlightRef.current = false;
     },
   });
 
@@ -1124,6 +1127,7 @@ export default function QuickQuote() {
   };
 
   const handleCreateQuote = () => {
+    if (createQuoteInFlightRef.current) return;
     try {
     if (!selectedCustomer) {
       toast({
@@ -1197,6 +1201,7 @@ export default function QuickQuote() {
     // Determine effective payment method: pay_later overrides everything, otherwise use selection
     const effectivePaymentMethod = depositPercentage === 0 ? 'pay_later' : quotePaymentMethod;
 
+    createQuoteInFlightRef.current = true;
     createQuoteMutation.mutate({
       customerId: selectedCustomer.id,
       items: quoteItems,
@@ -1217,6 +1222,7 @@ export default function QuickQuote() {
     });
     } catch (err: unknown) {
       console.error('[handleCreateQuote] unexpected error', err);
+      createQuoteInFlightRef.current = false;
       toast({
         title: "Error",
         description: err instanceof Error ? err.message : "Something went wrong, please try again",
