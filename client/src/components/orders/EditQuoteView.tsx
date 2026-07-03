@@ -325,24 +325,29 @@ export function EditQuoteView({
                   return (
                   <div key={`item-${index}`} className="bg-gray-50 rounded-lg p-3">
                     <div className="flex items-start justify-between gap-2 mb-2">
-                      <div className="flex items-center gap-1.5 flex-wrap flex-1 min-w-0">
-                        {isCharge ? (
-                          <input
-                            type="text"
-                            value={item.customLabel ?? ''}
-                            onChange={(e) => {
-                              const updated = [...editItems];
-                              updated[index] = { ...updated[index], customLabel: e.target.value, productName: e.target.value };
-                              setEditItems(updated);
-                            }}
-                            placeholder="Charge label"
-                            className={`font-medium text-sm border rounded px-2 py-0.5 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent flex-1 min-w-0 ${!item.customLabel?.trim() ? 'border-red-400 bg-red-50' : 'border-gray-300 bg-white'}`}
-                          />
-                        ) : (
-                          <span className="font-medium text-sm">{item.productName}</span>
-                        )}
-                        {isCharge && (
-                          <span className="inline-flex items-center text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full font-medium">Charge</span>
+                      <div className="flex flex-col flex-1 min-w-0 gap-0.5">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {isCharge ? (
+                            <input
+                              type="text"
+                              value={item.customLabel ?? ''}
+                              onChange={(e) => {
+                                const updated = [...editItems];
+                                updated[index] = { ...updated[index], customLabel: e.target.value, productName: e.target.value };
+                                setEditItems(updated);
+                              }}
+                              placeholder="Charge label"
+                              className={`font-medium text-sm border rounded px-2 py-0.5 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent flex-1 min-w-0 ${!item.customLabel?.trim() ? 'border-red-400 bg-red-50' : 'border-gray-300 bg-white'}`}
+                            />
+                          ) : (
+                            <span className="font-medium text-sm">{item.productName}</span>
+                          )}
+                          {isCharge && (
+                            <span className="inline-flex items-center text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full font-medium">Charge</span>
+                          )}
+                        </div>
+                        {isCharge && !item.customLabel?.trim() && (
+                          <p className="text-xs text-red-600">Label is required</p>
                         )}
                       </div>
                       <button
@@ -578,7 +583,7 @@ export function EditQuoteView({
 
           {hasInvalidItems && (
             <p className="text-xs text-red-600 text-center">
-              All items must have a price greater than £0 and a quantity of at least 1 before saving.
+              All items must have a label, a price greater than £0, and a quantity of at least 1 before saving.
             </p>
           )}
 
