@@ -426,8 +426,9 @@ export function registerOrderLifecycleRoutes(app: Express): void {
 
       const today = new Date().toISOString().split('T')[0];
 
-      // PRE-VALIDATE stock for all items (units and pallets)
+      // PRE-VALIDATE stock for all items (units and pallets) — charge items (no productId) are skipped
       for (const item of items) {
+        if (!item.productId) continue; // misc charge: no stock to validate
         const sellingType = (item.sellingType || 'units') as 'units' | 'pallets';
         const [product] = await db.select().from(products).where(eq(products.id, item.productId!));
         if (!product) return res.status(400).json({ error: `Product ${item.productId} not found` });
@@ -467,6 +468,7 @@ export function registerOrderLifecycleRoutes(app: Express): void {
         } as any).where(eq(orders.id, id));
 
         for (const item of items) {
+          if (!item.productId) continue; // misc charge: no stock to deduct
           const [currentProduct] = await trx.select().from(products).where(eq(products.id, item.productId!));
           if (!currentProduct) continue;
 
@@ -555,6 +557,10 @@ export function registerOrderLifecycleRoutes(app: Express): void {
             // Build pack descriptions for Stripe line item
             const packDescLines: string[] = [];
             for (const item of items) {
+              if (!item.productId) {
+                packDescLines.push((item as any).customLabel?.trim() || 'Charge');
+                continue;
+              }
               const [prod] = await db.select().from(products).where(eq(products.id, item.productId!));
               if (prod) {
                 const packDescriptor = formatPackDescriptor(prod.packQuantity ?? prod.quantityInPack, prod.sizePerUnit ?? prod.unitSize, prod.unitOfMeasure);
@@ -692,6 +698,9 @@ export function registerOrderLifecycleRoutes(app: Express): void {
       try {
         if (customer && wholesaler && customer.email) {
           const enrichedItems = await Promise.all(items.map(async (item: any) => {
+            if (!item.productId) {
+              return { ...item, productName: item.customLabel?.trim() || 'Charge', packDescriptor: null, product: null };
+            }
             const product = await storage.getProduct(item.productId);
             return { ...item, productName: product?.name || 'Product', packDescriptor: formatPackDescriptor(product?.packQuantity || product?.quantityInPack, product?.sizePerUnit || product?.unitSize, product?.unitOfMeasure), product };
           }));
@@ -713,11 +722,16 @@ export function registerOrderLifecycleRoutes(app: Express): void {
           try {
             const itemsListParts: string[] = [];
             for (const item of items) {
+              const unitPrice = parseFloat(String((item as any).customPrice ?? item.unitPrice ?? '0'));
+              const lineTotal = (unitPrice * item.quantity).toFixed(2);
+              if (!item.productId) {
+                const chargeLabel = (item as any).customLabel?.trim() || 'Charge';
+                itemsListParts.push(`• ${chargeLabel} - ${item.quantity} × £${unitPrice.toFixed(2)} = £${lineTotal}`);
+                continue;
+              }
               const [prod] = await db.select().from(products).where(eq(products.id, item.productId!));
               const productName = prod?.name || `Product #${item.productId}`;
               const sellingType = item.sellingType || 'units';
-              const unitPrice = parseFloat(String((item as any).customPrice ?? item.unitPrice ?? '0'));
-              const lineTotal = (unitPrice * item.quantity).toFixed(2);
               itemsListParts.push(`• ${productName} - ${item.quantity} ${sellingType} × £${unitPrice.toFixed(2)} = £${lineTotal}`);
             }
             itemsList = itemsListParts.join('\n');
