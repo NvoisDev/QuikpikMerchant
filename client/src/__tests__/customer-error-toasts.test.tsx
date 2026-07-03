@@ -169,6 +169,55 @@ describe('PayBalanceButton — payment link failure', () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
+// PayBalanceButton — double-click prevention
+// ─────────────────────────────────────────────────────────────────────────────
+describe('PayBalanceButton — double-click prevention', () => {
+  beforeEach(() => {
+    mockToast.mockClear();
+  });
+
+  it('only sends one fetch request even when clicked twice in rapid succession', async () => {
+    let resolveFirst: (value: unknown) => void;
+    const firstRequestResolved = new Promise((res) => { resolveFirst = res; });
+
+    const fetchMock = vi.fn(() =>
+      firstRequestResolved.then(() => ({
+        ok: false,
+        status: 500,
+      })),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(
+      React.createElement(
+        Wrapper,
+        null,
+        React.createElement(PayBalanceButton, {
+          order: MOCK_ORDER as any,
+          customerPhone: '+447000000001',
+        }),
+      ),
+    );
+
+    const payBtn = screen.getByRole('button', { name: /pay now/i });
+
+    fireEvent.click(payBtn);
+    fireEvent.click(payBtn);
+    fireEvent.click(payBtn);
+
+    resolveFirst!(undefined);
+
+    await waitFor(() => {
+      expect(mockToast).toHaveBeenCalledWith(
+        expect.objectContaining({ variant: 'destructive' }),
+      );
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
 // 2. RecentOrdersSection — invoice download failure
 // ─────────────────────────────────────────────────────────────────────────────
 describe('RecentOrdersSection — invoice download failure', () => {

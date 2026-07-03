@@ -9,7 +9,7 @@ import { Package, Clock, Check, Eye, Search, RefreshCw, ChevronLeft, ChevronRigh
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { formatCurrency, formatWeight } from "@/lib/currencies";
 import { formatDateTime } from "@shared/utils/date";
 import { computePackWeightKg } from "@shared/utils/product";
@@ -254,8 +254,11 @@ export const isQuoteEdited = (order: Order): boolean =>
 
 export const PayBalanceButton = ({ order, customerPhone }: { order: Order, customerPhone: string }) => {
   const [isLoading, setIsLoading] = useState(false);
+  const inFlightRef = useRef(false);
   const { toast } = useToast();
   const handlePayNow = async () => {
+    if (inFlightRef.current) return;
+    inFlightRef.current = true;
     setIsLoading(true);
     try {
       const response = await fetch(`/api/customer/orders/${order.id}/payment-link/${encodeURIComponent(customerPhone)}`, {
@@ -269,15 +272,18 @@ export const PayBalanceButton = ({ order, customerPhone }: { order: Order, custo
           window.location.href = data.paymentLink;
         } else {
           toast({ title: 'Could not generate payment link. Please try again.', variant: 'destructive' });
+          inFlightRef.current = false;
           setIsLoading(false);
         }
       } else {
         toast({ title: 'Could not generate payment link. Please try again.', variant: 'destructive' });
+        inFlightRef.current = false;
         setIsLoading(false);
       }
     } catch (error) {
       console.error('Error generating payment link:', error);
       toast({ title: 'Something went wrong. Please check your connection and try again.', variant: 'destructive' });
+      inFlightRef.current = false;
       setIsLoading(false);
     }
   };
