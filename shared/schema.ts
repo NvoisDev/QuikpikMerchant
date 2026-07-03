@@ -891,6 +891,8 @@ export const orderItems = pgTable("order_items", {
   appliedOfferLabel: varchar("applied_offer_label", { length: 255 }),
   freeItems: integer("free_items").default(0),
   batchId: integer("batch_id").references(() => productBatches.id), // primary batch used (FEFO), null = no batch tracking
+  customLabel: varchar("custom_label", { length: 255 }), // label for miscellaneous charge lines (productId is null)
+  itemNotes: text("item_notes"), // optional note for miscellaneous charge lines
 }, (table) => ({
   orderIdIdx: index("order_items_order_id_idx").on(table.orderId),
   productIdIdx: index("order_items_product_id_idx").on(table.productId),

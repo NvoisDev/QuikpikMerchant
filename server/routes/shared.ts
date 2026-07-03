@@ -637,14 +637,18 @@ export async function buildInvoicePdf(order: any, wholesaler: any, showTransacti
     if (promoLabel && freeCount > 0) promoLine = `${promoLabel} · +${freeCount} free included`;
     else if (promoLabel) promoLine = promoLabel;
     else if (freeCount > 0) promoLine = `+${freeCount} free included`;
-    const packInfo = formatPackDescriptor(item.product?.packQuantity || item.product?.quantityInPack, item.product?.sizePerUnit || item.product?.unitSize, item.product?.unitOfMeasure);
+    const packInfo = item.productId
+      ? formatPackDescriptor(item.product?.packQuantity || item.product?.quantityInPack, item.product?.sizePerUnit || item.product?.unitSize, item.product?.unitOfMeasure)
+      : null;
     return {
-      name: item.product?.name || item.productName || 'Product',
+      name: item.product?.name || item.productName || item.customLabel || 'Product',
       qty: Number(item.quantity) || 0,
       unitPrice: parseFloat(item.unitPrice || '0'),
       lineTotal: parseFloat(item.unitPrice || '0') * (Number(item.quantity) || 0),
       promo: promoLine,
       packInfo,
+      isCharge: !item.productId,
+      itemNotes: item.itemNotes || null,
     };
   });
   const subtotal = parseFloat(order.subtotal || '0');
@@ -815,13 +819,17 @@ export async function buildInvoicePdf(order: any, wholesaler: any, showTransacti
     };
     let rowY = drawTableHeader(tableY);
     for (const item of orderItemsList) {
-      const hasExtra = !!(item.packInfo || item.promo);
+      const hasChargeNotes = !!(item.isCharge && item.itemNotes);
+      const hasExtra = !!(item.packInfo || item.promo || hasChargeNotes);
       const hasBoth = !!(item.packInfo && item.promo);
       const rowH = hasBoth ? 50 : hasExtra ? 38 : 26;
       if (rowY + rowH > 810) { doc.addPage({ size: 'A4', margin: 0 }); rowY = drawTableHeader(MARGIN); }
       doc.font('Helvetica').fontSize(10).fillColor(DARK).text(item.name, xProduct + 6, rowY + 7, { width: CW_PRODUCT - 12, ellipsis: true, lineBreak: false });
       if (item.packInfo) {
         doc.font('Helvetica').fontSize(8).fillColor('#6b7280').text(item.packInfo, xProduct + 6, rowY + 20, { width: CW_PRODUCT - 12, lineBreak: false });
+      }
+      if (item.isCharge && item.itemNotes) {
+        doc.font('Helvetica-Oblique').fontSize(8).fillColor('#6b7280').text(item.itemNotes, xProduct + 6, rowY + 20, { width: CW_PRODUCT - 12, lineBreak: false });
       }
       if (item.promo) {
         const promoY = item.packInfo ? rowY + 34 : rowY + 22;
@@ -966,19 +974,24 @@ export async function sendCustomerInvoiceEmail(customer: any, order: any, items:
       }
     }
     const itemsHtml = items.map((item) => {
-      const productName = item.productName || (item.product?.name) || 'Product';
+      const isMiscCharge = !item.productId;
+      const productName = isMiscCharge
+        ? (item.customLabel || 'Charge')
+        : (item.productName || (item.product?.name) || 'Product');
       const unitPrice = item.unitPrice ? parseFloat(item.unitPrice).toFixed(2) : '0.00';
       let total = '0.00';
       if (item.total) total = typeof item.total === 'string' ? parseFloat(item.total).toFixed(2) : item.total.toFixed(2);
       else if (item.unitPrice && item.quantity) total = (parseFloat(item.unitPrice) * parseInt(item.quantity)).toFixed(2);
       const promoLabel = item.appliedOfferLabel || '';
       const freeItemsCount = item.freeItems || 0;
-      const packDescriptor = item.packDescriptor ?? formatPackDescriptor(item.product?.quantityInPack, item.product?.unitSize, item.product?.unitOfMeasure);
+      const packDescriptor = isMiscCharge ? null : (item.packDescriptor ?? formatPackDescriptor(item.product?.quantityInPack, item.product?.unitSize, item.product?.unitOfMeasure));
       const packBadge = packDescriptor
         ? `<br><span style="color:#6b7280;font-size:11px;">${packDescriptor}</span>` : '';
+      const chargeBadge = isMiscCharge ? `<span style="display:inline-block;background:#fef3c7;color:#b45309;font-size:11px;font-weight:bold;padding:2px 8px;border-radius:12px;margin-left:4px;">CHARGE</span>` : '';
+      const notesBadge = isMiscCharge && item.itemNotes ? `<br><span style="color:#6b7280;font-size:11px;font-style:italic;">${item.itemNotes}</span>` : '';
       const promoBadge = promoLabel ? `<br><span style="display:inline-block;background:#f3e8ff;color:#7c3aed;font-size:11px;font-weight:bold;padding:2px 8px;border-radius:12px;margin-top:4px;">PROMO: ${promoLabel}</span>` : '';
       const freeBadge = freeItemsCount > 0 ? `<span style="display:inline-block;background:#dcfce7;color:#15803d;font-size:11px;font-weight:bold;padding:2px 8px;border-radius:12px;margin-left:4px;">+${freeItemsCount} FREE ITEMS</span>` : '';
-      return `<tr><td style="padding:8px;border-bottom:1px solid #ddd;">${productName}${packBadge}${promoBadge}${freeBadge}</td><td style="padding:8px;border-bottom:1px solid #ddd;text-align:center;">${item.quantity}</td><td style="padding:8px;border-bottom:1px solid #ddd;text-align:right;">${currencySymbol}${unitPrice}</td><td style="padding:8px;border-bottom:1px solid #ddd;text-align:right;">${currencySymbol}${total}</td></tr>`;
+      return `<tr><td style="padding:8px;border-bottom:1px solid #ddd;">${productName}${chargeBadge}${notesBadge}${packBadge}${promoBadge}${freeBadge}</td><td style="padding:8px;border-bottom:1px solid #ddd;text-align:center;">${item.quantity}</td><td style="padding:8px;border-bottom:1px solid #ddd;text-align:right;">${currencySymbol}${unitPrice}</td><td style="padding:8px;border-bottom:1px solid #ddd;text-align:right;">${currencySymbol}${total}</td></tr>`;
     }).join('');
     const addrParts = [addressComponents.line1, addressComponents.line2, addressComponents.city, addressComponents.state, addressComponents.postalCode, addressComponents.country].filter(Boolean);
     const deliverySection = addrParts.length > 0 ? `<div style="margin:16px 0"><strong>Delivery Address:</strong><br>${addrParts.join(', ')}</div>` : '';

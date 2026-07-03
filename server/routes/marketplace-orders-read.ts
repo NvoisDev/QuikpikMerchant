@@ -120,6 +120,8 @@ export function registerOrderReadRoutes(app: Express): void {
             palletWeight: products.palletWeight,
             unitWeight: products.unitWeight,
             quantityInPack: products.quantityInPack,
+            customLabel: orderItems.customLabel,
+            itemNotes: orderItems.itemNotes,
           })
           .from(orderItems)
           .leftJoin(products, eq(orderItems.productId, products.id))
@@ -141,7 +143,7 @@ export function registerOrderReadRoutes(app: Express): void {
         return {
           ...order,
           items: items.map(item => ({
-            productName: item.productName,
+            productName: item.productId ? item.productName : (item.customLabel || 'Charge'),
             quantity: item.quantity,
             unitPrice: item.unitPrice || "0",
             total: item.total || "0",
@@ -154,6 +156,9 @@ export function registerOrderReadRoutes(app: Express): void {
             palletWeight: item.palletWeight ?? undefined,
             unitWeight: item.unitWeight ?? undefined,
             quantityInPack: item.quantityInPack ?? undefined,
+            customLabel: item.customLabel ?? null,
+            itemNotes: item.itemNotes ?? null,
+            isMiscCharge: !item.productId,
           })),
           wholesaler: wholesalerDetails ? {
             id: order.wholesalerId,

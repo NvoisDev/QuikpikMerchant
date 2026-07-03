@@ -33,7 +33,7 @@ import { PickingMode } from "@/components/orders/PickingMode";
 
 interface OrderItem {
   id: number;
-  productId: number;
+  productId: number | null;
   quantity: number;
   unitPrice: string;
   total: string;
@@ -47,9 +47,11 @@ interface OrderItem {
     unitSize?: string | null;
     unitOfMeasure?: string | null;
     costPrice?: string | null;
-  };
+  } | null;
   appliedOfferLabel?: string | null;
   freeItems?: number;
+  customLabel?: string | null;
+  itemNotes?: string | null;
 }
 
 interface EditItem {
@@ -1637,13 +1639,23 @@ export default function OrderDetail() {
               {order.items?.map((item, index) => (
                 <div key={index} className="flex justify-between items-start gap-3">
                   <div className="flex-1 min-w-0">
-                    <div className="font-medium text-sm text-gray-900">{item.product?.name || 'Unknown Product'}</div>
-                    {item.product?.unitSize && item.product.unitOfMeasure && (
+                    {item.productId ? (
+                      <div className="font-medium text-sm text-gray-900">{item.product?.name || 'Unknown Product'}</div>
+                    ) : (
+                      <div className="flex items-center gap-1.5">
+                        <div className="font-medium text-sm text-gray-900">{item.customLabel || 'Charge'}</div>
+                        <span className="inline-flex items-center text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full font-medium">Charge</span>
+                      </div>
+                    )}
+                    {item.productId && item.product?.unitSize && item.product.unitOfMeasure && (
                       <div className="text-xs text-gray-400">
                         {item.product.packQuantity && item.product.packQuantity > 1
                           ? `${item.product.packQuantity} × ${parseFloat(item.product.unitSize)}${item.product.unitOfMeasure}`
                           : `${parseFloat(item.product.unitSize)}${item.product.unitOfMeasure}`}
                       </div>
+                    )}
+                    {item.itemNotes && (
+                      <div className="text-xs text-gray-400 italic mt-0.5">{item.itemNotes}</div>
                     )}
                     <div className="text-xs text-gray-500 mt-0.5">
                       {item.quantity} {item.sellingType === 'pallets' ? 'pallets' : 'units'} × {formatMoney(parseFloat(item.unitPrice))}

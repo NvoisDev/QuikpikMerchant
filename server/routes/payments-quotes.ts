@@ -250,6 +250,13 @@ export function registerQuoteRoutes(app: Express): void {
         if (typeof item.customPrice !== 'number' || !isFinite(item.customPrice) || item.customPrice <= 0) {
           return res.status(400).json({ error: 'Item price must be greater than zero', errorType: 'VALIDATION_ERROR' });
         }
+        // Misc charge items: productId must be absent; customLabel must be a non-empty string
+        if (!item.productId) {
+          if (!item.customLabel || typeof item.customLabel !== 'string' || !item.customLabel.trim()) {
+            return res.status(400).json({ error: 'Charge items must have a label', errorType: 'VALIDATION_ERROR' });
+          }
+          continue; // no sellingType/priceScope validation needed for charge lines
+        }
         const normalizedType = item.sellingType || 'units';
         if (!['units', 'pallets'].includes(normalizedType)) {
           return res.status(400).json({ error: 'Invalid sellingType — must be "units" or "pallets"', errorType: 'VALIDATION_ERROR' });
@@ -311,6 +318,7 @@ export function registerQuoteRoutes(app: Express): void {
       // PRE-VALIDATE STOCK for all items before creating any DB records
       // This prevents orphaned order rows when stock is insufficient
       for (const item of items) {
+        if (!item.productId) continue; // misc charge item — no stock to check
         const sellingType = item.sellingType || 'units';
         const [productForCheck] = await db.select().from(products)
           .where(and(eq(products.id, item.productId), eq(products.wholesalerId, wholesalerId)));
@@ -470,6 +478,23 @@ export function registerQuoteRoutes(app: Express): void {
         const createPurchaseSummary = new Map<string, { productId: number; sellingType: string; qty: number; primaryBatchId: number | null }>();
         // Create order items with custom prices, decrement stock via FEFO batch allocation
         for (const item of items) {
+          // Misc charge item — no product, no stock deduction, just a line entry
+          if (!item.productId) {
+            const chargeLabel = item.customLabel?.trim() || 'Charge';
+            await trx.insert(orderItems).values({
+              orderId: quoteOrderRow.id,
+              productId: null,
+              quantity: item.quantity,
+              unitPrice: item.customPrice.toFixed(2),
+              total: (item.customPrice * item.quantity).toFixed(2),
+              sellingType: 'units',
+              customLabel: chargeLabel,
+              itemNotes: item.itemNotes?.trim() || null,
+            });
+            packDescLines.push(chargeLabel);
+            continue;
+          }
+
           const sellingType = item.sellingType || 'units';
 
           const [product] = await trx.select().from(products).where(eq(products.id, item.productId));
@@ -669,6 +694,7 @@ export function registerQuoteRoutes(app: Express): void {
         // mirroring the edit-invoice path. Atomic with the order creation above.
         const propagationLines: Record<string, PriceScopeLine> = {};
         for (const it of items) {
+          if (!it.productId) continue; // misc charge item — no catalog price to propagate
           const key = `${it.productId}:${it.sellingType || 'units'}`;
           if (!propagationLines[key]) {
             propagationLines[key] = {

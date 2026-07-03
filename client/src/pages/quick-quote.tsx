@@ -68,8 +68,11 @@ import { QuoteItemCard } from "@/components/orders/QuoteItemCard";
 
 interface QuoteItem {
   stableId: string;
-  productId: number;
-  productName: string;
+  productId: number | null;
+  productName?: string;
+  customLabel?: string;
+  itemNotes?: string;
+  isMiscCharge?: boolean;
   originalPrice: number;
   customPrice: number;
   quantity: number;
@@ -242,6 +245,11 @@ export default function QuickQuote() {
   const [, setLocation] = useLocation();
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [quoteItems, setQuoteItems] = useState<QuoteItem[]>([]);
+  const [showChargeForm, setShowChargeForm] = useState(false);
+  const [chargeLabel, setChargeLabel] = useState('');
+  const [chargePrice, setChargePrice] = useState('');
+  const [chargeQty, setChargeQty] = useState('1');
+  const [chargeNotes, setChargeNotes] = useState('');
   const [productDialogOpen, setProductDialogOpen] = useState(false);
   const [productSearch, setProductSearch] = useState("");
   const [pickerPriceListId, setPickerPriceListId] = useState<number | null>(null);
@@ -620,10 +628,11 @@ export default function QuickQuote() {
       const body = {
         customerId: selectedCustomer.id,
         items: quoteItems.map(item => ({
-          productId: item.productId,
+          productId: item.productId ?? undefined,
           quantity: item.quantity,
           customPrice: item.customPrice,
           sellingType: item.sellingType,
+          ...(item.isMiscCharge ? { customLabel: item.customLabel, itemNotes: item.itemNotes } : {}),
         })),
         fulfillmentType,
         deliveryCharge: parseFloat(deliveryCharge) || 0,
@@ -680,10 +689,11 @@ export default function QuickQuote() {
         const draftBody = {
           customerId: data.customerId,
           items: data.items.map(item => ({
-            productId: item.productId,
+            productId: item.productId ?? undefined,
             quantity: item.quantity,
             customPrice: item.customPrice,
             sellingType: item.sellingType,
+            ...(item.isMiscCharge ? { customLabel: item.customLabel, itemNotes: item.itemNotes } : {}),
           })),
           fulfillmentType: data.fulfillmentType,
           deliveryCharge: data.deliveryCharge ?? 0,
@@ -718,12 +728,15 @@ export default function QuickQuote() {
         ...data,
         items: data.items.map(item => ({
           ...item,
+          productId: item.productId ?? undefined,
           // Match the edit-invoice screen: only propagate a price beyond this order
           // when the line was actually changed from its added baseline; otherwise
-          // keep it order-only ('invoice').
-          priceScope: Math.abs(item.customPrice - item.originalPrice) > 0.001
-            ? (item.priceScope || 'all')
-            : 'invoice',
+          // keep it order-only ('invoice'). Charge items never propagate.
+          priceScope: item.isMiscCharge
+            ? 'invoice'
+            : Math.abs(item.customPrice - item.originalPrice) > 0.001
+              ? (item.priceScope || 'all')
+              : 'invoice',
         })),
       };
       const response = await apiRequest('POST', '/api/quotes', body);
@@ -771,7 +784,7 @@ export default function QuickQuote() {
           businessName: user?.businessName || 'Your Supplier',
           orderRef: data.orderNumber || `#${data.orderId}`,
           total: formatCurrency(calculateTotal()),
-          itemLines: quoteItems.map(item => `🛍️ ${item.quantity}× ${item.productName}`).join('\n'),
+          itemLines: quoteItems.map(item => item.isMiscCharge ? `💳 ${item.quantity}× ${item.customLabel}` : `🛍️ ${item.quantity}× ${item.productName}`).join('\n'),
           fulfillmentLine: fulfillmentType === 'delivery' ? 'Delivery' : 'Collection from your store',
           paymentLink: shortPayLink,
           signOff: invoiceSignOffData?.invoiceSignOff ?? null,
@@ -941,6 +954,33 @@ export default function QuickQuote() {
 
   const removeItem = (index: number) => {
     setQuoteItems(quoteItems.filter((_, i) => i !== index));
+  };
+
+  const addMiscCharge = () => {
+    const label = chargeLabel.trim();
+    const price = parseFloat(chargePrice);
+    const qty = parseInt(chargeQty) || 1;
+    if (!label) { toast({ title: 'Enter a charge label', variant: 'destructive' }); return; }
+    if (!price || price <= 0) { toast({ title: 'Enter a valid price', variant: 'destructive' }); return; }
+    const chargeItem: QuoteItem = {
+      stableId: `charge-${Date.now()}-${Math.random()}`,
+      productId: null,
+      customLabel: label,
+      itemNotes: chargeNotes.trim() || undefined,
+      isMiscCharge: true,
+      originalPrice: price,
+      customPrice: price,
+      quantity: qty,
+      sellingType: 'units',
+      costPrice: 0,
+      weightKg: 0,
+    };
+    setQuoteItems(prev => [...prev, chargeItem]);
+    setChargeLabel('');
+    setChargePrice('');
+    setChargeQty('1');
+    setChargeNotes('');
+    setShowChargeForm(false);
   };
 
   const switchItemMode = (index: number, mode: 'units' | 'packs' | 'pallets') => {
@@ -2107,24 +2147,106 @@ export default function QuickQuote() {
               ) : (
                 <div className="space-y-4">
                   {quoteItems.map((item, index) => (
-                    <QuoteItemCard
-                      key={item.stableId}
-                      item={item}
-                      index={index}
-                      inputValues={inputValues}
-                      costValues={costValues}
-                      setInputValues={setInputValues}
-                      setCostValues={setCostValues}
-                      updateItemPrice={updateItemPrice}
-                      updateItemPriceScope={updateItemPriceScope}
-                      updateItemQuantity={updateItemQuantity}
-                      updateItemCost={updateItemCost}
-                      removeItem={removeItem}
-                      formatCurrency={formatCurrency}
-                      formatWeight={formatWeight}
-                      onSwitchMode={(mode) => switchItemMode(index, mode)}
-                    />
+                    item.isMiscCharge ? (
+                      <div key={item.stableId} className="flex items-start gap-3 p-3 rounded-lg border border-amber-200 bg-amber-50">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-sm text-gray-900">{item.customLabel}</span>
+                            <span className="inline-flex items-center text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full font-medium">Charge</span>
+                          </div>
+                          {item.itemNotes && <p className="text-xs text-gray-500 italic mt-0.5">{item.itemNotes}</p>}
+                          <p className="text-xs text-gray-500 mt-0.5">{item.quantity} × {formatCurrency(item.customPrice)}</p>
+                        </div>
+                        <div className="text-sm font-semibold text-gray-900 flex-shrink-0">{formatCurrency(item.customPrice * item.quantity)}</div>
+                        <button
+                          onClick={() => removeItem(index)}
+                          className="text-gray-400 hover:text-red-500 transition-colors flex-shrink-0"
+                          aria-label="Remove charge"
+                        >
+                          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                        </button>
+                      </div>
+                    ) : (
+                      <QuoteItemCard
+                        key={item.stableId}
+                        item={item as any}
+                        index={index}
+                        inputValues={inputValues}
+                        costValues={costValues}
+                        setInputValues={setInputValues}
+                        setCostValues={setCostValues}
+                        updateItemPrice={updateItemPrice}
+                        updateItemPriceScope={updateItemPriceScope}
+                        updateItemQuantity={updateItemQuantity}
+                        updateItemCost={updateItemCost}
+                        removeItem={removeItem}
+                        formatCurrency={formatCurrency}
+                        formatWeight={formatWeight}
+                        onSwitchMode={(mode) => switchItemMode(index, mode)}
+                      />
+                    )
                   ))}
+                  {showChargeForm ? (
+                    <div className="p-3 rounded-lg border border-dashed border-amber-300 bg-amber-50 space-y-2">
+                      <p className="text-xs font-semibold text-amber-800">Add miscellaneous charge</p>
+                      <input
+                        type="text"
+                        placeholder="Label (e.g. Delivery fee, Pallets)"
+                        value={chargeLabel}
+                        onChange={e => setChargeLabel(e.target.value)}
+                        className="w-full text-sm rounded border border-gray-300 px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-amber-400"
+                      />
+                      <div className="flex gap-2">
+                        <input
+                          type="number"
+                          placeholder="Price"
+                          min="0.01"
+                          step="0.01"
+                          value={chargePrice}
+                          onChange={e => setChargePrice(e.target.value)}
+                          className="flex-1 text-sm rounded border border-gray-300 px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-amber-400"
+                        />
+                        <input
+                          type="number"
+                          placeholder="Qty"
+                          min="1"
+                          step="1"
+                          value={chargeQty}
+                          onChange={e => setChargeQty(e.target.value)}
+                          className="w-16 text-sm rounded border border-gray-300 px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-amber-400"
+                        />
+                      </div>
+                      <input
+                        type="text"
+                        placeholder="Notes (optional)"
+                        value={chargeNotes}
+                        onChange={e => setChargeNotes(e.target.value)}
+                        className="w-full text-sm rounded border border-gray-300 px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-amber-400"
+                      />
+                      <div className="flex gap-2 pt-1">
+                        <button
+                          onClick={addMiscCharge}
+                          className="flex-1 text-sm font-medium bg-amber-500 text-white rounded py-1.5 hover:bg-amber-600 transition-colors"
+                        >
+                          Add charge
+                        </button>
+                        <button
+                          onClick={() => { setShowChargeForm(false); setChargeLabel(''); setChargePrice(''); setChargeQty('1'); setChargeNotes(''); }}
+                          className="px-3 text-sm text-gray-500 rounded border border-gray-300 py-1.5 hover:bg-gray-100 transition-colors"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setShowChargeForm(true)}
+                      className="w-full flex items-center justify-center gap-1.5 text-sm text-amber-700 border border-dashed border-amber-300 rounded-lg py-2 hover:bg-amber-50 transition-colors"
+                    >
+                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                      Add charge
+                    </button>
+                  )}
                 </div>
               )}
             </CardContent>

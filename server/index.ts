@@ -819,6 +819,11 @@ async function runStartupMigrations() {
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS verified_at TIMESTAMP`,
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS verified_by VARCHAR`,
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_notes TEXT`,
+    // Task #1540: Miscellaneous charge line items — non-product lines on invoices.
+    // custom_label holds the wholesaler-typed charge name; item_notes holds an optional
+    // free-text note. Both are nullable so existing product rows are unaffected.
+    `ALTER TABLE order_items ADD COLUMN IF NOT EXISTS custom_label VARCHAR(255)`,
+    `ALTER TABLE order_items ADD COLUMN IF NOT EXISTS item_notes TEXT`,
   ];
   for (const stmt of migrations) {
     await db.execute(sql.raw(stmt));
