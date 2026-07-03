@@ -37,6 +37,65 @@ export const paymentLimiter = rateLimit({
   message: { error: "Too many payment requests, please try again later." },
 });
 
+/**
+ * Shared settlement write path for all Stripe order-payment events.
+ *
+ * Unconditionally calls `isOrderAlreadySettled` before touching the DB so that
+ * any current or future event handler (checkout.session.completed,
+ * payment_intent.succeeded, charge.captured, …) cannot accidentally
+ * double-count an already-settled order.
+ *
+ * Returns the settlement result on success, or `null` when the order was
+ * already settled (no DB write was performed).
+ */
+async function settleOrderPayment(params: {
+  existingOrder: typeof orders.$inferSelect;
+  stripeAmountPaidPence: number;
+  newPiId?: string | null;
+  actualStripeFee?: number | null;
+}): Promise<{
+  cumulativePaid: number;
+  newAmountOutstanding: number;
+  paymentStatus: 'unpaid' | 'part_paid' | 'paid';
+} | null> {
+  const { existingOrder, stripeAmountPaidPence, newPiId, actualStripeFee } = params;
+
+  if (isOrderAlreadySettled(existingOrder.paymentStatus)) {
+    return null;
+  }
+
+  const { cumulativePaid, newAmountOutstanding, paymentStatus } =
+    calculateStripePaymentSettlement(
+      { total: existingOrder.total, amountPaid: existingOrder.amountPaid },
+      stripeAmountPaidPence,
+    );
+
+  const piList = (() => {
+    if (!newPiId) return existingOrder.stripePaymentIntentId;
+    const existing = existingOrder.stripePaymentIntentId || '';
+    if (existing.split(',').map((s: string) => s.trim()).includes(newPiId)) return existing;
+    return existing ? `${existing},${newPiId}` : newPiId;
+  })();
+
+  await db.update(orders)
+    .set({
+      amountPaid: cumulativePaid.toFixed(2),
+      amountOutstanding: newAmountOutstanding.toFixed(2),
+      paymentStatus,
+      status: paymentStatus === 'paid'
+        ? (existingOrder.status === 'fulfilled' ? 'fulfilled' : 'confirmed')
+        : existingOrder.status,
+      stripePaymentIntentId: piList,
+      stripePaymentLinkUrl: null,
+      stripePaymentLinkId: null,
+      ...(!existingOrder.paymentMethod ? { paymentMethod: 'payment_link' } : {}),
+      ...(actualStripeFee != null ? { stripeActualFee: actualStripeFee.toFixed(2) } : {}),
+    })
+    .where(eq(orders.id, existingOrder.id));
+
+  return { cumulativePaid, newAmountOutstanding, paymentStatus };
+}
+
 export function registerPaymentConnectRoutes(app: Express): void {
   // POST /api/stripe/connect
   app.post('/api/stripe/connect', async (req: any, res) => {
@@ -305,26 +364,17 @@ export function registerPaymentConnectRoutes(app: Express): void {
             return res.status(200).json({ received: true, skipped: true, reason: `Order ${orderId} not found` });
           }
 
-          // Order-level idempotency: if the order is already fully settled, a second
-          // checkout.session.completed event (e.g. webhook retry with a fresh event ID)
-          // would double-count amountPaid.  Return early instead.
+          // Early guard: skip expensive Stripe API calls if already settled.
+          // settleOrderPayment also checks this unconditionally before any DB write.
           if (isOrderAlreadySettled(existingOrder.paymentStatus)) {
             console.log(`ℹ️ Order ${orderNumber} already paid — skipping duplicate checkout.session.completed settlement`);
             return res.status(200).json({ received: true, skipped: true, reason: `Order ${orderNumber} already fully settled` });
           }
 
-          // Compute updated payment balance.
-          // existingOrder.total is the single source of truth: any invoiceDiscount was
-          // already subtracted when the discount was applied, so the stored total is
-          // already the discounted amount the customer is expected to pay.
+          // Track amounts before settlement for email logic below.
           const previouslyPaid = parseFloat(existingOrder.amountPaid || '0');
           const thisPayment = (session.amount_total || 0) / 100;
-          const { cumulativePaid, newAmountOutstanding: newOutstanding, paymentStatus } =
-            calculateStripePaymentSettlement(
-              { total: existingOrder.total, amountPaid: existingOrder.amountPaid },
-              session.amount_total || 0,
-            );
-          
+
           // Capture actual Stripe processing fee from balance_transaction (non-blocking)
           const piId = session.payment_intent as string | null;
           // Idempotency: skip fee capture if this PI was already processed (webhook retry safety)
@@ -351,32 +401,21 @@ export function registerPaymentConnectRoutes(app: Express): void {
             }
           }
 
-          // Update order with payment details
-          // Clear old payment link - user will generate a fresh balance link if needed
-          await db.update(orders)
-            .set({
-              amountPaid: cumulativePaid.toFixed(2),
-              amountOutstanding: newOutstanding.toFixed(2),
-              paymentStatus: paymentStatus,
-              status: paymentStatus === 'paid'
-                ? (existingOrder.status === 'fulfilled' ? 'fulfilled' : 'confirmed')
-                : existingOrder.status,
-              stripePaymentIntentId: (() => {
-                // Append the new PI to existing ones (comma-separated) so multi-PI refunds work
-                const newPi = session.payment_intent as string | null;
-                if (!newPi) return existingOrder.stripePaymentIntentId;
-                const existing = existingOrder.stripePaymentIntentId || '';
-                if (existing.split(',').map((s: string) => s.trim()).includes(newPi)) return existing;
-                return existing ? `${existing},${newPi}` : newPi;
-              })(),
-              stripePaymentLinkUrl: null, // Clear old deposit link so user generates fresh balance link
-              stripePaymentLinkId: null,
-              // Set payment method to 'payment_link' only if not already recorded manually
-              ...(!existingOrder.paymentMethod ? { paymentMethod: 'payment_link' } : {}),
-              // Store actual Stripe fee if we managed to retrieve it
-              ...(actualStripeFee !== null ? { stripeActualFee: actualStripeFee.toFixed(2) } : {}),
-            })
-            .where(eq(orders.id, parseInt(orderId)));
+          // Settle via the shared helper — unconditionally guards with isOrderAlreadySettled
+          // before writing to the DB, preventing double-settlement from any event type.
+          const settlement = await settleOrderPayment({
+            existingOrder,
+            stripeAmountPaidPence: session.amount_total || 0,
+            newPiId: piId,
+            actualStripeFee,
+          });
+
+          // settlement is null only on a race-condition re-delivery after the early guard above.
+          if (!settlement) {
+            return res.status(200).json({ received: true, skipped: true, reason: `Order ${orderNumber} already fully settled` });
+          }
+
+          const { cumulativePaid, newAmountOutstanding: newOutstanding, paymentStatus } = settlement;
           
           // Log payment event for quotes (non-blocking)
           if (existingOrder.isQuote) {
@@ -611,39 +650,13 @@ export function registerPaymentConnectRoutes(app: Express): void {
               return res.json({ received: true, type: event.type });
             }
 
-            // Guard 2: paymentStatus already 'paid' (settlement completed by another
-            // handler before this point — e.g. checkout.session.completed ran but
-            // hadn't yet written the PI ID when we read the row above).
-            if (isOrderAlreadySettled(existingOrder.paymentStatus)) {
-              return res.json({ received: true, type: event.type });
-            }
-
-            // Same settlement logic as checkout.session.completed: stored total is
-            // already discounted if an invoiceDiscount was applied before payment.
-            const { cumulativePaid, newAmountOutstanding: newOutstanding, paymentStatus } =
-              calculateStripePaymentSettlement(
-                { total: existingOrder.total, amountPaid: existingOrder.amountPaid },
-                paymentIntent.amount_received || 0,
-              );
-
-            const newPiList = existingOrder.stripePaymentIntentId
-              ? `${existingOrder.stripePaymentIntentId},${piId}`
-              : piId;
-
-            await db.update(orders)
-              .set({
-                amountPaid: cumulativePaid.toFixed(2),
-                amountOutstanding: newOutstanding.toFixed(2),
-                paymentStatus,
-                status: paymentStatus === 'paid'
-                  ? (existingOrder.status === 'fulfilled' ? 'fulfilled' : 'confirmed')
-                  : existingOrder.status,
-                stripePaymentIntentId: newPiList,
-                stripePaymentLinkUrl: null,
-                stripePaymentLinkId: null,
-                ...(!existingOrder.paymentMethod ? { paymentMethod: 'payment_link' } : {}),
-              })
-              .where(eq(orders.id, parseInt(piOrderId)));
+            // Settle via the shared helper — unconditionally guards with isOrderAlreadySettled
+            // before writing to the DB (covers the fully-paid case and any future event types).
+            await settleOrderPayment({
+              existingOrder,
+              stripeAmountPaidPence: paymentIntent.amount_received || 0,
+              newPiId: piId,
+            });
 
           } catch (fallbackErr) {
             console.error(`❌ payment_intent.succeeded fallback failed for order ${piOrderNumber}:`, fallbackErr);
