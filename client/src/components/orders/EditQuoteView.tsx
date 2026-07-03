@@ -754,8 +754,11 @@ export function EditQuoteView({
                   placeholder="0.00"
                   value={chargePrice}
                   onChange={(e) => setChargePrice(e.target.value)}
-                  className="w-full border border-gray-300 rounded-md px-3 py-1.5 text-sm text-right focus:outline-none focus:ring-2 focus:ring-green-500"
+                  className={`w-full border rounded-md px-3 py-1.5 text-sm text-right focus:outline-none focus:ring-2 focus:ring-green-500 ${chargePrice !== '' && parseFloat(chargePrice) <= 0 ? 'border-red-400 bg-red-50' : 'border-gray-300'}`}
                 />
+                {chargePrice !== '' && parseFloat(chargePrice) <= 0 && (
+                  <p className="text-xs text-red-500 mt-1">Price must be greater than £0</p>
+                )}
               </div>
               <div className="w-20">
                 <label className="block text-xs font-medium text-gray-700 mb-1">Qty</label>
