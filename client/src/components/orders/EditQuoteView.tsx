@@ -119,11 +119,16 @@ export function EditQuoteView({
   const filteredEditProducts = editProducts.filter(p =>
     p.name.toLowerCase().includes(editProductSearch.toLowerCase())
   );
-  const hasInvalidItems = editItems.some(item =>
-    item.customPrice <= 0 || item.quantity < 1 ||
-    (!item.productId && !item.customLabel?.trim()) ||
-    (item.sellingType === 'pallets' && !!item.palletMoq && item.palletMoq > 1 && item.quantity < item.palletMoq)
+  const hasInvalidCharges = editItems.some(item =>
+    !item.productId && (item.customPrice <= 0 || !item.customLabel?.trim())
   );
+  const hasInvalidProducts = editItems.some(item =>
+    !!item.productId && (
+      item.customPrice <= 0 || item.quantity < 1 ||
+      (item.sellingType === 'pallets' && !!item.palletMoq && item.palletMoq > 1 && item.quantity < item.palletMoq)
+    )
+  );
+  const hasInvalidItems = hasInvalidCharges || hasInvalidProducts;
 
   function getItemKey(item: EditItem): string {
     if (!item.productId) return `charge-${item._clientId ?? item.customLabel?.trim() ?? ''}`;
@@ -458,7 +463,9 @@ export function EditQuoteView({
                           <span className="text-xs text-gray-500">/{priceLabel}</span>
                         </div>
                         {item.customPrice <= 0 && (
-                          <p className="text-xs text-red-600">Price must be greater than £0</p>
+                          <p className="text-xs text-red-600 font-medium">
+                            {isCharge ? 'Charge price must be greater than £0' : 'Price must be greater than £0'}
+                          </p>
                         )}
                         {isPriceChanged(item) && (
                           <select
@@ -581,9 +588,14 @@ export function EditQuoteView({
             </div>
           )}
 
-          {hasInvalidItems && (
+          {hasInvalidCharges && (
             <p className="text-xs text-red-600 text-center">
-              All items must have a label, a price greater than £0, and a quantity of at least 1 before saving.
+              Each charge line needs a label and a price greater than £0 before saving.
+            </p>
+          )}
+          {hasInvalidProducts && (
+            <p className="text-xs text-red-600 text-center">
+              Each product line must have a price greater than £0 and a quantity of at least 1 before saving.
             </p>
           )}
 
