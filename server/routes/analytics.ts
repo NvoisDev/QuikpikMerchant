@@ -796,13 +796,17 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
         }
 
         // Add to spend and order count for all non-cancelled, non-draft orders (includes pending invoices)
+        // Exclude fully-refunded orders (amountRefunded >= subtotal) so they don't inflate counts or avgOrderValue
         if (order.status !== 'cancelled' && order.status !== 'draft') {
           const orderSubtotal = parseFloat(order.subtotal || order.total || '0');
           const orderPlatformFee = parseFloat(order.platformFee || '0');
           const amountRefunded = parseFloat(order.amountRefunded || '0');
-          current.totalSpent += (orderSubtotal - orderPlatformFee - amountRefunded);
-          current.orderCount++;
-          current.paidOrderCount++;
+          const isFullyRefunded = amountRefunded > 0 && amountRefunded >= orderSubtotal;
+          if (!isFullyRefunded) {
+            current.totalSpent += (orderSubtotal - orderPlatformFee - amountRefunded);
+            current.orderCount++;
+            current.paidOrderCount++;
+          }
         }
         
         const orderDate = new Date(order.createdAt ?? '');
