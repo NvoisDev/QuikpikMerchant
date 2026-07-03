@@ -19,6 +19,7 @@ import { resolveWholesalerId } from "../utils/resolveWholesalerId";
 import { createShortPaymentLink } from "../shortPaymentLink";
 import { businessProfiles } from "@shared/schema";
 import { logQuoteActivity, fmtGBP } from "../utils/quote-activity";
+import { buildChargeAuditEntries } from "../utils/quote-audit-diff";
 import { isConnectAccountReady } from "../utils/stripe-connect-ready";
 import { resolveInvoiceWholesaler } from "./orders-read";
 
@@ -1484,40 +1485,25 @@ export function registerQuoteRoutes(app: Express): void {
         const inNew = items.find((ni) => ni.productId === oldItem.productId && (ni.sellingType || 'units') === sellingTypeOld);
         if (!inNew) changeList.push(`Removed ${auditExistingLabel(oldItem)} (${sellingTypeOld})`);
       }
-      // Audit: removed charge items (match by customLabel since no productId)
-      for (const oldItem of existingItems) {
-        if (oldItem.productId !== null) continue;
-        const oldLabel = ((oldItem as any).customLabel?.trim() || '').toLowerCase();
-        const inNew = items.find((ni) => !ni.productId && (ni.customLabel?.trim() || '').toLowerCase() === oldLabel);
-        if (!inNew) changeList.push(`Removed charge: ${auditExistingLabel(oldItem)}`);
-      }
+      // Audit: product item additions / removals / changes
       for (const newItem of items) {
-        if (newItem.productId) {
-          // Product item audit
-          const sellingTypeNew = newItem.sellingType || 'units';
-          const inOld = existingItems.find((oi) => oi.productId === newItem.productId && (oi.sellingType || 'units') === sellingTypeNew);
-          if (!inOld) {
-            changeList.push(`Added ${auditItemLabel(newItem)}: ${newItem.quantity} ${sellingTypeNew} @ £${fmtGBP(newItem.customPrice)}`);
-          } else {
-            const parts: string[] = [];
-            if (inOld.quantity !== newItem.quantity) parts.push(`qty ${inOld.quantity}→${newItem.quantity}`);
-            if (Math.abs(parseFloat(inOld.unitPrice || '0') - newItem.customPrice) > 0.001) parts.push(`price £${fmtGBP(parseFloat(inOld.unitPrice || '0'))}→£${fmtGBP(newItem.customPrice)}`);
-            if (parts.length > 0) changeList.push(`${auditItemLabel(newItem)}: ${parts.join(', ')}`);
-          }
+        if (!newItem.productId) continue;
+        const sellingTypeNew = newItem.sellingType || 'units';
+        const inOld = existingItems.find((oi) => oi.productId === newItem.productId && (oi.sellingType || 'units') === sellingTypeNew);
+        if (!inOld) {
+          changeList.push(`Added ${auditItemLabel(newItem)}: ${newItem.quantity} ${sellingTypeNew} @ £${fmtGBP(newItem.customPrice)}`);
         } else {
-          // Charge item audit
-          const chargeLabel = newItem.customLabel?.trim() || '';
-          const inOld = existingItems.find((oi) => oi.productId === null && ((oi as any).customLabel?.trim() || '').toLowerCase() === chargeLabel.toLowerCase());
-          if (!inOld) {
-            changeList.push(`Added charge: ${chargeLabel || 'Charge'} × ${newItem.quantity} @ £${fmtGBP(newItem.customPrice)}`);
-          } else {
-            const parts: string[] = [];
-            if (inOld.quantity !== newItem.quantity) parts.push(`qty ${inOld.quantity}→${newItem.quantity}`);
-            if (Math.abs(parseFloat(inOld.unitPrice || '0') - newItem.customPrice) > 0.001) parts.push(`price £${fmtGBP(parseFloat(inOld.unitPrice || '0'))}→£${fmtGBP(newItem.customPrice)}`);
-            if (parts.length > 0) changeList.push(`Charge ${chargeLabel || 'item'}: ${parts.join(', ')}`);
-          }
+          const parts: string[] = [];
+          if (inOld.quantity !== newItem.quantity) parts.push(`qty ${inOld.quantity}→${newItem.quantity}`);
+          if (Math.abs(parseFloat(inOld.unitPrice || '0') - newItem.customPrice) > 0.001) parts.push(`price £${fmtGBP(parseFloat(inOld.unitPrice || '0'))}→£${fmtGBP(newItem.customPrice)}`);
+          if (parts.length > 0) changeList.push(`${auditItemLabel(newItem)}: ${parts.join(', ')}`);
         }
       }
+      // Audit: charge items — positional pairing detects label renames correctly
+      const oldCharges = existingItems.filter((oi) => oi.productId === null);
+      const newCharges = items.filter((ni) => !ni.productId);
+      const chargeEntries = buildChargeAuditEntries(oldCharges, newCharges, fmtGBP);
+      changeList.push(...chargeEntries);
       const auditEntry = `[Invoice edited ${timestamp} by ${editorName}] ${changeList.length > 0 ? changeList.join('; ') : 'No line item changes'}. New total: £${fmtGBP(total)}.`;
       const updatedNotes = existingOrder.notes ? `${existingOrder.notes}\n${auditEntry}` : auditEntry;
 
