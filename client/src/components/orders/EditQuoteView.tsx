@@ -1,7 +1,7 @@
 import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Loader2, ChevronLeft, X, Plus, Minus, Search } from "lucide-react";
+import { Loader2, ChevronLeft, X, Plus, Minus, Search, Tag } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { computeBaseUnits } from "@shared/quote-units";
 
@@ -83,6 +83,14 @@ export function EditQuoteView({
   const [editDeliveryCost, setEditDeliveryCost] = useState(
     parseFloat(order.deliveryCost || '0').toFixed(2)
   );
+
+  // Add-charge dialog state
+  const [addChargeOpen, setAddChargeOpen] = useState(false);
+  const [chargeLabel, setChargeLabel] = useState('');
+  const [chargePrice, setChargePrice] = useState('');
+  const [chargeQty, setChargeQty] = useState('1');
+  const [chargeNotes, setChargeNotes] = useState('');
+
   // Session price baselines: the price each line had when the editor opened, or when
   // the line was added / its selling type switched. We only offer a price-scope choice
   // for lines whose price the wholesaler has *manually changed this session*, so a
@@ -91,7 +99,7 @@ export function EditQuoteView({
   const priceBaselineRef = useRef<Record<string, number> | null>(null);
   if (priceBaselineRef.current === null) {
     priceBaselineRef.current = Object.fromEntries(
-      editItems.map(it => [`${it.productId}-${it.sellingType}`, it.customPrice])
+      editItems.map(it => [getItemKey(it), it.customPrice])
     );
   }
   const setBaseline = (productId: number, sellingType: 'units' | 'pallets', price: number) => {
@@ -100,6 +108,7 @@ export function EditQuoteView({
   // Per-line chosen scope for a manual price change. Default 'all' (update base catalog).
   const [priceScopes, setPriceScopes] = useState<Record<string, 'invoice' | 'customer' | 'all'>>({});
   const isPriceChanged = (item: EditItem) => {
+    if (!item.productId) return false; // charge items never propagate price scope
     const baseline = priceBaselineRef.current?.[getItemKey(item)];
     return baseline !== undefined && Math.abs(item.customPrice - baseline) > 0.001;
   };
@@ -111,10 +120,14 @@ export function EditQuoteView({
   );
   const hasInvalidItems = editItems.some(item =>
     item.customPrice <= 0 || item.quantity < 1 ||
+    (!item.productId && !item.customLabel?.trim()) ||
     (item.sellingType === 'pallets' && !!item.palletMoq && item.palletMoq > 1 && item.quantity < item.palletMoq)
   );
 
-  const getItemKey = (item: EditItem) => `${item.productId}-${item.sellingType}`;
+  function getItemKey(item: EditItem): string {
+    if (!item.productId) return `charge-${item.customLabel?.trim() || ''}`;
+    return `${item.productId}-${item.sellingType}`;
+  }
 
   const togglePackMode = (index: number) => {
     const item = editItems[index];
@@ -243,6 +256,27 @@ export function EditQuoteView({
     }
   };
 
+  const handleAddCharge = () => {
+    const label = chargeLabel.trim();
+    const price = parseFloat(chargePrice);
+    const qty = Math.max(1, parseInt(chargeQty, 10) || 1);
+    if (!label || !isFinite(price) || price <= 0) return;
+    setEditItems(prev => [...prev, {
+      productId: null,
+      customLabel: label,
+      itemNotes: chargeNotes.trim() || null,
+      productName: label,
+      quantity: qty,
+      customPrice: price,
+      sellingType: 'units',
+    }]);
+    setChargeLabel('');
+    setChargePrice('');
+    setChargeQty('1');
+    setChargeNotes('');
+    setAddChargeOpen(false);
+  };
+
   return (
     <div className="bg-white min-h-screen">
       <div className="max-w-lg mx-auto px-4 py-6">
@@ -266,14 +300,15 @@ export function EditQuoteView({
             ) : (
               <div className="space-y-3">
                 {editItems.map((item, index) => {
+                  const isCharge = !item.productId;
                   const key = getItemKey(item);
                   const qip = item.quantityInPack ?? 1;
-                  const isPacks = (packMode[key] ?? false) && qip > 1 && item.sellingType !== 'pallets';
+                  const isPacks = !isCharge && (packMode[key] ?? false) && qip > 1 && item.sellingType !== 'pallets';
                   const activeMode = item.sellingType === 'pallets' ? 'pallets' : isPacks ? 'packs' : 'units';
-                  const showUnits = item.sellingFormat !== 'pallets' && !!item.unitPrice;
-                  const showPacks = qip > 1 && item.sellingFormat !== 'pallets' && item.sellingFormat !== 'units';
-                  const showPallets = !!item.palletPrice && item.sellingFormat !== 'units';
-                  const showModeSelector = (showPacks || showPallets) && (showUnits || showPacks || showPallets);
+                  const showUnits = !isCharge && item.sellingFormat !== 'pallets' && !!item.unitPrice;
+                  const showPacks = !isCharge && qip > 1 && item.sellingFormat !== 'pallets' && item.sellingFormat !== 'units';
+                  const showPallets = !isCharge && !!item.palletPrice && item.sellingFormat !== 'units';
+                  const showModeSelector = !isCharge && (showPacks || showPallets) && (showUnits || showPacks || showPallets);
                   const displayedQty = isPacks
                     ? (packInputs[key] ?? Math.max(1, Math.round(item.quantity / qip)).toString())
                     : (packInputs[key] ?? item.quantity.toString());
@@ -281,15 +316,19 @@ export function EditQuoteView({
                   const palletPreview = item.sellingType === 'pallets' && item.unitsPerPallet
                     ? computeBaseUnits(parseInt(displayedQty) || 1, 'pallets', item.quantityInPack ?? 1, item.unitsPerPallet)
                     : undefined;
-                  const unitLabel = item.sellingType === 'pallets' ? 'pallet' : isPacks ? 'pack' : 'unit';
-                  // Price is per base-unit except for pallet items (which use palletPrice)
-                  const priceLabel = item.sellingType === 'pallets' ? 'pallet' : 'unit';
+                  const unitLabel = item.sellingType === 'pallets' ? 'pallet' : isPacks ? 'pack' : isCharge ? 'item' : 'unit';
+                  const priceLabel = item.sellingType === 'pallets' ? 'pallet' : isCharge ? 'item' : 'unit';
                   const palletMoqViolation = item.sellingType === 'pallets' && item.palletMoq && item.palletMoq > 1 && item.quantity < item.palletMoq;
 
                   return (
-                  <div key={key} className="bg-gray-50 rounded-lg p-3">
+                  <div key={`item-${index}`} className="bg-gray-50 rounded-lg p-3">
                     <div className="flex items-start justify-between gap-2 mb-2">
-                      <span className="font-medium text-sm">{item.productName}</span>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="font-medium text-sm">{item.productName}</span>
+                        {isCharge && (
+                          <span className="inline-flex items-center text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full font-medium">Charge</span>
+                        )}
+                      </div>
                       <button
                         onClick={() => setEditItems(editItems.filter((_, i) => i !== index))}
                         className="text-red-400 hover:text-red-600 flex-shrink-0"
@@ -297,7 +336,7 @@ export function EditQuoteView({
                         <X className="h-4 w-4" />
                       </button>
                     </div>
-                    {/* Mode selector */}
+                    {/* Mode selector — product items only */}
                     {showModeSelector && (
                       <div className="flex rounded overflow-hidden border border-gray-200 text-xs mb-2 w-fit">
                         {showUnits && (
@@ -323,7 +362,7 @@ export function EditQuoteView({
                     <div className="flex items-center gap-3 flex-wrap">
                       <div className="flex flex-col gap-0.5">
                         <span className="text-xs text-gray-500 flex items-baseline gap-1 flex-wrap">
-                          <span>Qty ({item.sellingType === 'pallets' ? 'pallets' : isPacks ? 'packs' : 'units'})</span>
+                          <span>Qty ({unitLabel})</span>
                           {isPacks && packsPreview !== undefined && (
                             <span className="text-blue-500 font-normal">= {packsPreview} units</span>
                           )}
@@ -404,8 +443,8 @@ export function EditQuoteView({
                           <select
                             value={priceScopes[getItemKey(item)] || 'all'}
                             onChange={(e) => {
-                              const key = getItemKey(item);
-                              setPriceScopes(prev => ({ ...prev, [key]: e.target.value as 'invoice' | 'customer' | 'all' }));
+                              const k = getItemKey(item);
+                              setPriceScopes(prev => ({ ...prev, [k]: e.target.value as 'invoice' | 'customer' | 'all' }));
                             }}
                             className="mt-0.5 text-xs border rounded p-0.5 bg-white max-w-[10rem]"
                             title="Where should this new price apply?"
@@ -435,10 +474,16 @@ export function EditQuoteView({
             )}
           </div>
 
-          <Button variant="outline" className="w-full border-dashed" onClick={() => setEditProductDialogOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Add Product
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" className="flex-1 border-dashed" onClick={() => setEditProductDialogOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Add Product
+            </Button>
+            <Button variant="outline" className="flex-1 border-dashed" onClick={() => setAddChargeOpen(true)}>
+              <Tag className="h-4 w-4 mr-2" />
+              Add Charge
+            </Button>
+          </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Delivery Cost</label>
@@ -479,7 +524,7 @@ export function EditQuoteView({
 
           <div className="border-t pt-3 space-y-1">
             <div className="flex justify-between text-gray-600">
-              <span>Products</span>
+              <span>Subtotal</span>
               <span>{formatMoney(editSubtotal)}</span>
             </div>
             {deliveryCostVal > 0 && (
@@ -521,6 +566,7 @@ export function EditQuoteView({
         </div>
       </div>
 
+      {/* Add Product dialog */}
       <Dialog open={editProductDialogOpen} onOpenChange={setEditProductDialogOpen}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
@@ -624,6 +670,78 @@ export function EditQuoteView({
                   </div>
                 );
               })}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Charge dialog */}
+      <Dialog open={addChargeOpen} onOpenChange={(open) => {
+        setAddChargeOpen(open);
+        if (!open) { setChargeLabel(''); setChargePrice(''); setChargeQty('1'); setChargeNotes(''); }
+      }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Add Misc Charge</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 text-sm">
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Label <span className="text-red-500">*</span></label>
+              <input
+                type="text"
+                placeholder="e.g. Pallet Delivery, Handling Fee"
+                value={chargeLabel}
+                onChange={(e) => setChargeLabel(e.target.value)}
+                className="w-full border border-gray-300 rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                autoFocus
+              />
+            </div>
+            <div className="flex gap-3">
+              <div className="flex-1">
+                <label className="block text-xs font-medium text-gray-700 mb-1">Price (£) <span className="text-red-500">*</span></label>
+                <input
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  placeholder="0.00"
+                  value={chargePrice}
+                  onChange={(e) => setChargePrice(e.target.value)}
+                  className="w-full border border-gray-300 rounded-md px-3 py-1.5 text-sm text-right focus:outline-none focus:ring-2 focus:ring-green-500"
+                />
+              </div>
+              <div className="w-20">
+                <label className="block text-xs font-medium text-gray-700 mb-1">Qty</label>
+                <input
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={chargeQty}
+                  onChange={(e) => setChargeQty(e.target.value)}
+                  className="w-full border border-gray-300 rounded-md px-3 py-1.5 text-sm text-center focus:outline-none focus:ring-2 focus:ring-green-500"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Notes (optional)</label>
+              <input
+                type="text"
+                placeholder="Optional description"
+                value={chargeNotes}
+                onChange={(e) => setChargeNotes(e.target.value)}
+                className="w-full border border-gray-300 rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+              />
+            </div>
+            <div className="flex gap-2 pt-1">
+              <Button variant="outline" className="flex-1" onClick={() => setAddChargeOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                className="flex-1 bg-amber-600 hover:bg-amber-700"
+                onClick={handleAddCharge}
+                disabled={!chargeLabel.trim() || !chargePrice || parseFloat(chargePrice) <= 0}
+              >
+                Add Charge
+              </Button>
             </div>
           </div>
         </DialogContent>
