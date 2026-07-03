@@ -27,6 +27,7 @@ import { getStripeClient, getPublishableKey, getWebhookSecretsWithLabels, isLive
 import { businessProfiles, stripeProcessedEvents } from "@shared/schema";
 import { logQuoteActivity } from "../utils/quote-activity";
 import { getBaseTier, getProductLimit } from "../utils/plan-tier";
+import { calculateStripePaymentSettlement } from "./order-payment-calculations";
 
 export const paymentLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -304,24 +305,17 @@ export function registerPaymentConnectRoutes(app: Express): void {
             return res.status(200).json({ received: true, skipped: true, reason: `Order ${orderId} not found` });
           }
           
-          // Get actual payment amount from Stripe session
-          const thisPayment = (session.amount_total || 0) / 100; // Convert from pence to pounds
-          
-          // Get existing amounts from order (cumulative)
+          // Compute updated payment balance.
+          // existingOrder.total is the single source of truth: any invoiceDiscount was
+          // already subtracted when the discount was applied, so the stored total is
+          // already the discounted amount the customer is expected to pay.
           const previouslyPaid = parseFloat(existingOrder.amountPaid || '0');
-          const orderTotal = parseFloat(existingOrder.total || '0');
-          
-          // Calculate cumulative paid and new outstanding
-          const cumulativePaid = previouslyPaid + thisPayment;
-          const newOutstanding = Math.max(0, orderTotal - cumulativePaid);
-          
-          // Determine payment status
-          let paymentStatus = 'unpaid';
-          if (newOutstanding <= 0.01) { // Allow for rounding
-            paymentStatus = 'paid';
-          } else if (cumulativePaid > 0) {
-            paymentStatus = 'part_paid';
-          }
+          const thisPayment = (session.amount_total || 0) / 100;
+          const { cumulativePaid, newAmountOutstanding: newOutstanding, paymentStatus } =
+            calculateStripePaymentSettlement(
+              { total: existingOrder.total, amountPaid: existingOrder.amountPaid },
+              session.amount_total || 0,
+            );
           
           // Capture actual Stripe processing fee from balance_transaction (non-blocking)
           const piId = session.payment_intent as string | null;
@@ -615,18 +609,13 @@ export function registerPaymentConnectRoutes(app: Express): void {
               return res.json({ received: true, type: event.type });
             }
 
-            const thisPayment = (paymentIntent.amount_received || 0) / 100;
-            const previouslyPaid = parseFloat(existingOrder.amountPaid || '0');
-            const orderTotal = parseFloat(existingOrder.total || '0');
-            const cumulativePaid = previouslyPaid + thisPayment;
-            const newOutstanding = Math.max(0, orderTotal - cumulativePaid);
-
-            let paymentStatus = 'unpaid';
-            if (newOutstanding <= 0.01) {
-              paymentStatus = 'paid';
-            } else if (cumulativePaid > 0) {
-              paymentStatus = 'part_paid';
-            }
+            // Same settlement logic as checkout.session.completed: stored total is
+            // already discounted if an invoiceDiscount was applied before payment.
+            const { cumulativePaid, newAmountOutstanding: newOutstanding, paymentStatus } =
+              calculateStripePaymentSettlement(
+                { total: existingOrder.total, amountPaid: existingOrder.amountPaid },
+                paymentIntent.amount_received || 0,
+              );
 
             const newPiList = existingOrder.stripePaymentIntentId
               ? `${existingOrder.stripePaymentIntentId},${piId}`
