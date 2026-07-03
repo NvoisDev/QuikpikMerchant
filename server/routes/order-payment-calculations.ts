@@ -34,6 +34,26 @@ export type StripePaymentSettlement = {
 export const isOrderAlreadySettled = (paymentStatus: string | null | undefined): boolean =>
   paymentStatus === 'paid';
 
+/**
+ * Returns true when the given Stripe payment-intent ID is already present in the
+ * comma-separated `stripePaymentIntentId` column.  Used by the
+ * `payment_intent.succeeded` handler to detect the ordering-race where
+ * `checkout.session.completed` is processed first (and records the PI ID) and
+ * then `payment_intent.succeeded` arrives for the same transaction.  Without
+ * this guard both handlers would independently call calculateStripePaymentSettlement
+ * and double-count amountPaid.
+ */
+export const isPaymentIntentAlreadyRecorded = (
+  piId: string,
+  recordedPiIds: string | null | undefined,
+): boolean => {
+  if (!piId || !recordedPiIds) return false;
+  return recordedPiIds
+    .split(',')
+    .map((s) => s.trim())
+    .includes(piId);
+};
+
 export const calculateStripePaymentSettlement = (
   order: StripePaymentSettlementInput,
   stripeAmountPaidPence: number,

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { calculateOfflinePaymentUpdate, calculateStripePaymentSettlement, isOrderAlreadySettled } from '../server/routes/order-payment-calculations';
+import { calculateOfflinePaymentUpdate, calculateStripePaymentSettlement, isOrderAlreadySettled, isPaymentIntentAlreadyRecorded } from '../server/routes/order-payment-calculations';
 
 describe('calculateOfflinePaymentUpdate', () => {
   it('allows a payment-link deposit order to be completed with cash against the stored balance', () => {
@@ -181,6 +181,41 @@ describe('calculateStripePaymentSettlement', () => {
     expect(result.newAmountOutstanding).toBe(0);
     expect(result.paymentStatus).toBe('paid');
     expect(result.cumulativePaid).toBeCloseTo(233.10, 2);
+  });
+});
+
+describe('isPaymentIntentAlreadyRecorded — payment_intent.succeeded ordering-race guard', () => {
+  it('returns true when the PI ID is the only value in the column', () => {
+    expect(isPaymentIntentAlreadyRecorded('pi_abc123', 'pi_abc123')).toBe(true);
+  });
+
+  it('returns true when the PI ID is one of several comma-separated values', () => {
+    expect(isPaymentIntentAlreadyRecorded('pi_abc123', 'pi_first,pi_abc123,pi_third')).toBe(true);
+  });
+
+  it('returns true when matching entry has surrounding whitespace', () => {
+    expect(isPaymentIntentAlreadyRecorded('pi_abc123', 'pi_first, pi_abc123 , pi_third')).toBe(true);
+  });
+
+  it('returns false when the PI ID is not in the column', () => {
+    expect(isPaymentIntentAlreadyRecorded('pi_new999', 'pi_abc123,pi_def456')).toBe(false);
+  });
+
+  it('returns false when the column is null (no prior PI recorded)', () => {
+    expect(isPaymentIntentAlreadyRecorded('pi_abc123', null)).toBe(false);
+  });
+
+  it('returns false when the column is undefined', () => {
+    expect(isPaymentIntentAlreadyRecorded('pi_abc123', undefined)).toBe(false);
+  });
+
+  it('returns false when the column is an empty string', () => {
+    expect(isPaymentIntentAlreadyRecorded('pi_abc123', '')).toBe(false);
+  });
+
+  it('does not match a PI ID that is a substring of a recorded ID', () => {
+    // 'pi_abc' must not match 'pi_abc123'
+    expect(isPaymentIntentAlreadyRecorded('pi_abc', 'pi_abc123')).toBe(false);
   });
 });
 

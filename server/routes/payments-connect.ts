@@ -27,7 +27,7 @@ import { getStripeClient, getPublishableKey, getWebhookSecretsWithLabels, isLive
 import { businessProfiles, stripeProcessedEvents } from "@shared/schema";
 import { logQuoteActivity } from "../utils/quote-activity";
 import { getBaseTier, getProductLimit } from "../utils/plan-tier";
-import { calculateStripePaymentSettlement, isOrderAlreadySettled } from "./order-payment-calculations";
+import { calculateStripePaymentSettlement, isOrderAlreadySettled, isPaymentIntentAlreadyRecorded } from "./order-payment-calculations";
 
 export const paymentLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -603,17 +603,18 @@ export function registerPaymentConnectRoutes(app: Express): void {
               return res.json({ received: true, type: event.type });
             }
 
-            // Only act if this PI hasn't already been recorded (avoid double-counting)
+            // Guard 1: PI ID already recorded (checkout.session.completed ran first and
+            // committed the PI ID). Covers the ordering-race where both events fire for
+            // the same transaction and checkout.session.completed wins.
             const piId = paymentIntent.id;
-            const alreadyRecorded = (existingOrder.stripePaymentIntentId || '')
-              .split(',').map((s: string) => s.trim()).includes(piId);
-
-            if (alreadyRecorded) {
+            if (isPaymentIntentAlreadyRecorded(piId, existingOrder.stripePaymentIntentId)) {
               return res.json({ received: true, type: event.type });
             }
 
-            // If the order is already fully paid, nothing to do
-            if (existingOrder.paymentStatus === 'paid') {
+            // Guard 2: paymentStatus already 'paid' (settlement completed by another
+            // handler before this point — e.g. checkout.session.completed ran but
+            // hadn't yet written the PI ID when we read the row above).
+            if (isOrderAlreadySettled(existingOrder.paymentStatus)) {
               return res.json({ received: true, type: event.type });
             }
 
