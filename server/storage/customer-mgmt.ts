@@ -219,8 +219,9 @@ export class CustomerMgmtStorage extends BroadcastStorage {
       .orderBy(desc(orders.createdAt));
 
     // Calculate stats (net amount: subtotal - platform fee)
+    // Exclude draft and cancelled orders so they don't inflate lifetime stats
     const paidOrders = customerOrders.filter(order =>
-      order.paymentStatus === 'paid' && order.status !== 'cancelled'
+      order.paymentStatus === 'paid' && order.status !== 'cancelled' && order.status !== 'draft'
     );
     const totalSpent = paidOrders.reduce((sum, order) => {
       const subtotal = parseFloat(order.subtotal || order.total || '0');
@@ -229,7 +230,7 @@ export class CustomerMgmtStorage extends BroadcastStorage {
     }, 0);
 
     const unpaidOrders = customerOrders.filter(order =>
-      (!order.paymentStatus || order.paymentStatus === 'unpaid' || order.paymentStatus === 'part_paid') && order.status !== 'cancelled'
+      (!order.paymentStatus || order.paymentStatus === 'unpaid' || order.paymentStatus === 'part_paid') && order.status !== 'cancelled' && order.status !== 'draft'
     );
     const totalUnpaid = unpaidOrders.reduce((sum, order) => {
       if (order.paymentStatus === 'part_paid') {
@@ -245,7 +246,7 @@ export class CustomerMgmtStorage extends BroadcastStorage {
       displayName: relationship.displayName ?? null,
       groups: scopedGroups.map(cg => cg.group),
       orders: customerOrders,
-      totalOrders: customerOrders.filter(o => o.status !== 'cancelled').length,
+      totalOrders: customerOrders.filter(o => o.status !== 'cancelled' && o.status !== 'draft').length,
       totalSpent,
       totalUnpaid
     };
