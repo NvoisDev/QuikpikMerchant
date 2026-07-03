@@ -286,6 +286,73 @@ const calculateNetAmount = (order: Order) => {
   return Math.max(0, base - actualPlatformFee);
 };
 
+interface WholesalerPaymentLinkButtonProps {
+  orderId: number;
+  onSuccess: (data: { paymentLink: string; order?: any; smsMessage?: string; customerPhone?: string }) => void;
+  className?: string;
+  label?: string;
+  /**
+   * Optional shared ref from the parent page so that two button instances
+   * (e.g. sticky bar + payment panel) are mutually exclusive.  When omitted
+   * the component owns a private ref, which is fine for single-instance use.
+   */
+  lockRef?: React.MutableRefObject<boolean>;
+  /** Whether a sibling instance is already generating a link. */
+  isLocked?: boolean;
+  /** Called with true when this instance starts, false when it finishes. */
+  onLockChange?: (active: boolean) => void;
+}
+
+export function WholesalerPaymentLinkButton({
+  orderId, onSuccess, className, label,
+  lockRef, isLocked = false, onLockChange,
+}: WholesalerPaymentLinkButtonProps) {
+  const [isLoading, setIsLoading] = useState(false);
+  const ownLockRef = useRef(false);
+  const activeLockRef = lockRef ?? ownLockRef;
+  const { toast } = useToast();
+
+  const handleClick = async () => {
+    if (activeLockRef.current || isLocked) return;
+    activeLockRef.current = true;
+    setIsLoading(true);
+    onLockChange?.(true);
+    try {
+      const response = await fetch(`/api/orders/${orderId}/generate-balance-link`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      const data = await response.json();
+      if (data.success && data.paymentLink) {
+        onSuccess(data);
+      } else {
+        toast({ title: "Error", description: data.error || "Failed to generate payment link", variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Error", description: "Failed to generate payment link", variant: "destructive" });
+    } finally {
+      activeLockRef.current = false;
+      setIsLoading(false);
+      onLockChange?.(false);
+    }
+  };
+
+  const busy = isLoading || isLocked;
+
+  return (
+    <Button
+      size="sm"
+      className={className ?? "w-full bg-blue-600 hover:bg-blue-700 text-white min-h-[44px]"}
+      onClick={handleClick}
+      disabled={busy}
+    >
+      {busy
+        ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Generating...</>
+        : <><RefreshCw className="h-4 w-4 mr-2" />{label ?? "Generate Payment Link"}</>}
+    </Button>
+  );
+}
+
 export default function OrderDetail() {
   const { id } = useParams<{ id: string }>();
   const [, navigate] = useLocation();
@@ -338,6 +405,7 @@ export default function OrderDetail() {
   const [editPaymentMethod, setEditPaymentMethod] = useState<string>('bank_transfer');
   const [editProductDialogOpen, setEditProductDialogOpen] = useState(false);
   const [editProductSearch, setEditProductSearch] = useState('');
+  const paymentLinkLockRef = useRef(false);
   const [isGeneratingPaymentLink, setIsGeneratingPaymentLink] = useState(false);
   const [showPickingMode, setShowPickingMode] = useState(false);
   const [isSwitchToDeliveryOpen, setIsSwitchToDeliveryOpen] = useState(false);
@@ -895,31 +963,15 @@ export default function OrderDetail() {
     }
   };
 
-  const generateAndCopyPaymentLink = async () => {
+  const onPaymentLinkGenerated = (data: { paymentLink: string; order?: any; smsMessage?: string; customerPhone?: string }) => {
     if (!order) return;
-    setIsGeneratingPaymentLink(true);
-    try {
-      const response = await fetch(`/api/orders/${order.id}/generate-balance-link`, {
-        method: 'POST',
-        credentials: 'include',
-      });
-      const data = await response.json();
-      if (data.success && data.paymentLink) {
-        if (data.order) setOrder({ ...order, ...data.order, stripePaymentLinkUrl: data.paymentLink });
-        setPaymentSendLink(data.paymentLink);
-        setPaymentSendMessage(data.smsMessage || '');
-        setOriginalPaymentMessage(data.smsMessage || '');
-        setPaymentSendPhone(data.customerPhone || '');
-        setPaymentSendChannel('whatsapp');
-        setShowPaymentSendModal(true);
-      } else {
-        toast({ title: "Error", description: data.error || "Failed to generate payment link", variant: "destructive" });
-      }
-    } catch {
-      toast({ title: "Error", description: "Failed to generate payment link", variant: "destructive" });
-    } finally {
-      setIsGeneratingPaymentLink(false);
-    }
+    if (data.order) setOrder({ ...order, ...data.order, stripePaymentLinkUrl: data.paymentLink });
+    setPaymentSendLink(data.paymentLink);
+    setPaymentSendMessage(data.smsMessage || '');
+    setOriginalPaymentMessage(data.smsMessage || '');
+    setPaymentSendPhone(data.customerPhone || '');
+    setPaymentSendChannel('whatsapp');
+    setShowPaymentSendModal(true);
   };
 
   const sendPaymentSms = async () => {
@@ -1216,8 +1268,8 @@ export default function OrderDetail() {
       label: 'Generate & Send Payment Link',
       color: 'bg-blue-600 hover:bg-blue-700',
       icon: <RefreshCw className="h-4 w-4 mr-2" />,
-      onClick: generateAndCopyPaymentLink,
-      loading: isGeneratingPaymentLink,
+      onClick: () => {},
+      loading: false,
     },
     record_payment: {
       label: 'Record Payment',
@@ -1975,16 +2027,13 @@ export default function OrderDetail() {
                   {wholesalerOutstanding > 0.01 && !isViewer && (
                     <div className="space-y-2">
                       {canUsePaymentLink && (
-                        <Button
-                          size="sm"
-                          className="w-full bg-blue-600 hover:bg-blue-700 text-white min-h-[44px]"
-                          onClick={generateAndCopyPaymentLink}
-                          disabled={isGeneratingPaymentLink}
-                        >
-                          {isGeneratingPaymentLink
-                            ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Generating...</>
-                            : <><RefreshCw className="h-4 w-4 mr-2" />Generate Payment Link</>}
-                        </Button>
+                        <WholesalerPaymentLinkButton
+                          orderId={order.id}
+                          onSuccess={onPaymentLinkGenerated}
+                          lockRef={paymentLinkLockRef}
+                          isLocked={isGeneratingPaymentLink}
+                          onLockChange={setIsGeneratingPaymentLink}
+                        />
                       )}
                       {(order.customerPhone || order.retailer?.phoneNumber) && (
                         <Button
@@ -2353,15 +2402,27 @@ export default function OrderDetail() {
                  'Unfulfilled'}
               </span>
             </div>
-            <Button
-              className={`shrink-0 text-white min-h-[44px] rounded-xl text-sm font-semibold whitespace-nowrap ${primaryActionConfig[primaryAction].color} disabled:opacity-50`}
-              onClick={primaryActionConfig[primaryAction].onClick}
-              disabled={!!(primaryActionConfig[primaryAction].loading) || updatingOrderId === order.id}
-            >
-              {primaryActionConfig[primaryAction].loading
-                ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Working...</>
-                : <>{primaryActionConfig[primaryAction].icon}{primaryActionConfig[primaryAction].label}</>}
-            </Button>
+            {primaryAction === 'send_payment_link' ? (
+              <WholesalerPaymentLinkButton
+                orderId={order.id}
+                onSuccess={onPaymentLinkGenerated}
+                className="shrink-0 text-white min-h-[44px] rounded-xl text-sm font-semibold whitespace-nowrap bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
+                label="Generate & Send Payment Link"
+                lockRef={paymentLinkLockRef}
+                isLocked={isGeneratingPaymentLink}
+                onLockChange={setIsGeneratingPaymentLink}
+              />
+            ) : (
+              <Button
+                className={`shrink-0 text-white min-h-[44px] rounded-xl text-sm font-semibold whitespace-nowrap ${primaryActionConfig[primaryAction].color} disabled:opacity-50`}
+                onClick={primaryActionConfig[primaryAction].onClick}
+                disabled={!!(primaryActionConfig[primaryAction].loading) || updatingOrderId === order.id}
+              >
+                {primaryActionConfig[primaryAction].loading
+                  ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Working...</>
+                  : <>{primaryActionConfig[primaryAction].icon}{primaryActionConfig[primaryAction].label}</>}
+              </Button>
+            )}
           </div>
         </div>
       )}
