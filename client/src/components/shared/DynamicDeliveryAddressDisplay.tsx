@@ -4,6 +4,7 @@ import { DeliveryAddressDisplay } from "./DeliveryAddressDisplay";
 import { Button } from "@/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 interface DynamicDeliveryAddressDisplayProps {
   orderId: number;
@@ -37,6 +38,7 @@ export const DynamicDeliveryAddressDisplay: React.FC<DynamicDeliveryAddressDispl
   onAddressChanged
 }) => {
   const [showAddressSelector, setShowAddressSelector] = useState(false);
+  const { toast } = useToast();
 
   // Determine if this order can have its address changed
   const isAddressChangeable = ['pending', 'confirmed', 'processing'].includes(orderStatus);
@@ -152,6 +154,7 @@ const AddressSelectionModal: React.FC<AddressSelectionModalProps> = ({
 }) => {
   const [selectedAddressId, setSelectedAddressId] = useState<number | null>(currentAddressId || null);
   const [isUpdating, setIsUpdating] = useState(false);
+  const { toast } = useToast();
 
   // Fetch customer's delivery addresses
   const { data: addresses = [], isLoading } = useQuery({
@@ -177,7 +180,7 @@ const AddressSelectionModal: React.FC<AddressSelectionModalProps> = ({
       onAddressChanged();
     } catch (error) {
       console.error('Failed to update address:', error);
-      alert('Failed to update delivery address. Please try again.');
+      toast({ title: 'Failed to update delivery address. Please try again.', variant: 'destructive' });
     } finally {
       setIsUpdating(false);
     }

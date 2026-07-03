@@ -922,7 +922,6 @@ export class DatabaseStorage extends BusinessProfileStorage implements IStorage 
   // ─── End Phone OTP methods ──────────────────────────────────────────────────
 
   async createSMSVerificationCode(data: InsertSMSVerificationCode): Promise<SMSVerificationCode> {
-    console.log('Creating SMS verification code for customer:', data.customerId);
     const [code] = await db.insert(smsVerificationCodes).values(data).returning();
     return code;
   }
@@ -939,7 +938,6 @@ export class DatabaseStorage extends BusinessProfileStorage implements IStorage 
   }
 
   async getSMSVerificationCode(wholesalerId: string, customerId: string, code: string): Promise<SMSVerificationCode | undefined> {
-    console.log('Getting SMS verification code:', { wholesalerId, customerId, code });
     const [result] = await db
       .select()
       .from(smsVerificationCodes)
@@ -987,7 +985,6 @@ export class DatabaseStorage extends BusinessProfileStorage implements IStorage 
   }
 
   async markSMSCodeAsUsed(id: number): Promise<void> {
-    console.log('Marking SMS code as used:', id);
     await db
       .update(smsVerificationCodes)
       .set({ 

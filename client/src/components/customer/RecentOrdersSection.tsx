@@ -18,6 +18,7 @@ import {
 } from "@/components/customer/CustomerOrderHistory";
 import { formatCurrency } from "@/lib/currencies";
 import { queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 interface RecentOrdersSectionProps {
   wholesalerId: string;
@@ -30,6 +31,7 @@ interface RecentOrdersSectionProps {
 
 export function RecentOrdersSection({ wholesalerId, customerPhone, onViewAllOrders, defaultCurrency, priceDisplayMode, onRequestQuote }: RecentOrdersSectionProps) {
   const [downloadingInvoiceId, setDownloadingInvoiceId] = useState<number | null>(null);
+  const { toast } = useToast();
   const [selectedOrderForDetails, setSelectedOrderForDetails] = useState<Order | null>(null);
 
   const downloadInvoice = async (order: Order) => {
@@ -48,7 +50,7 @@ export function RecentOrdersSection({ wholesalerId, customerPhone, onViewAllOrde
       a.remove();
       window.URL.revokeObjectURL(url);
     } catch {
-      alert('Could not generate the invoice. Please try again.');
+      toast({ title: 'Could not generate the invoice. Please try again.', variant: 'destructive' });
     } finally {
       setDownloadingInvoiceId(null);
     }

@@ -254,6 +254,7 @@ export const isQuoteEdited = (order: Order): boolean =>
 
 export const PayBalanceButton = ({ order, customerPhone }: { order: Order, customerPhone: string }) => {
   const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
   const handlePayNow = async () => {
     setIsLoading(true);
     try {
@@ -267,16 +268,16 @@ export const PayBalanceButton = ({ order, customerPhone }: { order: Order, custo
         if (data.paymentLink) {
           window.location.href = data.paymentLink;
         } else {
-          alert('Could not generate payment link. Please try again.');
+          toast({ title: 'Could not generate payment link. Please try again.', variant: 'destructive' });
           setIsLoading(false);
         }
       } else {
-        alert('Could not generate payment link. Please try again.');
+        toast({ title: 'Could not generate payment link. Please try again.', variant: 'destructive' });
         setIsLoading(false);
       }
     } catch (error) {
       console.error('Error generating payment link:', error);
-      alert('Something went wrong. Please check your connection and try again.');
+      toast({ title: 'Something went wrong. Please check your connection and try again.', variant: 'destructive' });
       setIsLoading(false);
     }
   };
@@ -1954,6 +1955,7 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone, currency = '
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const ordersPerPage = 10;
   const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   const downloadInvoice = async (order: Order) => {
     setDownloadingInvoiceId(order.id);
@@ -1971,7 +1973,7 @@ export function CustomerOrderHistory({ wholesalerId, customerPhone, currency = '
       a.remove();
       window.URL.revokeObjectURL(url);
     } catch {
-      alert('Could not generate the invoice. Please try again.');
+      toast({ title: 'Could not generate the invoice. Please try again.', variant: 'destructive' });
     } finally {
       setDownloadingInvoiceId(null);
     }
