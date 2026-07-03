@@ -316,6 +316,9 @@ interface ReorderPreview {
     packQuantity?: number | null;
     unitSize?: string | null;
     unitOfMeasure?: string | null;
+    isMiscCharge?: boolean;
+    customLabel?: string | null;
+    itemNotes?: string | null;
   }>;
   subtotal: string;
   customerTransactionFee: string;

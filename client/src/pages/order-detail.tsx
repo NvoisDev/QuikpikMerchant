@@ -55,7 +55,9 @@ interface OrderItem {
 }
 
 interface EditItem {
-  productId: number;
+  productId: number | null;
+  customLabel?: string | null;
+  itemNotes?: string | null;
   productName: string;
   quantity: number;
   customPrice: number;
@@ -309,7 +311,7 @@ export default function OrderDetail() {
   const [sendNotification, setSendNotification] = useState(true);
   const [staffNote, setStaffNote] = useState('');
   const [refundDelivery, setRefundDelivery] = useState(false);
-  const [returnItems, setReturnItems] = useState<Array<{ productId: number; quantity: number; sellingType: string; maxQty: number }>>([]);
+  const [returnItems, setReturnItems] = useState<Array<{ productId: number | null; quantity: number; sellingType: string; maxQty: number }>>([]);
   const [updatingOrderId, setUpdatingOrderId] = useState<number | null>(null);
   const [pendingCancellationRequestId, setPendingCancellationRequestId] = useState<number | null>(null);
 

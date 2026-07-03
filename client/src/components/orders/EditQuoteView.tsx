@@ -6,7 +6,9 @@ import { useToast } from "@/hooks/use-toast";
 import { computeBaseUnits } from "@shared/quote-units";
 
 interface EditItem {
-  productId: number;
+  productId: number | null;
+  customLabel?: string | null;
+  itemNotes?: string | null;
   productName: string;
   quantity: number;
   customPrice: number;
@@ -152,6 +154,7 @@ export function EditQuoteView({
 
   const switchEditItemMode = (index: number, mode: 'units' | 'packs' | 'pallets') => {
     const item = editItems[index];
+    if (!item.productId) return; // charge items have no sellingType to switch
     const qip = item.quantityInPack ?? 1;
     if (mode === 'pallets') {
       if (!item.palletPrice || item.sellingType === 'pallets') return;

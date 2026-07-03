@@ -24,7 +24,9 @@ import { resolveInvoiceWholesaler } from "./orders-read";
 
 // Local types for the quote-edit handler — avoids `any` casts in diff logic.
 interface QuoteEditItem {
-  productId: number;
+  productId: number | null;
+  customLabel?: string;
+  itemNotes?: string;
   quantity: number;
   customPrice: number;
   sellingType?: string;
@@ -866,10 +868,14 @@ export function registerQuoteRoutes(app: Express): void {
         try {
           const itemsListParts: string[] = [];
           for (const item of items) {
-            const [product] = await db.select().from(products).where(eq(products.id, item.productId));
-            const productName = product?.name || `Product #${item.productId}`;
             const sellingType = item.sellingType || 'units';
             const total = item.customPrice * item.quantity;
+            if (!item.productId) {
+              itemsListParts.push(`• ${item.customLabel?.trim() || 'Charge'} - ${item.quantity} × £${item.customPrice.toFixed(2)} = £${total.toFixed(2)}`);
+              continue;
+            }
+            const [product] = await db.select().from(products).where(eq(products.id, item.productId));
+            const productName = product?.name || `Product #${item.productId}`;
             itemsListParts.push(`• ${productName} - ${item.quantity} ${sellingType} × £${item.customPrice.toFixed(2)} = £${total.toFixed(2)}`);
           }
           itemsList = itemsListParts.join('\n');
@@ -948,12 +954,20 @@ export function registerQuoteRoutes(app: Express): void {
           // Build items HTML list for the customer email
           const customerItemsHtml: string[] = [];
           for (const item of items) {
+            const itemTotal = item.customPrice * item.quantity;
+            if (!item.productId) {
+              const chargeLabel = item.customLabel?.trim() || 'Charge';
+              const notesHtml = item.itemNotes ? ` <span style="color:#6b7280;font-style:italic;">(${item.itemNotes.trim()})</span>` : '';
+              customerItemsHtml.push(
+                `<li style="margin:6px 0"><strong>${chargeLabel}</strong>${notesHtml} — ${item.quantity} × £${item.customPrice.toFixed(2)} = <strong>£${itemTotal.toFixed(2)}</strong></li>`
+              );
+              continue;
+            }
             const [product] = await db.select().from(products).where(eq(products.id, item.productId));
             const productName = product?.name || `Product #${item.productId}`;
             const packDesc = formatPackDescriptor(product?.quantityInPack, product?.unitSize, product?.unitOfMeasure);
             const displayName = packDesc ? `${productName} (${packDesc})` : productName;
             const sellingType = item.sellingType || 'units';
-            const itemTotal = item.customPrice * item.quantity;
             customerItemsHtml.push(
               `<li style="margin:6px 0"><strong>${displayName}</strong> — ${item.quantity} ${sellingType} × £${item.customPrice.toFixed(2)} = <strong>£${itemTotal.toFixed(2)}</strong></li>`
             );
@@ -1205,14 +1219,21 @@ export function registerQuoteRoutes(app: Express): void {
 
       // Server-side input validation for each item
       for (const item of items) {
-        if (!Number.isInteger(item.productId) || item.productId <= 0) {
-          return res.status(400).json({ error: 'Each item must have a valid productId', errorType: 'VALIDATION_ERROR' });
-        }
         if (!Number.isInteger(item.quantity) || item.quantity <= 0) {
           return res.status(400).json({ error: 'Item quantity must be a positive integer', errorType: 'VALIDATION_ERROR' });
         }
         if (typeof item.customPrice !== 'number' || !isFinite(item.customPrice) || item.customPrice <= 0) {
           return res.status(400).json({ error: 'Item price must be greater than zero', errorType: 'VALIDATION_ERROR' });
+        }
+        // Misc charge item: productId absent/null; customLabel required
+        if (!item.productId) {
+          if (!item.customLabel || typeof item.customLabel !== 'string' || !item.customLabel.trim()) {
+            return res.status(400).json({ error: 'Charge items must have a label', errorType: 'VALIDATION_ERROR' });
+          }
+          continue; // no sellingType/priceScope validation for charge lines
+        }
+        if (!Number.isInteger(item.productId) || item.productId <= 0) {
+          return res.status(400).json({ error: 'Each item must have a valid productId', errorType: 'VALIDATION_ERROR' });
         }
         const normalizedType = item.sellingType || 'units';
         if (!['units', 'pallets'].includes(normalizedType)) {
@@ -1294,10 +1315,12 @@ export function registerQuoteRoutes(app: Express): void {
         }
       }
 
-      // Count quantities by productId+sellingType for new items (consolidate duplicates).
+      // Count quantities by productId+sellingType for new product items (consolidate duplicates).
+      // Charge items (no productId) bypass this map and stock checks entirely.
       // priceScope is consolidated first-wins, matching customPrice consolidation below.
       const newItemMap: Record<string, { productId: number; quantity: number; sellingType: string; customPrice: number; priceScope: 'invoice' | 'customer' | 'all' }> = {};
       for (const item of items) {
+        if (!item.productId) continue; // charge lines skip stock pre-check
         const key = `${item.productId}:${item.sellingType || 'units'}`;
         if (newItemMap[key]) {
           newItemMap[key].quantity += item.quantity;
@@ -1352,6 +1375,10 @@ export function registerQuoteRoutes(app: Express): void {
       let customerForEmail: Awaited<ReturnType<typeof storage.getUser>> | null = null;
       if (needsNewStripeSession) {
         for (const item of items) {
+          if (!item.productId) {
+            packDescLinesForStripe.push(item.customLabel?.trim() || 'Charge');
+            continue;
+          }
           const [product] = await db.select().from(products).where(eq(products.id, item.productId)).limit(1);
           if (product) {
             const packDescriptor = formatPackDescriptor(product.quantityInPack, product.unitSize, product.unitOfMeasure);
@@ -1433,34 +1460,62 @@ export function registerQuoteRoutes(app: Express): void {
       // Resolve product names so audit entries and the customer email are human-readable
       const auditAllProductIds = Array.from(new Set([
         ...existingItems.map(i => i.productId).filter((id): id is number => id !== null),
-        ...items.map(i => i.productId),
+        ...items.filter(i => i.productId).map(i => i.productId as number),
       ]));
       const auditProductRows = auditAllProductIds.length > 0
         ? await db.select({ id: products.id, name: products.name }).from(products).where(inArray(products.id, auditAllProductIds))
         : [];
       const auditProductNameMap = new Map<number, string>(auditProductRows.map(p => [p.id, p.name]));
       const auditPName = (id: number) => auditProductNameMap.get(id) ?? `Product #${id}`;
+      // Helper: human-readable name for any item (product or charge)
+      const auditItemLabel = (item: QuoteEditItem) =>
+        item.productId ? auditPName(item.productId) : (item.customLabel?.trim() || 'Charge');
+      const auditExistingLabel = (oi: ExistingOrderItem) =>
+        oi.productId ? auditPName(oi.productId) : ((oi as any).customLabel?.trim() || 'Charge');
 
       const changeList: string[] = [];
       const restoredProductWarnings: string[] = [];
       // Collected during the transaction for the post-commit activity log.
       const pricePropagations: Array<{ productId: number; sellingType: string; scope: 'customer' | 'all'; oldPrice: number; newPrice: number }> = [];
+      // Audit: removed product items
       for (const oldItem of existingItems) {
         if (oldItem.productId === null) continue;
         const sellingTypeOld = oldItem.sellingType || 'units';
         const inNew = items.find((ni) => ni.productId === oldItem.productId && (ni.sellingType || 'units') === sellingTypeOld);
-        if (!inNew) changeList.push(`Removed ${auditPName(oldItem.productId)} (${sellingTypeOld})`);
+        if (!inNew) changeList.push(`Removed ${auditExistingLabel(oldItem)} (${sellingTypeOld})`);
+      }
+      // Audit: removed charge items (match by customLabel since no productId)
+      for (const oldItem of existingItems) {
+        if (oldItem.productId !== null) continue;
+        const oldLabel = ((oldItem as any).customLabel?.trim() || '').toLowerCase();
+        const inNew = items.find((ni) => !ni.productId && (ni.customLabel?.trim() || '').toLowerCase() === oldLabel);
+        if (!inNew) changeList.push(`Removed charge: ${auditExistingLabel(oldItem)}`);
       }
       for (const newItem of items) {
-        const sellingTypeNew = newItem.sellingType || 'units';
-        const inOld = existingItems.find((oi) => oi.productId === newItem.productId && (oi.sellingType || 'units') === sellingTypeNew);
-        if (!inOld) {
-          changeList.push(`Added ${auditPName(newItem.productId)}: ${newItem.quantity} ${sellingTypeNew} @ £${fmtGBP(newItem.customPrice)}`);
+        if (newItem.productId) {
+          // Product item audit
+          const sellingTypeNew = newItem.sellingType || 'units';
+          const inOld = existingItems.find((oi) => oi.productId === newItem.productId && (oi.sellingType || 'units') === sellingTypeNew);
+          if (!inOld) {
+            changeList.push(`Added ${auditItemLabel(newItem)}: ${newItem.quantity} ${sellingTypeNew} @ £${fmtGBP(newItem.customPrice)}`);
+          } else {
+            const parts: string[] = [];
+            if (inOld.quantity !== newItem.quantity) parts.push(`qty ${inOld.quantity}→${newItem.quantity}`);
+            if (Math.abs(parseFloat(inOld.unitPrice || '0') - newItem.customPrice) > 0.001) parts.push(`price £${fmtGBP(parseFloat(inOld.unitPrice || '0'))}→£${fmtGBP(newItem.customPrice)}`);
+            if (parts.length > 0) changeList.push(`${auditItemLabel(newItem)}: ${parts.join(', ')}`);
+          }
         } else {
-          const parts: string[] = [];
-          if (inOld.quantity !== newItem.quantity) parts.push(`qty ${inOld.quantity}→${newItem.quantity}`);
-          if (Math.abs(parseFloat(inOld.unitPrice || '0') - newItem.customPrice) > 0.001) parts.push(`price £${fmtGBP(parseFloat(inOld.unitPrice || '0'))}→£${fmtGBP(newItem.customPrice)}`);
-          if (parts.length > 0) changeList.push(`${auditPName(newItem.productId)}: ${parts.join(', ')}`);
+          // Charge item audit
+          const chargeLabel = newItem.customLabel?.trim() || '';
+          const inOld = existingItems.find((oi) => oi.productId === null && ((oi as any).customLabel?.trim() || '').toLowerCase() === chargeLabel.toLowerCase());
+          if (!inOld) {
+            changeList.push(`Added charge: ${chargeLabel || 'Charge'} × ${newItem.quantity} @ £${fmtGBP(newItem.customPrice)}`);
+          } else {
+            const parts: string[] = [];
+            if (inOld.quantity !== newItem.quantity) parts.push(`qty ${inOld.quantity}→${newItem.quantity}`);
+            if (Math.abs(parseFloat(inOld.unitPrice || '0') - newItem.customPrice) > 0.001) parts.push(`price £${fmtGBP(parseFloat(inOld.unitPrice || '0'))}→£${fmtGBP(newItem.customPrice)}`);
+            if (parts.length > 0) changeList.push(`Charge ${chargeLabel || 'item'}: ${parts.join(', ')}`);
+          }
         }
       }
       const auditEntry = `[Invoice edited ${timestamp} by ${editorName}] ${changeList.length > 0 ? changeList.join('; ') : 'No line item changes'}. New total: £${fmtGBP(total)}.`;
@@ -1470,9 +1525,10 @@ export function registerQuoteRoutes(app: Express): void {
       const oldStripeSessionId = existingOrder.stripePaymentLinkId;
       await db.transaction(async (trx) => {
         // Capture stock for all affected products before any changes (for net movement records)
+        // Charge items (no productId) are excluded — they have no stock to track.
         const allAffectedProductIds = Array.from(new Set([
           ...existingItems.filter(i => i.productId !== null).map(i => i.productId as number),
-          ...items.map(i => i.productId),
+          ...items.filter(i => i.productId).map(i => i.productId as number),
         ]));
         const stockBeforeEdit7a = new Map<number, { units: number; pallets: number; qip: number; upp: number }>();
         for (const pid of allAffectedProductIds) {
@@ -1545,6 +1601,21 @@ export function registerQuoteRoutes(app: Express): void {
         // Accumulate purchase totals per (product, sellingType) to track primary batchId for the net movement
         const editPurchaseSummary = new Map<string, { productId: number; sellingType: string; qty: number; primaryBatchId: number | null }>();
         for (const item of items) {
+          // Misc charge item — no stock allocation needed; insert directly and move on
+          if (!item.productId) {
+            await trx.insert(orderItems).values({
+              orderId: quoteId,
+              productId: null,
+              customLabel: item.customLabel?.trim() || 'Charge',
+              itemNotes: item.itemNotes?.trim() || null,
+              quantity: item.quantity,
+              unitPrice: item.customPrice.toFixed(2),
+              total: (item.customPrice * item.quantity).toFixed(2),
+              sellingType: null,
+              batchId: null,
+            });
+            continue;
+          }
           const sellingType = item.sellingType || 'units';
           const [product] = await trx.select().from(products).where(eq(products.id, item.productId)).limit(1);
           if (!product) continue;

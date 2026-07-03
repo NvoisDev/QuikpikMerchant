@@ -13,7 +13,7 @@ const cancellationReasons = [
 ];
 
 interface ReturnItem {
-  productId: number;
+  productId: number | null;
   quantity: number;
   sellingType: string;
   maxQty: number;
@@ -25,10 +25,11 @@ interface OrderForCancel {
   amountPaid?: string;
   deliveryCost?: string;
   items?: Array<{
-    productId: number;
+    productId: number | null;
     quantity: number;
     unitPrice: string;
-    product?: { name?: string };
+    product?: { name?: string } | null;
+    customLabel?: string | null;
   }>;
 }
 
