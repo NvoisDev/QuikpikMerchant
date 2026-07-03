@@ -1302,17 +1302,21 @@ export default function OrderDetail() {
                 onClick={() => {
                   const items: EditItem[] = (order.items || []).map(item => ({
                     productId: item.productId,
-                    productName: item.product?.name || `Product #${item.productId}`,
+                    customLabel: item.customLabel ?? null,
+                    itemNotes: item.itemNotes ?? null,
+                    productName: item.productId
+                      ? (item.product?.name || `Product #${item.productId}`)
+                      : (item.customLabel?.trim() || 'Charge'),
                     quantity: item.quantity,
                     customPrice: parseFloat(item.unitPrice || '0'),
                     sellingType: (item.sellingType as 'units' | 'pallets') || 'units',
                     imageUrl: item.product?.imageUrl,
-                    quantityInPack: item.product?.quantityInPack,
-                    sellingFormat: item.product?.sellingFormat,
-                    unitsPerPallet: item.product?.unitsPerPallet,
-                    palletPrice: item.product?.palletPrice ? parseFloat(String(item.product.palletPrice)) : undefined,
-                    unitPrice: item.product?.price ? parseFloat(String(item.product.price)) : undefined,
-                    palletMoq: item.product?.palletMoq,
+                    quantityInPack: (item.product as any)?.quantityInPack,
+                    sellingFormat: (item.product as any)?.sellingFormat,
+                    unitsPerPallet: (item.product as any)?.unitsPerPallet,
+                    palletPrice: (item.product as any)?.palletPrice ? parseFloat(String((item.product as any).palletPrice)) : undefined,
+                    unitPrice: (item.product as any)?.price ? parseFloat(String((item.product as any).price)) : undefined,
+                    palletMoq: (item.product as any)?.palletMoq,
                   }));
                   setEditItems(items);
                   const defaultMethod = order.paymentMethod || (stripeReady ? 'payment_link' : 'bank_transfer');

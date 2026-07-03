@@ -207,12 +207,14 @@ export function EditQuoteView({
         body: JSON.stringify({
           items: editItems.map(item => ({
             productId: item.productId,
+            // Charge items: pass label/notes so server validation passes
+            ...(item.productId == null ? { customLabel: item.customLabel ?? '', itemNotes: item.itemNotes ?? undefined } : {}),
             customPrice: item.customPrice,
             quantity: item.quantity,
             sellingType: item.sellingType,
-            // Only send a propagating scope for lines whose price changed this session;
-            // unchanged lines stay 'invoice' so nothing leaks to catalog / customer lists.
-            priceScope: isPriceChanged(item) ? (priceScopes[getItemKey(item)] || 'all') : 'invoice',
+            // Only send a propagating scope for product lines whose price changed this session;
+            // charge items and unchanged lines stay 'invoice' so nothing leaks to catalog / customer lists.
+            priceScope: (item.productId && isPriceChanged(item)) ? (priceScopes[getItemKey(item)] || 'all') : 'invoice',
           })),
           paymentMethod: editPaymentMethod,
           deliveryCost: deliveryCostVal,
