@@ -1942,6 +1942,15 @@ export default function OrderDetail() {
                         )}
                       </div>
                     )}
+                    {order.paymentStatus === 'paid' && amountPaidRaw < parseFloat(order.total || '0') - 0.01 && (
+                      <div className="bg-amber-50 border border-amber-200 rounded p-2 col-span-2 flex items-start gap-2">
+                        <span className="text-amber-500 mt-0.5">⚠️</span>
+                        <div>
+                          <div className="text-amber-800 font-medium text-xs">Payment recorded before the order was edited</div>
+                          <div className="text-amber-600 text-xs mt-0.5">Please verify the balance — a top-up or refund may be needed.</div>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   <div className="pt-1">
