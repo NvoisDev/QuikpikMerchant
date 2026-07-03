@@ -799,7 +799,8 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
         if (order.status !== 'cancelled' && order.status !== 'draft') {
           const orderSubtotal = parseFloat(order.subtotal || order.total || '0');
           const orderPlatformFee = parseFloat(order.platformFee || '0');
-          current.totalSpent += (orderSubtotal - orderPlatformFee);
+          const amountRefunded = parseFloat(order.amountRefunded || '0');
+          current.totalSpent += (orderSubtotal - orderPlatformFee - amountRefunded);
           current.orderCount++;
           current.paidOrderCount++;
         }
