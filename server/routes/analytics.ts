@@ -5,6 +5,7 @@ import {
 } from "./shared";
 import { resolveWholesalerId } from "../utils/resolveWholesalerId";
 import { productBatches } from "@shared/schema";
+import { computeOrderNetValue } from "../utils/customer-spend";
 
 export function registerAnalyticsRoutes(app: Express): void {
   // GET /api/analytics/cancellations
@@ -803,7 +804,7 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
           const amountRefunded = parseFloat(order.amountRefunded || '0');
           const isFullyRefunded = amountRefunded > 0 && amountRefunded >= orderSubtotal;
           if (!isFullyRefunded) {
-            current.totalSpent += (orderSubtotal - orderPlatformFee - amountRefunded);
+            current.totalSpent += computeOrderNetValue(order);
             current.orderCount++;
             current.paidOrderCount++;
           }

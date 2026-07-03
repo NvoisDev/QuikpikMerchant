@@ -1,3 +1,4 @@
+import { computeDetailTotalSpent } from "../utils/customer-spend";
 import {
   users,
   products,
@@ -218,17 +219,11 @@ export class CustomerMgmtStorage extends BroadcastStorage {
       ))
       .orderBy(desc(orders.createdAt));
 
-    // Calculate stats (net amount: subtotal - platform fee)
-    // Exclude draft and cancelled orders so they don't inflate lifetime stats
-    const paidOrders = customerOrders.filter(order =>
-      order.paymentStatus === 'paid' && order.status !== 'cancelled' && order.status !== 'draft'
-    );
-    const totalSpent = paidOrders.reduce((sum, order) => {
-      const subtotal = parseFloat(order.subtotal || order.total || '0');
-      const platformFee = parseFloat(order.platformFee || '0');
-      const amountRefunded = parseFloat(order.amountRefunded || '0');
-      return sum + (subtotal - platformFee - amountRefunded);
-    }, 0);
+    // Calculate stats (net amount: subtotal - platform fee - amountRefunded)
+    // Exclude draft and cancelled orders so they don't inflate lifetime stats.
+    // computeDetailTotalSpent mirrors the bulk SQL formula in getCustomers() so
+    // both the single-detail and list views stay in sync.
+    const totalSpent = computeDetailTotalSpent(customerOrders);
 
     const unpaidOrders = customerOrders.filter(order =>
       (!order.paymentStatus || order.paymentStatus === 'unpaid' || order.paymentStatus === 'part_paid') && order.status !== 'cancelled' && order.status !== 'draft'
