@@ -594,6 +594,7 @@ async function runStartupMigrations() {
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS require_approval_for_pricing BOOLEAN NOT NULL DEFAULT FALSE`,
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS allow_guest_browsing BOOLEAN NOT NULL DEFAULT TRUE`,
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS whatsapp_contact_visible BOOLEAN NOT NULL DEFAULT TRUE`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS show_owner_name BOOLEAN NOT NULL DEFAULT TRUE`,
     // Task #1449: Cart quote request — link store enquiries to a draft order + store cart snapshot
     `ALTER TABLE store_enquiries ADD COLUMN IF NOT EXISTS order_id INTEGER REFERENCES orders(id) ON DELETE SET NULL`,
     `ALTER TABLE store_enquiries ADD COLUMN IF NOT EXISTS cart_items JSONB`,

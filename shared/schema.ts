@@ -323,6 +323,7 @@ export const users = pgTable("users", {
   requireApprovalForPricing: boolean("require_approval_for_pricing").default(false),
   allowGuestBrowsing: boolean("allow_guest_browsing").default(true),
   whatsappContactVisible: boolean("whatsapp_contact_visible").default(true),
+  showOwnerName: boolean("show_owner_name").default(true),
 
   // Public homepage opt-in — wholesaler chooses to appear on the landing page logo strip
   showOnHomepage: boolean("show_on_homepage").default(false),

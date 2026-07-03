@@ -106,10 +106,10 @@ export class CustomerMgmtStorage extends BroadcastStorage {
     const allOrderStats = await db
       .select({
         customerId: orders.retailerId,
-        totalOrders: sql<number>`COUNT(CASE WHEN ${orders.status} != 'cancelled' THEN 1 END)`,
-        totalSpent: sql<number>`COALESCE(SUM(CASE WHEN ${orders.paymentStatus} = 'paid' AND ${orders.status} != 'cancelled' THEN (COALESCE(${orders.subtotal}::numeric, ${orders.total}::numeric) - COALESCE(${orders.platformFee}::numeric, 0)) ELSE 0 END), 0)`,
-        totalInvoiced: sql<number>`COALESCE(SUM(CASE WHEN ${orders.status} != 'cancelled' THEN (COALESCE(${orders.subtotal}::numeric, ${orders.total}::numeric) - COALESCE(${orders.platformFee}::numeric, 0)) ELSE 0 END), 0)`,
-        totalUnpaid: sql<number>`COALESCE(SUM(CASE WHEN ${orders.status} != 'cancelled' AND (${orders.paymentStatus} IS NULL OR ${orders.paymentStatus} IN ('unpaid', 'part_paid')) THEN (CASE WHEN ${orders.paymentStatus} = 'part_paid' THEN COALESCE(${orders.amountOutstanding}::numeric, 0) ELSE (COALESCE(${orders.subtotal}::numeric, ${orders.total}::numeric) - COALESCE(${orders.platformFee}::numeric, 0)) END) ELSE 0 END), 0)`,
+        totalOrders: sql<number>`COUNT(CASE WHEN ${orders.status} NOT IN ('cancelled', 'draft') THEN 1 END)`,
+        totalSpent: sql<number>`COALESCE(SUM(CASE WHEN ${orders.paymentStatus} = 'paid' AND ${orders.status} NOT IN ('cancelled', 'draft') THEN (COALESCE(${orders.subtotal}::numeric, ${orders.total}::numeric) - COALESCE(${orders.platformFee}::numeric, 0)) ELSE 0 END), 0)`,
+        totalInvoiced: sql<number>`COALESCE(SUM(CASE WHEN ${orders.status} NOT IN ('cancelled', 'draft') THEN (COALESCE(${orders.subtotal}::numeric, ${orders.total}::numeric) - COALESCE(${orders.platformFee}::numeric, 0)) ELSE 0 END), 0)`,
+        totalUnpaid: sql<number>`COALESCE(SUM(CASE WHEN ${orders.status} NOT IN ('cancelled', 'draft') AND (${orders.paymentStatus} IS NULL OR ${orders.paymentStatus} IN ('unpaid', 'part_paid')) THEN (CASE WHEN ${orders.paymentStatus} = 'part_paid' THEN COALESCE(${orders.amountOutstanding}::numeric, 0) ELSE (COALESCE(${orders.subtotal}::numeric, ${orders.total}::numeric) - COALESCE(${orders.platformFee}::numeric, 0)) END) ELSE 0 END), 0)`,
         lastOrderDate: sql<Date>`MAX(${orders.createdAt})`
       })
       .from(orders)

@@ -855,7 +855,8 @@ export class CustomerStorage extends OrderStorage {
     const previousMonthStart = new Date(currentMonthStart);
     previousMonthStart.setMonth(previousMonthStart.getMonth() - 1);
     
-    // Get total gross revenue (subtotal, no fee deduction) across all non-cancelled orders
+    // Get total gross revenue (subtotal, no fee deduction) across all confirmed/paid orders
+    // Draft orders are excluded — they only count once confirmed or paid.
     const [revenueStats] = await db
       .select({
         totalRevenue: sql<number>`COALESCE(SUM(COALESCE(CAST(${orders.subtotal} AS NUMERIC), CAST(${orders.total} AS NUMERIC))), 0)`,
@@ -864,7 +865,7 @@ export class CustomerStorage extends OrderStorage {
       .from(orders)
       .where(and(
         eq(orders.wholesalerId, wholesalerId),
-        sql`${orders.status} NOT IN ('cancelled', 'refunded')`
+        sql`${orders.status} NOT IN ('cancelled', 'refunded', 'draft')`
       ));
 
     // Get current month stats
@@ -876,7 +877,7 @@ export class CustomerStorage extends OrderStorage {
       .from(orders)
       .where(and(
         eq(orders.wholesalerId, wholesalerId),
-        sql`${orders.status} NOT IN ('cancelled', 'refunded')`,
+        sql`${orders.status} NOT IN ('cancelled', 'refunded', 'draft')`,
         sql`${orders.createdAt} >= ${currentMonthStart}`
       ));
 
@@ -889,7 +890,7 @@ export class CustomerStorage extends OrderStorage {
       .from(orders)
       .where(and(
         eq(orders.wholesalerId, wholesalerId),
-        sql`${orders.status} NOT IN ('cancelled', 'refunded')`,
+        sql`${orders.status} NOT IN ('cancelled', 'refunded', 'draft')`,
         sql`${orders.createdAt} >= ${previousMonthStart} AND ${orders.createdAt} < ${currentMonthStart}`
       ));
 
@@ -942,7 +943,7 @@ export class CustomerStorage extends OrderStorage {
       .from(orders)
       .where(and(
         eq(orders.wholesalerId, wholesalerId),
-        sql`${orders.status} NOT IN ('cancelled', 'refunded')`,
+        sql`${orders.status} NOT IN ('cancelled', 'refunded', 'draft')`,
         sql`(${orders.paymentStatus} IS NULL OR ${orders.paymentStatus} IN ('unpaid', 'part_paid'))`
       ));
 
@@ -975,7 +976,7 @@ export class CustomerStorage extends OrderStorage {
       .from(orders)
       .where(and(
         eq(orders.wholesalerId, wholesalerId),
-        sql`${orders.status} NOT IN ('cancelled', 'refunded')`,
+        sql`${orders.status} NOT IN ('cancelled', 'refunded', 'draft')`,
         sql`${orders.createdAt} >= ${fromDate} AND ${orders.createdAt} <= ${toDate}`
       ));
 
@@ -1018,7 +1019,7 @@ export class CustomerStorage extends OrderStorage {
       .from(orders)
       .where(and(
         eq(orders.wholesalerId, wholesalerId),
-        sql`${orders.status} NOT IN ('cancelled', 'refunded')`,
+        sql`${orders.status} NOT IN ('cancelled', 'refunded', 'draft')`,
         sql`(${orders.paymentStatus} IS NULL OR ${orders.paymentStatus} IN ('unpaid', 'part_paid'))`
       ));
 

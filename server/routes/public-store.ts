@@ -68,6 +68,7 @@ export function registerPublicStoreRoutes(app: Express) {
           enquiriesEnabled: users.enquiriesEnabled,
           minOrderAmount: users.minOrderAmount,
           whatsappContactVisible: users.whatsappContactVisible,
+          showOwnerName: users.showOwnerName,
           phoneNumber: users.phoneNumber,
           isVerified: users.isVerified,
           ownerFirstName: users.firstName,
@@ -89,6 +90,10 @@ export function registerPublicStoreRoutes(app: Express) {
       // Redact PII that the wholesaler has chosen to hide
       if (wholesaler.whatsappContactVisible === false) {
         (wholesaler as Record<string, unknown>).phoneNumber = null;
+      }
+      if (wholesaler.showOwnerName === false) {
+        (wholesaler as Record<string, unknown>).ownerFirstName = null;
+        (wholesaler as Record<string, unknown>).ownerLastName = null;
       }
 
       // Fetch their public products

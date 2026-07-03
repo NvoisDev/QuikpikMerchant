@@ -117,6 +117,10 @@ async function cleanup() {
     WHERE product_id IN (SELECT id FROM products WHERE name LIKE 'zz_test%')`);
   await db.execute(sql`DELETE FROM order_items
     WHERE product_id IN (SELECT id FROM products WHERE name LIKE 'zz_test%')`);
+  // Re-run stock_movements delete immediately before products to catch any rows
+  // inserted after the first delete (e.g. startup-migration backfill running concurrently).
+  await db.execute(sql`DELETE FROM stock_movements
+    WHERE product_id IN (SELECT id FROM products WHERE name LIKE 'zz_test%')`);
   await db.execute(sql`DELETE FROM products WHERE name LIKE 'zz_test%'`);
 
   // Resolve all orders/products for this wholesaler so the cleanup is not

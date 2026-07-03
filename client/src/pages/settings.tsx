@@ -720,6 +720,7 @@ function PublicStoreSettings({ user }: { user: any }) {
   const [showOnHomepage, setShowOnHomepage] = useState(user?.showOnHomepage ?? false);
   const [minOrderAmount, setMinOrderAmount] = useState(String((user?.minOrderAmount ?? 0) / 100));
   const [whatsappContactVisible, setWhatsappContactVisible] = useState(user?.whatsappContactVisible !== false);
+  const [showOwnerName, setShowOwnerName] = useState(user?.showOwnerName !== false);
   const [portalAllowPayLater, setPortalAllowPayLater] = useState(user?.allowPayLater ?? false);
   const [portalDeliveryNote, setPortalDeliveryNote] = useState(user?.deliveryNote || '');
   const [portalPickupInstructions, setPortalPickupInstructions] = useState(user?.pickupInstructions || '');
@@ -736,10 +737,11 @@ function PublicStoreSettings({ user }: { user: any }) {
     setShowOnHomepage(user?.showOnHomepage ?? false);
     setMinOrderAmount(String((user?.minOrderAmount ?? 0) / 100));
     setWhatsappContactVisible(user?.whatsappContactVisible !== false);
+    setShowOwnerName(user?.showOwnerName !== false);
     setPortalAllowPayLater(user?.allowPayLater ?? false);
     setPortalDeliveryNote(user?.deliveryNote || '');
     setPortalPickupInstructions(user?.pickupInstructions || '');
-  }, [user?.storeVisibility, user?.priceDisplayMode, user?.moqVisible, user?.stockVisible, user?.packSizeVisible, user?.storeDescription, user?.deliveryRegions, user?.showOnHomepage, user?.minOrderAmount, user?.whatsappContactVisible, user?.allowPayLater, user?.deliveryNote, user?.pickupInstructions]);
+  }, [user?.storeVisibility, user?.priceDisplayMode, user?.moqVisible, user?.stockVisible, user?.packSizeVisible, user?.storeDescription, user?.deliveryRegions, user?.showOnHomepage, user?.minOrderAmount, user?.whatsappContactVisible, user?.showOwnerName, user?.allowPayLater, user?.deliveryNote, user?.pickupInstructions]);
 
   const storeSlug = user?.storeSlug || user?.id || '';
   const publicUrl = `${window.location.origin}/w/${storeSlug}`;
@@ -761,6 +763,7 @@ function PublicStoreSettings({ user }: { user: any }) {
         allowQuoteRequests: !showPrices,
         allowGuestBrowsing: isPublic,
         whatsappContactVisible,
+        showOwnerName,
         allowPayLater: portalAllowPayLater,
         deliveryNote: portalDeliveryNote.trim() || null,
         pickupInstructions: portalPickupInstructions.trim() || null,
@@ -912,6 +915,13 @@ function PublicStoreSettings({ user }: { user: any }) {
       {/* Contact */}
       <div className="mt-6">
         <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
+          <div className="pr-3">
+            <p className="text-sm font-medium text-gray-900">Show your name on the store</p>
+            <p className="text-xs text-gray-500 mt-0.5">Display your first and last name on your public storefront.</p>
+          </div>
+          <Switch checked={showOwnerName} onCheckedChange={setShowOwnerName} />
+        </div>
+        <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200 mt-2">
           <div className="pr-3">
             <p className="text-sm font-medium text-gray-900">Show WhatsApp contact button</p>
             <p className="text-xs text-gray-500 mt-0.5">Display your WhatsApp number as a contact option on your store.</p>
