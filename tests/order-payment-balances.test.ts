@@ -39,4 +39,14 @@ describe('order payment balance helpers', () => {
       paymentMethod: 'cash',
     })).toBe('65.00');
   });
+
+  it('subtracts invoiceDiscount from the offline base before pre-filling', () => {
+    expect(getOfflinePaymentDefaultAmount({
+      subtotal: '100.00',
+      deliveryCost: '10.00',
+      invoiceDiscount: '15.00',
+      amountPaid: '0.00',
+      paymentMethod: 'cash',
+    })).toBe('95.00');
+  });
 });

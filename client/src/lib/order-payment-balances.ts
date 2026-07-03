@@ -1,6 +1,7 @@
 export type OrderPaymentBalanceInput = {
   subtotal?: string | null;
   deliveryCost?: string | null;
+  invoiceDiscount?: string | null;
   amountPaid?: string | null;
   amountOutstanding?: string | null;
   paymentMethod?: string | null;
@@ -28,7 +29,7 @@ export const getOfflinePaymentDefaultAmount = (order: OrderPaymentBalanceInput):
     return parseCurrency(order.amountOutstanding).toFixed(2);
   }
 
-  const offlineBase = parseCurrency(order.subtotal) + parseCurrency(order.deliveryCost);
+  const offlineBase = parseCurrency(order.subtotal) + parseCurrency(order.deliveryCost) - parseCurrency(order.invoiceDiscount);
   const amountPaid = parseCurrency(order.amountPaid);
   return Math.max(0, offlineBase - amountPaid).toFixed(2);
 };
