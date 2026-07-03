@@ -107,7 +107,7 @@ export class CustomerMgmtStorage extends BroadcastStorage {
       .select({
         customerId: orders.retailerId,
         totalOrders: sql<number>`COUNT(CASE WHEN ${orders.status} NOT IN ('cancelled', 'draft') THEN 1 END)`,
-        totalSpent: sql<number>`COALESCE(SUM(CASE WHEN ${orders.paymentStatus} = 'paid' AND ${orders.status} NOT IN ('cancelled', 'draft') THEN (COALESCE(${orders.subtotal}::numeric, ${orders.total}::numeric) - COALESCE(${orders.platformFee}::numeric, 0)) ELSE 0 END), 0)`,
+        totalSpent: sql<number>`COALESCE(SUM(CASE WHEN ${orders.paymentStatus} = 'paid' AND ${orders.status} NOT IN ('cancelled', 'draft') THEN (COALESCE(${orders.subtotal}::numeric, ${orders.total}::numeric) - COALESCE(${orders.platformFee}::numeric, 0) - COALESCE(${orders.amountRefunded}::numeric, 0)) ELSE 0 END), 0)`,
         totalInvoiced: sql<number>`COALESCE(SUM(CASE WHEN ${orders.status} NOT IN ('cancelled', 'draft') THEN (COALESCE(${orders.subtotal}::numeric, ${orders.total}::numeric) - COALESCE(${orders.platformFee}::numeric, 0)) ELSE 0 END), 0)`,
         totalUnpaid: sql<number>`COALESCE(SUM(CASE WHEN ${orders.status} NOT IN ('cancelled', 'draft') AND (${orders.paymentStatus} IS NULL OR ${orders.paymentStatus} IN ('unpaid', 'part_paid')) THEN (CASE WHEN ${orders.paymentStatus} = 'part_paid' THEN COALESCE(${orders.amountOutstanding}::numeric, 0) ELSE (COALESCE(${orders.subtotal}::numeric, ${orders.total}::numeric) - COALESCE(${orders.platformFee}::numeric, 0)) END) ELSE 0 END), 0)`,
         lastOrderDate: sql<Date>`MAX(${orders.createdAt})`
@@ -226,7 +226,8 @@ export class CustomerMgmtStorage extends BroadcastStorage {
     const totalSpent = paidOrders.reduce((sum, order) => {
       const subtotal = parseFloat(order.subtotal || order.total || '0');
       const platformFee = parseFloat(order.platformFee || '0');
-      return sum + (subtotal - platformFee);
+      const amountRefunded = parseFloat(order.amountRefunded || '0');
+      return sum + (subtotal - platformFee - amountRefunded);
     }, 0);
 
     const unpaidOrders = customerOrders.filter(order =>
