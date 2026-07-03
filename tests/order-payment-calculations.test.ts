@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { calculateOfflinePaymentUpdate, calculateStripePaymentSettlement } from '../server/routes/order-payment-calculations';
+import { calculateOfflinePaymentUpdate, calculateStripePaymentSettlement, isOrderAlreadySettled } from '../server/routes/order-payment-calculations';
 
 describe('calculateOfflinePaymentUpdate', () => {
   it('allows a payment-link deposit order to be completed with cash against the stored balance', () => {
@@ -181,5 +181,27 @@ describe('calculateStripePaymentSettlement', () => {
     expect(result.newAmountOutstanding).toBe(0);
     expect(result.paymentStatus).toBe('paid');
     expect(result.cumulativePaid).toBeCloseTo(233.10, 2);
+  });
+});
+
+describe('isOrderAlreadySettled — checkout.session.completed double-payment guard', () => {
+  it('returns true for a fully-paid order, triggering the early-return in the webhook handler', () => {
+    expect(isOrderAlreadySettled('paid')).toBe(true);
+  });
+
+  it('returns false for a part-paid order so settlement continues normally', () => {
+    expect(isOrderAlreadySettled('part_paid')).toBe(false);
+  });
+
+  it('returns false for an unpaid order so settlement continues normally', () => {
+    expect(isOrderAlreadySettled('unpaid')).toBe(false);
+  });
+
+  it('returns false when paymentStatus is null (new order, no prior payment)', () => {
+    expect(isOrderAlreadySettled(null)).toBe(false);
+  });
+
+  it('returns false when paymentStatus is undefined', () => {
+    expect(isOrderAlreadySettled(undefined)).toBe(false);
   });
 });

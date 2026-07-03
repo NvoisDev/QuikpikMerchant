@@ -27,7 +27,7 @@ import { getStripeClient, getPublishableKey, getWebhookSecretsWithLabels, isLive
 import { businessProfiles, stripeProcessedEvents } from "@shared/schema";
 import { logQuoteActivity } from "../utils/quote-activity";
 import { getBaseTier, getProductLimit } from "../utils/plan-tier";
-import { calculateStripePaymentSettlement } from "./order-payment-calculations";
+import { calculateStripePaymentSettlement, isOrderAlreadySettled } from "./order-payment-calculations";
 
 export const paymentLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -304,7 +304,15 @@ export function registerPaymentConnectRoutes(app: Express): void {
             console.warn(`⚠️ Order ${orderId} not found in database — skipping webhook, returning 200 to prevent Stripe retry loop`);
             return res.status(200).json({ received: true, skipped: true, reason: `Order ${orderId} not found` });
           }
-          
+
+          // Order-level idempotency: if the order is already fully settled, a second
+          // checkout.session.completed event (e.g. webhook retry with a fresh event ID)
+          // would double-count amountPaid.  Return early instead.
+          if (isOrderAlreadySettled(existingOrder.paymentStatus)) {
+            console.log(`ℹ️ Order ${orderNumber} already paid — skipping duplicate checkout.session.completed settlement`);
+            return res.status(200).json({ received: true, skipped: true, reason: `Order ${orderNumber} already fully settled` });
+          }
+
           // Compute updated payment balance.
           // existingOrder.total is the single source of truth: any invoiceDiscount was
           // already subtracted when the discount was applied, so the stored total is

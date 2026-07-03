@@ -26,6 +26,14 @@ export type StripePaymentSettlement = {
  * any invoiceDiscount was already subtracted from it when the discount was applied,
  * so no additional discount handling is required here.
  */
+/**
+ * Returns true when an order is already fully settled and a second webhook call
+ * to calculateStripePaymentSettlement should be skipped entirely.  Extracted as
+ * a pure function so it can be unit-tested independently of the Express handler.
+ */
+export const isOrderAlreadySettled = (paymentStatus: string | null | undefined): boolean =>
+  paymentStatus === 'paid';
+
 export const calculateStripePaymentSettlement = (
   order: StripePaymentSettlementInput,
   stripeAmountPaidPence: number,
