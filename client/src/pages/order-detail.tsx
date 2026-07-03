@@ -56,6 +56,7 @@ interface OrderItem {
 
 interface EditItem {
   productId: number | null;
+  _clientId?: string;
   customLabel?: string | null;
   itemNotes?: string | null;
   productName: string;
@@ -1302,6 +1303,7 @@ export default function OrderDetail() {
                 onClick={() => {
                   const items: EditItem[] = (order.items || []).map(item => ({
                     productId: item.productId,
+                    _clientId: !item.productId ? crypto.randomUUID() : undefined,
                     customLabel: item.customLabel ?? null,
                     itemNotes: item.itemNotes ?? null,
                     productName: item.productId

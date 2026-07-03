@@ -7,6 +7,7 @@ import { computeBaseUnits } from "@shared/quote-units";
 
 interface EditItem {
   productId: number | null;
+  _clientId?: string;
   customLabel?: string | null;
   itemNotes?: string | null;
   productName: string;
@@ -125,7 +126,7 @@ export function EditQuoteView({
   );
 
   function getItemKey(item: EditItem): string {
-    if (!item.productId) return `charge-${item.customLabel?.trim() || ''}`;
+    if (!item.productId) return `charge-${item._clientId ?? item.customLabel?.trim() ?? ''}`;
     return `${item.productId}-${item.sellingType}`;
   }
 
@@ -263,6 +264,7 @@ export function EditQuoteView({
     if (!label || !isFinite(price) || price <= 0) return;
     setEditItems(prev => [...prev, {
       productId: null,
+      _clientId: crypto.randomUUID(),
       customLabel: label,
       itemNotes: chargeNotes.trim() || null,
       productName: label,
