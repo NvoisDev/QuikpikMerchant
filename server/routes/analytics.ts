@@ -795,13 +795,12 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
           current.customerName = order.customerName;
         }
 
-        current.orderCount++;
-
-        // Add to spend for all non-cancelled, non-draft orders (includes pending invoices)
+        // Add to spend and order count for all non-cancelled, non-draft orders (includes pending invoices)
         if (order.status !== 'cancelled' && order.status !== 'draft') {
           const orderSubtotal = parseFloat(order.subtotal || order.total || '0');
           const orderPlatformFee = parseFloat(order.platformFee || '0');
           current.totalSpent += (orderSubtotal - orderPlatformFee);
+          current.orderCount++;
           current.paidOrderCount++;
         }
         
@@ -833,8 +832,9 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
         }
       }
 
-      // Top customers by value
+      // Top customers by value — exclude customers who only have draft/cancelled orders
       const topCustomers = Array.from(customerOrderMap.entries())
+        .filter(([, data]) => data.orderCount > 0)
         .map(([customerId, data]) => {
           const customer = customers.find(c => c.id === customerId);
           return {
