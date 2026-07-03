@@ -43,6 +43,10 @@ args = "test"
 task = "workflow.run"
 args = "picking-tests"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "client-test"
+
 [[workflows.workflow]]
 name = "Start application"
 author = "agent"
@@ -70,6 +74,17 @@ author = "agent"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "npx vitest run tests/picking-isolation.test.ts"
+
+[workflows.workflow.metadata]
+isValidation = true
+
+[[workflows.workflow]]
+name = "client-test"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npx vitest run --config vitest.client.config.ts"
 
 [workflows.workflow.metadata]
 isValidation = true

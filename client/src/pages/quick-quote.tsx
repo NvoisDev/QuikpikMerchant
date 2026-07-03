@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, type MutableRefObject } from "react";
+import { createInFlightGuard } from "@/lib/inflight-guard";
 import { PickingMode } from "@/components/orders/PickingMode";
 import { useSidebarContext } from "@/contexts/sidebar-context";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -461,8 +462,8 @@ export default function QuickQuote() {
   }, [draftForEdit?.id, customers.length, products.length]);
 
   const paymentMethodInitialized = useRef(false);
-  const createQuoteInFlightRef = useRef(false);
-  const saveAsDraftInFlightRef = useRef(false);
+  const createQuoteGuard = useRef(createInFlightGuard());
+  const saveAsDraftGuard = useRef(createInFlightGuard());
   useEffect(() => {
     if (stripeConnectStatus === undefined) return;
     if (!paymentMethodInitialized.current) {
@@ -685,7 +686,7 @@ export default function QuickQuote() {
       toast({ title: 'Error saving draft', description: error.message, variant: 'destructive' });
     },
     onSettled: () => {
-      saveAsDraftInFlightRef.current = false;
+      saveAsDraftGuard.current.release();
     },
   });
 
@@ -777,7 +778,7 @@ export default function QuickQuote() {
       return response.json();
     },
     onSuccess: async (data) => {
-      createQuoteInFlightRef.current = false;
+      createQuoteGuard.current.release();
       setCreatedQuote({
         id: data.orderId,
         orderNumber: data.orderNumber,
@@ -836,7 +837,7 @@ export default function QuickQuote() {
           : (error.message || "Something went wrong, please try again"),
         variant: "destructive",
       });
-      createQuoteInFlightRef.current = false;
+      createQuoteGuard.current.release();
     },
   });
 
@@ -1131,7 +1132,6 @@ export default function QuickQuote() {
   };
 
   const handleCreateQuote = () => {
-    if (createQuoteInFlightRef.current) return;
     try {
     if (!selectedCustomer) {
       toast({
@@ -1205,7 +1205,7 @@ export default function QuickQuote() {
     // Determine effective payment method: pay_later overrides everything, otherwise use selection
     const effectivePaymentMethod = depositPercentage === 0 ? 'pay_later' : quotePaymentMethod;
 
-    createQuoteInFlightRef.current = true;
+    createQuoteGuard.current.acquire();
     createQuoteMutation.mutate({
       customerId: selectedCustomer.id,
       items: quoteItems,
@@ -1226,7 +1226,7 @@ export default function QuickQuote() {
     });
     } catch (err: unknown) {
       console.error('[handleCreateQuote] unexpected error', err);
-      createQuoteInFlightRef.current = false;
+      createQuoteGuard.current.release();
       toast({
         title: "Error",
         description: err instanceof Error ? err.message : "Something went wrong, please try again",
@@ -2737,47 +2737,112 @@ export default function QuickQuote() {
         </div>
       </div>
 
-      <div className={`fixed bottom-0 right-0 z-50 bg-white border-t border-gray-200 px-4 py-3 flex items-center justify-between gap-3 shadow-lg left-0 ${isDesktopCollapsed ? "lg:left-14" : "lg:left-64"}`}>
-        <div className="hidden sm:block min-w-0">
-          {editingDraftId && (
-            <span className="sm:hidden inline-block text-xs text-amber-600 font-medium bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5 mb-1">
-              Editing draft
-            </span>
+      <QuoteActionBar
+        isDesktopCollapsed={isDesktopCollapsed}
+        hasCustomer={!!selectedCustomer}
+        itemCount={quoteItems.length}
+        hasInvalidItems={quoteItems.some(
+          item =>
+            item.customPrice <= 0 ||
+            item.quantity < 1 ||
+            (item.sellingType === 'pallets' && !!item.palletMoq && item.palletMoq > 1 && item.quantity < item.palletMoq)
+        )}
+        fulfillmentType={fulfillmentType}
+        editingDraftId={editingDraftId}
+        totalText={formatCurrency(calculateTotal())}
+        isSaveDraftPending={saveAsDraftMutation.isPending}
+        isCreateQuotePending={createQuoteMutation.isPending}
+        saveAsDraftGuard={saveAsDraftGuard}
+        createQuoteGuard={createQuoteGuard}
+        onSaveDraftMutate={saveAsDraftMutation.mutate}
+        onCreateQuote={handleCreateQuote}
+      />
+    </div>
+  );
+}
+
+// ─── Exported action-bar sub-component ───────────────────────────────────────
+// Extracted so it can be unit-tested in isolation (see
+// client/src/__tests__/quick-quote-inflight-guard.test.tsx).  The Save Draft
+// button's in-flight guard lives here; the Create & Send guard lives inside
+// the handleCreateQuote callback passed from the parent.
+export interface QuoteActionBarProps {
+  isDesktopCollapsed: boolean;
+  hasCustomer: boolean;
+  itemCount: number;
+  hasInvalidItems: boolean;
+  fulfillmentType: 'delivery' | 'pickup';
+  editingDraftId: number | null;
+  totalText: string;
+  isSaveDraftPending: boolean;
+  isCreateQuotePending: boolean;
+  saveAsDraftGuard: MutableRefObject<ReturnType<typeof createInFlightGuard>>;
+  createQuoteGuard: MutableRefObject<ReturnType<typeof createInFlightGuard>>;
+  onSaveDraftMutate: () => void;
+  onCreateQuote: () => void;
+}
+
+export function QuoteActionBar({
+  isDesktopCollapsed,
+  hasCustomer,
+  itemCount,
+  hasInvalidItems,
+  fulfillmentType,
+  editingDraftId,
+  totalText,
+  isSaveDraftPending,
+  isCreateQuotePending,
+  saveAsDraftGuard,
+  createQuoteGuard,
+  onSaveDraftMutate,
+  onCreateQuote,
+}: QuoteActionBarProps) {
+  const ready = hasCustomer && itemCount > 0;
+
+  return (
+    <div className={`fixed bottom-0 right-0 z-50 bg-white border-t border-gray-200 px-4 py-3 flex items-center justify-between gap-3 shadow-lg left-0 ${isDesktopCollapsed ? "lg:left-14" : "lg:left-64"}`}>
+      <div className="hidden sm:block min-w-0">
+        {editingDraftId && (
+          <span className="sm:hidden inline-block text-xs text-amber-600 font-medium bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5 mb-1">
+            Editing draft
+          </span>
+        )}
+        <p className="text-xs text-gray-500 leading-tight">
+          {itemCount} {itemCount === 1 ? 'item' : 'items'} · {fulfillmentType === 'pickup' ? 'Collection' : 'Delivery'}
+          {editingDraftId && <span className="hidden sm:inline ml-1 text-amber-600 font-medium"> · Editing draft</span>}
+        </p>
+        <p className="text-lg font-bold leading-tight">{totalText}</p>
+      </div>
+      <div className="flex gap-2 shrink-0">
+        <Button
+          variant="outline"
+          size="lg"
+          disabled={!ready || isSaveDraftPending}
+          onClick={() => {
+            if (!saveAsDraftGuard.current.acquire()) return;
+            onSaveDraftMutate();
+          }}
+          className="border-amber-300 text-amber-700 hover:bg-amber-50"
+        >
+          {isSaveDraftPending ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <>
+              <Clock className="h-4 w-4 mr-1.5" />
+              {editingDraftId ? 'Save' : 'Save Draft'}
+            </>
           )}
-          <p className="text-xs text-gray-500 leading-tight">
-            {quoteItems.length} {quoteItems.length === 1 ? 'item' : 'items'} · {fulfillmentType === 'pickup' ? 'Collection' : 'Delivery'}
-            {editingDraftId && <span className="hidden sm:inline ml-1 text-amber-600 font-medium"> · Editing draft</span>}
-          </p>
-          <p className="text-lg font-bold leading-tight">{formatCurrency(calculateTotal())}</p>
-        </div>
-        <div className="flex gap-2 shrink-0">
-          <Button
-            variant="outline"
-            size="lg"
-            disabled={!selectedCustomer || quoteItems.length === 0 || saveAsDraftMutation.isPending}
-            onClick={() => {
-              if (saveAsDraftInFlightRef.current) return;
-              saveAsDraftInFlightRef.current = true;
-              saveAsDraftMutation.mutate();
-            }}
-            className="border-amber-300 text-amber-700 hover:bg-amber-50"
-          >
-            {saveAsDraftMutation.isPending ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <>
-                <Clock className="h-4 w-4 mr-1.5" />
-                {editingDraftId ? 'Save' : 'Save Draft'}
-              </>
-            )}
-          </Button>
+        </Button>
         <Button
           className="bg-green-600 hover:bg-green-700"
           size="lg"
-          disabled={!selectedCustomer || quoteItems.length === 0 || quoteItems.some(item => item.customPrice <= 0 || item.quantity < 1 || (item.sellingType === 'pallets' && !!item.palletMoq && item.palletMoq > 1 && item.quantity < item.palletMoq)) || createQuoteMutation.isPending}
-          onClick={handleCreateQuote}
+          disabled={!ready || hasInvalidItems || isCreateQuotePending}
+          onClick={() => {
+            if (createQuoteGuard.current.isLocked()) return;
+            onCreateQuote();
+          }}
         >
-          {createQuoteMutation.isPending ? (
+          {isCreateQuotePending ? (
             "Creating..."
           ) : (
             <>
@@ -2786,7 +2851,6 @@ export default function QuickQuote() {
             </>
           )}
         </Button>
-        </div>
       </div>
     </div>
   );
