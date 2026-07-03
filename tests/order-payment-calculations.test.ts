@@ -148,4 +148,38 @@ describe('calculateStripePaymentSettlement', () => {
     expect(result.paymentStatus).toBe('part_paid');
     expect(result.newAmountOutstanding).toBeCloseTo(0.01, 2);
   });
+
+  // Double-webhook idempotency: same Stripe event fired twice (different event IDs
+  // but same amount).  The event-level stripeProcessedEvents guard in
+  // payments-connect.ts short-circuits before settlement runs, but even if
+  // calculateStripePaymentSettlement is called a second time the result must not
+  // produce a negative outstanding or flip the order away from 'paid'.
+  it('does not produce a negative outstanding when called again on an already fully-paid discounted order', () => {
+    // Scenario: total £101.55 (after £15 discount), customer already paid £101.55.
+    // A second webhook fires (or a payment_intent.succeeded arrives after
+    // checkout.session.completed) carrying the same 10155-pence amount.
+    const result = calculateStripePaymentSettlement(
+      { total: '101.55', amountPaid: '101.55' },
+      10155,
+    );
+
+    // cumulativePaid will be double the total, but outstanding must clamp to 0
+    expect(result.newAmountOutstanding).toBe(0);
+    // Status must remain 'paid', not flip to anything else
+    expect(result.paymentStatus).toBe('paid');
+    // Cumulative paid is the running sum — over-payment is fine, just not negative outstanding
+    expect(result.cumulativePaid).toBeCloseTo(203.10, 2);
+  });
+
+  it('does not produce a negative outstanding when called again on a fully-paid undiscounted order', () => {
+    // Undiscounted £116.55 order, already paid in full; webhook fires a second time.
+    const result = calculateStripePaymentSettlement(
+      { total: '116.55', amountPaid: '116.55' },
+      11655,
+    );
+
+    expect(result.newAmountOutstanding).toBe(0);
+    expect(result.paymentStatus).toBe('paid');
+    expect(result.cumulativePaid).toBeCloseTo(233.10, 2);
+  });
 });
