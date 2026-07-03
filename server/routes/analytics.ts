@@ -328,7 +328,7 @@ export function registerAnalyticsRoutes(app: Express): void {
           lte(orders.createdAt, actualEndDate),
         ));
 
-      const validOrders = ordersInRange.filter(o => o.status !== 'cancelled');
+      const validOrders = ordersInRange.filter(o => o.status !== 'cancelled' && o.status !== 'draft');
 
       const empty = { revenue: 0, cost: 0, margin: 0, marginPercent: 0, hasMissingCost: false };
       if (validOrders.length === 0) {
@@ -797,8 +797,8 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
 
         current.orderCount++;
 
-        // Add to spend for all non-cancelled orders (includes pending invoices)
-        if (order.status !== 'cancelled') {
+        // Add to spend for all non-cancelled, non-draft orders (includes pending invoices)
+        if (order.status !== 'cancelled' && order.status !== 'draft') {
           const orderSubtotal = parseFloat(order.subtotal || order.total || '0');
           const orderPlatformFee = parseFloat(order.platformFee || '0');
           current.totalSpent += (orderSubtotal - orderPlatformFee);

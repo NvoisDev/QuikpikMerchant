@@ -359,7 +359,7 @@ export class OrderStorage extends ProductStorage {
       WHERE wholesaler_id = ${wholesalerId}
         AND created_at  >= ${fromDate}
         AND created_at  <= ${toDate}
-        AND status NOT IN ('cancelled', 'refunded')
+        AND status NOT IN ('cancelled', 'refunded', 'draft')
       GROUP BY date_trunc('hour', created_at AT TIME ZONE 'UTC')
       ORDER BY bucket
     `);
