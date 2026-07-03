@@ -462,6 +462,7 @@ export default function QuickQuote() {
 
   const paymentMethodInitialized = useRef(false);
   const createQuoteInFlightRef = useRef(false);
+  const saveAsDraftInFlightRef = useRef(false);
   useEffect(() => {
     if (stripeConnectStatus === undefined) return;
     if (!paymentMethodInitialized.current) {
@@ -682,6 +683,9 @@ export default function QuickQuote() {
     },
     onError: (error: Error) => {
       toast({ title: 'Error saving draft', description: error.message, variant: 'destructive' });
+    },
+    onSettled: () => {
+      saveAsDraftInFlightRef.current = false;
     },
   });
 
@@ -2751,7 +2755,11 @@ export default function QuickQuote() {
             variant="outline"
             size="lg"
             disabled={!selectedCustomer || quoteItems.length === 0 || saveAsDraftMutation.isPending}
-            onClick={() => saveAsDraftMutation.mutate()}
+            onClick={() => {
+              if (saveAsDraftInFlightRef.current) return;
+              saveAsDraftInFlightRef.current = true;
+              saveAsDraftMutation.mutate();
+            }}
             className="border-amber-300 text-amber-700 hover:bg-amber-50"
           >
             {saveAsDraftMutation.isPending ? (
