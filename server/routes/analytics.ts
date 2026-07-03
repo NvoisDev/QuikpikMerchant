@@ -834,7 +834,7 @@ Focus on practical B2B wholesale strategies. Be concise and specific.`;
 
       // Top customers by value — exclude customers who only have draft/cancelled orders
       const topCustomers = Array.from(customerOrderMap.entries())
-        .filter(([, data]) => data.orderCount > 0)
+        .filter(([, data]) => data.orderCount > 0 && data.totalSpent > 0)
         .map(([customerId, data]) => {
           const customer = customers.find(c => c.id === customerId);
           return {
