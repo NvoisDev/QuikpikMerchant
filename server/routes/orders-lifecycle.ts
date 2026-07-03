@@ -1151,10 +1151,18 @@ export function registerOrderLifecycleRoutes(app: Express): void {
         const subtotal = parseFloat(order.subtotal || '0');
         const delivery = parseFloat(order.deliveryCost || '0');
         const vatAmount = parseFloat(order.vatAmount || '0');
-        updateData.total = (subtotal + vatAmount + delivery).toFixed(2);
+        const invoiceDiscountValue = parseFloat(order.invoiceDiscount || '0');
+        const correctedTotal = Math.max(0, subtotal + vatAmount + delivery - invoiceDiscountValue);
+        updateData.total = correctedTotal.toFixed(2);
+        // Re-derive outstanding and status from the corrected total so a discount
+        // does not leave the order stuck at 'part_paid' after the invoice is settled.
+        const newPaid = paymentUpdate.newAmountPaid;
+        const correctedOutstanding = Math.max(0, correctedTotal - newPaid);
+        updateData.amountOutstanding = correctedOutstanding.toFixed(2);
+        updateData.paymentStatus = correctedOutstanding <= 0.01 ? 'paid' : (newPaid > 0.01 ? 'part_paid' : 'unpaid');
       }
 
-      if (paymentUpdate.newPaymentStatus === 'paid' && order.status === 'confirmed') {
+      if ((updateData.paymentStatus ?? paymentUpdate.newPaymentStatus) === 'paid' && order.status === 'confirmed') {
         updateData.status = 'paid';
       }
 

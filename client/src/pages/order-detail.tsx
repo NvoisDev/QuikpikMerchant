@@ -1458,6 +1458,9 @@ export default function OrderDetail() {
               ) : (
                 <Badge className="bg-gray-100 text-gray-600 border-0 text-xs">Unfulfilled</Badge>
               )}
+              {parseFloat(order.invoiceDiscount || '0') > 0 && (
+                <Badge className="bg-orange-100 text-orange-700 border-0 text-xs">Discounted</Badge>
+              )}
               {parseFloat(order.amountRefunded || '0') > 0 && (() => {
                 const refAmt = parseFloat(order.amountRefunded || '0');
                 const paidAmt = parseFloat(order.amountPaid || '0');
