@@ -26,14 +26,14 @@ export const PLAN_LIMITS = {
     priceLists: 5,
   },
   starter: {
-    products: 20,
+    products: 40,
     broadcasts: 10,
     teamMembers: 1,
     groups: 5,
     priceLists: 5,
   },
   standard: {
-    products: 50,
+    products: 60,
     broadcasts: 25,
     teamMembers: 3,
     groups: 10,

@@ -11,6 +11,7 @@
  * GET  /api/admin/plans                                      ✅ admin-only; excludes test accounts from counts
  * POST /api/admin/plans                                      ✅ admin-only; validates price range; creates Stripe product
  * PATCH /api/admin/plans/:id/archive                         ✅ admin-only; integer planId validated
+ * PATCH /api/admin/plans/:id/limits                          ✅ admin-only; validates each limit field; merges with existing limits
  * POST /api/admin/wholesalers/:id/remove-custom-pricing      ✅ admin-only; validates wholesaler role
  * POST /api/admin/wholesalers/:id/change-plan                ✅ admin-only; validates wholesaler + plan existence
  * GET  /api/admin/search                                     ✅ admin-only; minimum 2-char term enforced; limit 5 each
@@ -162,6 +163,44 @@ export function registerAdminSystemRoutes(app: Express): void {
     } catch (error) {
       console.error('Admin archive plan error:', error);
       res.status(500).json({ error: 'Failed to archive plan' });
+    }
+  });
+
+  // PATCH /api/admin/plans/:id/limits — update plan limits without archiving/recreating
+  app.patch('/api/admin/plans/:id/limits', requireAuth, async (req: any, res) => {
+    try {
+      if (!ADMIN_EMAILS.includes(getAdminEmail(req) || "")) return res.status(403).json({ error: 'Forbidden' });
+      const planId = parseInt(req.params.id, 10);
+      if (isNaN(planId)) return res.status(400).json({ error: 'Invalid plan ID' });
+
+      const { limits } = req.body as { limits: Record<string, unknown> };
+      if (!limits || typeof limits !== 'object') return res.status(400).json({ error: 'limits object is required' });
+
+      const validKeys = ['products', 'broadcasts', 'teamMembers', 'customGroups', 'priceLists'];
+      const cleaned: Record<string, number> = {};
+      for (const key of validKeys) {
+        if (!(key in limits)) continue;
+        const val = Number(limits[key]);
+        if (isNaN(val) || (val !== -1 && val < 0)) {
+          return res.status(400).json({ error: `${key} must be -1 (unlimited) or a non-negative integer` });
+        }
+        cleaned[key] = Math.floor(val);
+      }
+
+      const [planRecord] = await db.select().from(subscriptionPlans)
+        .where(eq(subscriptionPlans.id, planId)).limit(1);
+      if (!planRecord) return res.status(404).json({ error: 'Plan not found' });
+
+      const merged = { ...(planRecord.limits as object || {}), ...cleaned };
+      const [updated] = await db.update(subscriptionPlans)
+        .set({ limits: merged, updatedAt: new Date() })
+        .where(eq(subscriptionPlans.id, planId))
+        .returning();
+
+      res.json({ success: true, plan: updated });
+    } catch (error) {
+      console.error('Admin edit plan limits error:', error);
+      res.status(500).json({ error: 'Failed to update plan limits' });
     }
   });
 

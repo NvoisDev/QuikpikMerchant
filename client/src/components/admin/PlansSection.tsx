@@ -11,7 +11,7 @@ import {
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
-import { PlusCircle, Archive, AlertTriangle, BadgeCheck, Info } from "lucide-react";
+import { PlusCircle, Archive, AlertTriangle, BadgeCheck, Info, Pencil } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { GREEN, fmt, planBadge } from "./shared";
 import type { AdminPlanRow } from "./types";
@@ -31,7 +31,7 @@ const TIER_SUMMARY = [
     price: "£29.99/mo",
     color: "blue",
     note: null,
-    limits: "Up to 20 products · 1 team seat · 10 broadcasts/mo",
+    limits: "Up to 40 products · 1 team seat · 10 broadcasts/mo",
   },
   {
     planId: "standard",
@@ -39,7 +39,7 @@ const TIER_SUMMARY = [
     price: "£49.99/mo",
     color: "emerald",
     note: null,
-    limits: "Up to 50 products · 3 team seats · 25 broadcasts/mo",
+    limits: "Up to 60 products · 3 team seats · 25 broadcasts/mo",
   },
   {
     planId: "premium",
@@ -51,11 +51,42 @@ const TIER_SUMMARY = [
   },
 ] as const;
 
+const LIMIT_FIELDS = [
+  { key: "products" as const, label: "Products" },
+  { key: "broadcasts" as const, label: "Broadcasts/mo" },
+  { key: "teamMembers" as const, label: "Team members" },
+  { key: "priceLists" as const, label: "Price lists" },
+  { key: "customGroups" as const, label: "Customer groups" },
+] as const;
+
+type LimitKey = typeof LIMIT_FIELDS[number]["key"];
+type EditLimitsForm = Record<LimitKey, string>;
+
+function limitsToForm(limits: Record<string, number> | null | undefined): EditLimitsForm {
+  const l = limits || {};
+  return {
+    products: l.products !== undefined ? String(l.products) : "",
+    broadcasts: l.broadcasts !== undefined ? String(l.broadcasts) : "",
+    teamMembers: l.teamMembers !== undefined ? String(l.teamMembers) : "",
+    priceLists: l.priceLists !== undefined ? String(l.priceLists) : "",
+    customGroups: l.customGroups !== undefined ? String(l.customGroups) : "",
+  };
+}
+
+function formatLimitDisplay(val: number | undefined): string {
+  if (val === undefined) return "—";
+  return val === -1 ? "∞" : String(val);
+}
+
 export function PlansSection({ isAdmin }: { isAdmin: boolean }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [newPlanOpen, setNewPlanOpen] = useState(false);
   const [archiveTarget, setArchiveTarget] = useState<AdminPlanRow | null>(null);
+  const [editLimitsTarget, setEditLimitsTarget] = useState<AdminPlanRow | null>(null);
+  const [editLimitsForm, setEditLimitsForm] = useState<EditLimitsForm>({
+    products: "", broadcasts: "", teamMembers: "", priceLists: "", customGroups: "",
+  });
   const [form, setForm] = useState({
     name: "", price: "", billingInterval: "monthly",
     description: "", featuresRaw: "", limitsProducts: "", limitsTeamMembers: "",
@@ -97,6 +128,20 @@ export function PlansSection({ isAdmin }: { isAdmin: boolean }) {
     onError: (e: Error) => toast({ title: e.message, variant: "destructive" }),
   });
 
+  const editLimits = useMutation({
+    mutationFn: async ({ id, limits }: { id: number; limits: Record<string, number> }) => {
+      const r = await apiRequest("PATCH", `/api/admin/plans/${id}/limits`, { limits });
+      if (!r.ok) { const e = await r.json(); throw new Error(e.error || "Failed"); }
+      return r.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/plans"] });
+      toast({ title: "Plan limits updated" });
+      setEditLimitsTarget(null);
+    },
+    onError: (e: Error) => toast({ title: e.message, variant: "destructive" }),
+  });
+
   const handleCreate = () => {
     const featuresList = form.featuresRaw.split("\n").map(s => s.trim()).filter(Boolean);
     const toLimit = (v: string) => v.trim() === "" || v.trim() === "∞" || v.trim() === "-1" ? -1 : parseInt(v) || 0;
@@ -107,6 +152,25 @@ export function PlansSection({ isAdmin }: { isAdmin: boolean }) {
     if (form.limitsCustomGroups.trim()) limits.customGroups = toLimit(form.limitsCustomGroups);
     if (form.limitsBroadcasts.trim())   limits.broadcasts   = toLimit(form.limitsBroadcasts);
     createPlan.mutate({ name: form.name, price: form.price, billingInterval: form.billingInterval, description: form.description, features: featuresList, limits });
+  };
+
+  const handleSaveLimits = () => {
+    if (!editLimitsTarget) return;
+    const toLimit = (v: string) => v.trim() === "∞" || v.trim() === "-1" ? -1 : parseInt(v.trim());
+    const limits: Record<string, number> = {};
+    for (const { key } of LIMIT_FIELDS) {
+      const raw = editLimitsForm[key].trim();
+      if (raw === "") continue;
+      const val = toLimit(raw);
+      if (isNaN(val)) continue;
+      limits[key] = val;
+    }
+    editLimits.mutate({ id: editLimitsTarget.id, limits });
+  };
+
+  const openEditLimits = (plan: AdminPlanRow) => {
+    setEditLimitsTarget(plan);
+    setEditLimitsForm(limitsToForm(plan.limits as Record<string, number> | null));
   };
 
   const colorMap = {
@@ -121,7 +185,7 @@ export function PlansSection({ isAdmin }: { isAdmin: boolean }) {
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div>
           <h2 className="text-lg font-bold text-gray-900">Subscription Plans</h2>
-          <p className="text-xs text-gray-400">Manage plan tiers, pricing, and limits. Existing plans are immutable — create new versions instead.</p>
+          <p className="text-xs text-gray-400">Manage plan tiers, pricing, and limits. Use the pencil icon to edit limits on existing plans.</p>
         </div>
         <Button size="sm" className="text-white text-xs gap-1.5" style={{ background: GREEN }} onClick={() => setNewPlanOpen(true)}>
           <PlusCircle className="h-3.5 w-3.5" />New Plan
@@ -165,45 +229,99 @@ export function PlansSection({ isAdmin }: { isAdmin: boolean }) {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {plans.map(p => (
-                    <TableRow key={p.id} className={p.isActive ? "hover:bg-green-50/30" : "opacity-50 bg-gray-50"}>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <p className="text-xs font-semibold text-gray-800">{p.name}</p>
-                          {p.version && p.version > 1 && <span className="text-xs text-gray-400">v{p.version}</span>}
-                        </div>
-                        {p.planId && <p className="text-xs text-gray-400 font-mono">{p.planId}</p>}
-                      </TableCell>
-                      <TableCell className="text-xs font-medium text-gray-800">
-                        {parseFloat(p.monthlyPrice) === 0 ? "Free" : `£${parseFloat(p.monthlyPrice).toFixed(2)}`}
-                      </TableCell>
-                      <TableCell className="text-xs text-gray-500 capitalize">{p.billingInterval || "monthly"}</TableCell>
-                      <TableCell className="text-xs text-right text-gray-700 font-medium">{p.subscriberCount}</TableCell>
-                      <TableCell className="text-xs text-right font-bold" style={{ color: GREEN }}>
-                        {p.mrr > 0 ? fmt(p.mrr) : "—"}
-                      </TableCell>
-                      <TableCell>
-                        {p.isActive
-                          ? <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-green-50 border border-green-200" style={{ color: GREEN }}><BadgeCheck className="h-3 w-3" />Active</span>
-                          : <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-gray-100 border border-gray-200 text-gray-500"><Archive className="h-3 w-3" />Archived</span>
-                        }
-                      </TableCell>
-                      <TableCell>
-                        {p.isActive && p.planId !== 'free' && (
-                          <Button size="sm" variant="outline" className="h-7 text-xs border-gray-200 text-gray-500 hover:text-red-600 hover:border-red-200"
-                            onClick={() => setArchiveTarget(p)}>
-                            Archive
-                          </Button>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {plans.map(p => {
+                    const lim = p.limits as Record<string, number> | null | undefined;
+                    return (
+                      <TableRow key={p.id} className={p.isActive ? "hover:bg-green-50/30" : "opacity-50 bg-gray-50"}>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <p className="text-xs font-semibold text-gray-800">{p.name}</p>
+                            {p.version && p.version > 1 && <span className="text-xs text-gray-400">v{p.version}</span>}
+                          </div>
+                          {p.planId && <p className="text-xs text-gray-400 font-mono">{p.planId}</p>}
+                          {lim && Object.keys(lim).length > 0 && (
+                            <p className="text-xs text-gray-400 mt-0.5">
+                              {formatLimitDisplay(lim.products)} products · {formatLimitDisplay(lim.teamMembers)} seats
+                            </p>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-xs font-medium text-gray-800">
+                          {parseFloat(p.monthlyPrice) === 0 ? "Free" : `£${parseFloat(p.monthlyPrice).toFixed(2)}`}
+                        </TableCell>
+                        <TableCell className="text-xs text-gray-500 capitalize">{p.billingInterval || "monthly"}</TableCell>
+                        <TableCell className="text-xs text-right text-gray-700 font-medium">{p.subscriberCount}</TableCell>
+                        <TableCell className="text-xs text-right font-bold" style={{ color: GREEN }}>
+                          {p.mrr > 0 ? fmt(p.mrr) : "—"}
+                        </TableCell>
+                        <TableCell>
+                          {p.isActive
+                            ? <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-green-50 border border-green-200" style={{ color: GREEN }}><BadgeCheck className="h-3 w-3" />Active</span>
+                            : <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-gray-100 border border-gray-200 text-gray-500"><Archive className="h-3 w-3" />Archived</span>
+                          }
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1.5">
+                            {p.isActive && (
+                              <Button size="sm" variant="outline" className="h-7 w-7 p-0 border-gray-200 text-gray-400 hover:text-blue-600 hover:border-blue-200"
+                                title="Edit limits"
+                                onClick={() => openEditLimits(p)}>
+                                <Pencil className="h-3 w-3" />
+                              </Button>
+                            )}
+                            {p.isActive && p.planId !== 'free' && (
+                              <Button size="sm" variant="outline" className="h-7 text-xs border-gray-200 text-gray-500 hover:text-red-600 hover:border-red-200"
+                                onClick={() => setArchiveTarget(p)}>
+                                Archive
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </div>
           )}
         </CardContent>
       </Card>
+
+      {/* Edit Limits Dialog */}
+      <Dialog open={!!editLimitsTarget} onOpenChange={open => { if (!open) setEditLimitsTarget(null); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-sm font-semibold flex items-center gap-2">
+              <Pencil className="h-4 w-4" style={{ color: GREEN }} />Edit limits — {editLimitsTarget?.name}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-2 space-y-3">
+            <p className="text-xs text-gray-500 bg-blue-50 border border-blue-100 rounded-lg p-3">
+              Changes take effect immediately for all wholesalers on this plan. Use <strong>-1</strong> or <strong>∞</strong> for unlimited.
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              {LIMIT_FIELDS.map(({ key, label }) => (
+                <div key={key}>
+                  <Label className="text-xs text-gray-600">{label}</Label>
+                  <Input
+                    value={editLimitsForm[key]}
+                    onChange={e => setEditLimitsForm(f => ({ ...f, [key]: e.target.value }))}
+                    placeholder="—"
+                    className="h-8 text-xs mt-1"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button size="sm" variant="outline" className="text-xs" onClick={() => setEditLimitsTarget(null)}>Cancel</Button>
+            <Button size="sm" className="text-xs text-white" style={{ background: GREEN }}
+              disabled={editLimits.isPending}
+              onClick={handleSaveLimits}>
+              {editLimits.isPending ? "Saving…" : "Save limits"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* New Plan Modal */}
       <Dialog open={newPlanOpen} onOpenChange={setNewPlanOpen}>

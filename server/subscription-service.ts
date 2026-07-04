@@ -144,7 +144,7 @@ export class SubscriptionService {
           currency: "GBP",
           description: "Everything you need to run your wholesale business",
           features: [
-            "Up to 20 products",
+            "Up to 40 products",
             "Up to 5 price lists",
             "Up to 1 team member",
             "Invoices & payments",
@@ -155,7 +155,7 @@ export class SubscriptionService {
             "Customer portal",
           ],
           limits: {
-            products: 20,
+            products: 40,
             broadcasts: 10,
             teamMembers: 1,
             customGroups: 5,
@@ -197,7 +197,7 @@ export class SubscriptionService {
           currency: "GBP",
           description: "Built for growing wholesale operations",
           features: [
-            "Up to 50 products",
+            "Up to 60 products",
             "Up to 10 price lists",
             "Up to 3 team members",
             "Everything in Starter",
@@ -208,7 +208,7 @@ export class SubscriptionService {
             "Priority support",
           ],
           limits: {
-            products: 50,
+            products: 60,
             broadcasts: 25,
             teamMembers: 3,
             customGroups: 10,
@@ -922,7 +922,7 @@ export class SubscriptionService {
         price: 299.99,
         description: 'Annual Starter plan — save 16% vs monthly',
         features: [
-          'Up to 20 products',
+          'Up to 40 products',
           'Up to 5 price lists',
           'Up to 1 team member',
           'Invoices & payments',
@@ -930,7 +930,7 @@ export class SubscriptionService {
           'Customer tools',
           'Save 16% vs monthly',
         ],
-        limits: { products: 20, broadcasts: 10, teamMembers: 1, customGroups: 5, priceLists: 5 },
+        limits: { products: 40, broadcasts: 10, teamMembers: 1, customGroups: 5, priceLists: 5 },
         sortOrder: 6,
         skipStripe: true, // Admin creates the Stripe product manually; prevents blocking at startup
       },
@@ -940,14 +940,14 @@ export class SubscriptionService {
         price: 399.99,
         description: 'Annual plan — introductory rate until May 2027',
         features: [
-          'Up to 50 products',
+          'Up to 60 products',
           'Up to 10 price lists',
           'Broadcast tools coming soon',
           'Basic dashboard analytics',
           'Priority email support',
           'Save vs monthly billing',
         ],
-        limits: { products: 50, broadcasts: 25, teamMembers: 3, customGroups: 10, priceLists: 10 },
+        limits: { products: 60, broadcasts: 25, teamMembers: 3, customGroups: 10, priceLists: 10 },
         sortOrder: 10,
       },
       {
@@ -972,13 +972,13 @@ export class SubscriptionService {
         price: 499.99,
         description: 'Full-rate annual Standard plan (from May 2027)',
         features: [
-          'Up to 50 products',
+          'Up to 60 products',
           'Up to 10 price lists',
           'Broadcast tools coming soon',
           'Basic dashboard analytics',
           'Priority email support',
         ],
-        limits: { products: 50, broadcasts: 25, teamMembers: 3, customGroups: 10, priceLists: 10 },
+        limits: { products: 60, broadcasts: 25, teamMembers: 3, customGroups: 10, priceLists: 10 },
         sortOrder: 12,
         isPubliclyVisible: false,
       },

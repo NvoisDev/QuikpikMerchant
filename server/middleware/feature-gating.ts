@@ -382,16 +382,26 @@ export async function getUserPlanLimits(userId: string) {
     
     console.log(`🔍 getUserPlanLimits for user ${userId}: tier=${userTier}, plan=${JSON.stringify(plan?.limits)}`);
     
-    // Derive limits from the canonical PLAN_LIMITS (server/config/plan-limits.ts)
+    // Prefer DB plan limits when set (allows admin to edit them without a redeploy),
+    // falling back to the canonical PLAN_LIMITS config as a safety net.
     const planLimits = getPlanLimits(userTier);
-    limits = {
+    const fallbackLimits = {
       products: planLimits.products,
       broadcasts: planLimits.broadcasts,
       teamMembers: planLimits.teamMembers,
       customGroups: planLimits.groups,
       priceLists: planLimits.priceLists,
     };
-    console.log(`📊 ${userTier} user detected - applying limits from PLAN_LIMITS`);
+    const dbLimits = plan?.limits as Record<string, number> | null | undefined;
+    const hasDbLimits = dbLimits && Object.keys(dbLimits).length > 0;
+    limits = hasDbLimits ? {
+      products: dbLimits.products ?? fallbackLimits.products,
+      broadcasts: dbLimits.broadcasts ?? fallbackLimits.broadcasts,
+      teamMembers: dbLimits.teamMembers ?? fallbackLimits.teamMembers,
+      customGroups: dbLimits.customGroups ?? fallbackLimits.customGroups,
+      priceLists: dbLimits.priceLists ?? fallbackLimits.priceLists,
+    } : fallbackLimits;
+    console.log(`📊 ${userTier} user detected - applying limits from ${hasDbLimits ? 'DB plan' : 'PLAN_LIMITS'}`);
     
     // Get current usage counts
     const [productCount, broadcastCount, teamMemberCount, priceListCount] = await Promise.all([
