@@ -446,6 +446,16 @@ export default function ProductManagement() {
     queryKey: ["/api/categories"],
   });
 
+  // Clear the dismissed flag when all locked products are unlocked (e.g. after an upgrade)
+  useEffect(() => {
+    if (!products) return;
+    const lockedCount = products.filter(p => p.status === 'locked').length;
+    if (lockedCount === 0 && downgradeLockedBannerDismissed) {
+      sessionStorage.removeItem('downgradeLockedBannerDismissed');
+      setDowngradeLockedBannerDismissed(false);
+    }
+  }, [products, downgradeLockedBannerDismissed]);
+
   // Auto-open edit/stock modal when navigated from the product detail page
   useEffect(() => {
     if (!products || products.length === 0) return;
