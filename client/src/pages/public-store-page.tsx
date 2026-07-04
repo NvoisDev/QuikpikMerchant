@@ -97,6 +97,10 @@ function WholesalerLogo({ wholesaler }: { wholesaler: PublicWholesaler }) {
         src={wholesaler.logoUrl}
         alt={wholesaler.businessName}
         className="h-16 w-16 rounded-xl object-contain bg-white p-1 shadow-sm"
+        width={64}
+        height={64}
+        fetchPriority="high"
+        decoding="async"
       />
     );
   }
@@ -115,6 +119,7 @@ function ProductCard({
   showPackSize,
   currency,
   cartQty,
+  index,
   onAddToCart,
   onUpdateQty,
 }: {
@@ -125,12 +130,14 @@ function ProductCard({
   showPackSize: boolean;
   currency: string;
   cartQty: number;
+  index: number;
   onAddToCart: (product: PublicProduct) => void;
   onUpdateQty: (productId: number, qty: number) => void;
 }) {
   const showPrices = priceDisplayMode === 'shown';
   const imgSrc = product.imageUrl || (product.images && product.images[0]) || null;
   const inCart = cartQty > 0;
+  const isAboveFold = index < 4;
 
   const href = `/product/${productSlug(product.name, product.id)}`;
 
@@ -138,7 +145,14 @@ function ProductCard({
     <div className={`bg-white rounded-xl border shadow-sm overflow-hidden hover:shadow-md transition-shadow ${inCart ? 'border-emerald-300 ring-1 ring-emerald-200' : 'border-gray-100'}`}>
       <a href={href} className="block aspect-square bg-gray-50 flex items-center justify-center overflow-hidden relative" tabIndex={-1} aria-label={product.name}>
         {imgSrc ? (
-          <img src={imgSrc} alt={product.name} className="w-full h-full object-cover" />
+          <img
+            src={imgSrc}
+            alt={product.name}
+            className="w-full h-full object-cover"
+            loading={isAboveFold ? 'eager' : 'lazy'}
+            decoding={isAboveFold ? 'sync' : 'async'}
+            fetchPriority={index === 0 ? 'high' : 'auto'}
+          />
         ) : (
           <div className="flex flex-col items-center justify-center gap-1.5 w-full h-full bg-gradient-to-br from-gray-50 to-gray-100">
             <Package className="h-10 w-10 text-gray-300" />
@@ -297,7 +311,7 @@ function CartDrawer({
                 <div key={item.productId} className="flex items-center gap-3 px-4 py-3">
                   <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0 overflow-hidden">
                     {item.imageUrl ? (
-                      <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover rounded-lg" />
+                      <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover rounded-lg" loading="lazy" decoding="async" />
                     ) : (
                       <Package className="h-4 w-4 text-gray-300" />
                     )}
@@ -885,7 +899,7 @@ export default function PublicStorePage() {
         <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
           <Link href="/">
             <div className="flex items-center gap-1.5 text-gray-500 hover:text-gray-900 transition-colors cursor-pointer">
-              <img src="/quikpik-logo.png" alt="Quikpik" className="h-5 w-5 object-contain" />
+              <img src="/quikpik-logo.png" alt="Quikpik" className="h-5 w-5 object-contain" width={20} height={20} />
               <span className="text-sm font-semibold text-emerald-600">Quikpik</span>
             </div>
           </Link>
@@ -1052,7 +1066,7 @@ export default function PublicStorePage() {
           </div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
-            {filtered.map(product => (
+            {filtered.map((product, idx) => (
               <ProductCard
                 key={product.id}
                 product={product}
@@ -1062,6 +1076,7 @@ export default function PublicStorePage() {
                 showPackSize={wholesaler.packSizeVisible !== false}
                 currency={currency}
                 cartQty={getQty(product.id)}
+                index={idx}
                 onAddToCart={addToCart}
                 onUpdateQty={updateQty}
               />
