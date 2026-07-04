@@ -427,6 +427,9 @@ export default function ProductManagement() {
   const [uploadedProducts, setUploadedProducts] = useState<BulkUploadRow[]>([]);
   const [uploadErrors, setUploadErrors] = useState<string[]>([]);
   const [isDownloadModalOpen, setIsDownloadModalOpen] = useState(false);
+  const [downgradeLockedBannerDismissed, setDowngradeLockedBannerDismissed] = useState(
+    () => sessionStorage.getItem('downgradeLockedBannerDismissed') === 'true'
+  );
 
   const { data: products, isLoading } = useQuery<ProductWithBatches[]>({
     queryKey: ["/api/products"],
@@ -1110,6 +1113,35 @@ export default function ProductManagement() {
             </span>
           </div>
         )}
+
+        {(() => {
+          const lockedCount = products?.filter(p => p.status === 'locked').length ?? 0;
+          const hasFiniteLimit = planLimits && planLimits.limits.products !== -1;
+          if (!downgradeLockedBannerDismissed && lockedCount > 0 && hasFiniteLimit) {
+            return (
+              <div className="mb-3 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-xs text-red-800">
+                <Lock className="h-3.5 w-3.5 shrink-0 text-red-500 mt-0.5" />
+                <span className="flex-1">
+                  <span className="font-semibold">Products locked after plan change:</span>{" "}
+                  {lockedCount} product{lockedCount !== 1 ? 's' : ''} {lockedCount !== 1 ? 'are' : 'is'} currently locked because your catalogue exceeds your current plan's limit.{" "}
+                  <a href="/subscription-pricing" className="font-semibold underline hover:text-red-900">Upgrade your plan</a>{" "}
+                  to restore access to all products.
+                </span>
+                <button
+                  onClick={() => {
+                    sessionStorage.setItem('downgradeLockedBannerDismissed', 'true');
+                    setDowngradeLockedBannerDismissed(true);
+                  }}
+                  className="ml-1 shrink-0 rounded p-0.5 hover:bg-red-100 text-red-400 hover:text-red-600 transition-colors"
+                  aria-label="Dismiss"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            );
+          }
+          return null;
+        })()}
 
         {/* Action Buttons Section */}
         <div className="flex items-center justify-between gap-3 mb-4">
