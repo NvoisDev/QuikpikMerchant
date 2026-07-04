@@ -140,7 +140,10 @@ function ProductCard({
         {imgSrc ? (
           <img src={imgSrc} alt={product.name} className="w-full h-full object-cover" />
         ) : (
-          <Package className="h-10 w-10 text-gray-300" />
+          <div className="flex flex-col items-center justify-center gap-1.5 w-full h-full bg-gradient-to-br from-gray-50 to-gray-100">
+            <Package className="h-10 w-10 text-gray-300" />
+            <span className="text-[10px] text-gray-300 font-medium uppercase tracking-wide">No image</span>
+          </div>
         )}
         {inCart && (
           <div className="absolute top-2 right-2 bg-emerald-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] font-bold shadow">
@@ -886,15 +889,16 @@ export default function PublicStorePage() {
               <span className="text-sm font-semibold text-emerald-600">Quikpik</span>
             </div>
           </Link>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2">
             {wholesaler.whatsappContactVisible !== false && wholesaler.phoneNumber && (
               <a
                 href={`https://wa.me/${wholesaler.phoneNumber.replace(/\D/g, '')}`}
                 target="_blank"
                 rel="noreferrer"
               >
-                <Button size="sm" variant="outline" className="border-emerald-600 text-emerald-700 hover:bg-emerald-50 text-xs">
-                  <Phone className="h-3.5 w-3.5 mr-1" /> WhatsApp
+                <Button size="sm" variant="outline" className="border-emerald-600 text-emerald-700 hover:bg-emerald-50 text-xs px-2 sm:px-3">
+                  <Phone className="h-3.5 w-3.5 sm:mr-1" />
+                  <span className="hidden sm:inline">WhatsApp</span>
                 </Button>
               </a>
             )}
@@ -902,16 +906,17 @@ export default function PublicStorePage() {
               <Button
                 size="sm"
                 variant="outline"
-                className="text-xs border-gray-200 text-gray-600 hover:bg-gray-50"
+                className="text-xs border-gray-200 text-gray-600 hover:bg-gray-50 px-2 sm:px-3"
                 onClick={() => setShowEnquiry(true)}
               >
-                <MessageSquare className="h-3.5 w-3.5 mr-1" /> Get in touch
+                <MessageSquare className="h-3.5 w-3.5 sm:mr-1" />
+                <span className="hidden sm:inline">Get in touch</span>
               </Button>
             )}
             {/* Cart button */}
             <button
               onClick={() => setShowCart(true)}
-              className="relative flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium px-3 py-1.5 rounded-lg transition-colors"
+              className="relative flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium px-2.5 sm:px-3 py-1.5 rounded-lg transition-colors"
             >
               <ShoppingCart className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">Cart</span>
