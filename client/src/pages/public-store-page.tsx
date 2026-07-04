@@ -711,6 +711,15 @@ function useCart(slug: string) {
     }
   });
 
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(key);
+      setCartRaw(stored ? JSON.parse(stored) : []);
+    } catch {
+      setCartRaw([]);
+    }
+  }, [key]);
+
   const setCart = useCallback((updater: (prev: CartItem[]) => CartItem[]) => {
     setCartRaw(prev => {
       const next = updater(prev);
