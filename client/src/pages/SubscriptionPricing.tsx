@@ -388,6 +388,24 @@ export default function SubscriptionPricing() {
     return feature.toLowerCase().includes('broadcast') ? 'Broadcast tools coming soon' : feature;
   };
 
+  // Returns a feature list where limit-derived lines (products, price lists, team members)
+  // are always generated from plan.limits so they stay in sync when an admin edits limits.
+  const getComputedFeatures = (plan: SubscriptionPlan): string[] => {
+    const LIMIT_PATTERN = /^(up to \d+|unlimited)\s+(products?|price lists?|team members?)/i;
+    const nonLimitFeatures = plan.features.filter(f => !LIMIT_PATTERN.test(f.trim()));
+
+    const fmt = (n: number) => (n === -1 ? 'Unlimited' : `Up to ${n}`);
+    const { limits } = plan;
+
+    const limitLines: string[] = [
+      `${fmt(limits.products)} products`,
+      ...(limits.priceLists !== undefined ? [`${fmt(limits.priceLists)} price lists`] : []),
+      ...(limits.teamMembers !== undefined ? [`${fmt(limits.teamMembers)} team members`] : []),
+    ];
+
+    return [...limitLines, ...nonLimitFeatures];
+  };
+
   const isCurrentPlan = (planId: string) => {
     return currentSubscription?.currentPlan === planId;
   };
@@ -1082,9 +1100,9 @@ export default function SubscriptionPricing() {
                   )}
                 </div>
 
-                {/* 5. Feature list */}
+                {/* 5. Feature list — limit lines rendered dynamically from plan.limits */}
                 <ul className="space-y-2">
-                  {plan.features.map((feature, index) => (
+                  {getComputedFeatures(plan).map((feature, index) => (
                     <li key={index} className="flex items-start gap-2">
                       <svg className="w-3.5 h-3.5 text-green-500 mt-0.5 flex-shrink-0" viewBox="0 0 16 16" fill="none" aria-hidden="true">
                         <path d="M3 8L6.5 11.5L13 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
