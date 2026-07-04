@@ -586,6 +586,12 @@ export default function ProductManagement() {
     }
   }, [deleteProductMutate]);
 
+  const handleDeleteLocked = useCallback((id: number) => {
+    if (confirm("Delete this locked product?\n\nThis will permanently remove the product and free up a slot. If you have other locked products, the next one will be automatically unlocked.")) {
+      deleteProductMutate(id);
+    }
+  }, [deleteProductMutate]);
+
   const handleDuplicate = useCallback((product: Product) => {
     setEditingProduct(null);
     setDuplicateValues({
@@ -1370,7 +1376,7 @@ export default function ProductManagement() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
             {filteredProducts.map((product) => (
               <div key={product.id} className="space-y-3">
-                <ProductCard product={product} onStatusChange={handleStatusChange} isViewer={isViewer} />
+                <ProductCard product={product} onStatusChange={handleStatusChange} onDelete={handleDeleteLocked} isViewer={isViewer} />
               </div>
             ))}
           </div>
@@ -1543,14 +1549,25 @@ export default function ProductManagement() {
                         {!isViewer && (
                           <div className="flex items-center gap-0.5 mt-2 -ml-1.5">
                             {product.status === 'locked' ? (
-                              <a
-                                href="/subscription-pricing"
-                                onClick={(e) => e.stopPropagation()}
-                                className="ml-1.5 text-xs font-semibold text-orange-700 underline hover:text-orange-900 flex items-center gap-1"
-                              >
-                                <Lock className="h-3 w-3" />
-                                Upgrade to reactivate
-                              </a>
+                              <div className="flex items-center gap-2 ml-1.5">
+                                <a
+                                  href="/subscription-pricing"
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="text-xs font-semibold text-orange-700 underline hover:text-orange-900 flex items-center gap-1"
+                                >
+                                  <Lock className="h-3 w-3" />
+                                  Upgrade to reactivate
+                                </a>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 text-red-500 hover:text-red-700 hover:bg-red-50"
+                                  title="Delete locked product to free up a slot"
+                                  onClick={(e) => { e.stopPropagation(); handleDeleteLocked(product.id); }}
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
+                              </div>
                             ) : (
                               <>
                             <Button

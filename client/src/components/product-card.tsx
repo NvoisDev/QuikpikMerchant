@@ -13,6 +13,7 @@ import { formatNumber } from "@/lib/utils";
 import {
   AlertTriangle,
   Lock,
+  Trash2,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -95,12 +96,14 @@ const calcMarginPct = (price: string | number, costPrice: string | number): numb
 interface ProductCardProps {
   product: Product;
   onStatusChange?: (id: number, status: "active" | "inactive" | "out_of_stock" | "locked") => void;
+  onDelete?: (id: number) => void;
   isViewer?: boolean;
 }
 
 function ProductCard({
   product,
   onStatusChange,
+  onDelete,
   isViewer = false,
 }: ProductCardProps) {
   const [, navigate] = useLocation();
@@ -271,9 +274,25 @@ function ProductCard({
         >
           {/* Locked notice — compact inline */}
           {isLocked && (
-            <div className="mb-2 text-xs text-orange-700 bg-orange-50 border border-orange-200 rounded px-2 py-1.5 flex items-center gap-1.5">
-              <Lock className="h-3 w-3 shrink-0" />
-              <span>Locked — <a href="/subscription-pricing" className="font-semibold underline hover:text-orange-900">upgrade to reactivate</a></span>
+            <div className="mb-2 text-xs text-orange-700 bg-orange-50 border border-orange-200 rounded px-2 py-1.5 flex items-center justify-between gap-1.5">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <Lock className="h-3 w-3 shrink-0" />
+                <span>Locked — <a href="/subscription-pricing" className="font-semibold underline hover:text-orange-900">upgrade to reactivate</a></span>
+              </div>
+              {!isViewer && onDelete && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6 shrink-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                  title="Delete locked product to free up a slot"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete(product.id);
+                  }}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              )}
             </div>
           )}
 
