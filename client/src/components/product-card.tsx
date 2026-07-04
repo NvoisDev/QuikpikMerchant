@@ -271,9 +271,9 @@ function ProductCard({
         >
           {/* Locked notice — compact inline */}
           {isLocked && (
-            <div className="mb-2 text-xs text-gray-500 flex items-center gap-1.5">
+            <div className="mb-2 text-xs text-orange-700 bg-orange-50 border border-orange-200 rounded px-2 py-1.5 flex items-center gap-1.5">
               <Lock className="h-3 w-3 shrink-0" />
-              <span>Locked — <a href="/subscription-pricing" className="underline hover:text-gray-700">upgrade to unlock</a></span>
+              <span>Locked — <a href="/subscription-pricing" className="font-semibold underline hover:text-orange-900">upgrade to reactivate</a></span>
             </div>
           )}
 

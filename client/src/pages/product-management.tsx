@@ -1188,13 +1188,24 @@ export default function ProductManagement() {
           >
             <div className="flex items-center justify-between">
               <p className="text-xs font-medium text-gray-600">Product slots</p>
-              <span className={`text-xs font-semibold tabular-nums ${
-                planLimits.usage.products >= planLimits.limits.products
-                  ? 'text-red-600'
-                  : 'text-amber-600'
-              }`}>
-                {planLimits.usage.products} / {planLimits.limits.products} used
-              </span>
+              <div className="flex items-center gap-2">
+                {(() => {
+                  const lockedCount = products?.filter(p => p.status === 'locked').length ?? 0;
+                  return lockedCount > 0 ? (
+                    <span className="text-xs font-semibold text-orange-700 bg-orange-100 border border-orange-200 rounded px-1.5 py-0.5 flex items-center gap-1">
+                      <Lock className="h-3 w-3" />
+                      {lockedCount} locked
+                    </span>
+                  ) : null;
+                })()}
+                <span className={`text-xs font-semibold tabular-nums ${
+                  planLimits.usage.products >= planLimits.limits.products
+                    ? 'text-red-600'
+                    : 'text-amber-600'
+                }`}>
+                  {planLimits.usage.products} / {planLimits.limits.products} used
+                </span>
+              </div>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
               <div
@@ -1355,13 +1366,20 @@ export default function ProductManagement() {
                           <h3 className="text-sm sm:text-lg font-semibold text-gray-900 truncate">{product.name}</h3>
                         </div>
                         <div className="flex flex-wrap items-center gap-1.5 mt-1">
-                          <Badge variant={product.status === "active" ? "default" : (product.status === "inactive" ? "secondary" : "destructive")} className="text-xs">
-                            {product.status === "active" ? "Active" : (product.status === "inactive" ? "Inactive" : "Out of Stock")}
-                          </Badge>
-                          {product.stock === 0 && product.status !== "out_of_stock" && (
+                          {product.status === 'locked' ? (
+                            <Badge className="text-xs bg-orange-100 text-orange-800 border border-orange-200 hover:bg-orange-100">
+                              <Lock className="h-2.5 w-2.5 mr-1" />
+                              Locked — upgrade to reactivate
+                            </Badge>
+                          ) : (
+                            <Badge variant={product.status === "active" ? "default" : (product.status === "inactive" ? "secondary" : "destructive")} className="text-xs">
+                              {product.status === "active" ? "Active" : (product.status === "inactive" ? "Inactive" : "Out of Stock")}
+                            </Badge>
+                          )}
+                          {product.stock === 0 && product.status !== "out_of_stock" && product.status !== 'locked' && (
                             <Badge className="text-xs bg-red-500 text-white">Out of Stock</Badge>
                           )}
-                          {product.stock > 0 && product.stock <= (product.lowStockThreshold || 50) && (
+                          {product.stock > 0 && product.stock <= (product.lowStockThreshold || 50) && product.status !== 'locked' && (
                             <Badge className="text-xs bg-amber-500 text-white">Low Stock</Badge>
                           )}
                           {product.hiddenFromPublic && (
@@ -1492,17 +1510,28 @@ export default function ProductManagement() {
                         </div>
                         {!isViewer && (
                           <div className="flex items-center gap-0.5 mt-2 -ml-1.5">
+                            {product.status === 'locked' ? (
+                              <a
+                                href="/subscription-pricing"
+                                onClick={(e) => e.stopPropagation()}
+                                className="ml-1.5 text-xs font-semibold text-orange-700 underline hover:text-orange-900 flex items-center gap-1"
+                              >
+                                <Lock className="h-3 w-3" />
+                                Upgrade to reactivate
+                              </a>
+                            ) : (
+                              <>
                             <Button
-                              variant="ghost" size="icon" className={`h-8 w-8 ${product.status === 'locked' ? 'opacity-50 cursor-not-allowed' : ''}`}
-                              onClick={(e) => { e.stopPropagation(); product.status !== 'locked' && handleEdit(product); }}
-                              disabled={product.status === 'locked'} title="Edit"
+                              variant="ghost" size="icon" className="h-8 w-8"
+                              onClick={(e) => { e.stopPropagation(); handleEdit(product); }}
+                              title="Edit"
                             >
                               <Pencil className="h-4 w-4" />
                             </Button>
                             <Button
-                              variant="ghost" size="icon" className={`h-8 w-8 ${product.status === 'locked' ? 'opacity-50 cursor-not-allowed' : ''}`}
-                              onClick={(e) => { e.stopPropagation(); if (product.status !== 'locked') { setStockProduct(product); setStockAdjustmentType("increase"); setStockQuantity(""); setStockReason(""); setBatchExpiry(""); setBatchRef(""); setBatchCostPrice(product.costPrice ? String(product.costPrice) : ""); } }}
-                              disabled={product.status === 'locked'} title="Manage Stock"
+                              variant="ghost" size="icon" className="h-8 w-8"
+                              onClick={(e) => { e.stopPropagation(); setStockProduct(product); setStockAdjustmentType("increase"); setStockQuantity(""); setStockReason(""); setBatchExpiry(""); setBatchRef(""); setBatchCostPrice(product.costPrice ? String(product.costPrice) : ""); }}
+                              title="Manage Stock"
                             >
                               <PackagePlus className="h-4 w-4" />
                             </Button>
@@ -1513,6 +1542,8 @@ export default function ProductManagement() {
                               >
                                 {expandedBatchProductId === product.id ? 'Hide batches' : `${product.batchCount} batch${(product.batchCount ?? 0) !== 1 ? 'es' : ''}`}
                               </Button>
+                            )}
+                              </>
                             )}
                           </div>
                         )}
