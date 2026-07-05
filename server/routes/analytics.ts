@@ -333,7 +333,7 @@ export function registerAnalyticsRoutes(app: Express): void {
 
       const empty = { revenue: 0, cost: 0, margin: 0, marginPercent: 0, hasMissingCost: false };
       if (validOrders.length === 0) {
-        return res.json({ quotes: { ...empty }, online: { ...empty }, total: { ...empty } });
+        return res.json({ quotes: { ...empty }, online: { ...empty }, total: { ...empty }, products: [] });
       }
 
       const orderIds = validOrders.map(o => o.id);
@@ -342,6 +342,7 @@ export function registerAnalyticsRoutes(app: Express): void {
         .select({
           orderId: orderItems.orderId,
           productId: orderItems.productId,
+          productName: products.name,
           quantity: orderItems.quantity,
           unitPrice: orderItems.unitPrice,
           batchId: orderItems.batchId,
@@ -389,6 +390,26 @@ export function registerAnalyticsRoutes(app: Express): void {
       let quotesCoveredRevenue = 0, quotesCost = 0, quotesUncoveredRevenue = 0, quotesMissingCost = false;
       let onlineCoveredRevenue = 0, onlineCost = 0, onlineUncoveredRevenue = 0, onlineMissingCost = false;
 
+      // Per-product accumulator for the breakdown table
+      interface ProductAccum {
+        productId: number;
+        name: string;
+        wac: number | null;
+        // Mirror the top-level covered/uncovered split per product for accurate margin %
+        coveredRevenue: number;
+        uncoveredRevenue: number;
+        cost: number;
+        totalQty: number;
+      }
+      const productAccum = new Map<number, ProductAccum>();
+
+      const getOrInitProduct = (productId: number, name: string, wac: number | null): ProductAccum => {
+        if (!productAccum.has(productId)) {
+          productAccum.set(productId, { productId, name, wac, coveredRevenue: 0, uncoveredRevenue: 0, cost: 0, totalQty: 0 });
+        }
+        return productAccum.get(productId)!;
+      };
+
       for (const item of items) {
         const isQuote = orderQuoteMap.get(item.orderId) ?? false;
         // Fallback chain: batch cost → WAC from current active batches → product-level fallback
@@ -408,6 +429,12 @@ export function registerAnalyticsRoutes(app: Express): void {
             onlineUncoveredRevenue += revenue;
             onlineMissingCost = true;
           }
+          // Still accumulate revenue in per-product breakdown (with no cost)
+          if (item.productId) {
+            const acc = getOrInitProduct(item.productId, item.productName ?? 'Unknown', productWAC != null ? parseFloat(productWAC) : null);
+            acc.uncoveredRevenue += revenue;
+            acc.totalQty += item.quantity;
+          }
           continue;
         }
 
@@ -420,6 +447,15 @@ export function registerAnalyticsRoutes(app: Express): void {
         } else {
           onlineCoveredRevenue += revenue;
           onlineCost += cost;
+        }
+
+        // Accumulate per-product breakdown
+        if (item.productId) {
+          const acc = getOrInitProduct(item.productId, item.productName ?? 'Unknown', productWAC != null ? parseFloat(productWAC) : null);
+          acc.coveredRevenue += revenue;
+          acc.cost += cost;
+          acc.totalQty += item.quantity;
+          if (acc.wac === null && productWAC != null) acc.wac = parseFloat(productWAC);
         }
       }
 
@@ -437,6 +473,39 @@ export function registerAnalyticsRoutes(app: Express): void {
         };
       };
 
+      const totalPeriodRevenue = quotesCoveredRevenue + onlineCoveredRevenue + quotesUncoveredRevenue + onlineUncoveredRevenue;
+
+      // Build per-product breakdown sorted by margin % ascending (worst first)
+      const productBreakdown = Array.from(productAccum.values())
+        .map(acc => {
+          const totalRevenue = acc.coveredRevenue + acc.uncoveredRevenue;
+          // margin % is computed only on covered revenue (same semantics as top-level calcMetrics)
+          const margin = acc.coveredRevenue - acc.cost;
+          const marginPercent = acc.coveredRevenue > 0 ? (margin / acc.coveredRevenue) * 100 : null;
+          const revenueShare = totalPeriodRevenue > 0 ? (totalRevenue / totalPeriodRevenue) * 100 : 0;
+          // Weighted-average selling price across all sold units (covered + uncovered)
+          const avgSellingPrice = acc.totalQty > 0 ? totalRevenue / acc.totalQty : null;
+          return {
+            productId: acc.productId,
+            name: acc.name,
+            wac: acc.wac != null ? Math.round(acc.wac * 100) / 100 : null,
+            avgSellingPrice: avgSellingPrice != null ? Math.round(avgSellingPrice * 100) / 100 : null,
+            revenue: Math.round(totalRevenue * 100) / 100,
+            cost: Math.round(acc.cost * 100) / 100,
+            margin: Math.round(margin * 100) / 100,
+            marginPercent: marginPercent != null ? Math.round(marginPercent * 10) / 10 : null,
+            revenueShare: Math.round(revenueShare * 10) / 10,
+            hasCost: acc.coveredRevenue > 0,
+          };
+        })
+        .sort((a, b) => {
+          // Products with no cost go to the bottom; among the rest sort by marginPercent ascending
+          if (a.marginPercent === null && b.marginPercent === null) return 0;
+          if (a.marginPercent === null) return 1;
+          if (b.marginPercent === null) return -1;
+          return a.marginPercent - b.marginPercent;
+        });
+
       res.json({
         quotes: calcMetrics(quotesCoveredRevenue, quotesCost, quotesUncoveredRevenue, quotesMissingCost),
         online: calcMetrics(onlineCoveredRevenue, onlineCost, onlineUncoveredRevenue, onlineMissingCost),
@@ -446,6 +515,7 @@ export function registerAnalyticsRoutes(app: Express): void {
           quotesUncoveredRevenue + onlineUncoveredRevenue,
           quotesMissingCost || onlineMissingCost,
         ),
+        products: productBreakdown,
       });
     } catch (error) {
       console.error("Error fetching margin summary:", error);

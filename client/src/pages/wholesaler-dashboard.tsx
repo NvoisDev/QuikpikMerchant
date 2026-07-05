@@ -43,7 +43,9 @@ import {
   Info,
   Percent,
   Download,
-  Loader2
+  Loader2,
+  ChevronDown,
+  ChevronUp
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -67,10 +69,23 @@ interface MarginSegment {
   marginPercent: number;
   hasMissingCost: boolean;
 }
+interface MarginProduct {
+  productId: number;
+  name: string;
+  wac: number | null;
+  avgSellingPrice: number | null;
+  revenue: number;
+  cost: number;
+  margin: number;
+  marginPercent: number | null;
+  revenueShare: number;
+  hasCost: boolean;
+}
 interface MarginSummary {
   quotes: MarginSegment;
   online: MarginSegment;
   total: MarginSegment;
+  products?: MarginProduct[];
 }
 
 function MarginOverview() {
@@ -99,6 +114,8 @@ function MarginOverview() {
   const fmt = (v: number) => formatCurrency(v);
   const pct = (v: number) => `${v >= 0 ? "" : "-"}${Math.abs(v).toFixed(1)}%`;
   const hasMissingCost = marginData?.total?.hasMissingCost || marginData?.quotes?.hasMissingCost || marginData?.online?.hasMissingCost;
+
+  const [showProductBreakdown, setShowProductBreakdown] = useState(false);
 
   const StatTile = ({ label, value, positive }: { label: string; value: string; positive?: boolean }) => (
     <div className="bg-slate-50 rounded-xl p-3 sm:p-4 flex flex-col gap-1">
@@ -193,6 +210,67 @@ function MarginOverview() {
                   icon={<ShoppingCart className="w-4 h-4 text-blue-500 flex-shrink-0" />}
                 />
               </div>
+
+              {/* Per-product WAC breakdown */}
+              {marginData.products && marginData.products.length > 0 && (
+                <div className="border border-slate-200 rounded-xl overflow-hidden">
+                  <button
+                    onClick={() => setShowProductBreakdown(p => !p)}
+                    className="w-full flex items-center justify-between px-4 py-3 bg-slate-50 hover:bg-slate-100 transition-colors text-sm font-semibold text-slate-700"
+                  >
+                    <span className="flex items-center gap-2">
+                      <Package className="w-4 h-4 text-slate-500" />
+                      Per-product margin breakdown ({marginData.products.length} SKUs)
+                    </span>
+                    {showProductBreakdown ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+                  </button>
+                  {showProductBreakdown && (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-xs">
+                        <thead>
+                          <tr className="border-b border-slate-200 bg-slate-50/50">
+                            <th className="text-left px-4 py-2 font-semibold text-slate-500 uppercase tracking-wide">Product</th>
+                            <th className="text-right px-4 py-2 font-semibold text-slate-500 uppercase tracking-wide">WAC</th>
+                            <th className="text-right px-4 py-2 font-semibold text-slate-500 uppercase tracking-wide">Selling Price</th>
+                            <th className="text-right px-4 py-2 font-semibold text-slate-500 uppercase tracking-wide">Revenue</th>
+                            <th className="text-right px-4 py-2 font-semibold text-slate-500 uppercase tracking-wide">Margin £</th>
+                            <th className="text-right px-4 py-2 font-semibold text-slate-500 uppercase tracking-wide">Margin %</th>
+                            <th className="text-right px-4 py-2 font-semibold text-slate-500 uppercase tracking-wide">Share</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {marginData.products.map((p, idx) => {
+                            const isLowMargin = p.marginPercent !== null && p.marginPercent < 15;
+                            const isNegMargin = p.marginPercent !== null && p.marginPercent < 0;
+                            return (
+                              <tr key={p.productId} className={`border-b border-slate-100 last:border-0 ${idx % 2 === 0 ? "bg-white" : "bg-slate-50/40"}`}>
+                                <td className="px-4 py-2.5 font-medium text-slate-800 max-w-[180px] truncate">{p.name}</td>
+                                <td className="px-4 py-2.5 text-right text-slate-600">
+                                  {p.wac != null ? fmt(p.wac) : <span className="text-slate-400 italic">—</span>}
+                                </td>
+                                <td className="px-4 py-2.5 text-right text-slate-600">
+                                  {p.avgSellingPrice != null ? fmt(p.avgSellingPrice) : <span className="text-slate-400 italic">—</span>}
+                                </td>
+                                <td className="px-4 py-2.5 text-right text-slate-700">{fmt(p.revenue)}</td>
+                                <td className={`px-4 py-2.5 text-right font-semibold ${isNegMargin ? "text-red-500" : isLowMargin ? "text-amber-600" : "text-emerald-600"}`}>
+                                  {p.hasCost ? fmt(p.margin) : <span className="text-slate-400 italic">—</span>}
+                                </td>
+                                <td className={`px-4 py-2.5 text-right font-semibold ${isNegMargin ? "text-red-500" : isLowMargin ? "text-amber-600" : "text-emerald-600"}`}>
+                                  {p.marginPercent != null ? pct(p.marginPercent) : <span className="text-slate-400 italic font-normal">No cost</span>}
+                                </td>
+                                <td className="px-4 py-2.5 text-right text-slate-500">{p.revenueShare.toFixed(1)}%</td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                      <p className="px-4 py-2 text-xs text-slate-400 border-t border-slate-100">
+                        Sorted by margin % ascending · WAC = weighted average cost from active stock batches · Low margin (&lt;15%) shown in amber
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           ) : (
             <div className="text-center py-8 text-gray-500">
