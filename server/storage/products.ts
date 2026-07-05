@@ -225,7 +225,12 @@ export class ProductStorage extends UserStorageBase {
       });
 
       // ── Enrich with derived batch stats (active non-expired batches only) ──
-      const batchSummaries = await this._getBatchSummaries(mapped.map(p => p.id));
+      const productIds = mapped.map(p => p.id);
+      const stockByProductId = new Map(mapped.map(p => [p.id, p.stock ?? 0]));
+      const [batchSummaries, percentSoldMap] = await Promise.all([
+        this._getBatchSummaries(productIds),
+        this._getPercentSold(productIds, stockByProductId),
+      ]);
       return mapped.map(p => {
         const bs = batchSummaries.get(p.id);
         return {
@@ -234,6 +239,7 @@ export class ProductStorage extends UserStorageBase {
           nearestExpiry: bs?.nearestExpiry ?? null,
           batchCount: bs?.batchCount ?? 0,
           weightedAvgCost: bs?.weightedAvgCost ?? null,
+          percentSold: percentSoldMap.get(p.id) ?? null,
         };
       }) as unknown as Product[];
     }
@@ -425,8 +431,12 @@ export class ProductStorage extends UserStorageBase {
   async getProduct(id: number): Promise<Product | undefined> {
     const [product] = await db.select().from(products).where(eq(products.id, id));
     if (!product) return undefined;
-    // Enrich with derived batch stats (active non-expired batches only)
-    const batchSummaries = await this._getBatchSummaries([id]);
+    // Enrich with derived batch stats (active non-expired batches only) + % sold
+    const stockByProductId = new Map([[id, product.stock ?? 0]]);
+    const [batchSummaries, percentSoldMap] = await Promise.all([
+      this._getBatchSummaries([id]),
+      this._getPercentSold([id], stockByProductId),
+    ]);
     const bs = batchSummaries.get(id);
     return {
       ...product,
@@ -434,6 +444,7 @@ export class ProductStorage extends UserStorageBase {
       nearestExpiry: bs?.nearestExpiry ?? null,
       batchCount: bs?.batchCount ?? 0,
       weightedAvgCost: bs?.weightedAvgCost ?? null,
+      percentSold: percentSoldMap.get(id) ?? null,
     } as Product;
   }
 
@@ -531,6 +542,42 @@ export class ProductStorage extends UserStorageBase {
         asc(productBatches.expiryDate),
         asc(productBatches.createdAt)
       );
+  }
+
+  /**
+   * Compute the percentage of stock sold (lifetime) for a set of product IDs.
+   * Queries ALL batches (active + depleted + expired) to get the total stock ever
+   * received (SUM of original_quantity, falling back to quantity for legacy rows).
+   * percentSold = ROUND((totalOriginal - currentStock) / totalOriginal × 100)
+   * Returns null for products with no batch data.
+   */
+  private async _getPercentSold(
+    productIds: number[],
+    stockByProductId: Map<number, number>
+  ): Promise<Map<number, number | null>> {
+    if (productIds.length === 0) return new Map();
+    const rows = await db
+      .select({
+        productId: productBatches.productId,
+        totalOriginal: sql<string>`SUM(COALESCE(${productBatches.originalQuantity}, ${productBatches.quantity}))`,
+      })
+      .from(productBatches)
+      .where(inArray(productBatches.productId, productIds))
+      .groupBy(productBatches.productId);
+
+    const map = new Map<number, number | null>();
+    for (const row of rows) {
+      const totalOriginal = Number(row.totalOriginal ?? 0);
+      if (totalOriginal <= 0) {
+        map.set(row.productId, null);
+        continue;
+      }
+      const currentStock = stockByProductId.get(row.productId) ?? 0;
+      const sold = totalOriginal - currentStock;
+      const pct = Math.round((sold / totalOriginal) * 100);
+      map.set(row.productId, Math.min(100, Math.max(0, pct)));
+    }
+    return map;
   }
 
   /**

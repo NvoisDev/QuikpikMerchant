@@ -56,6 +56,7 @@ interface Product {
   batchCount?: number | null;
   nearestExpiry?: string | null;
   totalBatchStock?: number | null;
+  percentSold?: number | null;
 }
 
 function getActivePromos(offers: PromotionalOffer[]): PromotionalOffer[] {
@@ -381,6 +382,22 @@ function ProductCard({
                 <div className="flex justify-between items-center">
                   <span className="text-gray-500">Batches</span>
                   <span className="text-gray-600">{product.batchCount} {product.batchCount === 1 ? 'batch' : 'batches'}</span>
+                </div>
+              )}
+              {product.percentSold != null && (
+                <div>
+                  <div className="flex justify-between items-center mb-0.5">
+                    <span className="text-gray-500">Sold</span>
+                    <span className={`font-medium ${product.percentSold >= 70 ? 'text-green-600' : product.percentSold >= 30 ? 'text-amber-600' : 'text-gray-600'}`}>
+                      {product.percentSold}%
+                    </span>
+                  </div>
+                  <div className="h-1 bg-gray-100 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all ${product.percentSold >= 70 ? 'bg-green-500' : product.percentSold >= 30 ? 'bg-amber-500' : 'bg-gray-300'}`}
+                      style={{ width: `${product.percentSold}%` }}
+                    />
+                  </div>
                 </div>
               )}
               {product.sellingFormat === 'both' && (

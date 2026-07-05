@@ -67,6 +67,7 @@ interface ProductDetail {
   nearestExpiry: string | null;
   expiryDate: string | null;
   weightedAvgCost: string | null;
+  percentSold?: number | null;
 }
 
 interface Batch {
@@ -682,6 +683,24 @@ export default function ProductDetail() {
                   </div>
                 )}
               </div>
+
+              {product.percentSold != null && (
+                <div className="mt-1">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs text-gray-500">Stock sold (lifetime)</span>
+                    <span className={`text-xs font-semibold ${product.percentSold >= 70 ? 'text-green-600' : product.percentSold >= 30 ? 'text-amber-600' : 'text-gray-600'}`}>
+                      {product.percentSold}%
+                    </span>
+                  </div>
+                  <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all ${product.percentSold >= 70 ? 'bg-green-500' : product.percentSold >= 30 ? 'bg-amber-500' : 'bg-gray-300'}`}
+                      style={{ width: `${product.percentSold}%` }}
+                    />
+                  </div>
+                  <p className="text-xs text-gray-400 mt-0.5">of total stock ever received</p>
+                </div>
+              )}
 
               {totalStock === 0 && (
                 <div className="flex items-center gap-2 text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-sm">

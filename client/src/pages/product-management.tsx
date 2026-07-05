@@ -362,6 +362,7 @@ function PriceTrackerTab() {
 type ProductWithBatches = Product & {
   batchCount?: number;
   nearestExpiry?: string | null;
+  percentSold?: number | null;
 };
 
 export default function ProductManagement() {
@@ -1537,6 +1538,21 @@ export default function ProductManagement() {
                                   if (diff <= 30) return <span className="text-amber-600 font-medium"> · Exp: {fmt}</span>;
                                   return <span> · Exp: {fmt}</span>;
                                 })()}
+                              </div>
+                            )}
+                            {product.percentSold != null && (
+                              <div className="mt-1.5">
+                                <div className="flex items-center gap-1.5">
+                                  <div className="flex-1 h-1 bg-gray-100 rounded-full overflow-hidden">
+                                    <div
+                                      className={`h-full rounded-full ${product.percentSold >= 70 ? 'bg-green-500' : product.percentSold >= 30 ? 'bg-amber-500' : 'bg-gray-300'}`}
+                                      style={{ width: `${product.percentSold}%` }}
+                                    />
+                                  </div>
+                                  <span className={`text-xs font-medium ${product.percentSold >= 70 ? 'text-green-600' : product.percentSold >= 30 ? 'text-amber-600' : 'text-gray-500'}`}>
+                                    {product.percentSold}% sold
+                                  </span>
+                                </div>
                               </div>
                             )}
                           </div>
