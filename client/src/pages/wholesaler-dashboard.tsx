@@ -124,7 +124,7 @@ function MarginOverview() {
     const filename = `margin-breakdown-${fromStr}-to-${toStr}.csv`;
 
     const escapeCell = (val: string) => `"${val.replace(/"/g, '""')}"`;
-    const headers = ["Product", "WAC", "Revenue", "Margin £", "Margin %", "Revenue Share %"];
+    const headers = ["Product", "Unit Cost", "Revenue", "Margin £", "Margin %", "Revenue Share %"];
     const rows = marginData.products.map(p => [
       escapeCell(p.name),
       p.wac != null ? p.wac.toFixed(2) : "",
@@ -286,7 +286,7 @@ function MarginOverview() {
                         <thead>
                           <tr className="border-b border-slate-200 bg-slate-50/50">
                             <th className="text-left px-4 py-2 font-semibold text-slate-500 uppercase tracking-wide">Product</th>
-                            <th className="text-right px-4 py-2 font-semibold text-slate-500 uppercase tracking-wide">WAC</th>
+                            <th className="text-right px-4 py-2 font-semibold text-slate-500 uppercase tracking-wide">Unit Cost</th>
                             <th className="text-right px-4 py-2 font-semibold text-slate-500 uppercase tracking-wide">Selling Price</th>
                             <th className="text-right px-4 py-2 font-semibold text-slate-500 uppercase tracking-wide">Revenue</th>
                             <th className="text-right px-4 py-2 font-semibold text-slate-500 uppercase tracking-wide">Margin £</th>
@@ -321,7 +321,7 @@ function MarginOverview() {
                         </tbody>
                       </table>
                       <p className="px-4 py-2 text-xs text-slate-400 border-t border-slate-100">
-                        Sorted by margin % ascending · WAC = weighted average cost from active stock batches · Low margin (&lt;15%) shown in amber
+                        Sorted by margin % ascending · Unit Cost = batch WAC where available, otherwise product cost price · Low margin (&lt;15%) shown in amber
                       </p>
                     </div>
                   )}

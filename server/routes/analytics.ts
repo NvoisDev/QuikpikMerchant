@@ -400,12 +400,13 @@ export function registerAnalyticsRoutes(app: Express): void {
         uncoveredRevenue: number;
         cost: number;
         totalQty: number;
+        coveredQty: number;
       }
       const productAccum = new Map<number, ProductAccum>();
 
       const getOrInitProduct = (productId: number, name: string, wac: number | null): ProductAccum => {
         if (!productAccum.has(productId)) {
-          productAccum.set(productId, { productId, name, wac, coveredRevenue: 0, uncoveredRevenue: 0, cost: 0, totalQty: 0 });
+          productAccum.set(productId, { productId, name, wac, coveredRevenue: 0, uncoveredRevenue: 0, cost: 0, totalQty: 0, coveredQty: 0 });
         }
         return productAccum.get(productId)!;
       };
@@ -455,6 +456,7 @@ export function registerAnalyticsRoutes(app: Express): void {
           acc.coveredRevenue += revenue;
           acc.cost += cost;
           acc.totalQty += item.quantity;
+          acc.coveredQty += item.quantity;
           if (acc.wac === null && productWAC != null) acc.wac = parseFloat(productWAC);
         }
       }
@@ -485,10 +487,15 @@ export function registerAnalyticsRoutes(app: Express): void {
           const revenueShare = totalPeriodRevenue > 0 ? (totalRevenue / totalPeriodRevenue) * 100 : 0;
           // Weighted-average selling price across all sold units (covered + uncovered)
           const avgSellingPrice = acc.totalQty > 0 ? totalRevenue / acc.totalQty : null;
+          // Effective cost per unit: batch WAC if available, otherwise derive from what was
+          // actually used in the margin calculation (product-level cost price fallback)
+          const effectiveCostPerUnit = acc.wac != null
+            ? acc.wac
+            : acc.coveredQty > 0 ? acc.cost / acc.coveredQty : null;
           return {
             productId: acc.productId,
             name: acc.name,
-            wac: acc.wac != null ? Math.round(acc.wac * 100) / 100 : null,
+            wac: effectiveCostPerUnit != null ? Math.round(effectiveCostPerUnit * 100) / 100 : null,
             avgSellingPrice: avgSellingPrice != null ? Math.round(avgSellingPrice * 100) / 100 : null,
             revenue: Math.round(totalRevenue * 100) / 100,
             cost: Math.round(acc.cost * 100) / 100,
