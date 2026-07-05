@@ -211,6 +211,24 @@ function MarginOverview() {
                 />
               </div>
 
+              {/* Negative-margin insight banner */}
+              {marginData.products && marginData.products.length > 0 && (() => {
+                const negProducts = marginData.products.filter(p => p.marginPercent !== null && p.marginPercent < 0);
+                if (negProducts.length === 0) return null;
+                const negRevShare = negProducts.reduce((sum, p) => sum + p.revenueShare, 0);
+                return (
+                  <div className="flex items-start gap-2.5 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2.5">
+                    <TrendingDown className="w-4 h-4 flex-shrink-0 mt-0.5 text-red-500" />
+                    <span>
+                      <span className="font-semibold">{negProducts.length} product{negProducts.length > 1 ? "s" : ""} with negative margin</span>
+                      {" "}{negProducts.length > 1 ? "account" : "accounts"} for{" "}
+                      <span className="font-semibold">{negRevShare.toFixed(1)}%</span>
+                      {" "}of revenue in this period — review their cost or selling price.
+                    </span>
+                  </div>
+                );
+              })()}
+
               {/* Per-product WAC breakdown */}
               {marginData.products && marginData.products.length > 0 && (
                 <div className="border border-slate-200 rounded-xl overflow-hidden">
