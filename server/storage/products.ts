@@ -570,6 +570,7 @@ export class ProductStorage extends UserStorageBase {
         and(
           inArray(stockMovements.productId, productIds),
           sql`${stockMovements.movementType} = 'purchase'`,
+          sql`${stockMovements.unitType} = 'units'`,
           wholesalerId ? eq(stockMovements.wholesalerId, wholesalerId) : undefined
         )
       )
