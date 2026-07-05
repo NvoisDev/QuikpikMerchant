@@ -393,12 +393,12 @@ export default function ProductManagement() {
     setViewMode(mode);
   };
 
-  const [marginSort, setMarginSort] = useState<"asc" | "desc" | "name_asc" | "name_desc">(() => {
+  const [marginSort, setMarginSort] = useState<"asc" | "desc" | "name_asc" | "name_desc" | "sold_asc" | "sold_desc">(() => {
     const saved = localStorage.getItem("productsMarginSort");
-    const valid = ["asc", "desc", "name_asc", "name_desc"];
-    return (valid.includes(saved ?? "") ? saved : "name_asc") as "asc" | "desc" | "name_asc" | "name_desc";
+    const valid = ["asc", "desc", "name_asc", "name_desc", "sold_asc", "sold_desc"];
+    return (valid.includes(saved ?? "") ? saved : "name_asc") as "asc" | "desc" | "name_asc" | "name_desc" | "sold_asc" | "sold_desc";
   });
-  const handleSetMarginSort = (value: "asc" | "desc" | "name_asc" | "name_desc") => {
+  const handleSetMarginSort = (value: "asc" | "desc" | "name_asc" | "name_desc" | "sold_asc" | "sold_desc") => {
     localStorage.setItem("productsMarginSort", value);
     setMarginSort(value);
   };
@@ -1047,6 +1047,14 @@ export default function ProductManagement() {
       if (mb === null) return -1;
       return marginSort === "asc" ? ma - mb : mb - ma;
     }
+    if (marginSort === "sold_asc" || marginSort === "sold_desc") {
+      const sa = (a as ProductWithBatches).percentSold ?? null;
+      const sb = (b as ProductWithBatches).percentSold ?? null;
+      if (sa === null && sb === null) return 0;
+      if (sa === null) return 1;
+      if (sb === null) return -1;
+      return marginSort === "sold_asc" ? sa - sb : sb - sa;
+    }
     if (statusFilter === "expiring") {
       const getExpiryTime = (p: ProductWithBatches): number => {
         const fromExpiryDate = p.expiryDate ? new Date(p.expiryDate).getTime() : Infinity;
@@ -1359,7 +1367,7 @@ export default function ProductManagement() {
                 ))}
               </SelectContent>
             </Select>
-            <Select value={marginSort} onValueChange={(v) => handleSetMarginSort(v as "asc" | "desc" | "name_asc" | "name_desc")}>
+            <Select value={marginSort} onValueChange={(v) => handleSetMarginSort(v as "asc" | "desc" | "name_asc" | "name_desc" | "sold_asc" | "sold_desc")}>
               <SelectTrigger className="w-[160px] h-8 border-slate-200 rounded-lg">
                 <SelectValue placeholder="Sort by" />
               </SelectTrigger>
@@ -1368,6 +1376,8 @@ export default function ProductManagement() {
                 <SelectItem value="name_desc">Name (Z–A)</SelectItem>
                 <SelectItem value="asc">Margin (low → high)</SelectItem>
                 <SelectItem value="desc">Margin (high → low)</SelectItem>
+                <SelectItem value="sold_asc">% Sold (low → high)</SelectItem>
+                <SelectItem value="sold_desc">% Sold (high → low)</SelectItem>
               </SelectContent>
             </Select>
             <div className="flex items-center gap-1">
