@@ -563,13 +563,13 @@ export class ProductStorage extends UserStorageBase {
     const rows = await db
       .select({
         productId: stockMovements.productId,
-        unitsSold: sql<string>`SUM(ABS(${stockMovements.quantity}))`,
+        unitsSold: sql<string>`-SUM(${stockMovements.quantity})`,
       })
       .from(stockMovements)
       .where(
         and(
           inArray(stockMovements.productId, productIds),
-          sql`${stockMovements.movementType} = 'purchase'`,
+          sql`${stockMovements.movementType} IN ('purchase', 'return')`,
           sql`${stockMovements.unitType} = 'units'`,
           wholesalerId ? eq(stockMovements.wholesalerId, wholesalerId) : undefined
         )
