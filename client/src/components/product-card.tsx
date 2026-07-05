@@ -9,6 +9,7 @@ import type { PromotionalOffer } from "@shared/schema";
 import { formatCurrency, formatWeight } from "@/lib/currencies";
 import { computePackWeightKg } from "@shared/utils/product";
 import { formatNumber } from "@/lib/utils";
+import { useNearDepletionThreshold } from "@/lib/near-depletion";
 
 import {
   AlertTriangle,
@@ -180,12 +181,15 @@ function ProductCard({
     return parts.length ? parts.join(' · ') : null;
   })();
 
+  const { threshold: nearDepletionThreshold } = useNearDepletionThreshold();
+
   const getStockStatus = () => {
-    const threshold = product.lowStockThreshold || 50;
+    const lowThreshold = product.lowStockThreshold || 50;
     const stockVal = product.stock ?? 0;
-    if (stockVal === 0) return { color: "text-red-600", text: "Out of stock", isAlert: true };
-    if (stockVal <= threshold) return { color: "text-orange-600", text: "Low stock", isAlert: true };
-    return { color: "text-green-600", text: "In stock", isAlert: false };
+    if (stockVal === 0) return { color: "text-red-600", text: "Out of stock", isAlert: true, isNearDepletion: false };
+    if (stockVal <= lowThreshold) return { color: "text-orange-600", text: "Low stock", isAlert: true, isNearDepletion: false };
+    const nearDepletion = (product.percentSold ?? 0) >= nearDepletionThreshold;
+    return { color: "text-green-600", text: "In stock", isAlert: false, isNearDepletion: nearDepletion };
   };
 
   const stockStatus = getStockStatus();
@@ -318,6 +322,11 @@ function ProductCard({
             {stockStatus.isAlert && (
               <Badge className="text-xs bg-red-500/90 text-white inline-flex items-center gap-1 mb-2">
                 <AlertTriangle className="h-3 w-3" /> {stockStatus.text}
+              </Badge>
+            )}
+            {stockStatus.isNearDepletion && (
+              <Badge className="text-xs bg-purple-100 text-purple-800 border border-purple-300 inline-flex items-center gap-1 mb-2">
+                <AlertTriangle className="h-3 w-3" /> Near depletion
               </Badge>
             )}
 

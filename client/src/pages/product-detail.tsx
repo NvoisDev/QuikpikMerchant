@@ -28,6 +28,7 @@ import { formatNumber } from "@/lib/utils";
 import { formatWeight } from "@/lib/currencies";
 import { computePackWeightKg } from "@shared/utils/product";
 import { InventoryCalculator } from "@shared/inventory-calculator";
+import { useNearDepletionThreshold } from "@/lib/near-depletion";
 import { fetchProductDetail, fetchWithTimeout } from "@/lib/product-detail-fetch";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -180,6 +181,7 @@ export default function ProductDetail() {
 
   const productId = parseInt(id || "0");
 
+  const { threshold: nearDepletionThreshold } = useNearDepletionThreshold();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [showAllBatches, setShowAllBatches] = useState(false);
   const [expiryPopoverBatchId, setExpiryPopoverBatchId] = useState<number | null>(null);
@@ -699,6 +701,13 @@ export default function ProductDetail() {
                     />
                   </div>
                   <p className="text-xs text-gray-400 mt-0.5">of total stock ever received</p>
+                </div>
+              )}
+
+              {product.percentSold != null && product.percentSold >= nearDepletionThreshold && totalStock > 0 && totalStock > (product.lowStockThreshold ?? 50) && (
+                <div className="flex items-center gap-2 text-purple-800 bg-purple-50 border border-purple-200 rounded-lg px-3 py-2 text-sm">
+                  <AlertTriangle className="h-4 w-4 shrink-0 text-purple-600" />
+                  <span><strong>Near depletion</strong> — {product.percentSold}% of lifetime stock has sold. Consider reordering soon.</span>
                 </div>
               )}
 

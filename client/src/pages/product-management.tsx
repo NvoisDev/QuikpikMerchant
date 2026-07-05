@@ -6,6 +6,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { useNearDepletionThreshold } from "@/lib/near-depletion";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth, type AuthUser } from "@/hooks/useAuth";
@@ -13,7 +15,7 @@ import { useAuth, type AuthUser } from "@/hooks/useAuth";
 import ProductCard from "@/components/product-card";
 import { ContextualHelpBubble } from "@/components/ContextualHelpBubble";
 import { helpContent } from "@/data/whatsapp-help-content";
-import { Plus, Search, Download, Grid, List, Package, Upload, AlertTriangle, Lock, LockOpen, Tag, PackagePlus, Pencil, Copy, Trash2, TrendingUp, X } from "lucide-react";
+import { Plus, Search, Download, Grid, List, Package, Upload, AlertTriangle, Lock, LockOpen, Tag, PackagePlus, Pencil, Copy, Trash2, TrendingUp, X, Settings2 } from "lucide-react";
 import type { Product, PromotionalOffer } from "@shared/schema";
 import { formatCurrency, formatNumber } from "@/lib/currencies";
 import { useCurrency } from "@/hooks/useCurrency";
@@ -370,6 +372,8 @@ export default function ProductManagement() {
   const { user } = useAuth();
   const isViewer = (user as AuthUser)?.teamMemberRole === 'viewer';
   const [location, navigate] = useLocation();
+  const { threshold: nearDepletionThreshold, setThreshold: setNearDepletionThreshold } = useNearDepletionThreshold();
+  const [depletionThresholdInput, setDepletionThresholdInput] = useState<string>("");
   const { setMobileTopBarActions } = useSidebarContext();
   const { toast } = useToast();
   const [activeProductTab, setActiveProductTab] = useState<'catalog' | 'price-tracker' | 'price-lists'>(() => {
@@ -1387,6 +1391,42 @@ export default function ProductManagement() {
               <Button variant={viewMode === "list" ? "default" : "ghost"} size="sm" onClick={() => handleSetViewMode("list")} className="p-1.5 h-9 w-9">
                 <List className="h-4 w-4" />
               </Button>
+              <Popover onOpenChange={(open) => { if (open) setDepletionThresholdInput(String(nearDepletionThreshold)); }}>
+                <PopoverTrigger asChild>
+                  <Button variant="ghost" size="sm" className="p-1.5 h-9 w-9" title="Configure near-depletion alert">
+                    <Settings2 className="h-4 w-4 text-purple-600" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-64 p-4" align="end">
+                  <p className="text-sm font-semibold text-gray-800 mb-1">Near Depletion Alert</p>
+                  <p className="text-xs text-gray-500 mb-3">Show a warning badge when this % of a product's lifetime stock has sold.</p>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="number"
+                      min={1}
+                      max={100}
+                      value={depletionThresholdInput}
+                      onChange={(e) => setDepletionThresholdInput(e.target.value)}
+                      className="h-8 w-20 text-sm"
+                    />
+                    <span className="text-sm text-gray-500">% sold</span>
+                    <Button
+                      size="sm"
+                      className="h-8 ml-auto"
+                      onClick={() => {
+                        const val = parseInt(depletionThresholdInput, 10);
+                        if (!isNaN(val) && val >= 1 && val <= 100) {
+                          setNearDepletionThreshold(val);
+                          toast({ title: "Alert threshold updated", description: `Near depletion badge will show at ${val}% sold.` });
+                        }
+                      }}
+                    >
+                      Save
+                    </Button>
+                  </div>
+                  <p className="text-xs text-gray-400 mt-2">Default: 90%</p>
+                </PopoverContent>
+              </Popover>
             </div>
           </div>
         </div>
@@ -1443,6 +1483,9 @@ export default function ProductManagement() {
                           )}
                           {product.stock > 0 && product.stock <= (product.lowStockThreshold || 50) && product.status !== 'locked' && (
                             <Badge className="text-xs bg-amber-500 text-white">Low Stock</Badge>
+                          )}
+                          {product.stock > 0 && product.stock > (product.lowStockThreshold || 50) && (product.percentSold ?? 0) >= nearDepletionThreshold && product.status !== 'locked' && (
+                            <Badge className="text-xs bg-purple-100 text-purple-800 border border-purple-300">Near Depletion</Badge>
                           )}
                           {product.hiddenFromPublic && (
                             <Badge variant="outline" className="text-xs text-gray-500 border-gray-400">Hidden from public</Badge>
