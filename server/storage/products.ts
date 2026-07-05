@@ -229,7 +229,7 @@ export class ProductStorage extends UserStorageBase {
       const stockByProductId = new Map(mapped.map(p => [p.id, p.stock ?? 0]));
       const [batchSummaries, percentSoldMap] = await Promise.all([
         this._getBatchSummaries(productIds),
-        this._getPercentSold(productIds, stockByProductId),
+        this._getPercentSold(productIds, stockByProductId, wholesalerId),
       ]);
       return mapped.map(p => {
         const bs = batchSummaries.get(p.id);
@@ -435,7 +435,7 @@ export class ProductStorage extends UserStorageBase {
     const stockByProductId = new Map([[id, product.stock ?? 0]]);
     const [batchSummaries, percentSoldMap] = await Promise.all([
       this._getBatchSummaries([id]),
-      this._getPercentSold([id], stockByProductId),
+      this._getPercentSold([id], stockByProductId, product.wholesalerId ?? undefined),
     ]);
     const bs = batchSummaries.get(id);
     return {
@@ -546,35 +546,44 @@ export class ProductStorage extends UserStorageBase {
 
   /**
    * Compute the percentage of stock sold (lifetime) for a set of product IDs.
-   * Queries ALL batches (active + depleted + expired) to get the total stock ever
-   * received (SUM of original_quantity, falling back to quantity for legacy rows).
-   * percentSold = ROUND((totalOriginal - currentStock) / totalOriginal × 100)
-   * Returns null for products with no batch data.
+   * Uses stock_movements (movement_type = 'purchase') as the authoritative source of
+   * what has been sold, so the figure is accurate even when batch original_quantity
+   * was captured after some stock was already sold.
+   *
+   * Formula: percentSold = unitsSold / (unitsSold + currentStock) × 100
+   *
+   * Returns null for products with no purchase movements (never sold anything).
    */
   private async _getPercentSold(
     productIds: number[],
-    stockByProductId: Map<number, number>
+    stockByProductId: Map<number, number>,
+    wholesalerId?: string
   ): Promise<Map<number, number | null>> {
     if (productIds.length === 0) return new Map();
     const rows = await db
       .select({
-        productId: productBatches.productId,
-        totalOriginal: sql<string>`SUM(COALESCE(${productBatches.originalQuantity}, ${productBatches.quantity}))`,
+        productId: stockMovements.productId,
+        unitsSold: sql<string>`SUM(ABS(${stockMovements.quantity}))`,
       })
-      .from(productBatches)
-      .where(inArray(productBatches.productId, productIds))
-      .groupBy(productBatches.productId);
+      .from(stockMovements)
+      .where(
+        and(
+          inArray(stockMovements.productId, productIds),
+          sql`${stockMovements.movementType} = 'purchase'`,
+          wholesalerId ? eq(stockMovements.wholesalerId, wholesalerId) : undefined
+        )
+      )
+      .groupBy(stockMovements.productId);
 
     const map = new Map<number, number | null>();
     for (const row of rows) {
-      const totalOriginal = Number(row.totalOriginal ?? 0);
-      if (totalOriginal <= 0) {
+      const unitsSold = Number(row.unitsSold ?? 0);
+      if (unitsSold <= 0) {
         map.set(row.productId, null);
         continue;
       }
       const currentStock = stockByProductId.get(row.productId) ?? 0;
-      const sold = totalOriginal - currentStock;
-      const pct = Math.round((sold / totalOriginal) * 100);
+      const pct = Math.round((unitsSold / (unitsSold + currentStock)) * 100);
       map.set(row.productId, Math.min(100, Math.max(0, pct)));
     }
     return map;
