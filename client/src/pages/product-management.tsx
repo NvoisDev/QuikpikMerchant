@@ -1033,8 +1033,10 @@ export default function ProductManagement() {
     if (marginSort === "asc" || marginSort === "desc") {
       const getMargin = (p: Product): number | null => {
         const price = parseFloat(String(p.price));
-        const cost = parseFloat(String(p.costPrice));
-        if (!isFinite(price) || !isFinite(cost) || price <= 0 || p.costPrice === null || p.costPrice === undefined || p.costPrice === "") return null;
+        const effectiveCost = (p as any).weightedAvgCost ?? p.costPrice ?? null;
+        if (effectiveCost === null || effectiveCost === undefined || effectiveCost === "") return null;
+        const cost = parseFloat(String(effectiveCost));
+        if (!isFinite(price) || !isFinite(cost) || price <= 0) return null;
         return ((price - cost) / price) * 100;
       };
       const ma = getMargin(a);
@@ -1056,7 +1058,8 @@ export default function ProductManagement() {
   });
 
   const hasCostPrice = filteredProducts.some(
-    (p) => p.costPrice !== null && p.costPrice !== undefined && p.costPrice !== ""
+    (p) => (p as any).weightedAvgCost != null ||
+           (p.costPrice !== null && p.costPrice !== undefined && p.costPrice !== "")
   );
 
   const calcMarginPct = (price: string | number, costPrice: string | number): number | null => {
@@ -1538,8 +1541,9 @@ export default function ProductManagement() {
                             )}
                           </div>
                           {hasCostPrice && (() => {
-                            const margin = (product.costPrice !== null && product.costPrice !== undefined && product.costPrice !== "")
-                              ? calcMarginPct(product.price, product.costPrice)
+                            const effectiveCost = (product as any).weightedAvgCost ?? product.costPrice ?? null;
+                            const margin = (effectiveCost !== null && effectiveCost !== undefined && effectiveCost !== "")
+                              ? calcMarginPct(product.price, effectiveCost)
                               : null;
                             if (margin === null) {
                               return <div><span className="text-gray-500">Margin %:</span><div className="text-gray-400 font-semibold">—</div></div>;

@@ -66,6 +66,7 @@ interface ProductDetail {
   batchCount: number;
   nearestExpiry: string | null;
   expiryDate: string | null;
+  weightedAvgCost: string | null;
 }
 
 interface Batch {
@@ -426,7 +427,10 @@ export default function ProductDetail() {
   // ── Derived values ────────────────────────────────────────────────────────
 
   const currency = product.currency || "GBP";
-  const margin = product.costPrice ? calcMarginPct(product.price, product.costPrice) : null;
+  // WAC is preferred over the stale product-level cost price for margin display
+  const effectiveCost = product.weightedAvgCost ?? product.costPrice ?? null;
+  const margin = effectiveCost ? calcMarginPct(product.price, effectiveCost) : null;
+  const usingWAC = product.weightedAvgCost != null;
   const activePromos = getActivePromos(product.promotionalOffers || []);
   const isLocked = product.status === "locked";
 
@@ -571,21 +575,26 @@ export default function ProductDetail() {
                     );
                   })()}
                 </div>
-                {product.costPrice && (
+                {effectiveCost && (
                   <div>
-                    <p className="text-xs text-gray-500 mb-0.5">Cost price</p>
-                    <p className="text-xl font-bold text-gray-900">{fmt(product.costPrice, currency)}</p>
+                    <p className="text-xs text-gray-500 mb-0.5">
+                      {usingWAC ? "Weighted avg. cost" : "Cost price"}
+                    </p>
+                    <p className="text-xl font-bold text-gray-900">{fmt(effectiveCost, currency)}</p>
+                    {usingWAC && product.costPrice && product.costPrice !== product.weightedAvgCost && (
+                      <p className="text-[11px] text-gray-400 mt-0.5">Last batch: {fmt(product.costPrice, currency)}</p>
+                    )}
                   </div>
                 )}
               </div>
 
               {margin !== null && (
                 <div className={`rounded-lg p-3 border ${marginBadgeClass}`}>
-                  <p className="text-xs font-medium opacity-70">Gross Margin</p>
+                  <p className="text-xs font-medium opacity-70">Gross Margin{usingWAC ? " (weighted avg. cost)" : ""}</p>
                   <p className="text-2xl font-bold">{margin.toFixed(1)}%</p>
-                  {product.costPrice && (
+                  {effectiveCost && (
                     <p className="text-xs mt-0.5 opacity-70">
-                      {fmt(parseFloat(product.price) - parseFloat(product.costPrice), currency)} per unit
+                      {fmt(parseFloat(product.price) - parseFloat(effectiveCost), currency)} per unit
                     </p>
                   )}
                 </div>

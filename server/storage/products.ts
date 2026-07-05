@@ -233,6 +233,7 @@ export class ProductStorage extends UserStorageBase {
           totalBatchStock: bs?.totalBatchStock ?? null,
           nearestExpiry: bs?.nearestExpiry ?? null,
           batchCount: bs?.batchCount ?? 0,
+          weightedAvgCost: bs?.weightedAvgCost ?? null,
         };
       }) as unknown as Product[];
     }
@@ -331,6 +332,7 @@ export class ProductStorage extends UserStorageBase {
         totalBatchStock: bs?.totalBatchStock ?? null,
         nearestExpiry: bs?.nearestExpiry ?? null,
         batchCount: bs?.batchCount ?? 0,
+        weightedAvgCost: bs?.weightedAvgCost ?? null,
       } as unknown as Product;
     });
   }
@@ -431,6 +433,7 @@ export class ProductStorage extends UserStorageBase {
       totalBatchStock: bs?.totalBatchStock ?? null,
       nearestExpiry: bs?.nearestExpiry ?? null,
       batchCount: bs?.batchCount ?? 0,
+      weightedAvgCost: bs?.weightedAvgCost ?? null,
     } as Product;
   }
 
@@ -531,12 +534,17 @@ export class ProductStorage extends UserStorageBase {
   }
 
   /**
-   * Fetch batch summary (totalBatchStock, nearestExpiry, batchCount) for a set
-   * of product IDs in a single query.  Only counts active, non-expired batches.
+   * Fetch batch summary (totalBatchStock, nearestExpiry, batchCount, weightedAvgCost)
+   * for a set of product IDs in a single query.  Only counts active, non-expired batches.
+   *
+   * weightedAvgCost = SUM(qty × costPrice) / SUM(qty for priced batches).
+   * Batches with null costPrice are excluded from both the numerator and denominator
+   * so they don't drag the average toward zero.  Returns null when no active batch
+   * has a costPrice.
    */
   private async _getBatchSummaries(
     productIds: number[]
-  ): Promise<Map<number, { totalBatchStock: number; nearestExpiry: string | null; batchCount: number }>> {
+  ): Promise<Map<number, { totalBatchStock: number; nearestExpiry: string | null; batchCount: number; weightedAvgCost: string | null }>> {
     if (productIds.length === 0) return new Map();
     const today = new Date().toISOString().split('T')[0];
     const rows = await db
@@ -545,6 +553,13 @@ export class ProductStorage extends UserStorageBase {
         totalBatchStock: sum(productBatches.quantity),
         nearestExpiry: sql<string | null>`MIN(${productBatches.expiryDate})`,
         batchCount: count(productBatches.id),
+        weightedAvgCost: sql<string | null>`
+          SUM(CASE WHEN ${productBatches.costPrice} IS NOT NULL
+            THEN ${productBatches.quantity}::numeric * ${productBatches.costPrice}::numeric
+            ELSE 0 END) /
+          NULLIF(SUM(CASE WHEN ${productBatches.costPrice} IS NOT NULL
+            THEN ${productBatches.quantity} ELSE 0 END), 0)
+        `,
       })
       .from(productBatches)
       .where(
@@ -556,12 +571,13 @@ export class ProductStorage extends UserStorageBase {
       )
       .groupBy(productBatches.productId);
 
-    const map = new Map<number, { totalBatchStock: number; nearestExpiry: string | null; batchCount: number }>();
+    const map = new Map<number, { totalBatchStock: number; nearestExpiry: string | null; batchCount: number; weightedAvgCost: string | null }>();
     for (const row of rows) {
       map.set(row.productId, {
         totalBatchStock: Number(row.totalBatchStock ?? 0),
         nearestExpiry: row.nearestExpiry ? String(row.nearestExpiry) : null,
         batchCount: Number(row.batchCount ?? 0),
+        weightedAvgCost: row.weightedAvgCost != null ? String(row.weightedAvgCost) : null,
       });
     }
     return map;

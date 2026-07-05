@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import {
-  and, count, customerGroups, db, eq, gte, inArray, lte, openai, or, orderCancellationRequests,
-  orderItems, orders, products, requireAuth, requireNotViewer, requireBooleanFeature, storage, sum
+  and, count, customerGroups, db, eq, gte, inArray, isNull, lte, openai, or, orderCancellationRequests,
+  orderItems, orders, products, requireAuth, requireNotViewer, requireBooleanFeature, sql, storage, sum
 } from "./shared";
 import { resolveWholesalerId } from "../utils/resolveWholesalerId";
 import { productBatches } from "@shared/schema";
@@ -341,6 +341,7 @@ export function registerAnalyticsRoutes(app: Express): void {
       const items = await db
         .select({
           orderId: orderItems.orderId,
+          productId: orderItems.productId,
           quantity: orderItems.quantity,
           unitPrice: orderItems.unitPrice,
           batchId: orderItems.batchId,
@@ -354,6 +355,35 @@ export function registerAnalyticsRoutes(app: Express): void {
         .leftJoin(products, eq(orderItems.productId, products.id))
         .where(inArray(orderItems.orderId, orderIds));
 
+      // Compute WAC for every product referenced by these order items so we can
+      // use it as the fallback cost instead of the stale products.costPrice.
+      const uniqueProductIds = [...new Set(items.map(i => i.productId).filter((id): id is number => id != null))];
+      const wacByProductId = new Map<number, string | null>();
+      if (uniqueProductIds.length > 0) {
+        const today = new Date().toISOString().split('T')[0];
+        const wacRows = await db
+          .select({
+            productId: productBatches.productId,
+            wac: sql<string | null>`
+              SUM(CASE WHEN ${productBatches.costPrice} IS NOT NULL
+                THEN ${productBatches.quantity}::numeric * ${productBatches.costPrice}::numeric
+                ELSE 0 END) /
+              NULLIF(SUM(CASE WHEN ${productBatches.costPrice} IS NOT NULL
+                THEN ${productBatches.quantity} ELSE 0 END), 0)
+            `,
+          })
+          .from(productBatches)
+          .where(and(
+            inArray(productBatches.productId, uniqueProductIds),
+            eq(productBatches.status, 'active'),
+            or(isNull(productBatches.expiryDate), sql`${productBatches.expiryDate} >= ${today}`)
+          ))
+          .groupBy(productBatches.productId);
+        for (const row of wacRows) {
+          wacByProductId.set(row.productId, row.wac != null ? String(row.wac) : null);
+        }
+      }
+
       const orderQuoteMap = new Map(validOrders.map(o => [o.id, (o.isQuote ?? false) || o.orderSource === 'wholesaler']));
 
       let quotesCoveredRevenue = 0, quotesCost = 0, quotesUncoveredRevenue = 0, quotesMissingCost = false;
@@ -361,7 +391,9 @@ export function registerAnalyticsRoutes(app: Express): void {
 
       for (const item of items) {
         const isQuote = orderQuoteMap.get(item.orderId) ?? false;
-        const resolvedCostPrice = item.batchCostPrice ?? item.productCostPrice ?? null;
+        // Fallback chain: batch cost → WAC from current active batches → product-level fallback
+        const productWAC = item.productId ? (wacByProductId.get(item.productId) ?? null) : null;
+        const resolvedCostPrice = item.batchCostPrice ?? productWAC ?? item.productCostPrice ?? null;
         const hasCost = resolvedCostPrice !== null && resolvedCostPrice !== undefined;
 
         const revenue = parseFloat(item.unitPrice) * item.quantity;

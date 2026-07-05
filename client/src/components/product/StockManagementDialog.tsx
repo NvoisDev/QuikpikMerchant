@@ -426,6 +426,7 @@ export default function StockManagementDialog({
                     onChange={(e) => setBatchCostPrice(e.target.value)}
                     className="mt-1"
                   />
+                  <p className="text-[11px] text-gray-400 mt-1">Cost is indicative of your purchase price per unit for this batch.</p>
                 </div>
                 <Button
                   onClick={onAddBatch}
