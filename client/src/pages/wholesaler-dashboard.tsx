@@ -117,6 +117,35 @@ function MarginOverview() {
 
   const [showProductBreakdown, setShowProductBreakdown] = useState(false);
 
+  const exportMarginCSV = () => {
+    if (!marginData?.products?.length) return;
+    const fromStr = format(dateRange.from, "yyyy-MM-dd");
+    const toStr = format(dateRange.to, "yyyy-MM-dd");
+    const filename = `margin-breakdown-${fromStr}-to-${toStr}.csv`;
+
+    const escapeCell = (val: string) => `"${val.replace(/"/g, '""')}"`;
+    const headers = ["Product", "WAC", "Revenue", "Margin £", "Margin %", "Revenue Share %"];
+    const rows = marginData.products.map(p => [
+      escapeCell(p.name),
+      p.wac != null ? p.wac.toFixed(2) : "",
+      p.revenue.toFixed(2),
+      p.hasCost ? p.margin.toFixed(2) : "",
+      p.marginPercent != null ? p.marginPercent.toFixed(1) : "",
+      p.revenueShare.toFixed(1),
+    ]);
+
+    const csv = [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  };
+
   const StatTile = ({ label, value, positive }: { label: string; value: string; positive?: boolean }) => (
     <div className="bg-slate-50 rounded-xl p-3 sm:p-4 flex flex-col gap-1">
       <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">{label}</p>
@@ -244,6 +273,15 @@ function MarginOverview() {
                   </button>
                   {showProductBreakdown && (
                     <div className="overflow-x-auto">
+                      <div className="flex justify-end px-4 py-2 border-b border-slate-100 bg-white">
+                        <button
+                          onClick={exportMarginCSV}
+                          className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg px-3 py-1.5 transition-colors"
+                        >
+                          <Download className="w-3.5 h-3.5" />
+                          Export CSV
+                        </button>
+                      </div>
                       <table className="w-full text-xs">
                         <thead>
                           <tr className="border-b border-slate-200 bg-slate-50/50">
