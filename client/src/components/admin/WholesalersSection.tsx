@@ -359,7 +359,7 @@ export function WholesalersSection({ wholesalers, wholesalersLoading, isAdmin }:
 
       {/* Global GMV totals strip */}
       {(() => {
-        const nonTest = filtered.filter(w => !w.isTestAccount);
+        const nonTest = filtered.filter(w => !w.isTestAccount && !w.isInactive);
         const totalGMVWithFees = nonTest.reduce((s, w) => s + (w.gmvWithFees ?? 0), 0);
         const totalGMVWithoutFees = nonTest.reduce((s, w) => s + (w.gmvWithoutFees ?? 0), 0);
         const totalGMV = nonTest.reduce((s, w) => s + (w.totalGMV ?? 0), 0);

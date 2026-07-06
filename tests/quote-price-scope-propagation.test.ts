@@ -117,11 +117,16 @@ async function cleanup() {
     WHERE product_id IN (SELECT id FROM products WHERE name LIKE 'zz_test%')`);
   await db.execute(sql`DELETE FROM order_items
     WHERE product_id IN (SELECT id FROM products WHERE name LIKE 'zz_test%')`);
-  // Re-run stock_movements delete immediately before products to catch any rows
-  // inserted after the first delete (e.g. startup-migration backfill running concurrently).
-  await db.execute(sql`DELETE FROM stock_movements
-    WHERE product_id IN (SELECT id FROM products WHERE name LIKE 'zz_test%')`);
-  await db.execute(sql`DELETE FROM products WHERE name LIKE 'zz_test%'`);
+  // Final cleanup in a single transaction so no background process (e.g. startup
+  // migration backfill) can insert stock_movements between the delete and the
+  // products delete, which would trigger the FK violation.
+  await db.execute(sql`
+    BEGIN;
+    DELETE FROM stock_movements
+      WHERE product_id IN (SELECT id FROM products WHERE name LIKE 'zz_test%');
+    DELETE FROM products WHERE name LIKE 'zz_test%';
+    COMMIT;
+  `);
 
   // Resolve all orders/products for this wholesaler so the cleanup is not
   // dependent on the tracking arrays being accurate (they can fall out of sync
