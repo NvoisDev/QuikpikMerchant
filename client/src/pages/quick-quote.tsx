@@ -327,7 +327,7 @@ export default function QuickQuote() {
   const [customerSearch, setCustomerSearch] = useState("");
   const [selectedProfileId, setSelectedProfileId] = useState<number | null>(null);
   const [editNameOpen, setEditNameOpen] = useState(false);
-  const [summaryExpanded, setSummaryExpanded] = useState(() => typeof window !== 'undefined' && window.innerWidth >= 1024);
+  const [summaryExpanded, setSummaryExpanded] = useState(true);
   const [deliveryExpanded, setDeliveryExpanded] = useState(false);
   const [paymentSetupExpanded, setPaymentSetupExpanded] = useState(() => typeof window !== 'undefined' && window.innerWidth >= 1024);
   const [balanceDueExpanded, setBalanceDueExpanded] = useState(false);
