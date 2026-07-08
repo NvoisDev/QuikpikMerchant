@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { useCurrency } from "@/hooks/useCurrency";
 import { FeatureLock, isListingTier } from "@/components/FeatureLock";
 import PageHeader from "@/components/PageHeader";
@@ -174,6 +174,15 @@ export default function Customers() {
   const [isAddToGroupDialogOpen, setIsAddToGroupDialogOpen] = useState(false);
   const [isViewCustomerOrdersDialogOpen, setIsViewCustomerOrdersDialogOpen] = useState(false);
   const [isAddCustomerDialogOpen, setIsAddCustomerDialogOpen] = useState(false);
+
+  // Auto-open Add Customer dialog when navigated from dashboard with ?add=true
+  useEffect(() => {
+    const params = new URLSearchParams(location.split('?')[1] || '');
+    if (params.get('add') === 'true' && !isViewer) {
+      setIsAddCustomerDialogOpen(true);
+      navigate('/customers', { replace: true });
+    }
+  }, []);
 
   // Upgrade modal state (shared with CustomerGroupsTab)
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
