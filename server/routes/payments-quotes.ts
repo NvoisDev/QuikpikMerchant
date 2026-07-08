@@ -6,7 +6,7 @@ import { calculateOrderPricing } from "../services/orderPricingService";
 import { formatDateTime } from "../../shared/utils/date";
 import {
   InventoryCalculator, and, asc, db, emailButton, emailCard, emailHeading, eq,
-  formatPackDescriptor, generateOrderNumber, getEmailLogoUrl,
+  findRecentDuplicateOrder, formatPackDescriptor, generateOrderNumber, getEmailLogoUrl,
   inArray, isNull, ne, or, orderItems, orders, productBatches, products,
   requireAuth, requireNotViewer, requireBooleanFeature, sendEmail, sendWhatsAppMessage, sendCustomerInvoiceEmail,
   sql, stockMovements, storage, sum, wrapCustomerEmail, desc, quoteActivityLogs,
@@ -240,7 +240,7 @@ export function registerQuoteRoutes(app: Express): void {
     try {
       const wholesalerId = resolveWholesalerId(req);
       
-      const { customerId, items, sendVia, depositPercentage = 100, balanceDueDays = 0, fulfillmentType = 'pickup', deliveryCharge = 0, deliveryAddressId = null, deliveryAddress = null, customAddressFields = null, paymentMethod: requestedPaymentMethod, businessProfileId = null, collectionAddressId = null, sendSmsNotification = false } = req.body;
+      const { customerId, items, sendVia, depositPercentage = 100, balanceDueDays = 0, fulfillmentType = 'pickup', deliveryCharge = 0, deliveryAddressId = null, deliveryAddress = null, customAddressFields = null, paymentMethod: requestedPaymentMethod, businessProfileId = null, collectionAddressId = null, sendSmsNotification = false, confirmDuplicate = false } = req.body;
       
       if (!customerId || !items || items.length === 0) {
         return res.status(400).json({ error: 'Customer and items are required' });
@@ -373,6 +373,20 @@ export function registerQuoteRoutes(app: Express): void {
       const productSubtotal = items.reduce((sum: number, item: any) => 
         sum + (item.customPrice * item.quantity), 0
       );
+
+      // Guard against accidentally raising the same invoice twice for this customer
+      // (e.g. a draft was already approved moments ago, or a double form submission).
+      if (!confirmDuplicate) {
+        const duplicate = await findRecentDuplicateOrder({ wholesalerId, retailerId: customerId, subtotal: productSubtotal });
+        if (duplicate) {
+          return res.status(409).json({
+            error: `A similar invoice (${duplicate.orderNumber || `#${duplicate.id}`}) for this customer was created moments ago`,
+            errorType: 'DUPLICATE_INVOICE',
+            conflictingOrder: { id: duplicate.id, orderNumber: duplicate.orderNumber, createdAt: duplicate.createdAt, total: duplicate.total },
+          });
+        }
+      }
+
       const quoteDeliveryCharge = fulfillmentType === 'delivery' ? (parseFloat(deliveryCharge) || 0) : 0;
       const subtotal = productSubtotal + quoteDeliveryCharge;
       // Pay Later (depositPercentage === 0) has no Stripe processing — no fees apply.

@@ -65,6 +65,16 @@ import {
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { DialogDescription } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { QuoteItemCard } from "@/components/orders/QuoteItemCard";
 
 interface QuoteItem {
@@ -268,6 +278,12 @@ export default function QuickQuote() {
     id: number;
     customerName: string;
     isUpdate: boolean;
+  } | null>(null);
+  const [duplicateInvoiceWarning, setDuplicateInvoiceWarning] = useState<{
+    id: number;
+    orderNumber: string | null;
+    total: string;
+    createdAt: string;
   } | null>(null);
   const [showPickingMode, setShowPickingMode] = useState(false);
   const [isSharingInvoice, setIsSharingInvoice] = useState(false);
@@ -705,6 +721,7 @@ export default function QuickQuote() {
       customAddressFields?: { addressLine1: string; city: string; postalCode: string; state: string; label: string };
       paymentMethod?: string;
       businessProfileId?: number | null;
+      confirmDuplicate?: boolean;
     }) => {
       // When editing a draft, sync current state to the draft then approve it in-place.
       // This avoids the duplicate-order risk of creating a new order and then deleting the draft.
@@ -731,16 +748,19 @@ export default function QuickQuote() {
           const err = await patchResp.json().catch(() => ({ error: 'Failed to update draft' }));
           throw new Error(err.error || 'Failed to update draft before approval');
         }
-        const approveResp = await apiRequest('POST', `/api/orders/${editingDraftId}/approve`, {});
+        const approveResp = await apiRequest('POST', `/api/orders/${editingDraftId}/approve`, {
+          ...(data.confirmDuplicate ? { confirmDuplicate: true } : {}),
+        });
         if (!approveResp.ok) {
           const err = await approveResp.json().catch(() => ({ error: 'Failed to approve draft' }));
-          type StockError = Error & { errorType?: string; productName?: string; available?: number; requested?: number };
+          type StockError = Error & { errorType?: string; productName?: string; available?: number; requested?: number; conflictingOrder?: { id: number; orderNumber: string | null; createdAt: string; total: string } };
           const thrownError = new Error(err.error || 'Failed to approve draft') as StockError;
           if (err.errorType) {
             thrownError.errorType = err.errorType;
             thrownError.productName = err.productName;
             thrownError.available = err.available;
             thrownError.requested = err.requested;
+            thrownError.conflictingOrder = err.conflictingOrder;
           }
           throw thrownError;
         }
@@ -765,13 +785,14 @@ export default function QuickQuote() {
       const response = await apiRequest('POST', '/api/quotes', body);
       if (!response.ok) {
         const err = await response.json().catch(() => ({ error: 'Failed to create invoice' }));
-        type StockError = Error & { errorType?: string; productName?: string; available?: number; requested?: number };
+        type StockError = Error & { errorType?: string; productName?: string; available?: number; requested?: number; conflictingOrder?: { id: number; orderNumber: string | null; createdAt: string; total: string } };
         const thrownError = new Error(err.error || 'Failed to create invoice') as StockError;
         if (err.errorType) {
           thrownError.errorType = err.errorType;
           thrownError.productName = err.productName;
           thrownError.available = err.available;
           thrownError.requested = err.requested;
+          thrownError.conflictingOrder = err.conflictingOrder;
         }
         throw thrownError;
       }
@@ -829,7 +850,12 @@ export default function QuickQuote() {
       }
     },
     onError: (error: Error) => {
-      const e = error as Error & { errorType?: string; available?: number; requested?: number; productName?: string };
+      const e = error as Error & { errorType?: string; available?: number; requested?: number; productName?: string; conflictingOrder?: { id: number; orderNumber: string | null; total: string; createdAt: string } };
+      if (e.errorType === "DUPLICATE_INVOICE" && e.conflictingOrder) {
+        setDuplicateInvoiceWarning(e.conflictingOrder);
+        createQuoteGuard.current.release();
+        return;
+      }
       toast({
         title: e.errorType === "OUT_OF_STOCK" ? "Stock Unavailable" : "Error",
         description: e.errorType === "OUT_OF_STOCK" && e.available != null && e.requested != null
@@ -2757,6 +2783,37 @@ export default function QuickQuote() {
         onSaveDraftMutate={saveAsDraftMutation.mutate}
         onCreateQuote={handleCreateQuote}
       />
+
+      <AlertDialog open={!!duplicateInvoiceWarning} onOpenChange={(open) => { if (!open) setDuplicateInvoiceWarning(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Similar invoice created moments ago</AlertDialogTitle>
+            <AlertDialogDescription>
+              {duplicateInvoiceWarning && (
+                <>
+                  You already created invoice {duplicateInvoiceWarning.orderNumber || `#${duplicateInvoiceWarning.id}`} for {formatCurrency(parseFloat(duplicateInvoiceWarning.total))} to this customer at{' '}
+                  {new Date(duplicateInvoiceWarning.createdAt).toLocaleTimeString()}. Are you sure you want to create another one?
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setDuplicateInvoiceWarning(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setDuplicateInvoiceWarning(null);
+                createQuoteGuard.current.acquire();
+                createQuoteMutation.mutate({
+                  ...(createQuoteMutation.variables as Parameters<typeof createQuoteMutation.mutate>[0]),
+                  confirmDuplicate: true,
+                });
+              }}
+            >
+              Create Anyway
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

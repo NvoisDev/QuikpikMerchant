@@ -227,7 +227,7 @@ async function runStartupMigrations() {
     `DO $$ BEGIN
        DROP TRIGGER IF EXISTS trg_parse_order_number ON orders;
        CREATE TRIGGER trg_parse_order_number
-         BEFORE INSERT ON orders
+         BEFORE INSERT OR UPDATE OF order_number ON orders
          FOR EACH ROW EXECUTE FUNCTION fn_parse_order_number_parts();
      END $$`,
     // Task #479: Drop stale negotiation schema — negotiations table and its two columns on products

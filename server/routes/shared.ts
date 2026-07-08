@@ -229,6 +229,42 @@ export async function generateOrderNumber(wholesalerId: string, trx?: any): Prom
   }
 }
 
+// Best-effort guard against a wholesaler accidentally raising the same invoice twice
+// (e.g. approving a draft, then also creating a fresh Quick Quote for the same customer).
+// This is intentionally NOT a hard uniqueness constraint — it's a short recent-history
+// check performed outside any transaction, so two truly concurrent requests can both pass.
+// That's an acceptable tradeoff: the real-world failure mode this catches is a human
+// re-submitting the same invoice moments apart, not a race between simultaneous clicks.
+export async function findRecentDuplicateOrder(params: {
+  wholesalerId: string;
+  retailerId: string;
+  subtotal: number;
+  excludeOrderId?: number;
+  windowMinutes?: number;
+  trx?: any;
+}): Promise<{ id: number; orderNumber: string | null; createdAt: Date; total: string } | null> {
+  const { wholesalerId, retailerId, subtotal, excludeOrderId, windowMinutes = 5, trx } = params;
+  const dbConnection = trx || db;
+  const conditions = [
+    eq(orders.wholesalerId, wholesalerId),
+    eq(orders.retailerId, retailerId),
+    eq(orders.subtotal, subtotal.toFixed(2)),
+    ne(orders.status, 'draft'),
+    ne(orders.status, 'cancelled'),
+    gte(orders.createdAt, sql`now() - interval '${sql.raw(String(windowMinutes))} minutes'`),
+  ];
+  if (excludeOrderId) conditions.push(ne(orders.id, excludeOrderId));
+
+  const [existing] = await dbConnection
+    .select({ id: orders.id, orderNumber: orders.orderNumber, createdAt: orders.createdAt, total: orders.total })
+    .from(orders)
+    .where(and(...conditions))
+    .orderBy(desc(orders.createdAt))
+    .limit(1);
+
+  return existing || null;
+}
+
 export { formatNumber } from '../../shared/utils/currency';
 
 export function parseCustomerName(fullName: string): { firstName: string; lastName: string } {

@@ -10,6 +10,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Separator } from "@/components/ui/separator";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Search, Package, DollarSign, Clock, Users, CheckCircle, X, Truck, MapPin, Camera, Image as ImageIcon, RefreshCw, Eye, FileText, UserPen, ShoppingCart, Loader2, MoreVertical, Share2, PackageCheck, RotateCcw } from "lucide-react";
@@ -230,6 +240,12 @@ export default function OrdersFresh() {
   });
   const [isDeletingDraft, setIsDeletingDraft] = useState<number | null>(null);
   const [isApprovingDraft, setIsApprovingDraft] = useState<number | null>(null);
+  const [duplicateInvoiceWarning, setDuplicateInvoiceWarning] = useState<{
+    draftId: number;
+    orderNumber: string | null;
+    total: string;
+    createdAt: string;
+  } | null>(null);
   const [isSharingDraft, setIsSharingDraft] = useState<number | null>(null);
   const [reminderDismissed, setReminderDismissed] = useState(false);
   const { toast } = useToast();
@@ -371,10 +387,10 @@ export default function OrdersFresh() {
     }
   };
 
-  const handleApproveDraft = async (draftId: number) => {
+  const handleApproveDraft = async (draftId: number, confirmDuplicate?: boolean) => {
     setIsApprovingDraft(draftId);
     try {
-      await apiRequest('POST', `/api/orders/${draftId}/approve`);
+      await apiRequest('POST', `/api/orders/${draftId}/approve`, confirmDuplicate ? { confirmDuplicate: true } : {});
       refetchDrafts();
       if (user?.id) localStorage.removeItem(`quikpik_qq_draft_${user.id}`);
       setMobileDraft(null);
@@ -383,7 +399,9 @@ export default function OrdersFresh() {
       loadOrders(1, '', 'active');
       toast({ title: 'Invoice approved!', description: 'Order is now active and customer notified.' });
     } catch (err: any) {
-      if (err?.errorType === 'OUT_OF_STOCK') {
+      if (err?.errorType === 'DUPLICATE_INVOICE' && err.conflictingOrder) {
+        setDuplicateInvoiceWarning({ draftId, ...err.conflictingOrder });
+      } else if (err?.errorType === 'OUT_OF_STOCK') {
         toast({
           title: 'Stock Unavailable',
           description: err.available != null && err.requested != null
@@ -2189,6 +2207,34 @@ export default function OrdersFresh() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={!!duplicateInvoiceWarning} onOpenChange={(open) => { if (!open) setDuplicateInvoiceWarning(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Similar invoice created moments ago</AlertDialogTitle>
+            <AlertDialogDescription>
+              {duplicateInvoiceWarning && (
+                <>
+                  You already created invoice {duplicateInvoiceWarning.orderNumber || `#${duplicateInvoiceWarning.draftId}`} for {formatCurrency(parseFloat(duplicateInvoiceWarning.total))} to this customer at{' '}
+                  {new Date(duplicateInvoiceWarning.createdAt).toLocaleTimeString()}. Are you sure you want to approve this draft as another order?
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setDuplicateInvoiceWarning(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                const draftId = duplicateInvoiceWarning?.draftId;
+                setDuplicateInvoiceWarning(null);
+                if (draftId != null) handleApproveDraft(draftId, true);
+              }}
+            >
+              Approve Anyway
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
     </div>
   );

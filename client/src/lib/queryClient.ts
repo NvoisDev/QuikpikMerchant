@@ -12,12 +12,14 @@ async function throwIfResNotOk(res: Response) {
           requested?: number;
           productName?: string;
           status?: number;
+          conflictingOrder?: { id: number; orderNumber: string | null; createdAt: string; total: string };
         };
         err.errorType = json.errorType;
         err.available = json.available;
         err.requested = json.requested;
         err.productName = json.productName;
         err.status = res.status;
+        err.conflictingOrder = json.conflictingOrder;
         throw err;
       }
     } catch (e) {

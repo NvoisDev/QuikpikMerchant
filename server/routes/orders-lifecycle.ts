@@ -24,7 +24,7 @@ import {
   generateReadyForCollectionEmail,
   sendOrderStatusNotification,
   getCurrencySymbol, formatPackDescriptor,
-  generateOrderNumber, insertOrderSchema,
+  generateOrderNumber, findRecentDuplicateOrder, insertOrderSchema,
   z,
   sendCustomerInvoiceEmail,
   createStripeRefundReceipt,
@@ -386,6 +386,24 @@ export function registerOrderLifecycleRoutes(app: Express): void {
       if (!order) return res.status(404).json({ error: 'Draft not found' });
       if (order.status !== 'draft') return res.status(400).json({ error: 'Order is not a draft' });
       if (order.wholesalerId !== wholesalerId) return res.status(403).json({ error: 'Not authorized' });
+
+      // Guard against accidentally raising the same invoice twice for this customer
+      // (e.g. this draft was already approved, or a separate Quick Quote was already created).
+      if (!req.body?.confirmDuplicate) {
+        const duplicate = await findRecentDuplicateOrder({
+          wholesalerId,
+          retailerId: order.retailerId,
+          subtotal: parseFloat(order.subtotal || '0'),
+          excludeOrderId: id,
+        });
+        if (duplicate) {
+          return res.status(409).json({
+            error: `A similar invoice (${duplicate.orderNumber || `#${duplicate.id}`}) for this customer was created moments ago`,
+            errorType: 'DUPLICATE_INVOICE',
+            conflictingOrder: { id: duplicate.id, orderNumber: duplicate.orderNumber, createdAt: duplicate.createdAt, total: duplicate.total },
+          });
+        }
+      }
 
       const items = await storage.getOrderItems(id);
       if (!items || items.length === 0) return res.status(400).json({ error: 'Draft has no items' });
@@ -1563,6 +1581,19 @@ export function registerOrderLifecycleRoutes(app: Express): void {
       if (existingOrder) {
         console.warn(`⚠️  Duplicate order request (key ${orderFingerprint.slice(0, 12)}…) — returning existing order ${existingOrder.id} without side effects`);
         return res.json(existingOrder);
+      }
+
+      // Additional cross-path guard: catch a duplicate raised via a different flow
+      // (e.g. the fingerprint above only matches identical requests within a 60s bucket).
+      if (!req.body?.confirmDuplicate) {
+        const duplicate = await findRecentDuplicateOrder({ wholesalerId, retailerId: userId, subtotal });
+        if (duplicate) {
+          return res.status(409).json({
+            error: `A similar invoice (${duplicate.orderNumber || `#${duplicate.id}`}) for this customer was created moments ago`,
+            errorType: 'DUPLICATE_INVOICE',
+            conflictingOrder: { id: duplicate.id, orderNumber: duplicate.orderNumber, createdAt: duplicate.createdAt, total: duplicate.total },
+          });
+        }
       }
 
       const feeConfig = await getCurrentFeeConfig();
