@@ -771,8 +771,8 @@ export default function WholesalerDashboard() {
             {/* Quick Actions Bar */}
             {!isViewer && (
               <div className="mt-5 pt-4 border-t border-slate-200/70">
-                {/* Mobile: 2×2 grid */}
-                <div className="grid grid-cols-2 gap-2 sm:hidden">
+                {/* Mobile/tablet: 2×2 grid */}
+                <div className="grid grid-cols-2 gap-2 lg:hidden">
                   <Link href="/quick-quote">
                     <button className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-medium rounded-xl h-12 text-sm transition-colors">
                       <FileText className="h-4 w-4 shrink-0" />
@@ -798,8 +798,8 @@ export default function WholesalerDashboard() {
                     </button>
                   </Link>
                 </div>
-                {/* Tablet/Desktop: single flex row */}
-                <div className="hidden sm:flex items-center gap-2 flex-wrap">
+                {/* Desktop: single flex row */}
+                <div className="hidden lg:flex items-center gap-2 flex-wrap">
                   <Link href="/quick-quote">
                     <button className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-medium rounded-lg px-4 h-9 text-sm transition-colors">
                       <FileText className="h-4 w-4 shrink-0" />
