@@ -16,7 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { AddressSearchInput, type AddressPlaceResult } from "@/components/BusinessSearchInput";
+import { AddressSearchInput, BusinessSearchInput, type AddressPlaceResult, type BusinessPlaceResult } from "@/components/BusinessSearchInput";
 import { getNextAlertDate, ALERT_DAY_NAMES } from "@/lib/stockAlertSchedule";
 
 interface BusinessProfile {
@@ -1965,6 +1965,23 @@ export default function Settings() {
                             className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
                             placeholder="+44XXXXXXXXXX"
                           />
+                        </div>
+                        <div className="sm:col-span-2">
+                          <label className="text-sm font-medium text-gray-500 mb-1 block">Search business or address</label>
+                          <BusinessSearchInput
+                            global
+                            placeholder="Type your business name or address..."
+                            onSelect={(result: BusinessPlaceResult) => {
+                              setBusinessForm(f => ({
+                                ...f,
+                                businessAddress: result.streetAddress || f.businessAddress,
+                                city: result.city || f.city,
+                                postalCode: result.postalCode || f.postalCode,
+                                country: result.country || f.country,
+                              }));
+                            }}
+                          />
+                          <p className="text-xs text-gray-400 mt-1">Select a result to auto-fill the fields below, then edit if needed.</p>
                         </div>
                         <div className="sm:col-span-2">
                           <label className="text-sm font-medium text-gray-500">Registered Address</label>

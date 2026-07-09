@@ -23,6 +23,7 @@ interface BusinessSearchInputProps {
   onSelect: (result: BusinessPlaceResult) => void;
   placeholder?: string;
   className?: string;
+  global?: boolean;
 }
 
 let sdkPromise: Promise<boolean> | null = null;
@@ -63,12 +64,14 @@ interface AddressSearchInputProps {
   onSelect: (result: AddressPlaceResult) => void;
   placeholder?: string;
   className?: string;
+  global?: boolean;
 }
 
 export function AddressSearchInput({
   onSelect,
   placeholder = "Search for an address...",
   className,
+  global = false,
 }: AddressSearchInputProps) {
   const [query, setQuery] = useState('');
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
@@ -107,7 +110,7 @@ export function AddressSearchInput({
     setLoading(true);
     debounceRef.current = setTimeout(() => {
       autocompleteRef.current?.getPlacePredictions(
-        { input: query, types: ['geocode'], componentRestrictions: { country: 'gb' } },
+        { input: query, types: ['geocode'], ...(global ? {} : { componentRestrictions: { country: 'gb' } }) },
         (results: any[], status: string) => {
           setLoading(false);
           if (status === 'OK' && results?.length) {
@@ -223,6 +226,7 @@ export function BusinessSearchInput({
   onSelect,
   placeholder = "Find business on Google...",
   className,
+  global = false,
 }: BusinessSearchInputProps) {
   const [query, setQuery] = useState('');
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
@@ -261,7 +265,7 @@ export function BusinessSearchInput({
     setLoading(true);
     debounceRef.current = setTimeout(() => {
       autocompleteRef.current?.getPlacePredictions(
-        { input: query, types: ['establishment'], componentRestrictions: { country: 'gb' } },
+        { input: query, types: ['establishment'], ...(global ? {} : { componentRestrictions: { country: 'gb' } }) },
         (results: any[], status: string) => {
           setLoading(false);
           if (status === 'OK' && results?.length) {
