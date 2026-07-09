@@ -458,7 +458,7 @@ function MarginOverview() {
               <>
                 {(() => {
                   const costLines = drillData.filter(l => l.marginPercent !== null);
-                  if (costLines.length < 3) return null;
+                  if (costLines.length === 0) return null;
 
                   const bucket = (d: Date, weekly: boolean) =>
                     weekly
@@ -485,7 +485,15 @@ function MarginOverview() {
 
                   let groups = buildGroups(false);
                   if (groups.length < 3) groups = buildGroups(true);
-                  if (groups.length < 3) return null;
+                  if (groups.length < 3) {
+                    if (groups.length === 0) return null;
+                    return (
+                      <div className="px-4 pt-4 pb-3 border-b border-slate-100">
+                        <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 mb-1">Margin trend</p>
+                        <p className="text-xs text-slate-500 italic">Not enough data for a trend — more months needed to plot a chart.</p>
+                      </div>
+                    );
+                  }
 
                   const allPositive = groups.every(g => g.avg >= 0);
                   const trendColor = (v: number) => v < 0 ? "#dc2626" : v < 15 ? "#d97706" : "#10b981";
