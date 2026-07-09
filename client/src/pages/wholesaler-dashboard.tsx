@@ -433,7 +433,7 @@ function MarginOverview() {
                       return (
                         <tr key={line.orderId} className={`border-b border-slate-100 last:border-0 ${rowBg}`}>
                           <td className="px-4 py-2.5">
-                            <Link href={`/orders?highlight=${line.orderId}`} onClick={() => setSelectedMarginProduct(null)}>
+                            <Link href={`/orders/${line.orderId}`} onClick={() => setSelectedMarginProduct(null)}>
                               <span className="font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer">
                                 {line.orderNumber ?? `#${line.orderId}`}
                               </span>
