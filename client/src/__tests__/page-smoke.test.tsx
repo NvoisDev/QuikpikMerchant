@@ -7,12 +7,19 @@
  * stub) so any reference to an undefined function/variable at render time
  * throws immediately and fails the test.
  *
- * Each test covers the two render paths that the dashboard can take:
- *   1. Loading / unauthenticated state  — renders skeleton cards
- *   2. Authenticated state              — renders the full dashboard
+ * Each test covers the two render paths that the page can take:
+ *   1. Loading / unauthenticated state  — renders skeleton / loading UI
+ *   2. Authenticated state              — renders the full page
  *
  * Hooks that touch the network are mocked; fetch is stubbed to return empty
  * data so React Query suspense/error boundaries don't interfere.
+ *
+ * Pages covered:
+ *   - WholesalerDashboard
+ *   - ProductManagement
+ *   - OrdersFresh
+ *   - QuickQuote
+ *   - CustomerPortal
  */
 
 import React from 'react';
@@ -20,6 +27,10 @@ import { render } from '@testing-library/react';
 import { vi, describe, it, expect, afterEach } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import WholesalerDashboard from '@/pages/wholesaler-dashboard';
+import ProductManagement from '@/pages/product-management';
+import OrdersFresh from '@/pages/orders-fresh';
+import QuickQuote from '@/pages/quick-quote';
+import CustomerPortal from '@/pages/customer-portal';
 
 // ─── Suppress act(...) / console.error noise from React Query internals ──────
 const originalError = console.error;
@@ -106,11 +117,78 @@ vi.mock('wouter', () => ({
   Switch: ({ children }: { children: React.ReactNode }) => children,
 }));
 
+vi.mock('@/contexts/sidebar-context', () => ({
+  useSidebarContext: () => ({
+    isDesktopCollapsed: false,
+    toggleDesktopCollapsed: vi.fn(),
+    isMobileOpen: false,
+    openMobileSidebar: vi.fn(),
+    closeMobileSidebar: vi.fn(),
+    mobileTopBarActions: null,
+    setMobileTopBarActions: vi.fn(),
+  }),
+  SidebarProvider: ({ children }: { children: React.ReactNode }) => children,
+}));
+
+vi.mock('@/lib/near-depletion', () => ({
+  useNearDepletionThreshold: () => ({ threshold: 10, setThreshold: vi.fn() }),
+  getNearDepletionThreshold: () => 10,
+}));
+
+vi.mock('@/components/ui/theme-switcher', () => ({
+  useCustomerTheme: () => ({ theme: 'emerald', changeTheme: vi.fn() }),
+  ThemeSwitcher: () => null,
+}));
+
 // ─── Helpers to import the mocked modules ────────────────────────────────────
 async function importMocks() {
   const { useAuth } = await import('@/hooks/useAuth');
   const { useCurrency } = await import('@/hooks/useCurrency');
   return { useAuth: useAuth as ReturnType<typeof vi.fn>, useCurrency: useCurrency as ReturnType<typeof vi.fn> };
+}
+
+function makeAuthUser(overrides = {}) {
+  return {
+    id: 1,
+    email: 'test@example.com',
+    name: 'Test Wholesaler',
+    role: 'wholesaler',
+    preferredCurrency: 'GBP',
+    subscriptionStatus: 'active',
+    ...overrides,
+  };
+}
+
+function makeUnauthState() {
+  return {
+    user: undefined,
+    isLoading: true,
+    loading: true,
+    isAuthenticated: false,
+    logout: vi.fn(),
+    backToHome: vi.fn(),
+    isLoggingOut: false,
+  };
+}
+
+function makeAuthState(user = makeAuthUser()) {
+  return {
+    user,
+    isLoading: false,
+    loading: false,
+    isAuthenticated: true,
+    logout: vi.fn(),
+    backToHome: vi.fn(),
+    isLoggingOut: false,
+  };
+}
+
+function makeCurrency() {
+  return {
+    formatMoney: (v: number) => `£${v.toFixed(2)}`,
+    symbol: '£',
+    code: 'GBP',
+  };
 }
 
 // ─── Tests ───────────────────────────────────────────────────────────────────
@@ -119,24 +197,9 @@ describe('WholesalerDashboard — page smoke tests', () => {
   it('renders the loading skeleton without throwing (unauthenticated state)', async () => {
     stubFetch();
     const { useAuth, useCurrency } = await importMocks();
+    useAuth.mockReturnValue(makeUnauthState());
+    useCurrency.mockReturnValue(makeCurrency());
 
-    useAuth.mockReturnValue({
-      user: undefined,
-      isLoading: true,
-      loading: true,
-      isAuthenticated: false,
-      logout: vi.fn(),
-      backToHome: vi.fn(),
-      isLoggingOut: false,
-    });
-
-    useCurrency.mockReturnValue({
-      formatMoney: (v: number) => `£${v.toFixed(2)}`,
-      symbol: '£',
-      code: 'GBP',
-    });
-
-    // Should not throw — any undefined identifier used in render will throw here
     expect(() =>
       render(React.createElement(WholesalerDashboard), { wrapper: Wrapper }),
     ).not.toThrow();
@@ -145,33 +208,93 @@ describe('WholesalerDashboard — page smoke tests', () => {
   it('renders the authenticated dashboard without throwing (user present)', async () => {
     stubFetch();
     const { useAuth, useCurrency } = await importMocks();
+    useAuth.mockReturnValue(makeAuthState());
+    useCurrency.mockReturnValue(makeCurrency());
 
-    useAuth.mockReturnValue({
-      user: {
-        id: 1,
-        email: 'test@example.com',
-        name: 'Test Wholesaler',
-        role: 'wholesaler',
-        preferredCurrency: 'GBP',
-        subscriptionStatus: 'active',
-      },
-      isLoading: false,
-      loading: false,
-      isAuthenticated: true,
-      logout: vi.fn(),
-      backToHome: vi.fn(),
-      isLoggingOut: false,
-    });
-
-    useCurrency.mockReturnValue({
-      formatMoney: (v: number) => `£${v.toFixed(2)}`,
-      symbol: '£',
-      code: 'GBP',
-    });
-
-    // Should not throw — undefined helpers called on data in JSX will throw here
     expect(() =>
       render(React.createElement(WholesalerDashboard), { wrapper: Wrapper }),
+    ).not.toThrow();
+  });
+});
+
+describe('ProductManagement — page smoke tests', () => {
+  it('renders without throwing (unauthenticated / loading state)', async () => {
+    stubFetch();
+    const { useAuth, useCurrency } = await importMocks();
+    useAuth.mockReturnValue(makeUnauthState());
+    useCurrency.mockReturnValue(makeCurrency());
+
+    expect(() =>
+      render(React.createElement(ProductManagement), { wrapper: Wrapper }),
+    ).not.toThrow();
+  });
+
+  it('renders without throwing (authenticated state)', async () => {
+    stubFetch();
+    const { useAuth, useCurrency } = await importMocks();
+    useAuth.mockReturnValue(makeAuthState());
+    useCurrency.mockReturnValue(makeCurrency());
+
+    expect(() =>
+      render(React.createElement(ProductManagement), { wrapper: Wrapper }),
+    ).not.toThrow();
+  });
+});
+
+describe('OrdersFresh — page smoke tests', () => {
+  it('renders without throwing (unauthenticated / loading state)', async () => {
+    stubFetch();
+    const { useAuth, useCurrency } = await importMocks();
+    useAuth.mockReturnValue(makeUnauthState());
+    useCurrency.mockReturnValue(makeCurrency());
+
+    expect(() =>
+      render(React.createElement(OrdersFresh), { wrapper: Wrapper }),
+    ).not.toThrow();
+  });
+
+  it('renders without throwing (authenticated state)', async () => {
+    stubFetch();
+    const { useAuth, useCurrency } = await importMocks();
+    useAuth.mockReturnValue(makeAuthState());
+    useCurrency.mockReturnValue(makeCurrency());
+
+    expect(() =>
+      render(React.createElement(OrdersFresh), { wrapper: Wrapper }),
+    ).not.toThrow();
+  });
+});
+
+describe('QuickQuote — page smoke tests', () => {
+  it('renders without throwing (unauthenticated / loading state)', async () => {
+    stubFetch();
+    const { useAuth, useCurrency } = await importMocks();
+    useAuth.mockReturnValue(makeUnauthState());
+    useCurrency.mockReturnValue(makeCurrency());
+
+    expect(() =>
+      render(React.createElement(QuickQuote), { wrapper: Wrapper }),
+    ).not.toThrow();
+  });
+
+  it('renders without throwing (authenticated state)', async () => {
+    stubFetch();
+    const { useAuth, useCurrency } = await importMocks();
+    useAuth.mockReturnValue(makeAuthState());
+    useCurrency.mockReturnValue(makeCurrency());
+
+    expect(() =>
+      render(React.createElement(QuickQuote), { wrapper: Wrapper }),
+    ).not.toThrow();
+  });
+});
+
+describe('CustomerPortal — page smoke tests', () => {
+  it('renders without throwing (no store slug / anonymous visitor)', async () => {
+    stubFetch();
+
+    expect(() =>
+      render(React.createElement(CustomerPortal), { wrapper: Wrapper }),
     ).not.toThrow();
   });
 });
