@@ -530,6 +530,130 @@ export function registerAnalyticsRoutes(app: Express): void {
     }
   });
 
+  // GET /api/analytics/margin-product-orders
+  // Returns per-invoice margin breakdown for a single product within a date window.
+  app.get('/api/analytics/margin-product-orders', requireAuth, requireBooleanFeature('analytics'), async (req: any, res) => {
+    try {
+      const targetUserId = resolveWholesalerId(req);
+      const { productId, fromDate, toDate } = req.query;
+      if (!productId || !fromDate || !toDate) {
+        return res.status(400).json({ message: "productId, fromDate and toDate are required" });
+      }
+      const pid = parseInt(productId as string, 10);
+      if (isNaN(pid)) return res.status(400).json({ message: "productId must be a number" });
+
+      const startDate = new Date(fromDate as string);
+      const endDate = new Date(toDate as string);
+      const now = new Date();
+      const actualEndDate = endDate > now ? now : endDate;
+
+      // Fetch valid orders in range for this wholesaler
+      const ordersInRange = await db
+        .select({ id: orders.id, orderNumber: orders.orderNumber, customerName: orders.customerName, createdAt: orders.createdAt, isQuote: orders.isQuote, orderSource: orders.orderSource, status: orders.status })
+        .from(orders)
+        .where(and(
+          eq(orders.wholesalerId, targetUserId),
+          gte(orders.createdAt, startDate),
+          lte(orders.createdAt, actualEndDate),
+        ));
+
+      const validOrders = ordersInRange.filter(o => o.status !== 'cancelled' && o.status !== 'draft');
+      if (validOrders.length === 0) return res.json([]);
+
+      const orderIds = validOrders.map(o => o.id);
+      const orderMap = new Map(validOrders.map(o => [o.id, o]));
+
+      // Fetch order items for this product only
+      const items = await db
+        .select({
+          orderId: orderItems.orderId,
+          productId: orderItems.productId,
+          quantity: orderItems.quantity,
+          unitPrice: orderItems.unitPrice,
+          batchId: orderItems.batchId,
+          batchCostPrice: productBatches.costPrice,
+          productCostPrice: products.costPrice,
+          sellingType: orderItems.sellingType,
+          unitsPerPallet: products.unitsPerPallet,
+        })
+        .from(orderItems)
+        .leftJoin(productBatches, eq(orderItems.batchId, productBatches.id))
+        .leftJoin(products, eq(orderItems.productId, products.id))
+        .where(and(
+          inArray(orderItems.orderId, orderIds),
+          eq(orderItems.productId, pid),
+        ));
+
+      // Compute WAC for this product from active batches
+      const today = new Date().toISOString().split('T')[0];
+      const wacRows = await db
+        .select({
+          wac: sql<string | null>`
+            SUM(CASE WHEN ${productBatches.costPrice} IS NOT NULL
+              THEN ${productBatches.quantity}::numeric * ${productBatches.costPrice}::numeric
+              ELSE 0 END) /
+            NULLIF(SUM(CASE WHEN ${productBatches.costPrice} IS NOT NULL
+              THEN ${productBatches.quantity} ELSE 0 END), 0)
+          `,
+        })
+        .from(productBatches)
+        .where(and(
+          eq(productBatches.productId, pid),
+          eq(productBatches.status, 'active'),
+          or(isNull(productBatches.expiryDate), sql`${productBatches.expiryDate} >= ${today}`)
+        ));
+      const wac = wacRows[0]?.wac != null ? parseFloat(wacRows[0].wac) : null;
+
+      // Aggregate by order (a product can appear more than once per order in edge cases)
+      interface LineAccum { orderId: number; revenue: number; cost: number | null; qty: number; unitPrice: number; unitCost: number | null; hasCost: boolean; }
+      const lineMap = new Map<number, LineAccum>();
+
+      for (const item of items) {
+        const resolvedCostPrice = item.batchCostPrice ?? (wac != null ? String(wac) : null) ?? item.productCostPrice ?? null;
+        const hasCost = resolvedCostPrice !== null;
+        const revenue = parseFloat(item.unitPrice) * item.quantity;
+        const unitMultiplier = item.sellingType === 'pallets' ? (item.unitsPerPallet || 1) : 1;
+        const cost = hasCost ? parseFloat(resolvedCostPrice!) * item.quantity * unitMultiplier : null;
+        const unitCost = hasCost ? parseFloat(resolvedCostPrice!) * unitMultiplier : null;
+
+        const existing = lineMap.get(item.orderId);
+        if (existing) {
+          existing.revenue += revenue;
+          existing.qty += item.quantity;
+          if (cost !== null) existing.cost = (existing.cost ?? 0) + cost;
+          if (!existing.hasCost && hasCost) { existing.hasCost = true; existing.unitCost = unitCost; }
+        } else {
+          lineMap.set(item.orderId, { orderId: item.orderId, revenue, cost, qty: item.quantity, unitPrice: parseFloat(item.unitPrice), unitCost, hasCost });
+        }
+      }
+
+      const result = Array.from(lineMap.values()).map(line => {
+        const order = orderMap.get(line.orderId)!;
+        const margin = line.cost !== null ? line.revenue - line.cost : null;
+        const marginPercent = (margin !== null && line.revenue > 0) ? (margin / line.revenue) * 100 : null;
+        return {
+          orderId: line.orderId,
+          orderNumber: order.orderNumber,
+          customerName: order.customerName,
+          createdAt: order.createdAt,
+          quantity: line.qty,
+          unitPrice: Math.round(line.unitPrice * 100) / 100,
+          unitCost: line.unitCost !== null ? Math.round(line.unitCost * 100) / 100 : null,
+          revenue: Math.round(line.revenue * 100) / 100,
+          cost: line.cost !== null ? Math.round(line.cost * 100) / 100 : null,
+          margin: margin !== null ? Math.round(margin * 100) / 100 : null,
+          marginPercent: marginPercent !== null ? Math.round(marginPercent * 10) / 10 : null,
+          hasCost: line.hasCost,
+        };
+      }).sort((a, b) => new Date(b.createdAt!).getTime() - new Date(a.createdAt!).getTime());
+
+      res.json(result);
+    } catch (error) {
+      console.error("Error fetching margin product orders:", error);
+      res.status(500).json({ message: "Failed to fetch margin product orders" });
+    }
+  });
+
   // GET /api/analytics/dashboard
   app.get('/api/analytics/dashboard', requireAuth, requireBooleanFeature('analytics'), async (req: any, res) => {
     try {

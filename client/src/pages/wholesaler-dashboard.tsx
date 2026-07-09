@@ -53,6 +53,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { DynamicTooltip, HelpTooltip, InfoTooltip } from "@/components/ui/dynamic-tooltip";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 
 // Chart data is now fetched from real backend API instead of fake data generation
 
@@ -117,6 +118,39 @@ function MarginOverview() {
   const hasMissingCost = marginData?.total?.hasMissingCost || marginData?.quotes?.hasMissingCost || marginData?.online?.hasMissingCost;
 
   const [showProductBreakdown, setShowProductBreakdown] = useState(false);
+  const [selectedMarginProduct, setSelectedMarginProduct] = useState<MarginProduct | null>(null);
+
+  interface ProductOrderLine {
+    orderId: number;
+    orderNumber: string | null;
+    customerName: string | null;
+    createdAt: string;
+    quantity: number;
+    unitPrice: number;
+    unitCost: number | null;
+    revenue: number;
+    cost: number | null;
+    margin: number | null;
+    marginPercent: number | null;
+    hasCost: boolean;
+  }
+
+  const { data: drillData, isLoading: drillLoading } = useQuery<ProductOrderLine[]>({
+    queryKey: ["/api/analytics/margin-product-orders", selectedMarginProduct?.productId, dateRange.from.toISOString(), dateRange.to.toISOString()],
+    queryFn: async () => {
+      const params = new URLSearchParams({
+        productId: String(selectedMarginProduct!.productId),
+        fromDate: dateRange.from.toISOString(),
+        toDate: dateRange.to.toISOString(),
+      });
+      const res = await fetch(`/api/analytics/margin-product-orders?${params}`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch product orders");
+      return res.json();
+    },
+    enabled: selectedMarginProduct !== null,
+    staleTime: 2 * 60 * 1000,
+    retry: false,
+  });
 
   const exportMarginCSV = () => {
     if (!marginData?.products?.length) return;
@@ -300,8 +334,17 @@ function MarginOverview() {
                             const isLowMargin = p.marginPercent !== null && p.marginPercent < 15;
                             const isNegMargin = p.marginPercent !== null && p.marginPercent < 0;
                             return (
-                              <tr key={p.productId} className={`border-b border-slate-100 last:border-0 ${idx % 2 === 0 ? "bg-white" : "bg-slate-50/40"}`}>
-                                <td className="px-4 py-2.5 font-medium text-slate-800 max-w-[180px] truncate">{p.name}</td>
+                              <tr
+                                key={p.productId}
+                                onClick={() => setSelectedMarginProduct(p)}
+                                className={`border-b border-slate-100 last:border-0 cursor-pointer transition-colors hover:bg-blue-50/60 active:bg-blue-100/60 ${idx % 2 === 0 ? "bg-white" : "bg-slate-50/40"}`}
+                              >
+                                <td className="px-4 py-2.5 font-medium text-slate-800 max-w-[180px] truncate">
+                                  <span className="flex items-center gap-1.5">
+                                    {p.name}
+                                    <ChevronDown className="w-3 h-3 text-slate-400 shrink-0 rotate-[-90deg]" />
+                                  </span>
+                                </td>
                                 <td className="px-4 py-2.5 text-right text-slate-600">
                                   {p.wac != null ? fmt(p.wac) : <span className="text-slate-400 italic">—</span>}
                                 </td>
@@ -337,6 +380,92 @@ function MarginOverview() {
           )}
         </CardContent>
       </Card>
+
+      {/* Per-invoice drill-down drawer */}
+      <Sheet open={selectedMarginProduct !== null} onOpenChange={(open) => { if (!open) setSelectedMarginProduct(null); }}>
+        <SheetContent side="right" className="w-full sm:max-w-2xl p-0 flex flex-col">
+          <SheetHeader className="px-6 py-4 border-b border-slate-200 shrink-0">
+            <SheetTitle className="text-base font-semibold text-slate-900 leading-tight">
+              {selectedMarginProduct?.name}
+            </SheetTitle>
+            {selectedMarginProduct && (
+              <div className="flex flex-wrap gap-4 mt-1 text-xs text-slate-500">
+                <span>Revenue: <span className="font-medium text-slate-700">{fmt(selectedMarginProduct.revenue)}</span></span>
+                {selectedMarginProduct.hasCost && (
+                  <>
+                    <span>Cost: <span className="font-medium text-slate-700">{fmt(selectedMarginProduct.cost)}</span></span>
+                    <span>Margin: <span className={`font-semibold ${(selectedMarginProduct.marginPercent ?? 0) < 0 ? "text-red-600" : (selectedMarginProduct.marginPercent ?? 0) < 15 ? "text-amber-600" : "text-emerald-600"}`}>{fmt(selectedMarginProduct.margin)} ({pct(selectedMarginProduct.marginPercent ?? 0)})</span></span>
+                  </>
+                )}
+              </div>
+            )}
+          </SheetHeader>
+
+          <div className="flex-1 overflow-y-auto">
+            {drillLoading ? (
+              <div className="flex items-center justify-center py-16">
+                <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
+              </div>
+            ) : !drillData || drillData.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 text-slate-400">
+                <Package className="w-10 h-10 mb-3 opacity-40" />
+                <p className="text-sm">No invoices found for this product in the selected period</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="border-b border-slate-200 bg-slate-50 sticky top-0">
+                      <th className="text-left px-4 py-2.5 font-semibold text-slate-500 uppercase tracking-wide">Invoice</th>
+                      <th className="text-left px-4 py-2.5 font-semibold text-slate-500 uppercase tracking-wide hidden sm:table-cell">Customer</th>
+                      <th className="text-right px-4 py-2.5 font-semibold text-slate-500 uppercase tracking-wide">Qty</th>
+                      <th className="text-right px-4 py-2.5 font-semibold text-slate-500 uppercase tracking-wide hidden sm:table-cell">Unit Cost</th>
+                      <th className="text-right px-4 py-2.5 font-semibold text-slate-500 uppercase tracking-wide">Revenue</th>
+                      <th className="text-right px-4 py-2.5 font-semibold text-slate-500 uppercase tracking-wide">Margin £</th>
+                      <th className="text-right px-4 py-2.5 font-semibold text-slate-500 uppercase tracking-wide">Margin %</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {drillData.map((line, idx) => {
+                      const isNeg = line.marginPercent !== null && line.marginPercent < 0;
+                      const isLow = line.marginPercent !== null && line.marginPercent >= 0 && line.marginPercent < 15;
+                      const rowBg = isNeg ? "bg-red-50" : idx % 2 === 0 ? "bg-white" : "bg-slate-50/40";
+                      return (
+                        <tr key={line.orderId} className={`border-b border-slate-100 last:border-0 ${rowBg}`}>
+                          <td className="px-4 py-2.5">
+                            <Link href={`/orders?highlight=${line.orderId}`} onClick={() => setSelectedMarginProduct(null)}>
+                              <span className="font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer">
+                                {line.orderNumber ?? `#${line.orderId}`}
+                              </span>
+                            </Link>
+                            <p className="text-slate-400 mt-0.5 sm:hidden truncate max-w-[120px]">{line.customerName ?? "—"}</p>
+                            <p className="text-slate-400 mt-0.5">{new Date(line.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}</p>
+                          </td>
+                          <td className="px-4 py-2.5 text-slate-600 hidden sm:table-cell max-w-[140px] truncate">{line.customerName ?? "—"}</td>
+                          <td className="px-4 py-2.5 text-right text-slate-600">{line.quantity}</td>
+                          <td className="px-4 py-2.5 text-right text-slate-600 hidden sm:table-cell">
+                            {line.unitCost !== null ? fmt(line.unitCost) : <span className="text-slate-400 italic">—</span>}
+                          </td>
+                          <td className="px-4 py-2.5 text-right text-slate-700">{fmt(line.revenue)}</td>
+                          <td className={`px-4 py-2.5 text-right font-semibold ${isNeg ? "text-red-600" : isLow ? "text-amber-600" : "text-emerald-600"}`}>
+                            {line.margin !== null ? fmt(line.margin) : <span className="text-slate-400 italic font-normal">—</span>}
+                          </td>
+                          <td className={`px-4 py-2.5 text-right font-semibold ${isNeg ? "text-red-600" : isLow ? "text-amber-600" : "text-emerald-600"}`}>
+                            {line.marginPercent !== null ? pct(line.marginPercent) : <span className="text-slate-400 italic font-normal">No cost</span>}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+                <p className="px-4 py-2 text-xs text-slate-400 border-t border-slate-100">
+                  Tap an invoice number to view the full order · Negative margin highlighted in red · Low margin (&lt;15%) in amber
+                </p>
+              </div>
+            )}
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
