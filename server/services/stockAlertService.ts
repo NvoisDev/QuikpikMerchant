@@ -18,8 +18,8 @@ export interface StockAlert {
   suggestedReorderQuantity: number;
 }
 
-type StockAlertFrequency = 'daily' | 'weekly' | 'critical_only';
-type StockAlertChannel = 'email' | 'sms' | 'both' | 'off';
+type StockAlertFrequency = 'daily' | 'weekly' | 'critical_only' | 'inherit';
+type StockAlertChannel = 'email' | 'sms' | 'both' | 'off' | 'inherit';
 
 interface NotificationPrefs {
   stockAlertFrequency?: StockAlertFrequency;
@@ -262,17 +262,17 @@ export class StockAlertService {
 
         // Whether the member has an explicit (non-inherit) frequency preference
         const memberHasExplicitFrequency =
-          !!memberPrefs.stockAlertFrequency && (memberPrefs.stockAlertFrequency as string) !== 'inherit';
+          !!memberPrefs.stockAlertFrequency && memberPrefs.stockAlertFrequency !== 'inherit';
 
         // Resolve effective channel and frequency — fall back to owner's setting when 'inherit' or unset
         const memberChannel: StockAlertChannel =
-          (memberPrefs.stockAlertChannel && (memberPrefs.stockAlertChannel as string) !== 'inherit')
-            ? memberPrefs.stockAlertChannel as StockAlertChannel
+          (memberPrefs.stockAlertChannel && memberPrefs.stockAlertChannel !== 'inherit')
+            ? memberPrefs.stockAlertChannel
             : ownerChannel;
 
         const memberFrequency: StockAlertFrequency =
           memberHasExplicitFrequency
-            ? memberPrefs.stockAlertFrequency as StockAlertFrequency
+            ? memberPrefs.stockAlertFrequency!
             : ownerFrequency;
 
         if (memberChannel === 'off') continue;
