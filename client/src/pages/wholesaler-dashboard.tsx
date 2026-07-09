@@ -119,6 +119,7 @@ function MarginOverview() {
 
   const [showProductBreakdown, setShowProductBreakdown] = useState(false);
   const [selectedMarginProduct, setSelectedMarginProduct] = useState<MarginProduct | null>(null);
+  const [marginTrendChartType, setMarginTrendChartType] = useState<"line" | "bar">("line");
 
   interface ProductOrderLine {
     orderId: number;
@@ -414,7 +415,7 @@ function MarginOverview() {
       </Card>
 
       {/* Per-invoice drill-down drawer */}
-      <Sheet open={selectedMarginProduct !== null} onOpenChange={(open) => { if (!open) setSelectedMarginProduct(null); }}>
+      <Sheet open={selectedMarginProduct !== null} onOpenChange={(open) => { if (!open) { setSelectedMarginProduct(null); setMarginTrendChartType("line"); } }}>
         <SheetContent side="right" className="w-full sm:max-w-2xl p-0 flex flex-col">
           <SheetHeader className="px-6 py-4 border-b border-slate-200 shrink-0">
             <div className="flex items-start justify-between gap-3">
@@ -501,25 +502,54 @@ function MarginOverview() {
 
                   return (
                     <div className="px-4 pt-4 pb-2 border-b border-slate-100">
-                      <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 mb-1">Margin trend</p>
+                      <div className="flex items-center justify-between mb-1">
+                        <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Margin trend</p>
+                        <div className="flex items-center rounded-md border border-slate-200 overflow-hidden text-[10px] font-medium">
+                          <button
+                            onClick={() => setMarginTrendChartType("line")}
+                            className={`px-2 py-1 transition-colors ${marginTrendChartType === "line" ? "bg-emerald-600 text-white" : "bg-white text-slate-500 hover:bg-slate-50"}`}
+                          >
+                            Line
+                          </button>
+                          <button
+                            onClick={() => setMarginTrendChartType("bar")}
+                            className={`px-2 py-1 transition-colors border-l border-slate-200 ${marginTrendChartType === "bar" ? "bg-emerald-600 text-white" : "bg-white text-slate-500 hover:bg-slate-50"}`}
+                          >
+                            Bar
+                          </button>
+                        </div>
+                      </div>
                       <ResponsiveContainer width="100%" height={110}>
-                        <LineChart data={groups} margin={{ top: 6, right: 8, left: -20, bottom: 0 }}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                          <XAxis dataKey="label" tick={{ fontSize: 10, fill: "#94a3b8" }} axisLine={false} tickLine={false} />
-                          <YAxis tick={{ fontSize: 10, fill: "#94a3b8" }} axisLine={false} tickLine={false} tickFormatter={v => `${v}%`} domain={allPositive ? [0, "auto"] : ["auto", "auto"]} />
-                          <RechartsTooltip
-                            contentStyle={{ fontSize: 11, padding: "4px 8px", border: "1px solid #e2e8f0", borderRadius: 6, background: "#fff" }}
-                            formatter={(v: number) => [`${v}%`, "Avg margin"]}
-                          />
-                          <Line
-                            type="monotone"
-                            dataKey="avg"
-                            stroke={dotColor}
-                            strokeWidth={2}
-                            dot={{ r: 3, fill: dotColor, strokeWidth: 0 }}
-                            activeDot={{ r: 4 }}
-                          />
-                        </LineChart>
+                        {marginTrendChartType === "bar" ? (
+                          <BarChart data={groups} margin={{ top: 6, right: 8, left: -20, bottom: 0 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                            <XAxis dataKey="label" tick={{ fontSize: 10, fill: "#94a3b8" }} axisLine={false} tickLine={false} />
+                            <YAxis tick={{ fontSize: 10, fill: "#94a3b8" }} axisLine={false} tickLine={false} tickFormatter={v => `${v}%`} domain={allPositive ? [0, "auto"] : ["auto", "auto"]} />
+                            <RechartsTooltip
+                              contentStyle={{ fontSize: 11, padding: "4px 8px", border: "1px solid #e2e8f0", borderRadius: 6, background: "#fff" }}
+                              formatter={(v: number) => [`${v}%`, "Avg margin"]}
+                            />
+                            <Bar dataKey="avg" fill={dotColor} radius={[3, 3, 0, 0]} />
+                          </BarChart>
+                        ) : (
+                          <LineChart data={groups} margin={{ top: 6, right: 8, left: -20, bottom: 0 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                            <XAxis dataKey="label" tick={{ fontSize: 10, fill: "#94a3b8" }} axisLine={false} tickLine={false} />
+                            <YAxis tick={{ fontSize: 10, fill: "#94a3b8" }} axisLine={false} tickLine={false} tickFormatter={v => `${v}%`} domain={allPositive ? [0, "auto"] : ["auto", "auto"]} />
+                            <RechartsTooltip
+                              contentStyle={{ fontSize: 11, padding: "4px 8px", border: "1px solid #e2e8f0", borderRadius: 6, background: "#fff" }}
+                              formatter={(v: number) => [`${v}%`, "Avg margin"]}
+                            />
+                            <Line
+                              type="monotone"
+                              dataKey="avg"
+                              stroke={dotColor}
+                              strokeWidth={2}
+                              dot={{ r: 3, fill: dotColor, strokeWidth: 0 }}
+                              activeDot={{ r: 4 }}
+                            />
+                          </LineChart>
+                        )}
                       </ResponsiveContainer>
                     </div>
                   );
