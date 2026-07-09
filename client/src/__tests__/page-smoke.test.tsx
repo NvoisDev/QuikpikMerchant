@@ -26,6 +26,8 @@
  *   - Settings
  *   - TeamManagement
  *   - StockAlerts
+ *   - Customers (customer management)
+ *   - PriceListDetail (price lists)
  */
 
 import React from 'react';
@@ -43,6 +45,8 @@ import Financials from '@/pages/financials';
 import Settings from '@/pages/settings';
 import TeamManagement from '@/pages/team-management';
 import StockAlerts from '@/pages/stock-alerts';
+import Customers from '@/pages/customers';
+import PriceListDetail from '@/pages/price-list-detail';
 
 // ─── Suppress act(...) / console.error noise from React Query internals ──────
 const originalError = console.error;
@@ -465,6 +469,54 @@ describe('StockAlerts — page smoke tests', () => {
 
     expect(() =>
       render(React.createElement(StockAlerts), { wrapper: Wrapper }),
+    ).not.toThrow();
+  });
+});
+
+describe('Customers — page smoke tests', () => {
+  it('renders without throwing (unauthenticated / loading state)', async () => {
+    stubFetch();
+    const { useAuth, useCurrency } = await importMocks();
+    useAuth.mockReturnValue(makeUnauthState());
+    useCurrency.mockReturnValue(makeCurrency());
+
+    expect(() =>
+      render(React.createElement(Customers), { wrapper: Wrapper }),
+    ).not.toThrow();
+  });
+
+  it('renders without throwing (authenticated state)', async () => {
+    stubFetch();
+    const { useAuth, useCurrency } = await importMocks();
+    useAuth.mockReturnValue(makeAuthState());
+    useCurrency.mockReturnValue(makeCurrency());
+
+    expect(() =>
+      render(React.createElement(Customers), { wrapper: Wrapper }),
+    ).not.toThrow();
+  });
+});
+
+describe('PriceListDetail — page smoke tests', () => {
+  it('renders without throwing (unauthenticated / loading state)', async () => {
+    stubFetch();
+    const { useAuth, useCurrency } = await importMocks();
+    useAuth.mockReturnValue(makeUnauthState());
+    useCurrency.mockReturnValue(makeCurrency());
+
+    expect(() =>
+      render(React.createElement(PriceListDetail), { wrapper: Wrapper }),
+    ).not.toThrow();
+  });
+
+  it('renders without throwing (authenticated state)', async () => {
+    stubFetch();
+    const { useAuth, useCurrency } = await importMocks();
+    useAuth.mockReturnValue(makeAuthState());
+    useCurrency.mockReturnValue(makeCurrency());
+
+    expect(() =>
+      render(React.createElement(PriceListDetail), { wrapper: Wrapper }),
     ).not.toThrow();
   });
 });
