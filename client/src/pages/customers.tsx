@@ -468,18 +468,20 @@ export default function Customers() {
       const ws = wb.addWorksheet("Customers");
 
       ws.columns = [
-        { header: "Store Name",      key: "storeName",    width: 28 },
-        { header: "First Name",      key: "firstName",    width: 16 },
-        { header: "Last Name",       key: "lastName",     width: 16 },
-        { header: "Email",           key: "email",        width: 28 },
-        { header: "Phone",           key: "phone",        width: 18 },
-        { header: "City",            key: "city",         width: 18 },
-        { header: "Country",         key: "country",      width: 18 },
-        { header: "Groups",          key: "groups",       width: 30 },
-        { header: "Total Orders",    key: "totalOrders",  width: 14 },
-        { header: "Total Spent (£)", key: "totalSpent",   width: 18 },
-        { header: "Unpaid (£)",      key: "totalUnpaid",  width: 14 },
-        { header: "Member Since",    key: "memberSince",  width: 16 },
+        { header: "Store Name",      key: "storeName",      width: 28 },
+        { header: "First Name",      key: "firstName",      width: 16 },
+        { header: "Last Name",       key: "lastName",       width: 16 },
+        { header: "Email",           key: "email",          width: 28 },
+        { header: "Phone",           key: "phone",          width: 18 },
+        { header: "Street Address",  key: "streetAddress",  width: 28 },
+        { header: "City",            key: "city",           width: 18 },
+        { header: "Postcode",        key: "postalCode",     width: 14 },
+        { header: "Country",         key: "country",        width: 18 },
+        { header: "Groups",          key: "groups",         width: 30 },
+        { header: "Total Orders",    key: "totalOrders",    width: 14 },
+        { header: "Total Spent (£)", key: "totalSpent",     width: 18 },
+        { header: "Unpaid (£)",      key: "totalUnpaid",    width: 14 },
+        { header: "Member Since",    key: "memberSince",    width: 16 },
       ];
 
       const headerRow = ws.getRow(1);
@@ -496,7 +498,9 @@ export default function Customers() {
           lastName: c.lastName || "",
           email: c.email || "",
           phone: c.phoneNumber || "",
+          streetAddress: [c.streetAddress, c.addressLine2].filter(Boolean).join(", "),
           city: c.city || "",
+          postalCode: c.postalCode || "",
           country: c.country || "",
           groups: (c.groupNames || []).join(", "),
           totalOrders: c.totalOrders ?? 0,
@@ -506,7 +510,7 @@ export default function Customers() {
         });
       }
 
-      ws.autoFilter = { from: "A1", to: "L1" };
+      ws.autoFilter = { from: "A1", to: "N1" };
 
       const buffer = await wb.xlsx.writeBuffer();
       const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
