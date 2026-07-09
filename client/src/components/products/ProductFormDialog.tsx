@@ -15,7 +15,8 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Upload, Sparkles, AlertTriangle, Package } from "lucide-react";
 import type { Product } from "@shared/schema";
-import { currencies, formatCurrency } from "@/lib/currencies";
+import { currencies } from "@/lib/currencies";
+import { useCurrency } from "@/hooks/useCurrency";
 import { BASE_UNITS } from "@shared/units";
 import { computePackWeightKg } from "@shared/utils/product";
 import ButtonLoader from "@/components/ui/button-loader";
@@ -122,6 +123,7 @@ export default function ProductFormDialog({
   onUpgradeRequired,
   defaultLowStockThreshold = 50,
 }: ProductFormDialogProps) {
+  const { formatMoney } = useCurrency();
   const { toast } = useToast();
   const [, navigate] = useLocation();
   const [isGeneratingDescription, setIsGeneratingDescription] = useState(false);
@@ -1078,7 +1080,7 @@ export default function ProductFormDialog({
                         <FormMessage />
                         <div className="text-xs text-muted-foreground">
                           {unitPrice !== null ? (
-                            <>Total price for full pallet &mdash; <span className="font-medium text-orange-700">{formatCurrency(unitPrice, currency)} per unit</span></>
+                            <>Total price for full pallet &mdash; <span className="font-medium text-orange-700">{formatMoney(unitPrice)} per unit</span></>
                           ) : "Total price for full pallet"}
                           {palletPct !== null && Math.abs(palletPct) >= 0.5 && !palletManuallyEdited && (
                             <span className={`ml-1 font-medium ${palletPct > 0 ? 'text-green-600' : 'text-red-600'}`}>

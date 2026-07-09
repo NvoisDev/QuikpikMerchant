@@ -1,6 +1,7 @@
 import type { Express } from "express";
 import {
   and, count, customerGroups, generateCampaignSuggestions, generatePersonalizedTagline,
+  getCurrencySymbol,
   insertBroadcastSchema, insertMessageTemplateSchema,
   insertTemplateProductSchema, like, optimizeMessageTiming, or, orderItems, orders, products,
   requireAuth, requireBroadcastLimits, requireNotViewer, storage, sum, twilio,
@@ -1255,8 +1256,9 @@ export function registerCampaignRoutes(app: Express): void {
         if (!wholesaler) {
           return res.status(404).json({ message: "Wholesaler not found" });
         }
+        const sym = getCurrencySymbol((wholesaler as any)?.preferredCurrency || (wholesaler as any)?.defaultCurrency || 'GBP');
 
-        const message = `🛍️ Product: ${product.name}\nPrice: £${product.price}\nFrom: ${wholesaler.businessName}`;
+        const message = `🛍️ Product: ${product.name}\nPrice: ${sym}${product.price}\nFrom: ${wholesaler.businessName}`;
         
         res.json({
           type: 'single',

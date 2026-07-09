@@ -2,6 +2,7 @@ import { db } from './db';
 import { orders, users, orderItems, products } from '@shared/schema';
 import { and, gt, isNotNull, sql, eq } from 'drizzle-orm';
 import { sendPaymentReminderEmail } from './sendgrid-service';
+import { getCurrencySymbol } from '../shared/utils/currency';
 import { sendWhatsAppMessage } from './services/whatsappService';
 import { getStripeClient } from './stripeConfig';
 import { isConnectAccountReady } from './utils/stripe-connect-ready';
@@ -164,6 +165,8 @@ async function sendPaymentReminder(
     businessName: users.businessName,
     email: users.email,
     notificationPreferences: users.notificationPreferences,
+    preferredCurrency: users.preferredCurrency,
+    defaultCurrency: users.defaultCurrency,
   })
   .from(users)
   .where(sql`${users.id} = ${order.wholesalerId}`)
@@ -178,6 +181,8 @@ async function sendPaymentReminder(
   const sendSmsChannel = paymentChannel === 'sms' || paymentChannel === 'both';
 
   const businessName = wholesalerResult[0]?.businessName || 'Your supplier';
+  const currency = wholesalerResult[0]?.preferredCurrency || wholesalerResult[0]?.defaultCurrency || 'GBP';
+  const sym = getCurrencySymbol(currency);
   const outstandingAmount = parseFloat(order.amountOutstanding || '0');
   const formattedDueDate = dueDate.toLocaleDateString('en-GB', { 
     day: 'numeric', 
@@ -212,6 +217,7 @@ async function sendPaymentReminder(
         businessName,
         paymentLink,
         urgency,
+        currency,
       });
     } catch (error) {
       console.error(`❌ Failed to send email reminder for order ${orderRef}:`, error);
@@ -225,11 +231,11 @@ async function sendPaymentReminder(
       const payPart = shortPayLink ? ` Pay here: ${shortPayLink}` : ' Please contact us to arrange payment.';
       
       if (urgency === 'upcoming') {
-        smsMessage = `Hi ${firstName}! Reminder: £${outstandingAmount.toFixed(2)} balance due on ${formattedDueDate} for order ${orderRef}${itemsPart} with ${businessName}.${payPart}`;
+        smsMessage = `Hi ${firstName}! Reminder: ${sym}${outstandingAmount.toFixed(2)} balance due on ${formattedDueDate} for order ${orderRef}${itemsPart} with ${businessName}.${payPart}`;
       } else if (urgency === 'due_today') {
-        smsMessage = `Hi ${firstName}! Payment due today: £${outstandingAmount.toFixed(2)} outstanding on order ${orderRef}${itemsPart} with ${businessName}.${payPart}`;
+        smsMessage = `Hi ${firstName}! Payment due today: ${sym}${outstandingAmount.toFixed(2)} outstanding on order ${orderRef}${itemsPart} with ${businessName}.${payPart}`;
       } else {
-        smsMessage = `Hi ${firstName}, overdue notice: £${outstandingAmount.toFixed(2)} for order ${orderRef}${itemsPart} with ${businessName} was due on ${formattedDueDate}. Please pay immediately${shortPayLink ? `: ${shortPayLink}` : ' — contact us.'}`; 
+        smsMessage = `Hi ${firstName}, overdue notice: ${sym}${outstandingAmount.toFixed(2)} for order ${orderRef}${itemsPart} with ${businessName} was due on ${formattedDueDate}. Please pay immediately${shortPayLink ? `: ${shortPayLink}` : ' — contact us.'}`; 
       }
       
       await sendWhatsAppMessage({ to: order.customerPhone, message: smsMessage });

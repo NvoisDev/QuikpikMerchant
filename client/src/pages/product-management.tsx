@@ -17,7 +17,7 @@ import { ContextualHelpBubble } from "@/components/ContextualHelpBubble";
 import { helpContent } from "@/data/whatsapp-help-content";
 import { Plus, Search, Download, Grid, List, Package, Upload, AlertTriangle, Lock, LockOpen, Tag, PackagePlus, Pencil, Copy, Trash2, TrendingUp, X, Settings2 } from "lucide-react";
 import type { Product, PromotionalOffer } from "@shared/schema";
-import { formatCurrency, formatNumber } from "@/lib/currencies";
+import { formatNumber } from "@/lib/currencies";
 import { useCurrency } from "@/hooks/useCurrency";
 import { UNITS } from "@shared/units";
 import Papa from "papaparse";
@@ -1527,10 +1527,10 @@ export default function ProductManagement() {
                                 let label: string;
                                 switch (promo.type) {
                                   case "percentage_discount": label = `${promo.discountPercentage}% off`; break;
-                                  case "fixed_price": label = `Now ${formatCurrency(promo.fixedPrice)}`; break;
-                                  case "clearance": label = `Clearance ${formatCurrency(promo.fixedPrice)}`; break;
+                                  case "fixed_price": label = `Now ${formatMoney(promo.fixedPrice)}`; break;
+                                  case "clearance": label = `Clearance ${formatMoney(promo.fixedPrice)}`; break;
                                   case "buy_x_get_y_free": label = `Buy ${promo.buyQuantity} Get ${promo.getQuantity} Free`; break;
-                                  case "bundle_deal": label = `${promo.minQuantity}+ at ${formatCurrency(promo.fixedPrice)} each`; break;
+                                  case "bundle_deal": label = `${promo.minQuantity}+ at ${formatMoney(promo.fixedPrice)} each`; break;
                                   default: label = promo.name || "Promo";
                                 }
                                 return (

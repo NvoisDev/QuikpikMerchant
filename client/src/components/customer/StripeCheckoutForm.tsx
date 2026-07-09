@@ -290,7 +290,7 @@ const PaymentFormContent = ({
           disabled={disabled || !isElementReady || !stripe || isProcessing || paymentSubmitted}
           className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3"
         >
-          {!isElementReady ? "Loading payment form…" : isProcessing ? "Processing..." : paymentSubmitted ? "Payment Submitted..." : `Pay ${formatCurrency(totalAmount, wholesaler?.defaultCurrency)}`}
+          {!isElementReady ? "Loading payment form…" : isProcessing ? "Processing..." : paymentSubmitted ? "Payment Submitted..." : `Pay ${formatCurrency(totalAmount, wholesaler?.preferredCurrency || wholesaler?.defaultCurrency)}`}
         </Button>
       </form>
 

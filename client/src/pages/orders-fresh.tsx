@@ -34,7 +34,6 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Home, Building, Warehouse, ChevronLeft, ChevronRight } from "lucide-react";
 import { useCurrency } from "@/hooks/useCurrency";
 import { useSidebarContext } from "@/contexts/sidebar-context";
-import { formatCurrency } from "@/lib/currencies";
 import { getOfflinePaymentDefaultAmount } from "@/lib/order-payment-balances";
 
 interface Order {
@@ -784,7 +783,7 @@ export default function OrdersFresh() {
         setIsMarkAsPaidOpen(false);
         toast({
           title: 'Payment recorded',
-          description: `${formatCurrency(parsed)} via ${markAsPaidMethod.replace('_', ' ')} has been recorded.`,
+          description: `${formatMoney(parsed)} via ${markAsPaidMethod.replace('_', ' ')} has been recorded.`,
         });
       } else {
         toast({ title: 'Error', description: data.error || 'Failed to record payment', variant: 'destructive' });
@@ -2215,7 +2214,7 @@ export default function OrdersFresh() {
             <AlertDialogDescription>
               {duplicateInvoiceWarning && (
                 <>
-                  You already created invoice {duplicateInvoiceWarning.orderNumber || `#${duplicateInvoiceWarning.draftId}`} for {formatCurrency(parseFloat(duplicateInvoiceWarning.total))} to this customer at{' '}
+                  You already created invoice {duplicateInvoiceWarning.orderNumber || `#${duplicateInvoiceWarning.draftId}`} for {formatMoney(parseFloat(duplicateInvoiceWarning.total))} to this customer at{' '}
                   {new Date(duplicateInvoiceWarning.createdAt).toLocaleTimeString()}. Are you sure you want to approve this draft as another order?
                 </>
               )}

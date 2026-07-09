@@ -5,7 +5,7 @@ import { formatDateTime } from "../../shared/utils/date";
 import { resolveWholesalerId } from "../utils/resolveWholesalerId";
 import {
   SendGridAttachment, buildInvoicePdf, db, emailButton, emailCard, escapeHtml, eq,
-  formatPackDescriptor, generateReadyForCollectionEmail, getEmailLogoUrl,
+  formatPackDescriptor, generateReadyForCollectionEmail, getCurrencySymbol, getEmailLogoUrl,
   multer, orderPhotoUpload, orders,
   requireAuth, requireMemberPermission, requireNotViewer, requireBooleanFeature,
   sendCustomerInvoiceEmail, sendEmail, sendWhatsAppMessage, sgMail, storage,
@@ -465,6 +465,7 @@ export function registerOrderCommsRoutes(app: Express): void {
 
       const wholesaler = await storage.getUser(order.wholesalerId);
       if (!wholesaler) return res.status(404).json({ message: 'Wholesaler not found' });
+      const sym = getCurrencySymbol((wholesaler as any)?.preferredCurrency || (wholesaler as any)?.defaultCurrency || 'GBP');
 
       const effectiveWholesaler = await resolveInvoiceWholesaler(order, wholesaler);
 
@@ -502,11 +503,11 @@ export function registerOrderCommsRoutes(app: Express): void {
         const connectReady = await isConnectAccountReady(wholesaler.stripeAccountId, Boolean(wholesaler.isTestAccount));
         if (connectReady && order.stripePaymentLinkUrl) {
           paymentSection =
-            `<p style="margin:16px 0 8px;color:#374151;font-size:15px">💳 <strong>Amount due: £${amountOutstanding.toFixed(2)}</strong></p>` +
+            `<p style="margin:16px 0 8px;color:#374151;font-size:15px">💳 <strong>Amount due: ${sym}${amountOutstanding.toFixed(2)}</strong></p>` +
             emailButton('Pay Now', order.stripePaymentLinkUrl);
         } else {
           paymentSection =
-            `<p style="margin:16px 0 0;color:#374151;font-size:14px">💳 <strong>Amount due: £${amountOutstanding.toFixed(2)}</strong> — Please contact us to arrange payment.</p>`;
+            `<p style="margin:16px 0 0;color:#374151;font-size:14px">💳 <strong>Amount due: ${sym}${amountOutstanding.toFixed(2)}</strong> — Please contact us to arrange payment.</p>`;
         }
       }
 
@@ -848,6 +849,7 @@ export function registerOrderCommsRoutes(app: Express): void {
       if (!wholesaler) {
         return res.status(404).json({ error: 'Wholesaler not found' });
       }
+      const sym = getCurrencySymbol((wholesaler as any)?.preferredCurrency || (wholesaler as any)?.defaultCurrency || 'GBP');
       const stripe = getStripeClient(Boolean(wholesaler.isTestAccount));
 
       // Calculate the correct payment amount
@@ -955,7 +957,7 @@ export function registerOrderCommsRoutes(app: Express): void {
           const sellingType = item.sellingType || 'units';
           const promoNote = item.appliedOfferLabel ? ` (${item.appliedOfferLabel})` : '';
           const freeNote = (item.freeItems || 0) > 0 ? ` +${item.freeItems} free` : '';
-          itemsListParts.push(`• ${productName} - ${item.quantity} ${sellingType} × £${unitPrice.toFixed(2)} = £${total.toFixed(2)}${promoNote}${freeNote}`);
+          itemsListParts.push(`• ${productName} - ${item.quantity} ${sellingType} × ${sym}${unitPrice.toFixed(2)} = ${sym}${total.toFixed(2)}${promoNote}${freeNote}`);
         }
         const itemsList = itemsListParts.length > 0 ? `\n\n📦 Items:\n${itemsListParts.join('\n')}` : '';
         const paymentTypeLabel = order.paymentStatus === 'unpaid' && depositPercentage < 100
@@ -963,7 +965,7 @@ export function registerOrderCommsRoutes(app: Express): void {
           : 'Outstanding Balance';
         const rawCommsUrl = session.url || '';
         const shortCommsUrl = rawCommsUrl ? await createShortPaymentLink(rawCommsUrl, wholesalerId, 24) : rawCommsUrl;
-        smsMessage = `Hi${order.customerName ? ` ${order.customerName.split(' ')[0]}` : ''}! ${wholesaler?.businessName || 'Your supplier'} is requesting payment for Order ${order.orderNumber}.${itemsList}\n\n${paymentTypeLabel}: £${paymentAmount.toFixed(2)}\n\nPay here: ${shortCommsUrl}\n\nThis link expires in 24 hours.`;
+        smsMessage = `Hi${order.customerName ? ` ${order.customerName.split(' ')[0]}` : ''}! ${wholesaler?.businessName || 'Your supplier'} is requesting payment for Order ${order.orderNumber}.${itemsList}\n\n${paymentTypeLabel}: ${sym}${paymentAmount.toFixed(2)}\n\nPay here: ${shortCommsUrl}\n\nThis link expires in 24 hours.`;
       } catch (msgError) {
         console.warn('⚠️ Could not build SMS message preview:', msgError);
       }

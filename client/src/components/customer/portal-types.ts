@@ -87,6 +87,7 @@ export interface WholesalerPortal {
   businessPhone?: string;
   businessAddress?: string;
   profileImageUrl?: string;
+  preferredCurrency?: string;
   defaultCurrency?: string;
   pickupAddress?: string;
   pickupInstructions?: string;

@@ -9,3 +9,4 @@
 - [React Query render-gating needs a fetch timeout](react-query-render-gating-timeout.md) — bare fetch w/o AbortController can stall → isLoading sticks true → permanent blank page; impersonation is a global window.fetch monkeypatch.
 - [DDL via startup migrations](db-ddl-startup-migrations.md) — db:push needs a TTY (fails here); add idempotent DDL+seeds to server/index.ts migrations array; also declare tables/indexes in schema.ts.
 - [Testing account — never use real wholesalers](testing-account.md) — all test data must go to the Quikpik Test Account only; never create products/orders in real wholesaler accounts.
+- [Multi-currency server-side pattern](multi-currency-server-pattern.md) — inject sym from wholesaler's preferredCurrency after each fetch; import getCurrencySymbol from ./shared (routes) or shared/utils/currency (services); Stripe descriptions and fmtGBP audit logs intentionally stay as £.

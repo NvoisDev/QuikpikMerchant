@@ -1708,9 +1708,29 @@ export default function Settings() {
                             onChange={(e) => setAccountForm({...accountForm, preferredCurrency: e.target.value})}
                             className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
                           >
-                            <option value="GBP">GBP (£)</option>
-                            <option value="USD">USD ($)</option>
-                            <option value="EUR">EUR (€)</option>
+                            <option value="GBP">GBP — British Pound (£)</option>
+                            <option value="USD">USD — US Dollar ($)</option>
+                            <option value="EUR">EUR — Euro (€)</option>
+                            <option value="CAD">CAD — Canadian Dollar (CA$)</option>
+                            <option value="AUD">AUD — Australian Dollar (A$)</option>
+                            <option value="NZD">NZD — New Zealand Dollar (NZ$)</option>
+                            <option value="NGN">NGN — Nigerian Naira (₦)</option>
+                            <option value="ZAR">ZAR — South African Rand (R)</option>
+                            <option value="GHS">GHS — Ghanaian Cedi (₵)</option>
+                            <option value="KES">KES — Kenyan Shilling (KSh)</option>
+                            <option value="CHF">CHF — Swiss Franc (CHF)</option>
+                            <option value="SEK">SEK — Swedish Krona (kr)</option>
+                            <option value="NOK">NOK — Norwegian Krone (kr)</option>
+                            <option value="DKK">DKK — Danish Krone (kr)</option>
+                            <option value="JPY">JPY — Japanese Yen (¥)</option>
+                            <option value="CNY">CNY — Chinese Yuan (¥)</option>
+                            <option value="HKD">HKD — Hong Kong Dollar (HK$)</option>
+                            <option value="SGD">SGD — Singapore Dollar (S$)</option>
+                            <option value="INR">INR — Indian Rupee (₹)</option>
+                            <option value="AED">AED — UAE Dirham (د.إ)</option>
+                            <option value="SAR">SAR — Saudi Riyal (﷼)</option>
+                            <option value="MXN">MXN — Mexican Peso (MX$)</option>
+                            <option value="BRL">BRL — Brazilian Real (R$)</option>
                           </select>
                         </div>
                       </div>

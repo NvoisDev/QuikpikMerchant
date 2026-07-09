@@ -7,6 +7,7 @@ import { formatDateTime } from "../../shared/utils/date";
 import {
   InventoryCalculator, and, asc, db, emailButton, emailCard, emailHeading, eq,
   findRecentDuplicateOrder, formatPackDescriptor, generateOrderNumber, getEmailLogoUrl,
+  getCurrencySymbol,
   inArray, isNull, ne, or, orderItems, orders, productBatches, products,
   requireAuth, requireNotViewer, requireBooleanFeature, sendEmail, sendWhatsAppMessage, sendCustomerInvoiceEmail,
   sql, stockMovements, storage, sum, wrapCustomerEmail, desc, quoteActivityLogs,
@@ -290,6 +291,7 @@ export function registerQuoteRoutes(app: Express): void {
       if (!wholesaler) {
         return res.status(404).json({ error: 'Wholesaler not found' });
       }
+      const sym = getCurrencySymbol((wholesaler as any)?.preferredCurrency || (wholesaler as any)?.defaultCurrency || 'GBP');
       const stripe = getStripeClient(Boolean(wholesaler.isTestAccount));
 
       // Validate businessProfileId ownership (prevent cross-tenant assignment)
@@ -886,12 +888,12 @@ export function registerQuoteRoutes(app: Express): void {
             const sellingType = item.sellingType || 'units';
             const total = item.customPrice * item.quantity;
             if (!item.productId) {
-              itemsListParts.push(`• ${item.customLabel?.trim() || 'Charge'} - ${item.quantity} × £${item.customPrice.toFixed(2)} = £${total.toFixed(2)}`);
+              itemsListParts.push(`• ${item.customLabel?.trim() || 'Charge'} - ${item.quantity} × ${sym}${item.customPrice.toFixed(2)} = ${sym}${total.toFixed(2)}`);
               continue;
             }
             const [product] = await db.select().from(products).where(eq(products.id, item.productId));
             const productName = product?.name || `Product #${item.productId}`;
-            itemsListParts.push(`• ${productName} - ${item.quantity} ${sellingType} × £${item.customPrice.toFixed(2)} = £${total.toFixed(2)}`);
+            itemsListParts.push(`• ${productName} - ${item.quantity} ${sellingType} × ${sym}${item.customPrice.toFixed(2)} = ${sym}${total.toFixed(2)}`);
           }
           itemsList = itemsListParts.join('\n');
         } catch (itemsError) {
@@ -911,7 +913,7 @@ export function registerQuoteRoutes(app: Express): void {
           balanceDueText = '\nBalance due: Immediately';
         }
         
-        const deliveryChargeText = quoteDeliveryCharge > 0 ? `\nDelivery: £${quoteDeliveryCharge.toFixed(2)}` : '';
+        const deliveryChargeText = quoteDeliveryCharge > 0 ? `\nDelivery: ${sym}${quoteDeliveryCharge.toFixed(2)}` : '';
         const deliveryNoteText = wholesaler.deliveryNote ? `\n📦 ${wholesaler.deliveryNote}` : '';
         const offlineMethodDisplayName: Record<string, string> = {
           bank_transfer: 'bank transfer',
@@ -927,19 +929,19 @@ export function registerQuoteRoutes(app: Express): void {
         const customerGreeting = customer.firstName || customer.businessName || 'there';
         const shortPaymentUrl = paymentLinkUrl ? await createShortPaymentLink(paymentLinkUrl, wholesalerId, 24) : '';
         const message = isPayLater
-          ? `Hi ${customerGreeting}! ${businessName} has sent you an invoice.\n\nItems:\n${itemsList}${deliveryChargeText}\n\nTotal: £${total.toFixed(2)}\nPayment: Pay Later${deliveryNoteText}\n\nPlease arrange payment with ${businessName} directly.${wholesalerContact ? `\n\nContact ${businessName}: ${wholesalerContact}` : ''}`
+          ? `Hi ${customerGreeting}! ${businessName} has sent you an invoice.\n\nItems:\n${itemsList}${deliveryChargeText}\n\nTotal: ${sym}${total.toFixed(2)}\nPayment: Pay Later${deliveryNoteText}\n\nPlease arrange payment with ${businessName} directly.${wholesalerContact ? `\n\nContact ${businessName}: ${wholesalerContact}` : ''}`
           : isOfflineNonPayLater
-          ? `Hi ${customerGreeting}! ${businessName} has sent you an invoice.\n\nItems:\n${itemsList}${deliveryChargeText}\n\nTotal: £${total.toFixed(2)}${deliveryNoteText}\n\n${offlineArrangement}${wholesalerContact ? `\n\nContact ${businessName}: ${wholesalerContact}` : ''}`
+          ? `Hi ${customerGreeting}! ${businessName} has sent you an invoice.\n\nItems:\n${itemsList}${deliveryChargeText}\n\nTotal: ${sym}${total.toFixed(2)}${deliveryNoteText}\n\n${offlineArrangement}${wholesalerContact ? `\n\nContact ${businessName}: ${wholesalerContact}` : ''}`
           : isDeposit 
-          ? `Hi ${customerGreeting}! ${businessName} has sent you an invoice.\n\nItems:\n${itemsList}${deliveryChargeText}\n\nOrder Total: £${total.toFixed(2)}\nDeposit (${validDepositPercentage}%): £${depositAmount.toFixed(2)}\nRemaining: £${outstandingAmount.toFixed(2)}${balanceDueText}${deliveryNoteText}\n\nPay deposit: ${shortPaymentUrl}\n\nLink expires in 24 hours.${wholesalerContact ? `\n\nContact ${businessName}: ${wholesalerContact}` : ''}`
+          ? `Hi ${customerGreeting}! ${businessName} has sent you an invoice.\n\nItems:\n${itemsList}${deliveryChargeText}\n\nOrder Total: ${sym}${total.toFixed(2)}\nDeposit (${validDepositPercentage}%): ${sym}${depositAmount.toFixed(2)}\nRemaining: ${sym}${outstandingAmount.toFixed(2)}${balanceDueText}${deliveryNoteText}\n\nPay deposit: ${shortPaymentUrl}\n\nLink expires in 24 hours.${wholesalerContact ? `\n\nContact ${businessName}: ${wholesalerContact}` : ''}`
           : (() => {
             if (orderBalanceDueDays > 0) {
               const fullDueDate = new Date();
               fullDueDate.setDate(fullDueDate.getDate() + orderBalanceDueDays);
               const formattedFullDueDate = fullDueDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-              return `Hi ${customerGreeting}! ${businessName} has sent you an invoice.\n\nItems:\n${itemsList}${deliveryChargeText}\n\nTotal: £${total.toFixed(2)} due by ${formattedFullDueDate}${deliveryNoteText}\n\nPay here: ${shortPaymentUrl}${wholesalerContact ? `\n\nContact ${businessName}: ${wholesalerContact}` : ''}`;
+              return `Hi ${customerGreeting}! ${businessName} has sent you an invoice.\n\nItems:\n${itemsList}${deliveryChargeText}\n\nTotal: ${sym}${total.toFixed(2)} due by ${formattedFullDueDate}${deliveryNoteText}\n\nPay here: ${shortPaymentUrl}${wholesalerContact ? `\n\nContact ${businessName}: ${wholesalerContact}` : ''}`;
             }
-            return `Hi ${customerGreeting}! ${businessName} has sent you an invoice.\n\nItems:\n${itemsList}${deliveryChargeText}\n\nTotal: £${total.toFixed(2)}${deliveryNoteText}\n\nPay here: ${shortPaymentUrl}\n\nLink expires in 24 hours.${wholesalerContact ? `\n\nContact ${businessName}: ${wholesalerContact}` : ''}`;
+            return `Hi ${customerGreeting}! ${businessName} has sent you an invoice.\n\nItems:\n${itemsList}${deliveryChargeText}\n\nTotal: ${sym}${total.toFixed(2)}${deliveryNoteText}\n\nPay here: ${shortPaymentUrl}\n\nLink expires in 24 hours.${wholesalerContact ? `\n\nContact ${businessName}: ${wholesalerContact}` : ''}`;
           })();
         
         try {
@@ -974,7 +976,7 @@ export function registerQuoteRoutes(app: Express): void {
               const chargeLabel = item.customLabel?.trim() || 'Charge';
               const notesHtml = item.itemNotes ? ` <span style="color:#6b7280;font-style:italic;">(${item.itemNotes.trim()})</span>` : '';
               customerItemsHtml.push(
-                `<li style="margin:6px 0"><strong>${chargeLabel}</strong>${notesHtml} — ${item.quantity} × £${item.customPrice.toFixed(2)} = <strong>£${itemTotal.toFixed(2)}</strong></li>`
+                `<li style="margin:6px 0"><strong>${chargeLabel}</strong>${notesHtml} — ${item.quantity} × ${sym}${item.customPrice.toFixed(2)} = <strong>${sym}${itemTotal.toFixed(2)}</strong></li>`
               );
               continue;
             }
@@ -984,7 +986,7 @@ export function registerQuoteRoutes(app: Express): void {
             const displayName = packDesc ? `${productName} (${packDesc})` : productName;
             const sellingType = item.sellingType || 'units';
             customerItemsHtml.push(
-              `<li style="margin:6px 0"><strong>${displayName}</strong> — ${item.quantity} ${sellingType} × £${item.customPrice.toFixed(2)} = <strong>£${itemTotal.toFixed(2)}</strong></li>`
+              `<li style="margin:6px 0"><strong>${displayName}</strong> — ${item.quantity} ${sellingType} × ${sym}${item.customPrice.toFixed(2)} = <strong>${sym}${itemTotal.toFixed(2)}</strong></li>`
             );
           }
 
@@ -1008,7 +1010,7 @@ export function registerQuoteRoutes(app: Express): void {
 
           const deliveryRowHtml =
             quoteDeliveryCharge > 0
-              ? `<tr><td style="padding:4px 0">Delivery:</td><td style="padding:4px 0;text-align:right">£${quoteDeliveryCharge.toFixed(2)}</td></tr>`
+              ? `<tr><td style="padding:4px 0">Delivery:</td><td style="padding:4px 0;text-align:right">${sym}${quoteDeliveryCharge.toFixed(2)}</td></tr>`
               : '';
 
           const emailSubjectPrefix = isPayLaterCustomer ? 'Invoice (Pay Later)' : 'Invoice';
@@ -1027,7 +1029,7 @@ export function registerQuoteRoutes(app: Express): void {
               { borderColor: '#d1fae5', bgColor: '#f0fdf4' }
             ),
             `<ul style="margin:8px 0 16px;padding-left:20px">${customerItemsHtml.join('')}</ul>`,
-            `<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse">${deliveryRowHtml}<tr style="border-top:2px solid #e5e7eb"><td style="padding:8px 0;font-size:16px;font-weight:bold">Total:</td><td style="padding:8px 0;text-align:right;font-size:16px;font-weight:bold;color:#10b981">£${total.toFixed(2)}</td></tr></table>`,
+            `<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse">${deliveryRowHtml}<tr style="border-top:2px solid #e5e7eb"><td style="padding:8px 0;font-size:16px;font-weight:bold">Total:</td><td style="padding:8px 0;text-align:right;font-size:16px;font-weight:bold;color:#10b981">${sym}${total.toFixed(2)}</td></tr></table>`,
             emailCard(
               `<p style="margin:0 0 6px;font-size:15px">${arrangementHtml}</p>${wholesalerContact ? `<p style="margin:0;font-size:13px;color:#6b7280">Contact ${businessName}: ${wholesalerContact}</p>` : ''}`,
               { borderColor: '#dbeafe', bgColor: '#eff6ff' }
@@ -1040,7 +1042,7 @@ export function registerQuoteRoutes(app: Express): void {
               businessName,
               logoUrl: getEmailLogoUrl(wholesaler.id, wholesaler.logoType, wholesaler.logoUrl, wholesaler.updatedAt),
             },
-            { preheader: `Invoice ${orderNumber} from ${businessName} — £${total.toFixed(2)}` }
+            { preheader: `Invoice ${orderNumber} from ${businessName} — ${sym}${total.toFixed(2)}` }
           );
 
           await sendEmail({
@@ -1063,7 +1065,7 @@ export function registerQuoteRoutes(app: Express): void {
         try {
           const businessName = wholesaler.businessName || `${wholesaler.firstName}'s Store`;
           const customerGreeting = customer.firstName || customer.businessName || 'there';
-          const smsBody = `Hi ${customerGreeting}! ${businessName} has raised an invoice for you. Total: £${total.toFixed(2)}. Order ref: ${quoteOrder.orderNumber}. Please check your email for full details.`;
+          const smsBody = `Hi ${customerGreeting}! ${businessName} has raised an invoice for you. Total: ${sym}${total.toFixed(2)}. Order ref: ${quoteOrder.orderNumber}. Please check your email for full details.`;
           const result = await ReliableSMSService.sendMarketingSMS(customer.phoneNumber, smsBody);
           if (!result.success) {
             console.warn(`⚠️ Invoice SMS notification failed [orderId=${quoteOrder.id}]: ${result.error}`);
@@ -1100,14 +1102,14 @@ export function registerQuoteRoutes(app: Express): void {
               unitWeightKg = packWeight > 0 ? packWeight : unitWeight * packQty;
             }
             wholesalerTotalWeightKg += unitWeightKg * item.quantity;
-            itemsForEmail.push(`<li style="margin:6px 0"><strong>${displayName}</strong> — ${item.quantity} ${sellingType} × £${item.customPrice.toFixed(2)} = <strong>£${itemTotal.toFixed(2)}</strong></li>`);
+            itemsForEmail.push(`<li style="margin:6px 0"><strong>${displayName}</strong> — ${item.quantity} ${sellingType} × ${sym}${item.customPrice.toFixed(2)} = <strong>${sym}${itemTotal.toFixed(2)}</strong></li>`);
           }
 
           const deliveryRowHtmlWholesaler = quoteDeliveryCharge > 0
-            ? `<tr><td style="padding:4px 0">Delivery:</td><td style="padding:4px 0;text-align:right">£${quoteDeliveryCharge.toFixed(2)}</td></tr>`
+            ? `<tr><td style="padding:4px 0">Delivery:</td><td style="padding:4px 0;text-align:right">${sym}${quoteDeliveryCharge.toFixed(2)}</td></tr>`
             : '';
           const vatRowHtmlWholesaler = quoteVatAmount > 0
-            ? `<tr><td style="padding:4px 0">VAT (${(quoteVatRate * 100).toFixed(0)}%):</td><td style="padding:4px 0;text-align:right">£${quoteVatAmount.toFixed(2)}</td></tr>`
+            ? `<tr><td style="padding:4px 0">VAT (${(quoteVatRate * 100).toFixed(0)}%):</td><td style="padding:4px 0;text-align:right">${sym}${quoteVatAmount.toFixed(2)}</td></tr>`
             : '';
           const weightRowHtml = wholesalerTotalWeightKg > 0
             ? `<tr><td style="padding:4px 0;color:#6b7280;font-size:13px">Est. Weight:</td><td style="padding:4px 0;text-align:right;color:#6b7280;font-size:13px">${wholesalerTotalWeightKg.toFixed(1)} kg</td></tr>`
@@ -1119,8 +1121,8 @@ export function registerQuoteRoutes(app: Express): void {
           const wholesalerEmailIntro = isPayLater
             ? `A new <strong>Pay Later</strong> invoice has been created for <strong>${wholesalerCustomerName}</strong>. Payment will be arranged directly with the customer.`
             : isDeposit
-              ? `A new invoice requiring a <strong>${validDepositPercentage}% deposit</strong> (£${depositAmount.toFixed(2)}) has been sent to <strong>${wholesalerCustomerName}</strong>.`
-              : `A new invoice for <strong>£${total.toFixed(2)}</strong> has been sent to <strong>${wholesalerCustomerName}</strong>.`;
+              ? `A new invoice requiring a <strong>${validDepositPercentage}% deposit</strong> (${sym}${depositAmount.toFixed(2)}) has been sent to <strong>${wholesalerCustomerName}</strong>.`
+              : `A new invoice for <strong>${sym}${total.toFixed(2)}</strong> has been sent to <strong>${wholesalerCustomerName}</strong>.`;
 
           const paymentLinkSection = !isPayLater && !isOfflineMethod && paymentLinkUrl
             ? emailCard(`<p style="margin:0 0 8px"><strong>Payment Link:</strong></p><p style="margin:0;font-size:13px;word-break:break-all"><a href="${paymentLinkUrl}" style="color:#059669">${paymentLinkUrl}</a></p>`, { borderColor: '#d1fae5', bgColor: '#f0fdf4' })
@@ -1133,7 +1135,7 @@ export function registerQuoteRoutes(app: Express): void {
               ? `<p style="margin:0 0 16px"><strong>Customer:</strong> <a href="${customerLink}" style="color:#059669">${wholesalerCustomerName}</a></p>`
               : `<p style="margin:0 0 16px"><strong>Customer:</strong> ${wholesalerCustomerName}</p>`,
             `<ul style="margin:8px 0 16px;padding-left:20px">${itemsForEmail.join('')}</ul>`,
-            `<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse">${deliveryRowHtmlWholesaler}${vatRowHtmlWholesaler}${weightRowHtml}<tr style="border-top:2px solid #e5e7eb"><td style="padding:8px 0;font-size:16px;font-weight:bold">Total:</td><td style="padding:8px 0;text-align:right;font-size:16px;font-weight:bold;color:#10b981">£${total.toFixed(2)}</td></tr></table>`,
+            `<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse">${deliveryRowHtmlWholesaler}${vatRowHtmlWholesaler}${weightRowHtml}<tr style="border-top:2px solid #e5e7eb"><td style="padding:8px 0;font-size:16px;font-weight:bold">Total:</td><td style="padding:8px 0;text-align:right;font-size:16px;font-weight:bold;color:#10b981">${sym}${total.toFixed(2)}</td></tr></table>`,
             paymentLinkSection,
           ].join('');
 
@@ -1143,7 +1145,7 @@ export function registerQuoteRoutes(app: Express): void {
               businessName: wholesaler.businessName || 'Quikpik',
               logoUrl: getEmailLogoUrl(wholesaler.id, wholesaler.logoType, wholesaler.logoUrl, wholesaler.updatedAt),
             },
-            { preheader: `New invoice ${orderNumber} created for ${wholesalerCustomerName} — £${total.toFixed(2)}` }
+            { preheader: `New invoice ${orderNumber} created for ${wholesalerCustomerName} — ${sym}${total.toFixed(2)}` }
           );
 
           await sendEmail({
@@ -1278,6 +1280,7 @@ export function registerQuoteRoutes(app: Express): void {
 
       const wholesaler = await storage.getUser(wholesalerId);
       if (!wholesaler) return res.status(404).json({ error: 'Wholesaler not found' });
+      const sym = getCurrencySymbol((wholesaler as any)?.preferredCurrency || (wholesaler as any)?.defaultCurrency || 'GBP');
       const stripe = getStripeClient(Boolean(wholesaler.isTestAccount));
 
       // ── Step 2: Snapshot existing items (read-only, for audit trail) ──────
@@ -1954,13 +1957,13 @@ export function registerQuoteRoutes(app: Express): void {
             emailCard(
               `<p style="margin:0 0 8px"><b>${wholesaler.businessName || 'Your wholesaler'}</b> has updated your invoice.</p>` +
               `<p style="margin:0 0 4px"><b>Changes:</b></p><ul style="margin:4px 0 8px;padding-left:20px">${changeSummary}</ul>` +
-              `<p style="margin:8px 0 0"><b>New total: £${total.toFixed(2)}</b></p>`,
+              `<p style="margin:8px 0 0"><b>New total: ${sym}${total.toFixed(2)}</b></p>`,
               { borderColor: '#dbeafe', bgColor: '#eff6ff' }
             ),
             `<p style="margin:16px 0 8px">A new payment link has been created for you. Please use the link below to complete your payment — your previous link is no longer valid.</p>`,
             emailButton('Pay Now', newPaymentLinkUrl, '#059669'),
           ].join('');
-          const html = wrapCustomerEmail(emailBody, branding, { preheader: `Your invoice ${existingOrder.orderNumber} has been updated — new total: £${total.toFixed(2)}` });
+          const html = wrapCustomerEmail(emailBody, branding, { preheader: `Your invoice ${existingOrder.orderNumber} has been updated — new total: ${sym}${total.toFixed(2)}` });
           await sendEmail({
             to: customerForEmail.email,
             from: 'hello@quikpik.co',

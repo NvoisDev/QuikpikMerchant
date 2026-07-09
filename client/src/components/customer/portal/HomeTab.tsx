@@ -124,7 +124,7 @@ export function HomeTab({
                 </span>
                 <span className="flex items-center gap-1">
                   <Banknote className="w-3.5 h-3.5" />
-                  {formatCurrency(customerOrderStats.totalSpent || 0, wholesaler?.defaultCurrency || 'GBP')} spent
+                  {formatCurrency(customerOrderStats.totalSpent || 0, wholesaler?.preferredCurrency || wholesaler?.defaultCurrency || 'GBP')} spent
                 </span>
               </div>
             )}
@@ -174,7 +174,7 @@ export function HomeTab({
               <div className="font-extrabold leading-none text-theme-primary">
                 <PriceDisplay
                   price={cartStats.totalValue}
-                  currency={wholesaler?.defaultCurrency || 'GBP'}
+                  currency={wholesaler?.preferredCurrency || wholesaler?.defaultCurrency || 'GBP'}
                   isGuestMode={false}
                   size="medium"
                 />
@@ -219,7 +219,7 @@ export function HomeTab({
           wholesalerId={wholesalerId}
           customerPhone={authenticatedCustomer.phone}
           onViewAllOrders={() => setActiveTab("orders")}
-          defaultCurrency={wholesaler?.defaultCurrency}
+          defaultCurrency={wholesaler?.preferredCurrency || wholesaler?.defaultCurrency}
           priceDisplayMode={priceDisplayMode}
           onRequestQuote={onRequestQuote}
         />
@@ -303,7 +303,7 @@ export function HomeTab({
                               <PriceDisplay
                                 price={pricing.effectivePrice}
                                 originalPrice={pricing.effectivePrice !== pricing.originalPrice ? pricing.originalPrice : undefined}
-                                currency={wholesaler?.defaultCurrency || 'GBP'}
+                                currency={wholesaler?.preferredCurrency || wholesaler?.defaultCurrency || 'GBP'}
                                 isGuestMode={isTrueGuestMode}
                                 size="medium"
                                 showStrikethrough={true}

@@ -234,7 +234,7 @@ export function AccountTab({
                 </div>
                 <div className="text-center p-4 bg-white border border-gray-200 rounded-lg shadow-sm">
                   <div className="text-2xl font-bold text-theme-primary">
-                    {formatCurrency(customerOrderStats?.totalSpent || 0, wholesaler?.defaultCurrency || 'GBP')}
+                    {formatCurrency(customerOrderStats?.totalSpent || 0, wholesaler?.preferredCurrency || wholesaler?.defaultCurrency || 'GBP')}
                   </div>
                   <div className="text-sm text-gray-600">Total Spent</div>
                 </div>

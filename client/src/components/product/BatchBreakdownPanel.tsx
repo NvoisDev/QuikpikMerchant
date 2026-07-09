@@ -1,7 +1,8 @@
 import { useRef } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Pencil, PackagePlus } from "lucide-react";
-import { formatCurrency, formatNumber } from "@/lib/currencies";
+import { formatNumber } from "@/lib/currencies";
+import { useCurrency } from "@/hooks/useCurrency";
 import type { Product } from "@shared/schema";
 import type { ProductBatch } from "./types";
 
@@ -34,6 +35,7 @@ export default function BatchBreakdownPanel({
   onDepleteBatch,
   onUpdateExpiry,
 }: BatchBreakdownPanelProps) {
+  const { formatMoney } = useCurrency();
   return (
     <div className="mt-2 border border-blue-100 rounded-lg bg-blue-50/40 p-3">
       <h5 className="text-xs font-semibold text-gray-700 mb-2 flex items-center gap-1.5">
@@ -115,7 +117,7 @@ export default function BatchBreakdownPanel({
                         </span>
                       )}
                     </td>
-                    <td className="py-1.5 pr-3 text-right text-gray-600">{batch.costPrice ? formatCurrency(batch.costPrice) : '—'}</td>
+                    <td className="py-1.5 pr-3 text-right text-gray-600">{batch.costPrice ? formatMoney(batch.costPrice) : '—'}</td>
                     <td className="py-1.5 pr-3">
                       {isDepleted ? (
                         <Badge className="text-xs bg-gray-100 text-gray-500 border-0">Depleted</Badge>

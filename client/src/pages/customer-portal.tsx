@@ -556,7 +556,7 @@ export default function CustomerPortal() {
         } else if (orders < 10) {
           return `Welcome back, valued customer! ${orders} orders and counting ⭐`;
         } else {
-          return `Welcome back, loyal customer! ${formatCurrency(spent, wholesaler?.defaultCurrency || 'GBP')} in total spending 🏆`;
+          return `Welcome back, loyal customer! ${formatCurrency(spent, wholesaler?.preferredCurrency || wholesaler?.defaultCurrency || 'GBP')} in total spending 🏆`;
         }
       };
       
@@ -1663,7 +1663,7 @@ export default function CustomerPortal() {
         businessName: wholesaler?.businessName || 'Business',
         email: wholesaler?.email || 'hello@business.com',
         phone: wholesaler?.businessPhone || wholesaler?.phone || '+44000000000',
-        currency: wholesaler?.defaultCurrency || 'GBP'
+        currency: wholesaler?.preferredCurrency || wholesaler?.defaultCurrency || 'GBP'
       }}
       onContinueShopping={() => {
         // Clear cart and order data
@@ -2173,7 +2173,7 @@ export default function CustomerPortal() {
                               })}
                             </div>
                             <div className="flex items-center justify-between gap-3 pt-1">
-                              <PriceDisplay price={null} currency={wholesaler?.defaultCurrency || 'GBP'} isGuestMode={true} size="medium" />
+                              <PriceDisplay price={null} currency={wholesaler?.preferredCurrency || wholesaler?.defaultCurrency || 'GBP'} isGuestMode={true} size="medium" />
                               <Button
                                 size="sm"
                                 onClick={openCustomerSignIn}
@@ -2418,6 +2418,7 @@ export default function CustomerPortal() {
           setCart={setCart}
           cart={cart}
           priceDisplayMode={wholesaler?.priceDisplayMode || 'hidden'}
+          currency={wholesaler?.preferredCurrency || wholesaler?.defaultCurrency || 'GBP'}
         />
 
         {/* First Time Address Setup Popup */}

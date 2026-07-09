@@ -229,7 +229,7 @@ export function CheckoutDialog({
                               )}
                               <PriceDisplay
                                 price={totalCost}
-                                currency={wholesaler?.defaultCurrency || 'GBP'}
+                                currency={wholesaler?.preferredCurrency || wholesaler?.defaultCurrency || 'GBP'}
                                 isGuestMode={false}
                                 size="small"
                               />
@@ -364,7 +364,7 @@ export function CheckoutDialog({
                       <span>Product Subtotal</span>
                       <PriceDisplay
                         price={cartStats.subtotal}
-                        currency={wholesaler?.defaultCurrency || 'GBP'}
+                        currency={wholesaler?.preferredCurrency || wholesaler?.defaultCurrency || 'GBP'}
                         isGuestMode={false}
                         size="small"
                       />
@@ -375,7 +375,7 @@ export function CheckoutDialog({
                         <span>Delivery</span>
                         <PriceDisplay
                           price={parseFloat(wholesaler.deliveryFlatRate)}
-                          currency={wholesaler?.defaultCurrency || 'GBP'}
+                          currency={wholesaler?.preferredCurrency || wholesaler?.defaultCurrency || 'GBP'}
                           isGuestMode={false}
                           size="small"
                         />
@@ -391,7 +391,7 @@ export function CheckoutDialog({
                             customerData.shippingOption === 'delivery' && wholesaler?.deliveryFlatRate ? parseFloat(wholesaler.deliveryFlatRate) : 0,
                             feeConfig
                           )}
-                          currency={wholesaler?.defaultCurrency || 'GBP'}
+                          currency={wholesaler?.preferredCurrency || wholesaler?.defaultCurrency || 'GBP'}
                           isGuestMode={false}
                           size="small"
                         />
@@ -410,7 +410,7 @@ export function CheckoutDialog({
                         const fee = feesEnabled ? calculateCustomerFee(cartStats.subtotal, shipping, feeConfig) : 0;
                         return cartStats.subtotal + shipping + fee;
                       })()}
-                      currency={wholesaler?.defaultCurrency || 'GBP'}
+                      currency={wholesaler?.preferredCurrency || wholesaler?.defaultCurrency || 'GBP'}
                       isGuestMode={false}
                       size="medium"
                     />
@@ -598,13 +598,13 @@ export function CheckoutDialog({
                         <span>Home delivery</span>
                         {!pricesHidden && (
                           <span className="text-blue-600 font-medium">
-                            {wholesaler?.deliveryFlatRate ? formatCurrency(wholesaler.deliveryFlatRate) : 'Arranged by supplier'}
+                            {wholesaler?.deliveryFlatRate ? formatCurrency(wholesaler.deliveryFlatRate, wholesaler?.preferredCurrency || wholesaler?.defaultCurrency || 'GBP') : 'Arranged by supplier'}
                           </span>
                         )}
                       </div>
                       <p className="text-sm text-gray-600">
                         {!pricesHidden && wholesaler?.deliveryFlatRate
-                          ? `Flat delivery fee of ${formatCurrency(wholesaler.deliveryFlatRate)} added at checkout`
+                          ? `Flat delivery fee of ${formatCurrency(wholesaler.deliveryFlatRate, wholesaler?.preferredCurrency || wholesaler?.defaultCurrency || 'GBP')} added at checkout`
                           : 'The supplier will contact you to arrange delivery and discuss costs'}
                       </p>
                     </Label>
@@ -768,7 +768,7 @@ export function CheckoutDialog({
                               const shipping = customerData.shippingOption === 'delivery' && wholesaler?.deliveryFlatRate
                                 ? parseFloat(wholesaler.deliveryFlatRate) : 0;
                               const fee = feesEnabled ? calculateCustomerFee(cartStats.subtotal, shipping, feeConfig) : 0;
-                              return formatCurrency(cartStats.subtotal + shipping + fee);
+                              return formatCurrency(cartStats.subtotal + shipping + fee, wholesaler?.preferredCurrency || wholesaler?.defaultCurrency || 'GBP');
                             })()}
                           </strong>{' '}
                           will be due on invoice. The supplier will be notified of your order.

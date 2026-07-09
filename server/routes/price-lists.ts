@@ -1,6 +1,7 @@
 import type { Express } from "express";
 import {
   requireAuth, requireNotViewer, db, storage, z,
+  getCurrencySymbol,
   priceLists, priceListItems, priceListAssignments,
   products, customerGroups, customerGroupMembers,
   wholesalerCustomerRelationships,
@@ -811,6 +812,7 @@ export function registerPriceListRoutes(app: Express): void {
 
       const wholesaler = await storage.getUser(wholesalerId);
       if (!wholesaler) return res.status(404).json({ message: "Wholesaler not found" });
+      const sym = getCurrencySymbol((wholesaler as any)?.preferredCurrency || (wholesaler as any)?.defaultCurrency || 'GBP');
 
       // Build product list
       const rawItems = await db
@@ -891,8 +893,8 @@ export function registerPriceListRoutes(app: Express): void {
               const standardPrice = parseFloat(p.price || "0");
               const hasDiscount = effectivePrice < standardPrice;
               const priceCell = hasDiscount
-                ? `£${effectivePrice.toFixed(2)} <span style="color:#9ca3af;text-decoration:line-through;font-size:12px">£${standardPrice.toFixed(2)}</span>`
-                : `£${effectivePrice.toFixed(2)}`;
+                ? `${sym}${effectivePrice.toFixed(2)} <span style="color:#9ca3af;text-decoration:line-through;font-size:12px">${sym}${standardPrice.toFixed(2)}</span>`
+                : `${sym}${effectivePrice.toFixed(2)}`;
               return [p.name, priceCell];
             });
 
@@ -950,7 +952,7 @@ export function registerPriceListRoutes(app: Express): void {
                   customPrice: item.customPrice,
                   discountPercentage: item.discountPercentage,
                 });
-                return `• ${p.name}: £${effectivePrice.toFixed(2)}`;
+                return `• ${p.name}: ${sym}${effectivePrice.toFixed(2)}`;
               })
               .join("\n");
 

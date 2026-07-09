@@ -1,0 +1,221 @@
+I want to implement multi-currency support in a safe, backwards-compatible way without disrupting any existing functionality or live wholesalers.
+
+Objective
+
+When a new wholesaler signs up, Quikpik should automatically determine their default currency based on their country/location (e.g. United States → USD, Canada → CAD, Nigeria → NGN).
+
+Existing UK wholesalers should remain on GBP unless they manually choose to change their preferred currency.
+
+This implementation must be safe for production and must NOT break any existing payment, subscription, invoice, reporting or pricing logic.
+
+⸻
+
+Phase 1 (Current Build)
+
+Automatic Currency Selection
+
+During wholesaler signup:
+
+* Detect country using a reliable IP geolocation service.
+* Map country to a default currency.
+* Save this as the wholesaler’s preferred currency.
+* Existing users remain GBP by default.
+
+Examples:
+
+United Kingdom → GBP
+
+United States → USD
+
+Canada → CAD
+
+Nigeria → NGN
+
+Ireland → EUR
+
+Australia → AUD
+
+South Africa → ZAR
+
+⸻
+
+User Settings
+
+Add a Currency setting within Settings where the wholesaler can manually change their preferred display currency.
+
+Changing the preferred currency should only affect display values during Phase 1.
+
+⸻
+
+Currency Display
+
+All prices shown throughout the platform should respect the preferred currency using the existing currency formatting infrastructure.
+
+This includes (where applicable):
+
+* Dashboard
+* Products
+* Quotes
+* Draft invoices
+* Invoices
+* Orders
+* Payments
+* Analytics
+* Reports
+* Customer Portal
+* Marketplace
+* Subscription pages (display only)
+* Admin pages
+* Emails
+* PDFs
+* Exports
+
+⸻
+
+IMPORTANT
+
+Phase 1 is DISPLAY ONLY.
+
+Do NOT convert monetary values.
+
+The numeric amount should remain unchanged.
+
+Example:
+
+29.99 GBP becomes
+
+$29.99
+
+NOT
+
+$40.13
+
+The objective is simply changing the default platform currency presentation until Stripe subscriptions are updated.
+
+⸻
+
+Existing Wholesalers
+
+Existing wholesalers must:
+
+* remain on GBP
+* retain all existing subscriptions
+* retain existing Stripe customer records
+* retain invoice history
+* retain payment history
+
+No existing data should be modified automatically.
+
+⸻
+
+Stripe Safeguards
+
+DO NOT modify:
+
+* Stripe Customers
+* Stripe Connect Accounts
+* Existing Stripe Prices
+* Existing Stripe Subscriptions
+* Existing Billing Portal
+* Existing Checkout Sessions
+
+These remain exactly as they are during Phase 1.
+
+This work will be completed during Phase 2.
+
+⸻
+
+Database Safeguards
+
+Do not alter historical financial records.
+
+Invoices already created should continue displaying exactly as originally generated unless explicitly designed otherwise.
+
+Historical reporting must remain unchanged.
+
+⸻
+
+Backwards Compatibility
+
+Ensure this implementation does NOT break:
+
+* Stripe Connect
+* Marketplace payments
+* Quote creation
+* Draft invoices
+* Invoice sending
+* Customer portal
+* Stock allocation
+* Batch tracking
+* Reports
+* Analytics
+* Exports
+* Admin dashboard
+* Super Admin
+* Payment reminders
+* WhatsApp messages
+* Email templates
+* Scheduled jobs
+* Subscription enforcement
+
+⸻
+
+Testing Requirements
+
+Please regression test:
+
+✓ Existing UK wholesaler
+
+✓ New US wholesaler
+
+✓ New Nigerian wholesaler
+
+✓ Existing subscriptions
+
+✓ Invoice creation
+
+✓ Draft invoice flow
+
+✓ Payment links
+
+✓ Customer portal
+
+✓ Analytics
+
+✓ Reports
+
+✓ PDF generation
+
+✓ CSV exports
+
+✓ Stripe checkout
+
+✓ Marketplace ordering
+
+✓ Admin pages
+
+⸻
+
+Phase 2 (Future)
+
+Once Phase 1 is stable, implement full multi-currency Stripe subscriptions.
+
+This will require:
+
+* Currency-specific Stripe Prices
+* Correct Stripe Price selection based on preferred currency
+* Billing Portal support
+* Upgrade/Downgrade compatibility
+* Subscription migration strategy
+* Thorough regression testing
+
+⸻
+
+Success Criteria
+
+* Existing wholesalers experience zero behavioural changes.
+* New wholesalers automatically receive the correct default currency.
+* Users can change their preferred currency in Settings.
+* Currency formatting works consistently across the platform.
+* No existing invoices, payments, subscriptions or analytics are broken.
+* The codebase remains extensible for full multi-currency billing in Phase 2.

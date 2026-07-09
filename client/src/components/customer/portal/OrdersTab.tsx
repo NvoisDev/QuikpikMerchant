@@ -70,7 +70,7 @@ export function OrdersTab({
             <div className="font-extrabold leading-none text-theme-primary">
               <PriceDisplay
                 price={cartStats.totalValue}
-                currency={wholesaler?.defaultCurrency || 'GBP'}
+                currency={wholesaler?.preferredCurrency || wholesaler?.defaultCurrency || 'GBP'}
                 isGuestMode={false}
                 size="medium"
               />
@@ -99,7 +99,7 @@ export function OrdersTab({
           <LazyOrderHistory
             wholesalerId={wholesaler.id}
             customerPhone={authenticatedCustomer.phone || authenticatedCustomer.phoneNumber || '+447507659550'}
-            currency={wholesaler?.defaultCurrency || 'GBP'}
+            currency={wholesaler?.preferredCurrency || wholesaler?.defaultCurrency || 'GBP'}
             priceDisplayMode={wholesaler?.priceDisplayMode}
           />
         </Suspense>

@@ -1,5 +1,6 @@
 import { storage } from "../storage";
 import { sendWhatsAppMessage } from "./whatsappService";
+import { getCurrencySymbol } from "../../shared/utils/currency";
 import { sendEmail } from "../sendgrid-service";
 import {
   buildItemisedRefundEmail,
@@ -86,6 +87,7 @@ export async function sendCancellationNotification(
   if (!wholesaler) return;
 
   const businessName = wholesaler.businessName || `${wholesaler.firstName}'s Store`;
+  const sym = getCurrencySymbol((wholesaler as any)?.preferredCurrency || (wholesaler as any)?.defaultCurrency || 'GBP');
   const amountPaid = parseFloat(order.amountPaid || '0');
 
   const refundLineItems: RefundLineItem[] = [];
@@ -172,9 +174,9 @@ export async function sendCancellationNotification(
     if (isFullCancellation) {
       smsMsg = `Hi ${customer.firstName || customer.businessName || 'there'}, your order ${order.orderNumber} with ${businessName} has been cancelled.`;
       if (stripeRefundTotalPounds > 0) {
-        smsMsg += ` A refund of £${stripeRefundTotalPounds.toFixed(2)} for ${totalReturnedQty} item(s) has been processed. Allow 5-10 business days.`;
+        smsMsg += ` A refund of ${sym}${stripeRefundTotalPounds.toFixed(2)} for ${totalReturnedQty} item(s) has been processed. Allow 5-10 business days.`;
       } else if (showPendingRefund && smsPendingAmount > 0) {
-        smsMsg += ` A refund of £${smsPendingAmount.toFixed(2)} for ${totalReturnedQty} item(s) is pending.`;
+        smsMsg += ` A refund of ${sym}${smsPendingAmount.toFixed(2)} for ${totalReturnedQty} item(s) is pending.`;
       } else if (!showPendingRefund) {
         // refundType is 'later' or 'none' — no refund detail in SMS
       } else {
@@ -183,9 +185,9 @@ export async function sendCancellationNotification(
     } else {
       smsMsg = `Hi ${customer.firstName || customer.businessName || 'there'}, ${totalReturnedQty} item(s) returned for order ${order.orderNumber} with ${businessName}.`;
       if (stripeRefundTotalPounds > 0) {
-        smsMsg += ` Refund of £${stripeRefundTotalPounds.toFixed(2)} processed. Allow 5-10 business days.`;
+        smsMsg += ` Refund of ${sym}${stripeRefundTotalPounds.toFixed(2)} processed. Allow 5-10 business days.`;
       } else if (actualRefundAmount > 0) {
-        smsMsg += ` Refund of £${actualRefundAmount.toFixed(2)} pending.`;
+        smsMsg += ` Refund of ${sym}${actualRefundAmount.toFixed(2)} pending.`;
       }
     }
     smsMsg += `\n\nContact ${businessName}: ${wholesaler.phoneNumber || wholesaler.email || ''}`;

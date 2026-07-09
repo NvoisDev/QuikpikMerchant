@@ -11,7 +11,7 @@ import { AlertTriangle, Package, Check, X, Settings, Eye, Info, Clock, Calendar 
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { formatDistanceToNow } from "date-fns";
-import { formatCurrency } from "@/lib/currencies";
+import { useCurrency } from "@/hooks/useCurrency";
 
 import { getNextAlertDate, ALERT_DAY_NAMES } from "@/lib/stockAlertSchedule";
 
@@ -60,6 +60,7 @@ interface User {
 }
 
 export default function StockAlerts() {
+  const { formatMoney } = useCurrency();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [selectedAlert, setSelectedAlert] = useState<StockAlert | null>(null);
@@ -329,7 +330,7 @@ export default function StockAlerts() {
                               Batch: <strong>{batch.batchNumber || 'Initial Stock'}</strong>
                               {' · '}{batch.quantity} units
                               {' · '}Exp: {expiryFmt}
-                              {batch.costPrice && ` · Cost: ${formatCurrency(batch.costPrice)}/unit`}
+                              {batch.costPrice && ` · Cost: ${formatMoney(batch.costPrice)}/unit`}
                             </p>
                           </div>
                         </div>

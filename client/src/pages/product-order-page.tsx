@@ -13,6 +13,7 @@ import { ArrowLeft, Package, Phone, ShoppingCart, MapPin, Clock } from "lucide-r
 import Logo from "@/components/ui/logo";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { formatNumber } from "@/lib/utils";
+import { getCurrencySymbol } from "@/lib/currencies";
 
 interface Product {
   id: number;
@@ -30,6 +31,7 @@ interface Product {
     businessPhone?: string;
     businessAddress?: string;
     profileImageUrl?: string;
+    preferredCurrency?: string;
     defaultCurrency?: string;
   };
 }
@@ -159,8 +161,7 @@ export default function ProductOrderPage() {
     );
   }
 
-  const currencySymbol = product.wholesaler.defaultCurrency === 'GBP' ? '£' : 
-                        product.wholesaler.defaultCurrency === 'EUR' ? '€' : '$';
+  const currencySymbol = getCurrencySymbol(product.wholesaler.preferredCurrency || product.wholesaler.defaultCurrency || 'GBP');
   const totalPrice = (parseFloat(product.price) * quantity).toFixed(2);
   const minQuantity = product.moq;
   const maxQuantity = product.stock;

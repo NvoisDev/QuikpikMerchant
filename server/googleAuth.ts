@@ -4,6 +4,7 @@ import { storage } from './storage';
 import { db } from './db';
 import { sql } from 'drizzle-orm';
 import { ADMIN_EMAILS } from './config';
+import { detectCurrencyFromIp } from '../shared/utils/geoip-currency';
 
 if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
   throw new Error('Google OAuth credentials are required');
@@ -93,7 +94,7 @@ export class GoogleAuthBlockedError extends Error {
   }
 }
 
-export async function createOrUpdateUser(googleUser: GoogleUser) {
+export async function createOrUpdateUser(googleUser: GoogleUser, ip?: string) {
   try {
     // Step 1: Look up by Google ID first — most precise match, handles returning users
     let user = await storage.getUserByGoogleId(googleUser.id);
@@ -106,6 +107,7 @@ export async function createOrUpdateUser(googleUser: GoogleUser) {
         if (user.role === 'team_member') {
           throw new GoogleAuthBlockedError('team_member_use_tab');
         }
+        const detectedCurrency1 = await detectCurrencyFromIp(ip);
         const newUser = await storage.createUser({
           id: googleUser.id,
           email: googleUser.email,
@@ -115,7 +117,8 @@ export async function createOrUpdateUser(googleUser: GoogleUser) {
           googleId: googleUser.id,
           role: 'wholesaler',
           businessName: `${googleUser.name}'s Business`,
-          defaultCurrency: 'GBP',
+          preferredCurrency: detectedCurrency1,
+          defaultCurrency: detectedCurrency1,
           isFirstLogin: true,
           currentPlan: 'listing',
           subscriptionStatus: 'trialing',
@@ -180,6 +183,7 @@ export async function createOrUpdateUser(googleUser: GoogleUser) {
       // SECURITY: All email matches are non-wholesaler, non-team-member records (e.g. retailer,
       // customer) that have never been Google-linked. Do NOT bind this sign-in to any of
       // those records — create a fresh wholesaler account instead.
+      const detectedCurrency2 = await detectCurrencyFromIp(ip);
       user = await storage.createUser({
         id: googleUser.id,
         email: googleUser.email,
@@ -189,7 +193,8 @@ export async function createOrUpdateUser(googleUser: GoogleUser) {
         googleId: googleUser.id,
         role: 'wholesaler',
         businessName: `${googleUser.name}'s Business`,
-        defaultCurrency: 'GBP',
+        preferredCurrency: detectedCurrency2,
+        defaultCurrency: detectedCurrency2,
         isFirstLogin: true,
         currentPlan: 'listing',
         subscriptionStatus: 'trialing',
@@ -201,6 +206,7 @@ export async function createOrUpdateUser(googleUser: GoogleUser) {
     // Step 3: Completely new user — create fresh wholesaler account
     // SECURITY: All Google OAuth users are wholesalers by default
     // Customers use separate SMS-based authentication system
+    const detectedCurrency3 = await detectCurrencyFromIp(ip);
     user = await storage.createUser({
       id: googleUser.id,
       email: googleUser.email,
@@ -210,7 +216,8 @@ export async function createOrUpdateUser(googleUser: GoogleUser) {
       googleId: googleUser.id,
       role: 'wholesaler',
       businessName: `${googleUser.name}'s Business`,
-      defaultCurrency: 'GBP',
+      preferredCurrency: detectedCurrency3,
+      defaultCurrency: detectedCurrency3,
       isFirstLogin: true,
       currentPlan: 'listing',
       subscriptionStatus: 'trialing',

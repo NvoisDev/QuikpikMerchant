@@ -5,7 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { PackagePlus, ArrowUpCircle, ArrowDownCircle, Clock, Download } from "lucide-react";
 import ExcelJS from "exceljs";
-import { formatCurrency, formatNumber } from "@/lib/currencies";
+import { formatNumber } from "@/lib/currencies";
+import { useCurrency } from "@/hooks/useCurrency";
 import { InventoryCalculator } from "@shared/inventory-calculator";
 import type { Product } from "@shared/schema";
 import type { ProductBatch, StockMovement } from "./types";
@@ -95,6 +96,7 @@ export default function StockManagementDialog({
   onUpdateBatchCostPrice,
   isUpdatingCostPrice,
 }: StockManagementDialogProps) {
+  const { formatMoney } = useCurrency();
   const handleExportExcel = async () => {
     if (!stockMovements || (stockMovements as StockMovement[]).length === 0) return;
     const rows = (stockMovements as StockMovement[]).map((m) => {
@@ -245,7 +247,7 @@ export default function StockManagementDialog({
                               </div>
                               <div className="flex items-center gap-2 mt-1 sm:mt-0 pl-4 sm:pl-0">
                                 <span className="text-gray-500 text-xs">
-                                  Cost: {batch.costPrice != null && batch.costPrice !== "" ? formatCurrency(batch.costPrice, stockProduct?.currency ?? undefined) : "—"}
+                                  Cost: {batch.costPrice != null && batch.costPrice !== "" ? formatMoney(batch.costPrice) : "—"}
                                 </span>
                                 <span className="text-gray-400">·</span>
                                 <span className="font-semibold text-gray-700">{formatNumber(batch.quantity)} units</span>
@@ -269,7 +271,7 @@ export default function StockManagementDialog({
                                 <div className="flex items-center gap-2 flex-shrink-0 pl-4 sm:pl-0">
                                   {isViewer ? (
                                     <span className="text-xs text-gray-400">
-                                      Cost: {batch.costPrice != null && batch.costPrice !== "" ? formatCurrency(batch.costPrice, stockProduct?.currency ?? undefined) : "—"}
+                                      Cost: {batch.costPrice != null && batch.costPrice !== "" ? formatMoney(batch.costPrice) : "—"}
                                     </span>
                                   ) : (
                                     <button
@@ -283,7 +285,7 @@ export default function StockManagementDialog({
                                       className="text-xs text-gray-400 hover:text-green-600 transition-colors py-2.5 min-h-[44px] inline-flex items-center"
                                       title="Edit cost price"
                                     >
-                                      Cost: {batch.costPrice != null && batch.costPrice !== "" ? formatCurrency(batch.costPrice, stockProduct?.currency ?? undefined) : "—"} ✎
+                                      Cost: {batch.costPrice != null && batch.costPrice !== "" ? formatMoney(batch.costPrice) : "—"} ✎
                                     </button>
                                   )}
                                   <span className="text-gray-300">·</span>

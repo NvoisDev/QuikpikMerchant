@@ -6,7 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { cleanAIDescription } from "@shared/utils";
 import { useLocation } from "wouter";
 import type { PromotionalOffer } from "@shared/schema";
-import { formatCurrency, formatWeight } from "@/lib/currencies";
+import { formatWeight } from "@/lib/currencies";
+import { useCurrency } from "@/hooks/useCurrency";
 import { computePackWeightKg } from "@shared/utils/product";
 import { formatNumber } from "@/lib/utils";
 import { useNearDepletionThreshold } from "@/lib/near-depletion";
@@ -71,18 +72,18 @@ function getActivePromos(offers: PromotionalOffer[]): PromotionalOffer[] {
   });
 }
 
-function formatPromoLabel(promo: PromotionalOffer): string {
+function formatPromoLabel(promo: PromotionalOffer, fmt: (v: number) => string): string {
   switch (promo.type) {
     case "percentage_discount":
       return `${promo.discountPercentage}% off`;
     case "fixed_price":
-      return `Now ${formatCurrency(promo.fixedPrice)}`;
+      return `Now ${fmt(promo.fixedPrice)}`;
     case "clearance":
-      return `Clearance ${formatCurrency(promo.fixedPrice)}`;
+      return `Clearance ${fmt(promo.fixedPrice)}`;
     case "buy_x_get_y_free":
       return `Buy ${promo.buyQuantity} Get ${promo.getQuantity} Free`;
     case "bundle_deal":
-      return `${promo.minQuantity}+ at ${formatCurrency(promo.fixedPrice)} each`;
+      return `${promo.minQuantity}+ at ${fmt(promo.fixedPrice)} each`;
     default:
       return promo.name || "Promotion";
   }
@@ -108,6 +109,7 @@ function ProductCard({
   onDelete,
   isViewer = false,
 }: ProductCardProps) {
+  const { formatMoney } = useCurrency();
   const [, navigate] = useLocation();
 
   const getStatusConfig = (status: string) => {
@@ -414,7 +416,7 @@ function ProductCard({
                   <div className="flex justify-between items-center border-t pt-1.5 mt-1.5">
                     <span className="text-gray-500">Pallet price</span>
                     <span className="font-semibold text-gray-900">
-                      {product.priceVisible ? formatCurrency(product.palletPrice || 0) : "Hidden"}
+                      {product.priceVisible ? formatMoney(product.palletPrice || 0) : "Hidden"}
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
@@ -454,7 +456,7 @@ function ProductCard({
               )}
               {activePromos.map((promo, i) => (
                 <Badge key={i} className="text-xs bg-orange-100 text-orange-800 hover:bg-orange-100 border-orange-200">
-                  🏷 {formatPromoLabel(promo)}
+                  🏷 {formatPromoLabel(promo, formatMoney)}
                 </Badge>
               ))}
             </div>

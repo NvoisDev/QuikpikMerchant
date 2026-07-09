@@ -1,5 +1,6 @@
 import { db } from "../db";
 import { products, users } from "../../shared/schema";
+import { getCurrencySymbol } from "../../shared/utils/currency";
 import type { PromotionalOffer } from "../../shared/schema";
 import { eq, and, sql } from "drizzle-orm";
 import { sendEmail } from "../sendgrid-service";
@@ -31,19 +32,21 @@ interface WholesalerInfo {
   logoUrl?: string | null;
   email?: string | null;
   phoneNumber?: string | null;
+  preferredCurrency?: string | null;
+  defaultCurrency?: string | null;
 }
 
 function getTodayDateString(): string {
   return new Date().toISOString().slice(0, 10); // YYYY-MM-DD
 }
 
-function formatPromoType(type: PromotionalOffer["type"], promo: PromotionalOffer): string {
+function formatPromoType(type: PromotionalOffer["type"], promo: PromotionalOffer, sym = '£'): string {
   switch (type) {
     case "percentage_discount":
       return promo.discountPercentage ? `${promo.discountPercentage}% OFF` : "% Off";
     case "fixed_discount":
     case "fixed_amount_discount":
-      return promo.discountAmount ? `£${Number(promo.discountAmount).toFixed(2)} OFF` : "Price Off";
+      return promo.discountAmount ? `${sym}${Number(promo.discountAmount).toFixed(2)} OFF` : "Price Off";
     case "fixed_price":
       return "Fixed Price";
     case "bogo":
@@ -64,9 +67,9 @@ function formatPromoType(type: PromotionalOffer["type"], promo: PromotionalOffer
   }
 }
 
-function formatPrice(price: string | null | undefined): string {
+function formatPrice(price: string | null | undefined, sym = '£'): string {
   if (!price) return "—";
-  return `£${Number(price).toFixed(2)}`;
+  return `${sym}${Number(price).toFixed(2)}`;
 }
 
 function buildPromoBadgeColor(type: PromotionalOffer["type"]): string {
@@ -88,6 +91,7 @@ export function buildStartEmailHtml(
   storeUrl: string
 ): string {
   const productCount = products.length;
+  const sym = getCurrencySymbol(wholesaler.preferredCurrency || wholesaler.defaultCurrency || 'GBP');
   const heading = emailHeading(
     productCount === 1
       ? "A new deal just launched!"
@@ -99,8 +103,8 @@ export function buildStartEmailHtml(
 
   const rows = products.map((p) => {
     const promo = p.matchedPromo;
-    const badge = emailBadge(formatPromoType(promo.type, promo), buildPromoBadgeColor(promo.type));
-    const salePrice = p.promoPrice ? `<strong style="color:#059669">${formatPrice(p.promoPrice)}</strong>` : formatPrice(p.price);
+    const badge = emailBadge(formatPromoType(promo.type, promo, sym), buildPromoBadgeColor(promo.type));
+    const salePrice = p.promoPrice ? `<strong style="color:#059669">${formatPrice(p.promoPrice, sym)}</strong>` : formatPrice(p.price, sym);
     return [escapeHtml(p.name), badge, salePrice];
   });
 
@@ -135,6 +139,7 @@ export function buildEndEmailHtml(
   storeUrl: string
 ): string {
   const productCount = products.length;
+  const sym = getCurrencySymbol(wholesaler.preferredCurrency || wholesaler.defaultCurrency || 'GBP');
   const heading = emailHeading(
     productCount === 1
       ? "Last chance — this deal ends today!"
@@ -146,8 +151,8 @@ export function buildEndEmailHtml(
 
   const rows = products.map((p) => {
     const promo = p.matchedPromo;
-    const badge = emailBadge(formatPromoType(promo.type, promo), buildPromoBadgeColor(promo.type));
-    const salePrice = p.promoPrice ? `<strong style="color:#059669">${formatPrice(p.promoPrice)}</strong>` : formatPrice(p.price);
+    const badge = emailBadge(formatPromoType(promo.type, promo, sym), buildPromoBadgeColor(promo.type));
+    const salePrice = p.promoPrice ? `<strong style="color:#059669">${formatPrice(p.promoPrice, sym)}</strong>` : formatPrice(p.price, sym);
     return [escapeHtml(p.name), badge, salePrice];
   });
 
@@ -190,6 +195,8 @@ async function getWholesalerInfo(wholesalerId: string): Promise<WholesalerInfo |
       phoneNumber: users.phoneNumber,
       logoUrl: users.logoUrl,
       logoType: users.logoType,
+      preferredCurrency: users.preferredCurrency,
+      defaultCurrency: users.defaultCurrency,
     })
     .from(users)
     .where(eq(users.id, wholesalerId))
@@ -211,6 +218,8 @@ async function getWholesalerInfo(wholesalerId: string): Promise<WholesalerInfo |
     email: u.email,
     phoneNumber: u.phoneNumber,
     logoUrl: resolvedLogoUrl,
+    preferredCurrency: u.preferredCurrency,
+    defaultCurrency: u.defaultCurrency,
   };
 }
 

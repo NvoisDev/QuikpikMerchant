@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { useAuth, type AuthUser } from "@/hooks/useAuth";
 import { useOnboarding } from "@/hooks/useOnboarding";
 import { formatNumber } from "@/lib/utils";
-import { formatCurrency } from "@/lib/currencies";
+import { useCurrency } from "@/hooks/useCurrency";
 import OnboardingWelcome from "@/components/OnboardingWelcome";
 import { WelcomeModal } from "@/components/WelcomeModal";
 import { StripeSetupAlert, StripeStatusIndicator } from "@/components/StripeSetupAlert";
@@ -113,7 +113,7 @@ function MarginOverview() {
     retry: false,
   });
 
-  const fmt = (v: number) => formatCurrency(v);
+  const { formatMoney: fmt } = useCurrency();
   const pct = (v: number) => `${v >= 0 ? "" : "-"}${Math.abs(v).toFixed(1)}%`;
   const hasMissingCost = marginData?.total?.hasMissingCost || marginData?.quotes?.hasMissingCost || marginData?.online?.hasMissingCost;
 
@@ -1232,7 +1232,7 @@ export default function WholesalerDashboard() {
                         <p className="text-white/80 text-xs sm:text-sm font-medium">Revenue</p>
                         <p className="text-white/50 text-xs">before fees</p>
                       </div>
-                      <p className="text-xl sm:text-3xl font-bold">{statsLoading ? '...' : formatCurrency(stats?.totalRevenue || 0)}</p>
+                      <p className="text-xl sm:text-3xl font-bold">{statsLoading ? '...' : fmt(stats?.totalRevenue || 0)}</p>
                       <p className="text-white/80 text-xs mt-1">
                         {stats?.revenueChange !== undefined 
                           ? `${stats.revenueChange >= 0 ? '+' : ''}${stats.revenueChange.toFixed(1)}% from last month`
@@ -1263,7 +1263,7 @@ export default function WholesalerDashboard() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-white/80 text-xs sm:text-sm font-medium">Amount Owed</p>
-                      <p className="text-xl sm:text-3xl font-bold">{statsLoading ? '...' : formatCurrency(stats?.unpaidAmount || 0)}</p>
+                      <p className="text-xl sm:text-3xl font-bold">{statsLoading ? '...' : fmt(stats?.unpaidAmount || 0)}</p>
                       <p className="text-white/80 text-xs mt-1">
                         {statsLoading ? '' : `${stats?.unpaidCount ?? 0} order${(stats?.unpaidCount ?? 0) !== 1 ? 's' : ''} with balance due`}
                       </p>
@@ -1518,7 +1518,7 @@ export default function WholesalerDashboard() {
                         <div className="bg-green-50 p-3 rounded-lg">
                           <p className="text-xs text-green-600 font-medium">Total Sales</p>
                           <p className="text-lg font-bold text-green-700">
-                            {formatCurrency(topProducts[0].revenue || 0)}
+                            {fmt(topProducts[0].revenue || 0)}
                           </p>
                         </div>
                         <div className="bg-blue-50 p-3 rounded-lg">
@@ -1536,7 +1536,7 @@ export default function WholesalerDashboard() {
                         <div className="bg-orange-50 p-3 rounded-lg">
                           <p className="text-xs text-orange-600 font-medium">Current Price</p>
                           <p className="text-lg font-bold text-orange-700">
-                            {formatCurrency(topProducts[0].price || 0)}
+                            {fmt(topProducts[0].price || 0)}
                           </p>
                         </div>
                       </div>
@@ -1573,7 +1573,7 @@ export default function WholesalerDashboard() {
                   <div>
                     <p className="text-xs text-gray-500">Period total</p>
                     <p className="text-lg font-bold text-emerald-600">
-                      {chartLoading ? '...' : formatCurrency((chartData as ChartDataPoint[] | undefined)?.reduce((sum: number, d: ChartDataPoint) => sum + (d.revenue || 0), 0) || 0)}
+                      {chartLoading ? '...' : fmt((chartData as ChartDataPoint[] | undefined)?.reduce((sum: number, d: ChartDataPoint) => sum + (d.revenue || 0), 0) || 0)}
                     </p>
                   </div>
                 </div>
@@ -1602,10 +1602,10 @@ export default function WholesalerDashboard() {
                         <YAxis 
                           tick={{ fontSize: 12, fill: '#6b7280' }}
                           axisLine={false}
-                          tickFormatter={(value) => `${formatCurrency(value)}`}
+                          tickFormatter={(value) => `${fmt(value)}`}
                         />
                         <RechartsTooltip 
-                          formatter={(value: any) => [formatCurrency(value), 'Revenue']}
+                          formatter={(value: any) => [fmt(value), 'Revenue']}
                           labelStyle={{ color: '#374151' }}
                           contentStyle={{ 
                             backgroundColor: 'white', 
@@ -1725,8 +1725,8 @@ export default function WholesalerDashboard() {
                           </div>
                         </div>
                         <div className="text-right">
-                          <p className="font-bold text-emerald-600">{formatCurrency(customer.totalSpent || 0)}</p>
-                          <p className="text-xs text-gray-500">avg {formatCurrency(customer.avgOrderValue || 0)}</p>
+                          <p className="font-bold text-emerald-600">{fmt(customer.totalSpent || 0)}</p>
+                          <p className="text-xs text-gray-500">avg {fmt(customer.avgOrderValue || 0)}</p>
                         </div>
                       </div>
                     ))}
@@ -1765,10 +1765,10 @@ export default function WholesalerDashboard() {
                     {activePromotions.slice(0, 6).map((promo: any) => {
                       const typeLabels: Record<string, string> = {
                         percentage_discount: `${promo.discountPercentage}% OFF`,
-                        fixed_price: `Now ${formatCurrency(promo.fixedPrice)}`,
+                        fixed_price: `Now ${fmt(promo.fixedPrice)}`,
                         buy_x_get_y_free: `Buy ${promo.buyQuantity} Get ${promo.getQuantity} Free`,
-                        bundle_deal: `${promo.minQuantity}+ @ ${formatCurrency(promo.fixedPrice)}`,
-                        clearance: `Clearance ${formatCurrency(promo.fixedPrice)}`,
+                        bundle_deal: `${promo.minQuantity}+ @ ${fmt(promo.fixedPrice)}`,
+                        clearance: `Clearance ${fmt(promo.fixedPrice)}`,
                       };
                       const typeColors: Record<string, string> = {
                         percentage_discount: 'bg-red-100 text-red-700',
@@ -1909,7 +1909,7 @@ export default function WholesalerDashboard() {
                             </div>
                           </div>
                           <div className="text-right">
-                            <p className="font-bold text-gray-900">{formatCurrency(product.price)}</p>
+                            <p className="font-bold text-gray-900">{fmt(product.price)}</p>
                             <p className="text-sm text-emerald-600 font-medium">{formatNumber(product.totalQuantitySold || 0)} sold</p>
                           </div>
                         </div>

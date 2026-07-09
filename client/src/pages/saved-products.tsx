@@ -1,9 +1,10 @@
 import { useSavedProducts } from "@/hooks/useSavedProducts";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Heart, Package, Trash2, X } from "lucide-react";
-import { formatCurrency } from "@/lib/currencies";
+import { useCurrency } from "@/hooks/useCurrency";
 
 export default function SavedProductsPage() {
+  const { formatMoney } = useCurrency();
   const { saved, removeSaved, clearAll } = useSavedProducts();
 
   return (
@@ -105,7 +106,7 @@ export default function SavedProductsPage() {
                     )}
                     {product.priceVisible && product.price ? (
                       <p className="text-sm font-bold text-emerald-600 mt-1">
-                        {formatCurrency(parseFloat(product.price), "GBP")}
+                        {formatMoney(parseFloat(product.price))}
                         <span className="text-xs font-normal text-gray-400 ml-1">/ unit</span>
                       </p>
                     ) : (

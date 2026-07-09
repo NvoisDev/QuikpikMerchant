@@ -1,7 +1,7 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { FileText, Upload, AlertCircle, CheckCircle } from "lucide-react";
-import { formatCurrency } from "@/lib/currencies";
+import { useCurrency } from "@/hooks/useCurrency";
 import type { BulkUploadRow } from "./types";
 import Papa from "papaparse";
 
@@ -73,6 +73,7 @@ export default function BulkUploadDialog({
   onCancelUpload,
   isBulkCreating,
 }: BulkUploadDialogProps) {
+  const { formatMoney } = useCurrency();
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -165,7 +166,7 @@ export default function BulkUploadDialog({
                   {uploadedProducts.map((product, index) => (
                     <tr key={index}>
                       <td className="px-4 py-2 text-sm text-gray-900">{product.name}</td>
-                      <td className="px-4 py-2 text-sm text-gray-900">{formatCurrency(parseFloat(product.price), product.currency)}</td>
+                      <td className="px-4 py-2 text-sm text-gray-900">{formatMoney(parseFloat(product.price))}</td>
                       <td className="px-4 py-2 text-sm text-gray-900">{product.moq}</td>
                       <td className="px-4 py-2 text-sm text-gray-900">{product.stock}</td>
                       <td className="px-4 py-2 text-sm text-gray-900">{product.unit || 'units'} {product.unitFormat && `(${product.unitFormat})`}</td>

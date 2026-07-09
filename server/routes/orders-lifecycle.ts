@@ -712,6 +712,7 @@ export function registerOrderLifecycleRoutes(app: Express): void {
       // Send email + WhatsApp/SMS notifications (best-effort)
       const customer = await storage.getUser(order.retailerId);
       const wholesaler = await storage.getUser(order.wholesalerId);
+      const sym = getCurrencySymbol((wholesaler as any)?.preferredCurrency || (wholesaler as any)?.defaultCurrency || 'GBP');
 
       try {
         if (customer && wholesaler && customer.email) {
@@ -744,13 +745,13 @@ export function registerOrderLifecycleRoutes(app: Express): void {
               const lineTotal = (unitPrice * item.quantity).toFixed(2);
               if (!item.productId) {
                 const chargeLabel = (item as any).customLabel?.trim() || 'Charge';
-                itemsListParts.push(`• ${chargeLabel} - ${item.quantity} × £${unitPrice.toFixed(2)} = £${lineTotal}`);
+                itemsListParts.push(`• ${chargeLabel} - ${item.quantity} × ${sym}${unitPrice.toFixed(2)} = ${sym}${lineTotal}`);
                 continue;
               }
               const [prod] = await db.select().from(products).where(eq(products.id, item.productId!));
               const productName = prod?.name || `Product #${item.productId}`;
               const sellingType = item.sellingType || 'units';
-              itemsListParts.push(`• ${productName} - ${item.quantity} ${sellingType} × £${unitPrice.toFixed(2)} = £${lineTotal}`);
+              itemsListParts.push(`• ${productName} - ${item.quantity} ${sellingType} × ${sym}${unitPrice.toFixed(2)} = ${sym}${lineTotal}`);
             }
             itemsList = itemsListParts.join('\n');
           } catch {
@@ -758,7 +759,7 @@ export function registerOrderLifecycleRoutes(app: Express): void {
           }
 
           const deliveryChargeText = parseFloat(approvedOrder.deliveryCost || '0') > 0
-            ? `\nDelivery: £${parseFloat(approvedOrder.deliveryCost!).toFixed(2)}`
+            ? `\nDelivery: ${sym}${parseFloat(approvedOrder.deliveryCost!).toFixed(2)}`
             : '';
           const wholesalerContact = wholesaler.phoneNumber || wholesaler.email || '';
           // Match the nullish-coalescing default used above so 'payment_link' is the fallback for
@@ -785,18 +786,18 @@ export function registerOrderLifecycleRoutes(app: Express): void {
               } else {
                 balanceDueText = '\nBalance due: Immediately';
               }
-              message = `Hi ${customerGreeting}! ${businessName} has sent you an invoice.\n\nItems:\n${itemsList}${deliveryChargeText}\n\nOrder Total: £${totalDisplay}\nDeposit (${validDepositPct}%): £${depositAmt.toFixed(2)}\nRemaining: £${outstandingAmt.toFixed(2)}${balanceDueText}\n\nPay deposit: ${shortApproveUrl}\n\nLink expires in 24 hours.${wholesalerContact ? `\n\nContact ${businessName}: ${wholesalerContact}` : ''}`;
+              message = `Hi ${customerGreeting}! ${businessName} has sent you an invoice.\n\nItems:\n${itemsList}${deliveryChargeText}\n\nOrder Total: ${sym}${totalDisplay}\nDeposit (${validDepositPct}%): ${sym}${depositAmt.toFixed(2)}\nRemaining: ${sym}${outstandingAmt.toFixed(2)}${balanceDueText}\n\nPay deposit: ${shortApproveUrl}\n\nLink expires in 24 hours.${wholesalerContact ? `\n\nContact ${businessName}: ${wholesalerContact}` : ''}`;
             } else if (balanceDays > 0) {
               const dueDate = new Date();
               dueDate.setDate(dueDate.getDate() + balanceDays);
-              message = `Hi ${customerGreeting}! ${businessName} has sent you an invoice.\n\nItems:\n${itemsList}${deliveryChargeText}\n\nTotal: £${totalDisplay} due by ${dueDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}\n\nPay here: ${shortApproveUrl}${wholesalerContact ? `\n\nContact ${businessName}: ${wholesalerContact}` : ''}`;
+              message = `Hi ${customerGreeting}! ${businessName} has sent you an invoice.\n\nItems:\n${itemsList}${deliveryChargeText}\n\nTotal: ${sym}${totalDisplay} due by ${dueDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}\n\nPay here: ${shortApproveUrl}${wholesalerContact ? `\n\nContact ${businessName}: ${wholesalerContact}` : ''}`;
             } else {
-              message = `Hi ${customerGreeting}! ${businessName} has sent you an invoice.\n\nItems:\n${itemsList}${deliveryChargeText}\n\nTotal: £${totalDisplay}\n\nPay here: ${shortApproveUrl}\n\nLink expires in 24 hours.${wholesalerContact ? `\n\nContact ${businessName}: ${wholesalerContact}` : ''}`;
+              message = `Hi ${customerGreeting}! ${businessName} has sent you an invoice.\n\nItems:\n${itemsList}${deliveryChargeText}\n\nTotal: ${sym}${totalDisplay}\n\nPay here: ${shortApproveUrl}\n\nLink expires in 24 hours.${wholesalerContact ? `\n\nContact ${businessName}: ${wholesalerContact}` : ''}`;
             }
           } else if (approvedPaymentMethod === 'payment_link') {
             // Payment link was intended but no Stripe URL was generated (Connect not set up / session failed).
             // Never send bank-transfer instructions — send a neutral message so the customer waits for the link.
-            message = `Hi ${customerGreeting}! ${businessName} has sent you an invoice.\n\nItems:\n${itemsList}${deliveryChargeText}\n\nTotal: £${totalDisplay}\n\n${businessName} will send you a payment link shortly.${wholesalerContact ? `\n\nContact ${businessName}: ${wholesalerContact}` : ''}`;
+            message = `Hi ${customerGreeting}! ${businessName} has sent you an invoice.\n\nItems:\n${itemsList}${deliveryChargeText}\n\nTotal: ${sym}${totalDisplay}\n\n${businessName} will send you a payment link shortly.${wholesalerContact ? `\n\nContact ${businessName}: ${wholesalerContact}` : ''}`;
           } else {
             // Offline payment method
             const offlineMethodDisplayName: Record<string, string> = {
@@ -816,7 +817,7 @@ export function registerOrderLifecycleRoutes(app: Express): void {
               bank_transfer: 'Bank Transfer', cash: 'Cash', cheque: 'Cheque', pay_later: 'Pay Later', other: 'Other',
             };
             const paymentLabel = paymentMethodLabels[approvedPaymentMethod] || approvedPaymentMethod;
-            message = `Hi ${customerGreeting}! ${businessName} has sent you an invoice.\n\nItems:\n${itemsList}${deliveryChargeText}\n\nTotal: £${totalDisplay}\nPayment: ${paymentLabel}\n\n${arrangementSentence}${wholesalerContact ? `\n\nContact ${businessName}: ${wholesalerContact}` : ''}`;
+            message = `Hi ${customerGreeting}! ${businessName} has sent you an invoice.\n\nItems:\n${itemsList}${deliveryChargeText}\n\nTotal: ${sym}${totalDisplay}\nPayment: ${paymentLabel}\n\n${arrangementSentence}${wholesalerContact ? `\n\nContact ${businessName}: ${wholesalerContact}` : ''}`;
           }
 
           await sendWhatsAppMessage({ to: customer.phoneNumber, message });
@@ -1052,6 +1053,7 @@ export function registerOrderLifecycleRoutes(app: Express): void {
       try {
         const customer = await storage.getUser(updated.retailerId);
         const wholesaler = await storage.getUser(updated.wholesalerId);
+        const sym = getCurrencySymbol((wholesaler as any)?.preferredCurrency || (wholesaler as any)?.defaultCurrency || 'GBP');
 
         if (customer && wholesaler && customer.phoneNumber) {
           const actionType = updated.fulfillmentType === 'pickup' ? 'collection' : 'delivery';
@@ -1100,7 +1102,7 @@ export function registerOrderLifecycleRoutes(app: Express): void {
               const freeNote = (item.freeItems || 0) > 0 ? ` +${item.freeItems} free` : '';
               const pq = item.product?.quantityInPack; const pu = item.product?.unitSize; const pm = item.product?.unitOfMeasure;
               const packNote = (pq && pq > 1 && pu && pm) ? ` [${pq}×${parseFloat(String(pu))}${pm}]` : '';
-              itemsListParts.push(`• ${productName}${packNote} - ${item.quantity} ${sellingType} × £${unitPrice.toFixed(2)} = £${total.toFixed(2)}${promoNote}${freeNote}`);
+              itemsListParts.push(`• ${productName}${packNote} - ${item.quantity} ${sellingType} × ${sym}${unitPrice.toFixed(2)} = ${sym}${total.toFixed(2)}${promoNote}${freeNote}`);
             }
             itemsList = itemsListParts.length > 0 ? `\n\n📦 Items:\n${itemsListParts.join('\n')}` : '';
           } catch (itemsError) {
@@ -1108,8 +1110,8 @@ export function registerOrderLifecycleRoutes(app: Express): void {
           }
 
           const smsMessage = actionType === 'collection'
-            ? `🎉 Great news! Your order #${updated.orderNumber} from ${wholesaler.businessName || 'your supplier'} is ready for collection!${itemsList}\n\n📍 Collection Address:\n${collectionAddress || 'Please contact the store for address'}\n\n💰 Order Total: £${parseFloat(updated.total || '0').toFixed(2)}\n\n📞 Questions? Contact: ${wholesaler.businessPhone || wholesaler.phoneNumber || 'N/A'}\n\n- Quikpik`
-            : `🎉 Great news! Your order #${updated.orderNumber} from ${wholesaler.businessName || 'your supplier'} is ready for delivery!${itemsList}\n\n💰 Order Total: £${parseFloat(updated.total || '0').toFixed(2)}\n\nThe supplier will contact you to arrange delivery.\n\n📞 Contact: ${wholesaler.businessPhone || wholesaler.phoneNumber || 'N/A'}\n\n- Quikpik`;
+            ? `🎉 Great news! Your order #${updated.orderNumber} from ${wholesaler.businessName || 'your supplier'} is ready for collection!${itemsList}\n\n📍 Collection Address:\n${collectionAddress || 'Please contact the store for address'}\n\n💰 Order Total: ${sym}${parseFloat(updated.total || '0').toFixed(2)}\n\n📞 Questions? Contact: ${wholesaler.businessPhone || wholesaler.phoneNumber || 'N/A'}\n\n- Quikpik`
+            : `🎉 Great news! Your order #${updated.orderNumber} from ${wholesaler.businessName || 'your supplier'} is ready for delivery!${itemsList}\n\n💰 Order Total: ${sym}${parseFloat(updated.total || '0').toFixed(2)}\n\nThe supplier will contact you to arrange delivery.\n\n📞 Contact: ${wholesaler.businessPhone || wholesaler.phoneNumber || 'N/A'}\n\n- Quikpik`;
 
           await sendWhatsAppMessage({
             to: customer.phoneNumber,

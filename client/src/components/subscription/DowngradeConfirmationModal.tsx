@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { formatCurrency } from '@/lib/currencies';
+import { useCurrency } from '@/hooks/useCurrency';
 import { getBaseTier } from '@/lib/planUtils';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
@@ -124,6 +124,7 @@ export function DowngradeConfirmationModal({
   isCancelAtPeriodEnd = false,
   billingInfo
 }: DowngradeConfirmationModalProps) {
+  const { formatMoney } = useCurrency();
   const [confirmationChecked, setConfirmationChecked] = useState(false);
   
   const currentFeatures = resolvePlan(currentPlan, plans);
@@ -203,7 +204,7 @@ export function DowngradeConfirmationModal({
                 {!isCancelAtPeriodEnd && billingInfo?.proratedCredit && billingInfo.proratedCredit > 0 && (
                   <div className="bg-green-100 p-3 rounded-md border border-green-200">
                     <p className="text-green-800 text-sm font-medium">
-                      💰 You'll receive a pro-rated credit of <strong>{formatCurrency(billingInfo.proratedCredit)}</strong>
+                      💰 You'll receive a pro-rated credit of <strong>{formatMoney(billingInfo.proratedCredit)}</strong>
                     </p>
                     <p className="text-green-700 text-xs mt-1">
                       This credit will be applied to your next billing cycle or refunded if you cancel completely.
@@ -214,16 +215,16 @@ export function DowngradeConfirmationModal({
                 <div className="bg-gray-100 p-3 rounded-md">
                   {isCancelAtPeriodEnd ? (
                     <p className="text-gray-800 text-sm">
-                      <strong>No charge until renewal:</strong> You won't be billed again for {currentFeatures.name}. After the switch, your {targetFeatures.name} plan will be <strong>{formatCurrency(parseFloat(targetFeatures.monthlyPrice))}/month</strong>.
+                      <strong>No charge until renewal:</strong> You won't be billed again for {currentFeatures.name}. After the switch, your {targetFeatures.name} plan will be <strong>{formatMoney(parseFloat(targetFeatures.monthlyPrice))}/month</strong>.
                     </p>
                   ) : (
                     <p className="text-gray-800 text-sm">
-                      <strong>Next Billing:</strong> Your next charge will be <strong>{formatCurrency(billingInfo?.nextBillingAmount ?? parseFloat(targetFeatures.monthlyPrice))}/month</strong> for the {targetFeatures.name} plan
+                      <strong>Next Billing:</strong> Your next charge will be <strong>{formatMoney(billingInfo?.nextBillingAmount ?? parseFloat(targetFeatures.monthlyPrice))}/month</strong> for the {targetFeatures.name} plan
                     </p>
                   )}
                   {!isCancelAtPeriodEnd && billingInfo?.currentPlanPrice && billingInfo?.targetPlanPrice && (
                     <p className="text-gray-600 text-xs mt-1">
-                      Monthly savings: {formatCurrency(billingInfo.currentPlanPrice - billingInfo.targetPlanPrice)}
+                      Monthly savings: {formatMoney(billingInfo.currentPlanPrice - billingInfo.targetPlanPrice)}
                     </p>
                   )}
                 </div>

@@ -196,7 +196,7 @@ export function registerAuthCoreRoutes(app: Express): void {
 
       let user;
       try {
-        user = await createOrUpdateUser(googleUser);
+        user = await createOrUpdateUser(googleUser, (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.ip);
       } catch (authErr) {
         if (authErr instanceof GoogleAuthBlockedError) {
           return res.redirect(`/login?error=${authErr.code}`);

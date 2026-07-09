@@ -16,7 +16,7 @@ import { useSidebarPermissions } from "@/hooks/useSidebarPermissions";
 import { Plus, Pencil, Trash2, Tag, Percent, Package, ShoppingCart, Flame, Calendar, ToggleLeft, ToggleRight, TrendingUp, Clock, AlertCircle, MoreHorizontal } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import PageHeader from "@/components/PageHeader";
-import { formatCurrency } from "@/lib/currencies";
+import { useCurrency } from "@/hooks/useCurrency";
 
 const PROMOTION_TYPES = [
   { value: "percentage_discount", label: "Percentage Discount", icon: Percent, color: "bg-blue-100 text-blue-800" },
@@ -111,18 +111,18 @@ function getTypeBadge(type: string) {
   return <Badge className={`${t.color} hover:${t.color}`}>{t.label}</Badge>;
 }
 
-function formatPromoValue(promo: Promotion): string {
+function formatPromoValue(promo: Promotion, fmt: (v: number) => string): string {
   switch (promo.type) {
     case "percentage_discount":
       return `${promo.discountPercentage}% off`;
     case "fixed_price":
-      return `Now ${formatCurrency(promo.fixedPrice)}`;
+      return `Now ${fmt(promo.fixedPrice)}`;
     case "buy_x_get_y_free":
       return `Buy ${promo.buyQuantity} Get ${promo.getQuantity} Free`;
     case "bundle_deal":
-      return `${promo.minQuantity}+ at ${formatCurrency(promo.fixedPrice)} each`;
+      return `${promo.minQuantity}+ at ${fmt(promo.fixedPrice)} each`;
     case "clearance":
-      return `Clearance ${formatCurrency(promo.fixedPrice)}`;
+      return `Clearance ${fmt(promo.fixedPrice)}`;
     default:
       return "";
   }
@@ -134,6 +134,7 @@ function formatDate(dateStr?: string): string {
 }
 
 export default function Promotions() {
+  const { formatMoney } = useCurrency();
   const { toast } = useToast();
   const { user } = useAuth();
   const [, setLocation] = useLocation();
@@ -493,8 +494,8 @@ export default function Promotions() {
                       </div>
                       <p className="text-sm text-gray-500 mb-1.5">{promo.productName}</p>
                       <div className="flex items-center gap-3 text-sm mb-1.5">
-                        <span className="text-gray-400 line-through">{formatCurrency(promo.productPrice)}</span>
-                        <span className="font-semibold text-green-700">{formatPromoValue(promo)}</span>
+                        <span className="text-gray-400 line-through">{formatMoney(promo.productPrice)}</span>
+                        <span className="font-semibold text-green-700">{formatPromoValue(promo, formatMoney)}</span>
                       </div>
                       <div className="flex items-center gap-1 text-xs text-gray-400">
                         <Calendar className="h-3 w-3 flex-shrink-0" />
@@ -526,7 +527,7 @@ export default function Promotions() {
                   <SelectContent>
                     {products.map((p) => (
                       <SelectItem key={p.id} value={String(p.id)}>
-                        {p.name} — {formatCurrency(p.price)}
+                        {p.name} — {formatMoney(p.price)}
                       </SelectItem>
                     ))}
                   </SelectContent>
