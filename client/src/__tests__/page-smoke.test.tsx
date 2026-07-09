@@ -31,6 +31,9 @@ import ProductManagement from '@/pages/product-management';
 import OrdersFresh from '@/pages/orders-fresh';
 import QuickQuote from '@/pages/quick-quote';
 import CustomerPortal from '@/pages/customer-portal';
+import Analytics from '@/pages/analytics';
+import Campaigns from '@/pages/campaigns';
+import Financials from '@/pages/financials';
 
 // ─── Suppress act(...) / console.error noise from React Query internals ──────
 const originalError = console.error;
@@ -138,6 +141,18 @@ vi.mock('@/lib/near-depletion', () => ({
 vi.mock('@/components/ui/theme-switcher', () => ({
   useCustomerTheme: () => ({ theme: 'emerald', changeTheme: vi.fn() }),
   ThemeSwitcher: () => null,
+}));
+
+vi.mock('@/hooks/useSidebarPermissions', () => ({
+  useSidebarPermissions: () => ({
+    permissionsLoading: false,
+    checkTabAccess: () => true,
+  }),
+}));
+
+vi.mock('@/components/FeatureLock', () => ({
+  FeatureLock: ({ children }: { children: React.ReactNode }) => children,
+  isListingTier: () => false,
 }));
 
 // ─── Helpers to import the mocked modules ────────────────────────────────────
@@ -295,6 +310,78 @@ describe('CustomerPortal — page smoke tests', () => {
 
     expect(() =>
       render(React.createElement(CustomerPortal), { wrapper: Wrapper }),
+    ).not.toThrow();
+  });
+});
+
+describe('Analytics — page smoke tests', () => {
+  it('renders without throwing (unauthenticated / loading state)', async () => {
+    stubFetch();
+    const { useAuth, useCurrency } = await importMocks();
+    useAuth.mockReturnValue(makeUnauthState());
+    useCurrency.mockReturnValue(makeCurrency());
+
+    expect(() =>
+      render(React.createElement(Analytics), { wrapper: Wrapper }),
+    ).not.toThrow();
+  });
+
+  it('renders without throwing (authenticated state)', async () => {
+    stubFetch();
+    const { useAuth, useCurrency } = await importMocks();
+    useAuth.mockReturnValue(makeAuthState());
+    useCurrency.mockReturnValue(makeCurrency());
+
+    expect(() =>
+      render(React.createElement(Analytics), { wrapper: Wrapper }),
+    ).not.toThrow();
+  });
+});
+
+describe('Campaigns — page smoke tests', () => {
+  it('renders without throwing (unauthenticated / loading state)', async () => {
+    stubFetch();
+    const { useAuth, useCurrency } = await importMocks();
+    useAuth.mockReturnValue(makeUnauthState());
+    useCurrency.mockReturnValue(makeCurrency());
+
+    expect(() =>
+      render(React.createElement(Campaigns), { wrapper: Wrapper }),
+    ).not.toThrow();
+  });
+
+  it('renders without throwing (authenticated state)', async () => {
+    stubFetch();
+    const { useAuth, useCurrency } = await importMocks();
+    useAuth.mockReturnValue(makeAuthState());
+    useCurrency.mockReturnValue(makeCurrency());
+
+    expect(() =>
+      render(React.createElement(Campaigns), { wrapper: Wrapper }),
+    ).not.toThrow();
+  });
+});
+
+describe('Financials — page smoke tests', () => {
+  it('renders without throwing (unauthenticated / loading state)', async () => {
+    stubFetch();
+    const { useAuth, useCurrency } = await importMocks();
+    useAuth.mockReturnValue(makeUnauthState());
+    useCurrency.mockReturnValue(makeCurrency());
+
+    expect(() =>
+      render(React.createElement(Financials), { wrapper: Wrapper }),
+    ).not.toThrow();
+  });
+
+  it('renders without throwing (authenticated state)', async () => {
+    stubFetch();
+    const { useAuth, useCurrency } = await importMocks();
+    useAuth.mockReturnValue(makeAuthState());
+    useCurrency.mockReturnValue(makeCurrency());
+
+    expect(() =>
+      render(React.createElement(Financials), { wrapper: Wrapper }),
     ).not.toThrow();
   });
 });
