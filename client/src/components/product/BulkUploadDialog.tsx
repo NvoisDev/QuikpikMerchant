@@ -10,7 +10,7 @@ const CSV_TEMPLATE_ROWS = [
     name: "Example Product 1", description: "Premium Basmati Rice for wholesale",
     price: "25.99", promoPrice: "22.99", promoActive: "false", currency: "GBP",
     moq: "10", stock: "500", category: "Groceries & Food", imageUrl: "",
-    priceVisible: "true", status: "active", unit: "kg", unitFormat: "25kg bags",
+    priceVisible: "true", hiddenFromPublic: "false", status: "active", unit: "kg", unitFormat: "25kg bags",
     sellingFormat: "units", unitsPerPallet: "40", palletPrice: "950.00", palletMoq: "1",
     palletStock: "5", palletWeight: "1000", temperatureRequirement: "ambient",
     contentCategory: "food", specialHandling_fragile: "false",
@@ -21,7 +21,7 @@ const CSV_TEMPLATE_ROWS = [
     name: "Example Product 2", description: "Premium olive oil bottles",
     price: "8.50", promoPrice: "", promoActive: "false", currency: "GBP",
     moq: "12", stock: "240", category: "Groceries & Food", imageUrl: "",
-    priceVisible: "true", status: "active", unit: "ml", unitFormat: "12 x 500ml",
+    priceVisible: "true", hiddenFromPublic: "false", status: "active", unit: "ml", unitFormat: "12 x 500ml",
     sellingFormat: "units", unitsPerPallet: "120", palletPrice: "850.00", palletMoq: "1",
     palletStock: "2", palletWeight: "60", temperatureRequirement: "ambient",
     contentCategory: "food", specialHandling_fragile: "false",
@@ -32,7 +32,7 @@ const CSV_TEMPLATE_ROWS = [
     name: "Example Product 3", description: "Energy drink cans",
     price: "1.25", promoPrice: "1.10", promoActive: "true", currency: "GBP",
     moq: "24", stock: "1200", category: "Beverages & Drinks", imageUrl: "",
-    priceVisible: "true", status: "active", unit: "cl", unitFormat: "24 x 33cl",
+    priceVisible: "true", hiddenFromPublic: "false", status: "active", unit: "cl", unitFormat: "24 x 33cl",
     sellingFormat: "units", unitsPerPallet: "480", palletPrice: "600.00", palletMoq: "1",
     palletStock: "3", palletWeight: "168", temperatureRequirement: "ambient",
     contentCategory: "food", specialHandling_fragile: "false",
@@ -112,7 +112,7 @@ export default function BulkUploadDialog({
               <h4 className="font-semibold">File Format Requirements:</h4>
               <div className="text-sm text-gray-600 space-y-2">
                 <p><strong>Required columns:</strong> name, price, moq, stock</p>
-                <p><strong>Optional columns:</strong> description, promoPrice, promoActive, currency, category, imageUrl, priceVisible, status, unit, unitFormat, sellingFormat, unitsPerPallet, palletPrice, palletMoq, palletStock, palletWeight, temperatureRequirement, contentCategory, supportsPickup, supportsDelivery</p>
+                <p><strong>Optional columns:</strong> description, promoPrice, promoActive, currency, category, imageUrl, priceVisible, hiddenFromPublic, status, unit, unitFormat, sellingFormat, unitsPerPallet, palletPrice, palletMoq, palletStock, palletWeight, temperatureRequirement, contentCategory, supportsPickup, supportsDelivery</p>
                 <p><strong>Supported formats:</strong> CSV, Excel (.xlsx)</p>
               </div>
               <Button variant="link" onClick={downloadProductCsvTemplate} className="p-0">

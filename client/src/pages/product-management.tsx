@@ -952,7 +952,7 @@ export default function ProductManagement() {
         currency: row.currency || user?.preferredCurrency || "GBP",
         moq: row.moq, stock: row.stock, category: row.category || "",
         imageUrl: row.imageUrl || "", priceVisible: row.priceVisible !== 'false',
-        hiddenFromPublic: false,
+        hiddenFromPublic: row.hiddenFromPublic === 'true',
         status: row.status || "active", unit: row.unit || "units",
         unitFormat: row.unitFormat || "none", sellingFormat: row.sellingFormat || "units",
         unitsPerPallet: row.unitsPerPallet || "", palletPrice: row.palletPrice || "",
