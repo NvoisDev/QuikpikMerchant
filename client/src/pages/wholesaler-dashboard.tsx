@@ -615,6 +615,7 @@ function MarginOverview() {
 
 export default function WholesalerDashboard() {
   const { user, isLoading: authLoading } = useAuth();
+  const { formatMoney: fmt } = useCurrency();
   const { toast } = useToast();
   const isViewer = (user as AuthUser)?.teamMemberRole === 'viewer';
   const [isDownloadingPriceList, setIsDownloadingPriceList] = useState(false);
