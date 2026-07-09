@@ -498,7 +498,7 @@ function MarginOverview() {
 
                   const allPositive = groups.every(g => g.avg >= 0);
                   const trendColor = (v: number) => v < 0 ? "#dc2626" : v < 15 ? "#d97706" : "#10b981";
-                  const dotColor = trendColor(groups[groups.length - 1].avg);
+                  const dotColor = trendColor(groups[groups.length - 1]!.avg);
 
                   return (
                     <div className="px-4 pt-4 pb-2 border-b border-slate-100">
@@ -1496,10 +1496,10 @@ export default function WholesalerDashboard() {
                     {/* Product Image */}
                     <div className="flex-shrink-0">
                       <div className="w-20 h-20 bg-gray-100 rounded-lg overflow-hidden border-2 border-gray-200">
-                        {topProducts[0].images && topProducts[0].images.length > 0 ? (
+                        {topProducts[0]!.images && topProducts[0]!.images.length > 0 ? (
                           <img 
-                            src={topProducts[0].images[0]} 
-                            alt={topProducts[0].name}
+                            src={topProducts[0]!.images[0]} 
+                            alt={topProducts[0]!.name}
                             className="w-full h-full object-cover"
                           />
                         ) : (
@@ -1512,32 +1512,32 @@ export default function WholesalerDashboard() {
 
                     {/* Product Details */}
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-lg font-semibold text-gray-900 mb-1">{topProducts[0].name}</h3>
-                      <p className="text-sm text-gray-600 mb-3 line-clamp-2">{topProducts[0].description}</p>
+                      <h3 className="text-lg font-semibold text-gray-900 mb-1">{topProducts[0]!.name}</h3>
+                      <p className="text-sm text-gray-600 mb-3 line-clamp-2">{topProducts[0]!.description}</p>
                       
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         <div className="bg-green-50 p-3 rounded-lg">
                           <p className="text-xs text-green-600 font-medium">Total Sales</p>
                           <p className="text-lg font-bold text-green-700">
-                            {fmt(topProducts[0].revenue || 0)}
+                            {fmt(topProducts[0]!.revenue || 0)}
                           </p>
                         </div>
                         <div className="bg-blue-50 p-3 rounded-lg">
                           <p className="text-xs text-blue-600 font-medium">Units Sold</p>
                           <p className="text-lg font-bold text-blue-700">
-                            {formatNumber(topProducts[0].totalQuantitySold || 0)}
+                            {formatNumber(topProducts[0]!.totalQuantitySold || 0)}
                           </p>
                         </div>
                         <div className="bg-purple-50 p-3 rounded-lg">
                           <p className="text-xs text-purple-600 font-medium">Orders</p>
                           <p className="text-lg font-bold text-purple-700">
-                            {formatNumber(topProducts[0].orderCount || 0)}
+                            {formatNumber(topProducts[0]!.orderCount || 0)}
                           </p>
                         </div>
                         <div className="bg-orange-50 p-3 rounded-lg">
                           <p className="text-xs text-orange-600 font-medium">Current Price</p>
                           <p className="text-lg font-bold text-orange-700">
-                            {fmt(topProducts[0].price || 0)}
+                            {fmt(topProducts[0]!.price || 0)}
                           </p>
                         </div>
                       </div>

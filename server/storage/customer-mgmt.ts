@@ -79,7 +79,8 @@ export class CustomerMgmtStorage extends BroadcastStorage {
   async getAllCustomers(wholesalerId: string): Promise<(User & { 
     groupNames: string[]; 
     totalOrders: number; 
-    totalSpent: number; 
+    totalSpent: number;
+    totalInvoiced: number;
     totalUnpaid: number;
     lastOrderDate?: Date;
     groupIds: number[];
@@ -167,7 +168,7 @@ export class CustomerMgmtStorage extends BroadcastStorage {
         lastOrderDate: (stats?.lastOrderDate as Date | null) ?? null,
         groupIds: groups.map(g => g.groupId)
       };
-    })) as unknown as (User & { groupNames: string[]; totalOrders: number; totalSpent: number; totalUnpaid: number; lastOrderDate?: Date; groupIds: number[] })[];
+    })) as unknown as (User & { groupNames: string[]; totalOrders: number; totalSpent: number; totalInvoiced: number; totalUnpaid: number; lastOrderDate?: Date; groupIds: number[] })[];
   }
 
   async getCustomerDetails(customerId: string, wholesalerId: string): Promise<(User & { 
@@ -513,7 +514,7 @@ export class CustomerMgmtStorage extends BroadcastStorage {
       .insert(customerProfileUpdateNotifications)
       .values(notification)
       .returning();
-    return created;
+    return created!;
   }
 
   async getCustomerProfileUpdateNotifications(wholesalerId: string, limit = 50): Promise<SelectCustomerProfileUpdateNotification[]> {

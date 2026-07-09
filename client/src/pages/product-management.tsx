@@ -636,10 +636,10 @@ export default function ProductManagement() {
       unitsPerPallet: String(product.unitsPerPallet || ""),
       palletPrice: String(product.palletPrice || ""),
       palletMoq: String(product.palletMoq || ""),
-      palletStock: String(product.palletStock || ""),
+      palletStock: String((product as any).palletStock || ""),
       palletWeight: String(product.palletWeight || ""),
       promotionalOffers: Array.isArray(product.promotionalOffers) ? product.promotionalOffers : [],
-    });
+    } as any);
     setIsDialogOpen(true);
   }, []);
 
@@ -900,7 +900,7 @@ export default function ProductManagement() {
           const ws = wb.worksheets[0];
           const headers: string[] = [];
           const rows: Record<string, string>[] = [];
-          ws.eachRow((row, rowNum) => {
+          ws!.eachRow((row, rowNum) => {
             if (rowNum === 1) {
               row.eachCell((cell, colNum) => { headers[colNum] = cell.text; });
             } else {
@@ -952,6 +952,7 @@ export default function ProductManagement() {
         currency: row.currency || user?.preferredCurrency || "GBP",
         moq: row.moq, stock: row.stock, category: row.category || "",
         imageUrl: row.imageUrl || "", priceVisible: row.priceVisible !== 'false',
+        hiddenFromPublic: false,
         status: row.status || "active", unit: row.unit || "units",
         unitFormat: row.unitFormat || "none", sellingFormat: row.sellingFormat || "units",
         unitsPerPallet: row.unitsPerPallet || "", palletPrice: row.palletPrice || "",
@@ -1527,10 +1528,10 @@ export default function ProductManagement() {
                                 let label: string;
                                 switch (promo.type) {
                                   case "percentage_discount": label = `${promo.discountPercentage}% off`; break;
-                                  case "fixed_price": label = `Now ${formatMoney(promo.fixedPrice)}`; break;
-                                  case "clearance": label = `Clearance ${formatMoney(promo.fixedPrice)}`; break;
+                                  case "fixed_price": label = `Now ${formatMoney(promo.fixedPrice ?? 0)}`; break;
+                                  case "clearance": label = `Clearance ${formatMoney(promo.fixedPrice ?? 0)}`; break;
                                   case "buy_x_get_y_free": label = `Buy ${promo.buyQuantity} Get ${promo.getQuantity} Free`; break;
-                                  case "bundle_deal": label = `${promo.minQuantity}+ at ${formatMoney(promo.fixedPrice)} each`; break;
+                                  case "bundle_deal": label = `${promo.minQuantity}+ at ${formatMoney(promo.fixedPrice ?? 0)} each`; break;
                                   default: label = promo.name || "Promo";
                                 }
                                 return (

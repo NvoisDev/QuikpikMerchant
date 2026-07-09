@@ -33,7 +33,7 @@ export function registerOrderCommsRoutes(app: Express): void {
   // POST /api/orders/:id/resend-ready-notification
   app.post("/api/orders/:id/resend-ready-notification", requireAuth, requireBooleanFeature('order_management'), requireNotViewer, requireMemberPermission('orders'), async (req, res) => {
     try {
-      const orderId = parseInt(req.params.id);
+      const orderId = parseInt(req.params.id!);
       if (isNaN(orderId)) return res.status(400).json({ error: 'Invalid order ID' });
       const userId = req.user!.id;
 
@@ -87,7 +87,7 @@ export function registerOrderCommsRoutes(app: Express): void {
             }
           }
           const emailData = generateReadyForCollectionEmail({
-            orderNumber: order.orderNumber,
+            orderNumber: order.orderNumber ?? '',
             customerName: `${customer.firstName || ''} ${customer.lastName || ''}`.trim() || customer.businessName || 'Customer',
             wholesalerName: wholesaler.businessName || `${wholesaler.firstName || ''} ${wholesaler.lastName || ''}`.trim(),
             businessPhone: (wholesaler.businessPhone || wholesaler.phoneNumber) ?? undefined,
@@ -326,7 +326,7 @@ export function registerOrderCommsRoutes(app: Express): void {
   // POST /api/orders/:id/resend-confirmation
   app.post('/api/orders/:id/resend-confirmation', requireAuth, requireBooleanFeature('invoices'), requireNotViewer, requireMemberPermission('orders'), async (req: any, res) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = parseInt(req.params.id!);
       if (isNaN(id)) return res.status(400).json({ error: 'Invalid order ID' });
       const userId = req.user.id;
 
@@ -454,7 +454,7 @@ export function registerOrderCommsRoutes(app: Express): void {
   // POST /api/orders/:id/share-invoice
   app.post('/api/orders/:id/share-invoice', requireAuth, requireBooleanFeature('invoices'), requireNotViewer, requireMemberPermission('orders'), async (req: any, res) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = parseInt(req.params.id!);
       if (isNaN(id)) return res.status(400).json({ error: 'Invalid order ID' });
       const user = req.user;
       const effectiveWholesalerId = user.role === 'team_member' ? user.wholesalerId : user.id;
@@ -539,7 +539,7 @@ export function registerOrderCommsRoutes(app: Express): void {
   // POST /api/orders/:id/share-invoice-whatsapp
   app.post('/api/orders/:id/share-invoice-whatsapp', requireAuth, requireBooleanFeature('invoices'), requireNotViewer, requireMemberPermission('orders'), async (req: any, res) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = parseInt(req.params.id!);
       if (isNaN(id)) return res.status(400).json({ error: 'Invalid order ID' });
       const user = req.user;
       const effectiveWholesalerId = user.role === 'team_member' ? user.wholesalerId : user.id;
@@ -586,7 +586,7 @@ export function registerOrderCommsRoutes(app: Express): void {
   // POST /api/orders/:id/send-receipt
   app.post('/api/orders/:id/send-receipt', requireAuth, requireBooleanFeature('invoices'), requireNotViewer, requireMemberPermission('orders'), async (req: any, res) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = parseInt(req.params.id!);
       if (isNaN(id)) return res.status(400).json({ error: 'Invalid order ID' });
       const userId = req.user.id;
 

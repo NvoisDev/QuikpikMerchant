@@ -413,7 +413,7 @@ export function HomeTab({
                                   }}
                                   onBlur={() => {
                                     const inputValue = quantityInputValues[product.id];
-                                    const parsedValue = parseInt(inputValue) || 0;
+                                    const parsedValue = parseInt(inputValue ?? '') || 0;
                                     if (parsedValue === 0) {
                                       setCart(cart.filter(item => item.product.id !== product.id));
                                     } else {

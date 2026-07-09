@@ -110,7 +110,7 @@ function resolvePlan(planId: string, plans?: PlanInfo[]): PlanInfo {
     const match = plans.find(p => p.planId === planId);
     if (match) return match;
   }
-  return FALLBACK_PLAN_FEATURES[planId] ?? FALLBACK_PLAN_FEATURES.free;
+  return FALLBACK_PLAN_FEATURES[planId] ?? FALLBACK_PLAN_FEATURES.free!;
 }
 
 export function DowngradeConfirmationModal({
@@ -270,7 +270,7 @@ export function DowngradeConfirmationModal({
           )}
 
           {/* Data Impact Warning */}
-          {getBaseTier(currentPlan) !== 'free' ? (
+          {getBaseTier(currentPlan) !== 'listing' ? (
             <Card className="bg-amber-50 border-amber-200">
               <CardContent className="p-4">
                 <h3 className="font-semibold text-amber-900 mb-2">⚠️ Data Impact</h3>

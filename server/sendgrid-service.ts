@@ -313,6 +313,7 @@ export async function sendWeeklyOrderDigestEmail(data: {
 }): Promise<boolean> {
   const { wrapCustomerEmail, emailCard, emailButton, emailHeading, emailTable } = await import('./email-templates');
 
+  const sym = '£';
   const today = new Date();
   const orderRows = data.orders.map((o) => {
     const ageMs = today.getTime() - new Date(o.createdAt).getTime();

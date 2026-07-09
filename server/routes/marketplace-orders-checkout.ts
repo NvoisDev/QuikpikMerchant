@@ -40,9 +40,9 @@ function parseItemsFromMetadata(
     return compact.split('|').flatMap(chunk => {
       const [productId, quantity, unitPrice, sellingType] = chunk.split(':');
       const parsed = {
-        productId: parseInt(productId, 10),
-        quantity: parseInt(quantity, 10),
-        unitPrice: parseFloat(unitPrice),
+        productId: parseInt(productId!, 10),
+        quantity: parseInt(quantity!, 10),
+        unitPrice: parseFloat(unitPrice!),
         sellingType: sellingType || 'units',
       };
       if (isNaN(parsed.productId) || isNaN(parsed.quantity) || isNaN(parsed.unitPrice)) {
@@ -283,7 +283,7 @@ export function registerOrderCheckoutRoutes(
 
             if (existingOrderResult.length > 0) {
               const existingOrder = existingOrderResult[0];
-              throw new Error(`DUPLICATE_ORDER:${existingOrder.id}:${existingOrder.orderNumber}`);
+              throw new Error(`DUPLICATE_ORDER:${existingOrder!.id}:${existingOrder!.orderNumber}`);
             }
 
             // Use consistent order number generation

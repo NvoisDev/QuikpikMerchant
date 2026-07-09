@@ -499,13 +499,13 @@ export default function QuickQuote() {
   useEffect(() => {
     if (businessProfiles.length > 0 && selectedProfileId === null) {
       const def = businessProfiles.find(p => p.isDefault) || businessProfiles[0];
-      setSelectedProfileId(def.id);
+      setSelectedProfileId(def!.id);
     }
   }, [businessProfiles]);
 
   useEffect(() => {
     if (customerAddresses.length > 0 && !useCustomAddress && !deliveryAddressId) {
-      setDeliveryAddressId(customerAddresses[0].id);
+      setDeliveryAddressId(customerAddresses[0]!.id);
     }
     if (customerAddresses.length === 0) {
       setUseCustomAddress(true);
@@ -935,10 +935,10 @@ export default function QuickQuote() {
       const updated = [...quoteItems];
       const existing = updated[existingIndex];
       // In packs display mode each "add" should add a full pack worth of base units
-      const increment = existing.displayUnit === 'packs'
-        ? (existing.quantityInPack ?? 1)
+      const increment = existing!.displayUnit === 'packs'
+        ? (existing!.quantityInPack ?? 1)
         : 1;
-      updated[existingIndex] = { ...existing, quantity: existing.quantity + increment };
+      updated[existingIndex] = { ...existing!, quantity: existing!.quantity + increment };
       setQuoteItems(updated);
     } else {
       const newStableId = `${product.id}-${sellingType}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
@@ -982,26 +982,26 @@ export default function QuickQuote() {
 
   const updateItemCost = (index: number, newCost: number) => {
     const updated = [...quoteItems];
-    updated[index].costPrice = newCost;
+    updated[index]!.costPrice = newCost;
     setQuoteItems(updated);
   };
 
   const updateItemPrice = (index: number, newPrice: number) => {
     const updated = [...quoteItems];
-    updated[index].customPrice = newPrice;
+    updated[index]!.customPrice = newPrice;
     setQuoteItems(updated);
   };
 
   const updateItemPriceScope = (index: number, scope: 'invoice' | 'customer' | 'all') => {
     const updated = [...quoteItems];
-    updated[index].priceScope = scope;
+    updated[index]!.priceScope = scope;
     setQuoteItems(updated);
   };
 
   const updateItemQuantity = (index: number, quantity: number) => {
     if (quantity < 1) return;
     const updated = [...quoteItems];
-    updated[index].quantity = quantity;
+    updated[index]!.quantity = quantity;
     setQuoteItems(updated);
   };
 
@@ -1038,48 +1038,48 @@ export default function QuickQuote() {
 
   const switchItemMode = (index: number, mode: 'units' | 'packs' | 'pallets') => {
     const item = quoteItems[index];
-    const qip = item.quantityInPack ?? 1;
-    const sk = item.stableId;
+    const qip = item!.quantityInPack ?? 1;
+    const sk = item!.stableId;
     const updated = [...quoteItems];
 
     if (mode === 'pallets') {
-      if (!item.palletPrice || item.sellingType === 'pallets') return;
-      const palletQty = Math.max(1, item.palletMoq ?? 1);
+      if (!item!.palletPrice || item!.sellingType === 'pallets') return;
+      const palletQty = Math.max(1, item!.palletMoq ?? 1);
       updated[index] = {
-        ...updated[index],
+        ...updated[index]!,
         sellingType: 'pallets',
-        customPrice: item.palletPrice,
-        originalPrice: item.palletPrice,
+        customPrice: item!.palletPrice,
+        originalPrice: item!.palletPrice,
         quantity: palletQty,
-        stockCount: item.palletStockCount ?? 0,
+        stockCount: item!.palletStockCount ?? 0,
         displayUnit: 'units',
-      };
-      setInputValues(prev => ({ ...prev, [sk]: { price: item.palletPrice!.toString(), qty: palletQty.toString() } }));
+      } as (typeof updated)[number];
+      setInputValues(prev => ({ ...prev, [sk]: { price: item!.palletPrice!.toString(), qty: palletQty.toString() } }));
       setQuoteItems(updated);
     } else if (mode === 'units') {
-      if (item.sellingType === 'units' && (item.displayUnit ?? 'units') === 'units') return;
-      if (!item.unitPrice) return;
+      if (item!.sellingType === 'units' && (item!.displayUnit ?? 'units') === 'units') return;
+      if (!item!.unitPrice) return;
       // Packs → Units: item.quantity is already in base units, preserve it.
       // Pallets → Units: different price context, reset to 1.
-      const preservedQty = item.sellingType === 'pallets' ? 1 : item.quantity;
+      const preservedQty = item!.sellingType === 'pallets' ? 1 : item!.quantity;
       updated[index] = {
-        ...updated[index],
+        ...updated[index]!,
         sellingType: 'units',
-        customPrice: item.unitPrice,
-        originalPrice: item.unitPrice,
+        customPrice: item!.unitPrice,
+        originalPrice: item!.unitPrice,
         quantity: preservedQty,
-        stockCount: item.unitStockCount ?? 0,
+        stockCount: item!.unitStockCount ?? 0,
         displayUnit: 'units',
-      };
-      setInputValues(prev => ({ ...prev, [sk]: { price: item.unitPrice!.toString(), qty: preservedQty.toString() } }));
+      } as (typeof updated)[number];
+      setInputValues(prev => ({ ...prev, [sk]: { price: item!.unitPrice!.toString(), qty: preservedQty.toString() } }));
       setQuoteItems(updated);
     } else if (mode === 'packs') {
-      if (item.sellingType === 'pallets' || qip <= 1 || (item.displayUnit ?? 'units') === 'packs') return;
+      if (item!.sellingType === 'pallets' || qip <= 1 || (item!.displayUnit ?? 'units') === 'packs') return;
       // Immediately commit pack-aligned base units so saves are always correct
-      const packCount = Math.max(1, Math.round(item.quantity / qip));
+      const packCount = Math.max(1, Math.round(item!.quantity / qip));
       const alignedBaseUnits = packCount * qip;
-      setInputValues(prev => ({ ...prev, [sk]: { ...prev[sk], qty: packCount.toString() } }));
-      updated[index] = { ...updated[index], displayUnit: 'packs', quantity: alignedBaseUnits };
+      setInputValues(prev => ({ ...prev, [sk]: { ...prev[sk]!, qty: packCount.toString() } }));
+      updated[index] = { ...updated[index]!, displayUnit: 'packs', quantity: alignedBaseUnits } as (typeof updated)[number];
       setQuoteItems(updated);
     }
   };

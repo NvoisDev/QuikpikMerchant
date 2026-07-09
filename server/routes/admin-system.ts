@@ -543,7 +543,7 @@ export function registerAdminSystemRoutes(app: Express): void {
 
       const existing = await getExistingTables();
       const has = (t: string) => existing.has(t);
-      const n = (rows: { n: unknown }[]) => Number(rows[0].n);
+      const n = (rows: { n: unknown }[]) => Number(rows[0]!.n);
       const sc = (tableName: string, q: Promise<{ n: unknown }[]>) =>
         has(tableName) ? q.then(n) : Promise.resolve(0);
 
@@ -658,7 +658,7 @@ export function registerAdminSystemRoutes(app: Express): void {
 
       const truncateTargets = TRUNCATE_WHITELIST.filter(t => existing.has(t));
 
-      const n = (rows: { n: unknown }[]) => Number(rows[0].n);
+      const n = (rows: { n: unknown }[]) => Number(rows[0]!.n);
       const sc = (tableName: string, q: Promise<{ n: unknown }[]>) =>
         existing.has(tableName) ? q.then(n) : Promise.resolve(0);
 

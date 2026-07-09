@@ -241,7 +241,7 @@ export class PerformanceMiddleware {
         
         const toRemove = Math.ceil(this.cacheMaxSize * 0.1); // Remove 10%
         for (let i = 0; i < toRemove; i++) {
-          this.responseCache.delete(sortedEntries[i][0]);
+          this.responseCache.delete(sortedEntries[i]![0]);
         }
       }
     }

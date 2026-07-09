@@ -555,7 +555,7 @@ export function registerOrderLifecycleRoutes(app: Express): void {
         }
 
         const [updated] = await trx.select().from(orders).where(eq(orders.id, id));
-        return updated;
+        return updated!;
       });
 
       // ── Stripe payment link (for payment_link orders, same as direct quote creation) ──
@@ -690,7 +690,7 @@ export function registerOrderLifecycleRoutes(app: Express): void {
         try {
           // Parse the text address into minimal structured fields for storage
           const parts = (approvedOrder.deliveryAddress as string).split(',').map((s: string) => s.trim());
-          const addressLine1 = parts[0] || approvedOrder.deliveryAddress as string;
+          const addressLine1 = parts[0]! || approvedOrder.deliveryAddress as string;
           const city = parts[1] || '';
           const postalCode = parts[2] || '';
           if (addressLine1 && city) {
@@ -1497,7 +1497,7 @@ export function registerOrderLifecycleRoutes(app: Express): void {
   // PUT /api/orders/:id/items-prepared
   app.put("/api/orders/:id/items-prepared", requireAuth, requireBooleanFeature('order_management'), requireNotViewer, requireMemberPermission('orders'), async (req, res) => {
     try {
-      const orderId = parseInt(req.params.id);
+      const orderId = parseInt(req.params.id!);
       if (isNaN(orderId)) return res.status(400).json({ error: 'Invalid order ID' });
       const userId = req.user!.id;
 

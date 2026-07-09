@@ -269,7 +269,7 @@ export function registerPriceListRoutes(app: Express): void {
         eq(priceListAssignments.customerId, customerId),
       ))
       .limit(1);
-    return rows.length > 0 ? rows[0].id : null;
+    return rows.length > 0 ? rows[0]!.id : null;
   }
 
   // Delete the personal list outright once it has no remaining overrides, so an

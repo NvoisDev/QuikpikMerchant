@@ -279,19 +279,19 @@ export function registerProductRoutes(app: Express): void {
         let initialBatchId: number | undefined;
         if (initialStock > 0) {
           const [initialBatch] = await tx.insert(productBatches).values({
-            productId: newProduct.id,
+            productId: newProduct!.id,
             batchNumber: 'Initial Stock',
             quantity: initialStock,
             status: 'active',
             notes: 'Initial stock batch (auto-created on product creation)',
           }).returning();
-          initialBatchId = initialBatch.id;
+          initialBatchId = initialBatch!.id;
         }
 
         // Always write the opening stock movement — even at 0 — so every product's
         // history starts cleanly and the summary strip identity always balances.
         await tx.insert(stockMovements).values({
-          productId: newProduct.id,
+          productId: newProduct!.id,
           wholesalerId: targetUserId,
           movementType: 'initial',
           quantity: initialStock,
@@ -349,7 +349,7 @@ export function registerProductRoutes(app: Express): void {
       // If this product already has batches, the stock column is owned exclusively
       // by the batch system (Manage Stock). Strip it from the patch payload so a
       // product-edit form save can never silently overwrite batch-managed inventory.
-      const productHasBatches = (existingProduct.batchCount ?? 0) > 0;
+      const productHasBatches = ((existingProduct as any).batchCount ?? 0) > 0;
       if (productHasBatches) {
         delete (productData as any).stock;
         delete (productData as any).baseUnitStock;
@@ -445,7 +445,7 @@ export function registerProductRoutes(app: Express): void {
               stockBefore: currentBatchTotal,
               stockAfter: newStock,
               reason: `Manual stock edit (+${delta} units)`,
-              batchId: adjBatch.id,
+              batchId: adjBatch!.id,
             });
           } else if (delta < 0) {
             // Stock decrease: deduct from batches in FEFO order
@@ -1027,7 +1027,7 @@ export function registerProductRoutes(app: Express): void {
         max_tokens: 120,
       }, { signal: AbortSignal.timeout(25_000) });
 
-      let generatedDescription = (response.choices[0].message.content || "").trim();
+      let generatedDescription = (response.choices[0]!.message.content || "").trim();
 
       if (generatedDescription.length > 250) {
         const truncated = generatedDescription.slice(0, 250);
@@ -1050,7 +1050,7 @@ export function registerProductRoutes(app: Express): void {
 
       // Parse product ID — last hyphen-separated segment, or the whole slug if numeric
       const segments = slug.split('-');
-      const lastSegment = segments[segments.length - 1];
+      const lastSegment = segments[segments.length - 1]!;
       const productId = parseInt(lastSegment, 10);
 
       if (isNaN(productId)) {
@@ -1140,7 +1140,7 @@ export function registerProductRoutes(app: Express): void {
 
       // Resolve product from slug (last hyphen-separated segment is the ID)
       const segments = slug.split('-');
-      const productId = parseInt(segments[segments.length - 1], 10);
+      const productId = parseInt(segments[segments.length - 1]!, 10);
       if (isNaN(productId)) {
         return res.status(404).json({ message: "Product not found" });
       }
@@ -1280,7 +1280,7 @@ Return only the taglines, one per line, without numbers or formatting.`;
         temperature: 0.8,
       }, { signal: AbortSignal.timeout(25_000) });
 
-      const generatedText = response.choices[0].message.content || "";
+      const generatedText = response.choices[0]!.message.content || "";
       const taglines = generatedText
         .split('\n')
         .map((line: any) => line.trim())

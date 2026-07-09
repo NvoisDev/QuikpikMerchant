@@ -176,10 +176,10 @@ export async function buildBrandedPdf({
       const palletStr = row.palletPrice !== '' ? (row.palletPrice as number).toFixed(2) : '—';
 
       doc.fillColor('#111827');
-      doc.text(row.name, cols[0].x, y, { width: cols[0].width, lineBreak: false });
-      doc.text(row.packSize, cols[1].x, y, { width: cols[1].width, lineBreak: false });
-      doc.text(priceStr, cols[2].x, y, { width: cols[2].width, lineBreak: false });
-      doc.text(palletStr, cols[3].x, y, { width: cols[3].width, lineBreak: false });
+      doc.text(row.name, cols[0]!.x, y, { width: cols[0]!.width, lineBreak: false });
+      doc.text(row.packSize, cols[1]!.x, y, { width: cols[1]!.width, lineBreak: false });
+      doc.text(priceStr, cols[2]!.x, y, { width: cols[2]!.width, lineBreak: false });
+      doc.text(palletStr, cols[3]!.x, y, { width: cols[3]!.width, lineBreak: false });
 
       y += 18;
     });

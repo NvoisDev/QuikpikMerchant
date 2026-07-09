@@ -179,7 +179,7 @@ export class UserStorageBase {
       .insert(users)
       .values(userData as typeof users.$inferInsert)
       .returning();
-    return user;
+    return user!;
   }
 
   // Password authentication methods
@@ -198,7 +198,7 @@ export class UserStorageBase {
       .values(userDataWithPassword as typeof users.$inferInsert)
       .returning();
     onProgress?.('user_insert_done');
-    return user;
+    return user!;
   }
 
   async authenticateUser(email: string, password: string): Promise<User | null> {
@@ -232,7 +232,7 @@ export class UserStorageBase {
       .where(eq(users.id, id))
       .returning();
     
-    return user;
+    return user!;
   }
 
   // Password reset methods
@@ -287,7 +287,7 @@ export class UserStorageBase {
       .where(eq(users.id, user.id))
       .returning();
     
-    return updatedUser;
+    return updatedUser!;
   }
 
   async updateUser(id: string, updates: Partial<UpsertUser>): Promise<User> {
@@ -296,7 +296,7 @@ export class UserStorageBase {
       .set(updates)
       .where(eq(users.id, id))
       .returning();
-    return user;
+    return user!;
   }
 
   async updateUserLastSeen(id: string): Promise<void> {
@@ -324,7 +324,7 @@ export class UserStorageBase {
         },
       })
       .returning();
-    return user;
+    return user!;
   }
 
   async updateUserSettings(id: string, settings: Partial<UpsertUser>): Promise<User> {
@@ -337,7 +337,7 @@ export class UserStorageBase {
         })
         .where(eq(users.id, id))
         .returning();
-      return user;
+      return user!;
     } catch (error: any) {
       console.error('Error in updateUserSettings:', error);
       throw error;
@@ -353,7 +353,7 @@ export class UserStorageBase {
       })
       .where(eq(users.id, id))
       .returning();
-    return user;
+    return user!;
   }
 
   // Product operations

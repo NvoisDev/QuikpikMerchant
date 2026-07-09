@@ -22,7 +22,7 @@ export function OnboardingWrapper() {
   return (
     <AnimatePresence>
       <AnimatedOnboardingTooltip
-        step={currentStep}
+        step={currentStep!}
         currentStepIndex={currentStepIndex}
         totalSteps={totalSteps}
         onNext={nextStep}

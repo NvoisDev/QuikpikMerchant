@@ -152,7 +152,7 @@ export function CancelOrderView({
                           variant="outline" size="sm"
                           onClick={() => {
                             const newItems = [...returnItems];
-                            newItems[index].quantity = Math.max(0, newItems[index].quantity - 1);
+                            newItems[index]!.quantity = Math.max(0, newItems[index]!.quantity - 1);
                             setReturnItems(newItems);
                           }}
                         >-</Button>
@@ -161,7 +161,7 @@ export function CancelOrderView({
                           variant="outline" size="sm"
                           onClick={() => {
                             const newItems = [...returnItems];
-                            newItems[index].quantity = Math.min(item.maxQty, newItems[index].quantity + 1);
+                            newItems[index]!.quantity = Math.min(item.maxQty, newItems[index]!.quantity + 1);
                             setReturnItems(newItems);
                           }}
                         >+</Button>

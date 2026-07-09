@@ -23,7 +23,7 @@ async function clearCustomPriceIfPlanChanged(userId: number, newPlanId: string):
       customPricePlanIdMonthly: (users as any).customPricePlanIdMonthly,
     })
     .from(users)
-    .where(eq(users.id, userId));
+    .where(eq(users.id, String(userId)));
 
   // If the wholesaler has separate monthly/annual bindings, those deals are intentionally
   // persistent across plan switches (e.g., switching monthly↔annual keeps both deals intact).
@@ -37,7 +37,7 @@ async function clearCustomPriceIfPlanChanged(userId: number, newPlanId: string):
       customPricePlanId: null,
       customMonthlyPrice: null,
       customAnnualPrice: null,
-    } as any).where(eq(users.id, userId));
+    } as any).where(eq(users.id, String(userId)));
     console.log(`💰 Cleared stale custom price for user ${userId} (was tied to plan "${existingCustomPlanId}", now on "${newPlanId}")`);
   }
 }
@@ -70,7 +70,7 @@ export function registerSubscriptionRoutes(app: Express): void {
       if (stripeSubId) {
         try {
           const stripe = getStripeClient(false);
-          const sub = await stripe.subscriptions.retrieve(stripeSubId, {
+          const sub = await stripe.subscriptions.retrieve(stripeSubId as string, {
             expand: ['default_payment_method'],
           });
           const pm = sub.default_payment_method;
@@ -143,7 +143,7 @@ export function registerSubscriptionRoutes(app: Express): void {
         return res.status(400).json({ message: 'Invalid price ID' });
       }
 
-      const targetPlan = validPlans[0];
+      const targetPlan = validPlans[0]!;
 
       // Check for a negotiated custom price override on this wholesaler's account.
       // If set for the plan's billing interval AND tied to this specific plan, create an
@@ -521,13 +521,13 @@ export function registerSubscriptionRoutes(app: Express): void {
       }
 
       // Handle downgrade to paid plan with immediate proration
-      if (!targetPlanData.stripePriceId) {
+      if (!targetPlanData!.stripePriceId) {
         return res.status(400).json({ message: 'Target plan price ID not configured' });
       }
 
       const result = await SubscriptionService.immediateDowngradeWithProration(
         currentSubscription.stripeSubscriptionId,
-        targetPlanData.stripePriceId,
+        targetPlanData!.stripePriceId,
         targetPlan,
         isTestAccount,
       );

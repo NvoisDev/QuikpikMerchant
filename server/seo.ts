@@ -505,7 +505,7 @@ async function productMeta(slug: string): Promise<SeoMeta> {
   try {
     // Slug format: "{name-slugified}-{productId}" or just "{productId}"
     const segments = slug.split("-");
-    const productId = parseInt(segments[segments.length - 1], 10);
+    const productId = parseInt(segments[segments.length - 1]!, 10);
     if (isNaN(productId)) return defaultPublicMeta(url);
 
     // Enforce the same visibility policy as /api/public/products/:slug:
@@ -519,7 +519,7 @@ async function productMeta(slug: string): Promise<SeoMeta> {
         imageUrl: products.imageUrl,
         category: products.category,
         wholesalerId: products.wholesalerId,
-        minOrderQuantity: products.minOrderQuantity,
+        moq: products.moq,
         stock: products.stock,
         status: products.status,
       })
@@ -716,7 +716,7 @@ function defaultPublicMeta(url: string): SeoMeta {
  * Falls back to homepage metadata for unknown / authenticated routes.
  */
 export async function getRouteMeta(pathname: string): Promise<SeoMeta> {
-  const clean = pathname.split("?")[0].replace(/\/$/, "") || "/";
+  const clean = pathname.split("?")[0]!.replace(/\/$/, "") || "/";
 
   if (clean === "/") return homeMeta();
   if (clean === "/blog") return blogIndexMeta();
@@ -724,16 +724,16 @@ export async function getRouteMeta(pathname: string): Promise<SeoMeta> {
   if (clean === "/privacy") return privacyMeta();
 
   const blogPostMatch = clean.match(/^\/blog\/([^/]+)$/);
-  if (blogPostMatch) return blogPostMeta(blogPostMatch[1]);
+  if (blogPostMatch) return blogPostMeta(blogPostMatch[1]!);
 
   const storeMatch = clean.match(/^\/w\/([^/]+)$/);
-  if (storeMatch) return storeMeta(storeMatch[1]);
+  if (storeMatch) return storeMeta(storeMatch[1]!);
 
   const productMatch = clean.match(/^\/product\/([^/]+)$/);
-  if (productMatch) return productMeta(productMatch[1]);
+  if (productMatch) return productMeta(productMatch[1]!);
 
   const welcomeMatch = clean.match(/^\/welcome\/([^/]+)$/);
-  if (welcomeMatch) return welcomeMeta(welcomeMatch[1]);
+  if (welcomeMatch) return welcomeMeta(welcomeMatch[1]!);
 
   return defaultPublicMeta(`${BASE_URL}${clean}`);
 }

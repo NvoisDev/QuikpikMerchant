@@ -193,9 +193,9 @@ export class APIBatcher {
       // Resolve individual promises
       results.forEach((result, index) => {
         if (result.status === 'fulfilled') {
-          batch[index].resolve(result.value);
+          batch[index]!.resolve(result.value);
         } else {
-          batch[index].reject(result.reason);
+          batch[index]!.reject(result.reason);
         }
       });
     } catch (error) {

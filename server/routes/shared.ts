@@ -194,9 +194,9 @@ export function parseAddressForEmail(address: string | null | undefined): {
 export function extractSessionId(cookieString?: string): string | null {
   if (!cookieString) return null;
   let sessionMatch = cookieString.match(/connect\.sid=s%3A([^;]+)/);
-  if (sessionMatch?.[1]) return decodeURIComponent(sessionMatch[1]).split('.')[0];
+  if (sessionMatch?.[1]) return decodeURIComponent(sessionMatch[1]).split('.')[0]!;
   sessionMatch = cookieString.match(/connect\.sid=([^;]+)/);
-  if (sessionMatch?.[1]) return sessionMatch[1].split('.')[0];
+  if (sessionMatch?.[1]) return sessionMatch[1].split('.')[0]!;
   return null;
 }
 
@@ -270,9 +270,9 @@ export { formatNumber } from '../../shared/utils/currency';
 export function parseCustomerName(fullName: string): { firstName: string; lastName: string } {
   if (!fullName || typeof fullName !== 'string') return { firstName: 'Unknown', lastName: 'Customer' };
   const nameParts = fullName.trim().split(' ');
-  if (nameParts.length === 1) return { firstName: nameParts[0], lastName: '' };
-  if (nameParts.length === 2) return { firstName: nameParts[0], lastName: nameParts[1] };
-  return { firstName: nameParts[0], lastName: nameParts.slice(1).join(' ') };
+  if (nameParts.length === 1) return { firstName: nameParts[0]!, lastName: '' };
+  if (nameParts.length === 2) return { firstName: nameParts[0]!, lastName: nameParts[1]! };
+  return { firstName: nameParts[0]!, lastName: nameParts.slice(1).join(' ') };
 }
 
 export function generateStockUpdateMessage(product: any, notificationType: string, wholesaler: any): string {

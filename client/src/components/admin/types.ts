@@ -69,6 +69,7 @@ export interface RevenueOrder {
   customerTransactionFee: string | null; totalQuikpikIncome: number;
   stripeProcessingFee: number; stripeFeIsEstimated: boolean; grossProfit: number;
   status: string; paymentStatus: string | null; createdAt: string;
+  refundedAt?: string | null; refundAmount?: string | null;
 }
 
 export interface RevenueData { orders: RevenueOrder[]; totals: RevenueTotals; subRevenueByWholesaler?: Record<string, number>; }

@@ -14,14 +14,15 @@ export function registerSystemRoutes(app: Express): void {
     try {
       const { wholesalerId } = req.params;
       const result = await db.select({ logoUrl: users.logoUrl, logoType: users.logoType }).from(users).where(eq(users.id, wholesalerId)).limit(1);
-      if (!result.length || !result[0].logoUrl) return res.status(404).end();
-      const { logoUrl, logoType } = result[0];
+      if (!result.length || !result[0]!.logoUrl) return res.status(404).end();
+      const logoUrl = result[0]!.logoUrl!;
+      const logoType = result[0]!.logoType;
       if (logoType === 'custom' && logoUrl.startsWith('data:')) {
         const match = logoUrl.match(/^data:([^;]+);base64,(.+)$/);
         if (!match) return res.status(400).end();
         const [, mimeType, base64Data] = match;
-        const buffer = Buffer.from(base64Data, 'base64');
-        res.setHeader('Content-Type', mimeType);
+        const buffer = Buffer.from(base64Data!, 'base64');
+        res.setHeader('Content-Type', mimeType!);
         res.setHeader('Cache-Control', 'no-store');
         return res.send(buffer);
       }

@@ -57,7 +57,7 @@ export function registerCollectionAddressRoutes(app: Express) {
               isDefault: true,
               isActive: true,
             });
-            addresses = [created];
+            addresses = [created!];
           } catch (migrateErr) {
             console.error("Lazy migration of pickupAddress failed (non-fatal):", migrateErr);
           }

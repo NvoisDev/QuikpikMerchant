@@ -530,8 +530,8 @@ export default function ProductDetail() {
           <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
           <div className="absolute bottom-4 left-4 right-4">
             <div className="flex flex-wrap gap-1.5 mb-2">
-              <span className={`text-xs font-medium px-2.5 py-1 rounded-full border ${currentStatus.className}`}>
-                {currentStatus.label}
+              <span className={`text-xs font-medium px-2.5 py-1 rounded-full border ${currentStatus!.className}`}>
+                {currentStatus!.label}
               </span>
               {product.category && (
                 <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-white/90 text-gray-700 border border-white/50">
@@ -568,9 +568,9 @@ export default function ProductDetail() {
                     const unitHistory = priceHistory.filter(h => h.sellingType === "units");
                     if (unitHistory.length === 0) return null;
                     const last = unitHistory[0];
-                    const pct = ((parseFloat(last.newPrice) - parseFloat(last.oldPrice)) / parseFloat(last.oldPrice)) * 100;
+                    const pct = ((parseFloat(last!.newPrice) - parseFloat(last!.oldPrice)) / parseFloat(last!.oldPrice)) * 100;
                     const isUp = pct > 0;
-                    const dateLabel = new Date(last.changedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+                    const dateLabel = new Date(last!.changedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
                     return (
                       <p className="text-[11px] mt-0.5 text-gray-400">
                         {isUp ? "↑" : "↓"} {Math.abs(pct).toFixed(1)}% on {dateLabel}
@@ -704,7 +704,7 @@ export default function ProductDetail() {
                 </div>
               )}
 
-              {product.percentSold != null && product.percentSold >= nearDepletionThreshold && totalStock > 0 && totalStock > (product.lowStockThreshold ?? 50) && (
+              {product.percentSold != null && product.percentSold >= nearDepletionThreshold && totalStock > 0 && totalStock > ((product as any).lowStockThreshold ?? 50) && (
                 <div className="flex items-center gap-2 text-purple-800 bg-purple-50 border border-purple-200 rounded-lg px-3 py-2 text-sm">
                   <AlertTriangle className="h-4 w-4 shrink-0 text-purple-600" />
                   <span><strong>Near depletion</strong> — {product.percentSold}% of lifetime stock has sold. Consider reordering soon.</span>

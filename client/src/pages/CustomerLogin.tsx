@@ -208,7 +208,7 @@ export default function CustomerLogin() {
       const options: WholesalerOption[] = data.wholesalers;
 
       if (options.length === 1) {
-        await completeLogin(options[0]);
+        await completeLogin(options[0]!);
         return;
       }
 

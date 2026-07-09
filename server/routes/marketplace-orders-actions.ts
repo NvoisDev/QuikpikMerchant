@@ -624,13 +624,13 @@ Please contact the customer to confirm this order.
               const effective = computeEffectivePrice(base, row);
               // Only apply unit override when there is a real discount/custom price (lower than base)
               if (effective < base) {
-                if (reorderPriceOverrides[row.productId] === undefined || effective < reorderPriceOverrides[row.productId]) {
+                if (reorderPriceOverrides[row.productId] === undefined || effective < reorderPriceOverrides[row.productId]!) {
                   reorderPriceOverrides[row.productId] = effective;
                 }
               }
               if (row.customPalletPrice != null) {
                 const palletEffective = parseFloat(String(row.customPalletPrice));
-                if (reorderPalletPriceOverrides[row.productId] === undefined || palletEffective < reorderPalletPriceOverrides[row.productId]) {
+                if (reorderPalletPriceOverrides[row.productId] === undefined || palletEffective < reorderPalletPriceOverrides[row.productId]!) {
                   reorderPalletPriceOverrides[row.productId] = palletEffective;
                 }
               }

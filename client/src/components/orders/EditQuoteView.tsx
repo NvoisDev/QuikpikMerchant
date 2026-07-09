@@ -137,71 +137,71 @@ export function EditQuoteView({
 
   const togglePackMode = (index: number) => {
     const item = editItems[index];
-    const qip = item.quantityInPack ?? 1;
-    if (qip <= 1 || item.sellingType === 'pallets') return;
-    const key = getItemKey(item);
+    const qip = item!.quantityInPack ?? 1;
+    if (qip <= 1 || item!.sellingType === 'pallets') return;
+    const key = getItemKey(item!);
     const nowPacks = !packMode[key];
     if (nowPacks) {
       // Round to nearest pack and immediately commit aligned base units so save is
       // always correct even if the user doesn't interact with the qty field again.
-      const packCount = Math.max(1, Math.round(item.quantity / qip));
+      const packCount = Math.max(1, Math.round(item!.quantity / qip));
       const alignedBaseUnits = packCount * qip;
       const updated = [...editItems];
-      updated[index] = { ...updated[index], quantity: alignedBaseUnits };
+      updated[index] = { ...updated[index]!, quantity: alignedBaseUnits } as EditItem;
       setEditItems(updated);
       setPackInputs(prev => ({ ...prev, [key]: packCount.toString() }));
     } else {
       // Back to units — quantity already in base units, just update display input.
-      setPackInputs(prev => ({ ...prev, [key]: item.quantity.toString() }));
+      setPackInputs(prev => ({ ...prev, [key]: item!.quantity.toString() }));
     }
     setPackMode(prev => ({ ...prev, [key]: nowPacks }));
   };
 
   const commitQty = (index: number, raw: string) => {
     const item = editItems[index];
-    const qip = item.quantityInPack ?? 1;
-    const key = getItemKey(item);
+    const qip = item!.quantityInPack ?? 1;
+    const key = getItemKey(item!);
     const isPacks = packMode[key];
     const val = parseInt(raw, 10);
     const displayVal = !isNaN(val) && val >= 1 ? val : 1;
     const baseUnits = isPacks ? displayVal * qip : displayVal;
     const updated = [...editItems];
-    updated[index] = { ...updated[index], quantity: Math.max(1, baseUnits) };
+    updated[index] = { ...updated[index]!, quantity: Math.max(1, baseUnits) } as EditItem;
     setEditItems(updated);
     setPackInputs(prev => ({ ...prev, [key]: displayVal.toString() }));
   };
 
   const switchEditItemMode = (index: number, mode: 'units' | 'packs' | 'pallets') => {
     const item = editItems[index];
-    if (!item.productId) return; // charge items have no sellingType to switch
-    const qip = item.quantityInPack ?? 1;
+    if (!item!.productId) return; // charge items have no sellingType to switch
+    const qip = item!.quantityInPack ?? 1;
     if (mode === 'pallets') {
-      if (!item.palletPrice || item.sellingType === 'pallets') return;
-      const palletQty = Math.max(1, item.palletMoq ?? 1);
+      if (!item!.palletPrice || item!.sellingType === 'pallets') return;
+      const palletQty = Math.max(1, item!.palletMoq ?? 1);
       const updated = [...editItems];
-      updated[index] = { ...updated[index], sellingType: 'pallets', customPrice: item.palletPrice, quantity: palletQty };
+      updated[index] = { ...updated[index]!, sellingType: 'pallets', customPrice: item!.palletPrice, quantity: palletQty } as EditItem;
       setEditItems(updated);
       // Switching is not a manual price change — baseline the new key to its catalog price.
-      setBaseline(item.productId, 'pallets', item.palletPrice);
-      const newKey = `${item.productId}-pallets`;
+      setBaseline(item!.productId, 'pallets', item!.palletPrice);
+      const newKey = `${item!.productId}-pallets`;
       setPackInputs(prev => ({ ...prev, [newKey]: palletQty.toString() }));
       setPackMode(prev => ({ ...prev, [newKey]: false }));
     } else if (mode === 'units') {
-      if (item.sellingType === 'units' && !packMode[getItemKey(item)]) return;
-      if (!item.unitPrice) return;
+      if (item!.sellingType === 'units' && !packMode[getItemKey(item!)]) return;
+      if (!item!.unitPrice) return;
       // Packs → Units: item.quantity is already in base units, preserve it.
       // Pallets → Units: different price context, reset to 1.
-      const preservedQty = item.sellingType === 'pallets' ? 1 : item.quantity;
+      const preservedQty = item!.sellingType === 'pallets' ? 1 : item!.quantity;
       const updated = [...editItems];
-      updated[index] = { ...updated[index], sellingType: 'units', customPrice: item.unitPrice, quantity: preservedQty };
+      updated[index] = { ...updated[index]!, sellingType: 'units', customPrice: item!.unitPrice, quantity: preservedQty } as EditItem;
       setEditItems(updated);
       // Switching is not a manual price change — baseline the new key to its catalog price.
-      setBaseline(item.productId, 'units', item.unitPrice);
-      const newKey = `${item.productId}-units`;
+      setBaseline(item!.productId, 'units', item!.unitPrice);
+      const newKey = `${item!.productId}-units`;
       setPackInputs(prev => ({ ...prev, [newKey]: preservedQty.toString() }));
       setPackMode(prev => ({ ...prev, [newKey]: false }));
     } else if (mode === 'packs') {
-      if (item.sellingType === 'pallets' || qip <= 1) return;
+      if (item!.sellingType === 'pallets' || qip <= 1) return;
       togglePackMode(index);
     }
   };
@@ -338,7 +338,7 @@ export function EditQuoteView({
                               value={item.customLabel ?? ''}
                               onChange={(e) => {
                                 const updated = [...editItems];
-                                updated[index] = { ...updated[index], customLabel: e.target.value, productName: e.target.value };
+                                updated[index] = { ...updated[index]!, customLabel: e.target.value, productName: e.target.value } as EditItem;
                                 setEditItems(updated);
                               }}
                               placeholder="Charge label"
@@ -405,7 +405,7 @@ export function EditQuoteView({
                               const newDisplay = current - 1;
                               const newBase = isPacks ? newDisplay * qip : newDisplay;
                               const updated = [...editItems];
-                              updated[index] = { ...updated[index], quantity: Math.max(1, newBase) };
+                              updated[index] = { ...updated[index]!, quantity: Math.max(1, newBase) } as EditItem;
                               setEditItems(updated);
                               setPackInputs(prev => ({ ...prev, [key]: newDisplay.toString() }));
                             }}
@@ -430,7 +430,7 @@ export function EditQuoteView({
                               const newDisplay = current + 1;
                               const newBase = isPacks ? newDisplay * qip : newDisplay;
                               const updated = [...editItems];
-                              updated[index] = { ...updated[index], quantity: newBase };
+                              updated[index] = { ...updated[index]!, quantity: newBase } as EditItem;
                               setEditItems(updated);
                               setPackInputs(prev => ({ ...prev, [key]: newDisplay.toString() }));
                             }}
@@ -455,7 +455,7 @@ export function EditQuoteView({
                             value={item.customPrice}
                             onChange={(e) => {
                               const updated = [...editItems];
-                              updated[index] = { ...updated[index], customPrice: parseFloat(e.target.value) || 0 };
+                              updated[index] = { ...updated[index]!, customPrice: parseFloat(e.target.value) || 0 } as EditItem;
                               setEditItems(updated);
                             }}
                             className={`w-20 p-1 border rounded text-sm text-right ${item.customPrice <= 0 ? 'border-red-400 bg-red-50' : ''}`}
@@ -502,7 +502,7 @@ export function EditQuoteView({
                           value={item.itemNotes ?? ''}
                           onChange={(e) => {
                             const updated = [...editItems];
-                            updated[index] = { ...updated[index], itemNotes: e.target.value || null };
+                            updated[index] = { ...updated[index]!, itemNotes: e.target.value || null } as EditItem;
                             setEditItems(updated);
                           }}
                           placeholder="Notes (optional)"
@@ -648,11 +648,11 @@ export function EditQuoteView({
                             const existing = editItems.findIndex(i => i.productId === product.id && i.sellingType === 'units');
                             if (existing >= 0) {
                               const updated = [...editItems];
-                              const existingItem = updated[existing];
+                              const existingItem = updated[existing]!;
                               // If item is in pack display mode, add a full pack worth of base units
                               const itemKey = getItemKey(existingItem);
                               const increment = packMode[itemKey] ? (existingItem.quantityInPack ?? 1) : 1;
-                              updated[existing] = { ...existingItem, quantity: existingItem.quantity + increment };
+                              updated[existing] = { ...existingItem, quantity: existingItem.quantity + increment } as EditItem;
                               setEditItems(updated);
                             } else {
                               setEditItems(prev => [...prev, {
@@ -686,7 +686,7 @@ export function EditQuoteView({
                             const existing = editItems.findIndex(i => i.productId === product.id && i.sellingType === 'pallets');
                             if (existing >= 0) {
                               const updated = [...editItems];
-                              updated[existing] = { ...updated[existing], quantity: updated[existing].quantity + 1 };
+                              updated[existing] = { ...updated[existing]!, quantity: updated[existing]!.quantity + 1 } as EditItem;
                               setEditItems(updated);
                             } else {
                               const initPalletQty = Math.max(1, product.palletMoq ?? 1);

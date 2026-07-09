@@ -2578,7 +2578,7 @@ Pay Later and cash/bank-transfer orders are not processed through Stripe, so the
 
 export default function Help() {
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedSection, setSelectedSection] = useState(helpSections[0].id);
+  const [selectedSection, setSelectedSection] = useState(helpSections[0]!.id);
   const [expandedArticles, setExpandedArticles] = useState<Record<string, boolean>>({});
 
   const { data: feeRates } = useQuery<{ platformFee: { percentage: number }; customerFee: { percentage: number; fixed: number } }>({

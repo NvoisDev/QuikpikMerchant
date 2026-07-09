@@ -393,7 +393,7 @@ export class OrderStorage extends ProductStorage {
 
   async createOrderItem(orderItem: InsertOrderItem): Promise<OrderItem> {
     const [newOrderItem] = await db.insert(orderItems).values(orderItem).returning();
-    return newOrderItem;
+    return newOrderItem!;
   }
 
   async getOrderItems(orderId: number): Promise<(OrderItem & { product: Product })[]> {
@@ -415,7 +415,7 @@ export class OrderStorage extends ProductStorage {
       .set({ status })
       .where(eq(orders.id, id))
       .returning();
-    return updatedOrder;
+    return updatedOrder!;
   }
 
   async markOrderReadyForCollection(id: number): Promise<Order> {
@@ -427,7 +427,7 @@ export class OrderStorage extends ProductStorage {
       })
       .where(eq(orders.id, id))
       .returning();
-    return updatedOrder;
+    return updatedOrder!;
   }
 
   async updateOrder(id: number, updates: Partial<Order>): Promise<Order> {
@@ -436,7 +436,7 @@ export class OrderStorage extends ProductStorage {
       .set(updates)
       .where(eq(orders.id, id))
       .returning();
-    return updatedOrder;
+    return updatedOrder!;
   }
 
   async updateOrderImages(orderId: number, images: Array<{
@@ -468,7 +468,7 @@ export class OrderStorage extends ProductStorage {
       .set(shippingInfo)
       .where(eq(orders.id, id))
       .returning();
-    return updatedOrder;
+    return updatedOrder!;
   }
 
   async switchOrderToDelivery(orderId: number, deliveryAddress: string): Promise<Order> {
@@ -482,7 +482,7 @@ export class OrderStorage extends ProductStorage {
       })
       .where(eq(orders.id, orderId))
       .returning();
-    return updatedOrder;
+    return updatedOrder!;
   }
 
   async switchOrderToCollection(orderId: number): Promise<Order> {
@@ -496,7 +496,7 @@ export class OrderStorage extends ProductStorage {
       })
       .where(eq(orders.id, orderId))
       .returning();
-    return updatedOrder;
+    return updatedOrder!;
   }
 
   async updateOrderDeliveryAddress(orderId: number, deliveryAddressId: number, formattedAddress: string): Promise<Order> {
@@ -509,7 +509,7 @@ export class OrderStorage extends ProductStorage {
       })
       .where(eq(orders.id, orderId))
       .returning();
-    return updatedOrder;
+    return updatedOrder!;
   }
 
   async getLastOrderForWholesaler(wholesalerId: string): Promise<Order | undefined> {

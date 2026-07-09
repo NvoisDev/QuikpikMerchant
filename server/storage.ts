@@ -490,7 +490,7 @@ export class DatabaseStorage extends BusinessProfileStorage implements IStorage 
 
   async createUserBadge(badge: InsertUserBadge): Promise<UserBadge> {
     const [newBadge] = await db.insert(userBadges).values(badge).returning();
-    return newBadge;
+    return newBadge!;
   }
 
   async awardBadge(
@@ -511,7 +511,7 @@ export class DatabaseStorage extends BusinessProfileStorage implements IStorage 
       .limit(1);
 
     if (existingBadge.length > 0) {
-      return existingBadge[0];
+      return existingBadge[0]!;
     }
 
     // Create new badge
@@ -553,7 +553,7 @@ export class DatabaseStorage extends BusinessProfileStorage implements IStorage 
       .where(eq(users.id, userId))
       .returning();
 
-    return updatedUser;
+    return updatedUser!;
   }
 
   async getUserOnboardingProgress(userId: string): Promise<{
@@ -612,7 +612,7 @@ export class DatabaseStorage extends BusinessProfileStorage implements IStorage 
       .where(eq(users.id, userId))
       .returning();
 
-    return updatedUser;
+    return updatedUser!;
   }
 
   // Milestone operations implementation
@@ -626,7 +626,7 @@ export class DatabaseStorage extends BusinessProfileStorage implements IStorage 
 
   async createMilestone(milestone: InsertOnboardingMilestone): Promise<OnboardingMilestone> {
     const [newMilestone] = await db.insert(onboardingMilestones).values(milestone).returning();
-    return newMilestone;
+    return newMilestone!;
   }
 
   async updateMilestone(id: number, updates: Partial<InsertOnboardingMilestone>): Promise<OnboardingMilestone> {
@@ -636,7 +636,7 @@ export class DatabaseStorage extends BusinessProfileStorage implements IStorage 
       .where(eq(onboardingMilestones.id, id))
       .returning();
 
-    return updatedMilestone;
+    return updatedMilestone!;
   }
 
   async completeMilestone(milestoneId: string, userId: string): Promise<{
@@ -694,7 +694,7 @@ export class DatabaseStorage extends BusinessProfileStorage implements IStorage 
       );
     }
 
-    return { milestone: completedMilestone, badge, experienceGained };
+    return { milestone: completedMilestone!, badge, experienceGained };
   }
 
   async checkMilestoneProgress(userId: string, action: string): Promise<{
@@ -923,7 +923,7 @@ export class DatabaseStorage extends BusinessProfileStorage implements IStorage 
 
   async createSMSVerificationCode(data: InsertSMSVerificationCode): Promise<SMSVerificationCode> {
     const [code] = await db.insert(smsVerificationCodes).values(data).returning();
-    return code;
+    return code!;
   }
 
   async getLatestSMSCode(customerId: string): Promise<string | null> {
@@ -1065,7 +1065,7 @@ export class DatabaseStorage extends BusinessProfileStorage implements IStorage 
     }
   }
 
-  async updateTabPermission(wholesalerId: string, tabName: string, isRestricted: boolean, allowedRoles: string[]): Promise<TabPermission> {
+  async updateTabPermission(wholesalerId: string, tabName: string, isRestricted: boolean, allowedRoles: string[] = []): Promise<TabPermission> {
     try {
       const existingPermission = await db
         .select()
@@ -1100,7 +1100,7 @@ export class DatabaseStorage extends BusinessProfileStorage implements IStorage 
             )
           )
           .limit(1);
-        return inserted[0];
+        return inserted[0]!;
       } else {
         // Update existing permission
         await db
@@ -1118,11 +1118,11 @@ export class DatabaseStorage extends BusinessProfileStorage implements IStorage 
           );
 
         return {
-          ...existingPermission[0],
+          ...existingPermission[0]!,
           isRestricted,
           allowedRoles,
           updatedAt: new Date()
-        };
+        } as any;
       }
     } catch (error) {
       console.error("Error updating tab permission:", error);
@@ -1157,12 +1157,12 @@ export class DatabaseStorage extends BusinessProfileStorage implements IStorage 
       const tabPermission = permission[0];
       
       // If not restricted, allow access
-      if (!tabPermission.isRestricted) {
+      if (!tabPermission!.isRestricted) {
         return true;
       }
 
       // Check if user role is in allowed roles
-      return (tabPermission.allowedRoles as string[]).includes(effectiveRole);
+      return (tabPermission!.allowedRoles as string[]).includes(effectiveRole);
     } catch (error) {
       console.error("Error checking tab access:", error);
       // failOpen=true (default): used for sidebar visibility — missing tab just disappears, not an error.
@@ -1197,12 +1197,12 @@ export class DatabaseStorage extends BusinessProfileStorage implements IStorage 
     const data = inventoryData.rows[0];
 
     return {
-      totalProducts: parseInt(data.total_products as string) || 0,
-      inStockProducts: parseInt(data.in_stock_products as string) || 0,
-      lowStockProducts: parseInt(data.low_stock_products as string) || 0,
-      outOfStockProducts: parseInt(data.out_of_stock_products as string) || 0,
-      totalStockValue: parseFloat(data.total_stock_value as string) || 0,
-      averageStockLevel: parseFloat(data.average_stock_level as string) || 0,
+      totalProducts: parseInt(data!.total_products as string) || 0,
+      inStockProducts: parseInt(data!.in_stock_products as string) || 0,
+      lowStockProducts: parseInt(data!.low_stock_products as string) || 0,
+      outOfStockProducts: parseInt(data!.out_of_stock_products as string) || 0,
+      totalStockValue: parseFloat(data!.total_stock_value as string) || 0,
+      averageStockLevel: parseFloat(data!.average_stock_level as string) || 0,
       lastUpdated: new Date()
     };
   }

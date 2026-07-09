@@ -201,7 +201,7 @@ ${emailTable(["Order #", "Customer", "Age", "Status", "Value"], orderRows)}
 ${emailCard(`<p style="margin:0;color:#92400e;font-size:14px">These orders may need your attention. Fulfilling or following up on them promptly helps keep your customers happy.</p>`, { borderColor: "#f59e0b", bgColor: "#fffbeb" })}
 ${emailButton("View Unfulfilled Orders", ordersLink, "#10b981")}
 <p style="margin:20px 0 4px;font-size:13px;color:#6b7280">You're receiving this because you have unfulfilled orders older than 15 days. You can turn off this digest in your <a href="https://quikpik.app/settings?tab=notifications" style="color:#10b981;text-decoration:none">notification settings</a>.</p>`;
-    out.push(emailEntry("weekly-order-digest", "Weekly Order Digest", "wholesaler", "Weekly summary of orders left unfulfilled for more than 15 days.", `Weekly Digest: ${countWord} awaiting fulfilment`, wrapCustomerEmail(body, { businessName: SAMPLE.wholesalerName }, { preheader: `You have ${countWord} awaiting fulfilment — ${orders[0].orderNumber} and more` })));
+    out.push(emailEntry("weekly-order-digest", "Weekly Order Digest", "wholesaler", "Weekly summary of orders left unfulfilled for more than 15 days.", `Weekly Digest: ${countWord} awaiting fulfilment`, wrapCustomerEmail(body, { businessName: SAMPLE.wholesalerName }, { preheader: `You have ${countWord} awaiting fulfilment — ${orders[0]!.orderNumber} and more` })));
   }
 
   // --- Trial reminder (wholesaler) ---------------------------------------

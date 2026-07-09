@@ -940,7 +940,7 @@ export default function LeadsPage() {
                       ? view === 'quote-requests' ? 'bg-violet-100 text-violet-700' : 'bg-emerald-100 text-emerald-700'
                       : 'bg-gray-100 text-gray-500'
                   }`}>
-                    {(e.enquirerName || '?')[0].toUpperCase()}
+                    {(e.enquirerName || '?')[0]!.toUpperCase()}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">

@@ -84,5 +84,5 @@ export function getTabNameFromPath(path: string): string {
     'help': 'settings',
   };
   
-  return pathToTabMap[firstSegment] || firstSegment;
+  return pathToTabMap[firstSegment ?? ''] || firstSegment || '';
 }

@@ -951,7 +951,7 @@ export default function Customers() {
                       const duplicateGroups = Array.from(duplicatePhoneGroups.values()).filter(group => group.length > 1);
                       if (duplicateGroups.length > 0) {
                         const firstDuplicateGroup = duplicateGroups[0];
-                        setMergeInitialDuplicates(firstDuplicateGroup.sort((a, b) => (b?.totalOrders || 0) - (a?.totalOrders || 0)));
+                        setMergeInitialDuplicates(firstDuplicateGroup!.sort((a, b) => (b?.totalOrders || 0) - (a?.totalOrders || 0)));
                         setMergeInitialMode('automatic');
                         setIsMergeDialogOpen(true);
                       } else {
@@ -1041,10 +1041,10 @@ export default function Customers() {
                               e.stopPropagation();
                               navigate(`/products?tab=price-lists`);
                             }}
-                            title={priceListCustomerSummary[customer.id].names.join(', ')}
+                            title={priceListCustomerSummary[customer.id]!.names.join(', ')}
                           >
                             <Tag className="h-2.5 w-2.5 mr-0.5" />
-                            {priceListCustomerSummary[customer.id].count} {priceListCustomerSummary[customer.id].count === 1 ? 'price list' : 'price lists'}
+                            {priceListCustomerSummary[customer.id]!.count} {priceListCustomerSummary[customer.id]!.count === 1 ? 'price list' : 'price lists'}
                           </Badge>
                         )}
                       </div>

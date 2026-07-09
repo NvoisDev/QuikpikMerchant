@@ -228,7 +228,7 @@ export async function sendOrderStatusNotification(
 
   await orderNotificationService.sendOrderStatusUpdate({
     orderId: order.id,
-    orderNumber: order.orderNumber,
+    orderNumber: order.orderNumber ?? '',
     status,
     customerName:
       `${customer.firstName || ''} ${customer.lastName || ''}`.trim() ||

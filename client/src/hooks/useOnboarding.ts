@@ -151,14 +151,14 @@ export function useOnboarding() {
       const currentStep = ONBOARDING_STEPS[currentStepIndex];
       
       // Handle click actions for current step
-      if (currentStep.action === 'click' && currentStep.interactive) {
+      if (currentStep!.action === 'click' && currentStep!.interactive) {
         // For interactive steps, just proceed to next step
         // The user will manually interact with the highlighted element
       }
       
       // Standard step progression
       setCurrentStepIndex(newIndex);
-      setCompletedSteps(prev => [...prev, currentStep.id]);
+      setCompletedSteps(prev => [...prev, currentStep!.id]);
       
       // Update backend with current step
       updateOnboardingMutation.mutate({ step: newIndex });

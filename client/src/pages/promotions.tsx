@@ -116,13 +116,13 @@ function formatPromoValue(promo: Promotion, fmt: (v: number) => string): string 
     case "percentage_discount":
       return `${promo.discountPercentage}% off`;
     case "fixed_price":
-      return `Now ${fmt(promo.fixedPrice)}`;
+      return `Now ${fmt(promo.fixedPrice ?? 0)}`;
     case "buy_x_get_y_free":
       return `Buy ${promo.buyQuantity} Get ${promo.getQuantity} Free`;
     case "bundle_deal":
-      return `${promo.minQuantity}+ at ${fmt(promo.fixedPrice)} each`;
+      return `${promo.minQuantity}+ at ${fmt(promo.fixedPrice ?? 0)} each`;
     case "clearance":
-      return `Clearance ${fmt(promo.fixedPrice)}`;
+      return `Clearance ${fmt(promo.fixedPrice ?? 0)}`;
     default:
       return "";
   }
@@ -182,7 +182,7 @@ export default function Promotions() {
       setForm({ ...emptyForm, productId: urlProductId });
       setIsDialogOpen(true);
     } else if (existingPromos.length === 1) {
-      openEdit(existingPromos[0]);
+      openEdit(existingPromos[0]!);
     }
     // 2+ promos: just show filtered list, no dialog
   }, [urlProductId, promosLoading, products.length, promotions.length, isViewer]);
@@ -265,8 +265,8 @@ export default function Promotions() {
       productId: String(promo.productId),
       name: promo.name,
       type: promo.type,
-      startDate: promo.startDate ? promo.startDate.split("T")[0] : "",
-      endDate: promo.endDate ? promo.endDate.split("T")[0] : "",
+      startDate: promo.startDate ? promo.startDate.split("T")[0]! : "",
+      endDate: promo.endDate ? promo.endDate.split("T")[0]! : "",
       discountPercentage: promo.discountPercentage != null ? String(promo.discountPercentage) : "",
       fixedPrice: promo.fixedPrice != null ? String(promo.fixedPrice) : "",
       buyQuantity: promo.buyQuantity != null ? String(promo.buyQuantity) : "",

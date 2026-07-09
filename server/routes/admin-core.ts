@@ -579,14 +579,14 @@ export function registerAdminCoreRoutes(app: Express): void {
   app.patch('/api/admin/wholesalers/:id/toggle-status', requireAuth, async (req: any, res) => {
     try {
       if (!ADMIN_EMAILS.includes(getAdminEmail(req) || "")) return res.status(403).json({ error: 'Forbidden' });
-      const targetUser = await db.select().from(users).where(eq(users.id, req.params.id)).limit(1);
-      if (!targetUser.length || targetUser[0].role !== 'wholesaler') {
+      const [targetUser] = await db.select().from(users).where(eq(users.id, req.params.id)).limit(1);
+      if (!targetUser || targetUser.role !== 'wholesaler') {
         return res.status(404).json({ error: 'Wholesaler not found' });
       }
-      const newArchived = !targetUser[0].archived;
+      const newArchived = !targetUser.archived;
       await db.update(users).set({ archived: newArchived }).where(eq(users.id, req.params.id));
-      const wholesalerEmail = targetUser[0].email;
-      const wholesalerName = targetUser[0].businessName || targetUser[0].email || 'Wholesaler';
+      const wholesalerEmail = targetUser.email;
+      const wholesalerName = targetUser.businessName || targetUser.email || 'Wholesaler';
       if (wholesalerEmail) {
         if (newArchived) {
           sendWholesalerSuspendedEmail({ wholesalerEmail, wholesalerName }).catch((err: any) =>
@@ -598,7 +598,7 @@ export function registerAdminCoreRoutes(app: Express): void {
           );
         }
       }
-      res.json({ id: req.params.id, archived: newArchived, businessName: targetUser[0].businessName });
+      res.json({ id: req.params.id, archived: newArchived, businessName: targetUser.businessName });
     } catch (error) {
       console.error('Admin toggle-status error:', error);
       res.status(500).json({ error: 'Failed to toggle status' });
@@ -609,14 +609,14 @@ export function registerAdminCoreRoutes(app: Express): void {
   app.patch('/api/admin/wholesalers/:id/toggle-test-account', requireAuth, async (req: any, res) => {
     try {
       if (!ADMIN_EMAILS.includes(getAdminEmail(req) || "")) return res.status(403).json({ error: 'Forbidden' });
-      const targetUser = await db.select().from(users).where(eq(users.id, req.params.id)).limit(1);
-      if (!targetUser.length || targetUser[0].role !== 'wholesaler') {
+      const [targetUser] = await db.select().from(users).where(eq(users.id, req.params.id)).limit(1);
+      if (!targetUser || targetUser.role !== 'wholesaler') {
         return res.status(404).json({ error: 'Wholesaler not found' });
       }
-      const newValue = !targetUser[0].isTestAccount;
+      const newValue = !targetUser.isTestAccount;
       await db.update(users).set({ isTestAccount: newValue }).where(eq(users.id, req.params.id));
-      console.log(`[admin] isTestAccount toggled to ${newValue} for ${targetUser[0].email}`);
-      res.json({ id: req.params.id, isTestAccount: newValue, businessName: targetUser[0].businessName });
+      console.log(`[admin] isTestAccount toggled to ${newValue} for ${targetUser.email}`);
+      res.json({ id: req.params.id, isTestAccount: newValue, businessName: targetUser.businessName });
     } catch (error) {
       console.error('Admin toggle-test-account error:', error);
       res.status(500).json({ error: 'Failed to toggle test account status' });
@@ -627,14 +627,14 @@ export function registerAdminCoreRoutes(app: Express): void {
   app.patch('/api/admin/wholesalers/:id/toggle-inactive', requireAuth, async (req: any, res) => {
     try {
       if (!ADMIN_EMAILS.includes(getAdminEmail(req) || "")) return res.status(403).json({ error: 'Forbidden' });
-      const targetUser = await db.select().from(users).where(eq(users.id, req.params.id)).limit(1);
-      if (!targetUser.length || targetUser[0].role !== 'wholesaler') {
+      const [targetUser] = await db.select().from(users).where(eq(users.id, req.params.id)).limit(1);
+      if (!targetUser || targetUser.role !== 'wholesaler') {
         return res.status(404).json({ error: 'Wholesaler not found' });
       }
-      const newValue = !targetUser[0].isInactive;
+      const newValue = !targetUser.isInactive;
       await db.update(users).set({ isInactive: newValue }).where(eq(users.id, req.params.id));
-      console.log(`[admin] isInactive toggled to ${newValue} for ${targetUser[0].email}`);
-      res.json({ id: req.params.id, isInactive: newValue, businessName: targetUser[0].businessName });
+      console.log(`[admin] isInactive toggled to ${newValue} for ${targetUser.email}`);
+      res.json({ id: req.params.id, isInactive: newValue, businessName: targetUser.businessName });
     } catch (error) {
       console.error('Admin toggle-inactive error:', error);
       res.status(500).json({ error: 'Failed to toggle inactive status' });
@@ -645,13 +645,13 @@ export function registerAdminCoreRoutes(app: Express): void {
   app.patch('/api/admin/wholesalers/:id/toggle-show-on-homepage', requireAuth, async (req: any, res) => {
     try {
       if (!ADMIN_EMAILS.includes(getAdminEmail(req) || "")) return res.status(403).json({ error: 'Forbidden' });
-      const targetUser = await db.select().from(users).where(eq(users.id, req.params.id)).limit(1);
-      if (!targetUser.length || targetUser[0].role !== 'wholesaler') {
+      const [targetUser] = await db.select().from(users).where(eq(users.id, req.params.id)).limit(1);
+      if (!targetUser || targetUser.role !== 'wholesaler') {
         return res.status(404).json({ error: 'Wholesaler not found' });
       }
-      const newValue = !targetUser[0].showOnHomepage;
+      const newValue = !targetUser.showOnHomepage;
       await db.update(users).set({ showOnHomepage: newValue }).where(eq(users.id, req.params.id));
-      console.log(`[admin] showOnHomepage toggled to ${newValue} for ${targetUser[0].email}`);
+      console.log(`[admin] showOnHomepage toggled to ${newValue} for ${targetUser.email}`);
       res.json({ id: req.params.id, showOnHomepage: newValue });
     } catch (error) {
       console.error('Admin toggle-show-on-homepage error:', error);
@@ -665,8 +665,8 @@ export function registerAdminCoreRoutes(app: Express): void {
       if (!ADMIN_EMAILS.includes(getAdminEmail(req) || "")) return res.status(403).json({ error: 'Forbidden' });
       const { verified, notes } = req.body as { verified: boolean; notes?: string };
       if (typeof verified !== 'boolean') return res.status(400).json({ error: 'verified (boolean) is required' });
-      const targetUser = await db.select().from(users).where(eq(users.id, req.params.id)).limit(1);
-      if (!targetUser.length || targetUser[0].role !== 'wholesaler') {
+      const [targetUser] = await db.select().from(users).where(eq(users.id, req.params.id)).limit(1);
+      if (!targetUser || targetUser.role !== 'wholesaler') {
         return res.status(404).json({ error: 'Wholesaler not found' });
       }
       const adminEmail = getAdminEmail(req) || req.user?.email || '';
@@ -676,7 +676,7 @@ export function registerAdminCoreRoutes(app: Express): void {
         verifiedBy: verified ? adminEmail : null,
         verificationNotes: verified ? (notes ?? null) : null,
       }).where(eq(users.id, req.params.id));
-      console.log(`[admin] isVerified set to ${verified} for ${targetUser[0].email} by ${adminEmail}`);
+      console.log(`[admin] isVerified set to ${verified} for ${targetUser.email} by ${adminEmail}`);
       const now = new Date();
       res.json({
         id: req.params.id,
@@ -1367,7 +1367,7 @@ export function registerAdminCoreRoutes(app: Express): void {
               .from(subscriptionAuditLogs)
               .where(
                 or(
-                  eq(subscriptionAuditLogs.stripeInvoiceId, invoiceId),
+                  invoiceId ? eq(subscriptionAuditLogs.stripeInvoiceId, invoiceId) : sql`1=0`,
                   and(
                     eq(subscriptionAuditLogs.stripeSubscriptionId, subId),
                     sql`${subscriptionAuditLogs.reason} LIKE ${`%${invoiceId}%`}`,
@@ -1396,7 +1396,7 @@ export function registerAdminCoreRoutes(app: Express): void {
             } catch {
               // Subscription may be deleted; fall back to invoice line items
               const lineItem = invoice.lines?.data?.[0];
-              const unitAmount = lineItem?.price?.unit_amount ?? 0;
+              const unitAmount = (lineItem as any)?.price?.unit_amount ?? 0;
               if (unitAmount >= 4999) planId = 'premium';
               else if (unitAmount >= 1999) planId = 'standard';
             }
@@ -1428,7 +1428,7 @@ export function registerAdminCoreRoutes(app: Express): void {
         // Update pagination state outside the inner invoice loop
         hasMore = invoices.has_more && invoices.data.length > 0;
         if (invoices.data.length > 0) {
-          startingAfter = invoices.data[invoices.data.length - 1].id;
+          startingAfter = invoices.data[invoices.data.length - 1]!.id;
         }
       }
 

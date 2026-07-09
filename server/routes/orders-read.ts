@@ -360,10 +360,10 @@ export function registerOrderReadRoutes(app: Express): void {
         }).from(orders).where(baseFilter),
       ]);
 
-      const totalOrders = totalCountResult[0].count;
+      const totalOrders = totalCountResult[0]!.count;
       const totalPages = Math.ceil(totalOrders / limit);
-      const { paidOrdersCount, pendingOrdersCount, totalRevenue } = tabStatsResult[0];
-      const { activeCount, archivedCount } = baseStatsResult[0];
+      const { paidOrdersCount, pendingOrdersCount, totalRevenue } = tabStatsResult[0]!;
+      const { activeCount, archivedCount } = baseStatsResult[0]!;
 
       // Fetch cancellation requests for this page's orders only
       const orderIds = ordersResult.map(o => o.id);

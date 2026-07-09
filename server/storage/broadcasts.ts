@@ -98,7 +98,7 @@ export class BroadcastStorage extends CustomerStorage {
 
   async createBroadcast(broadcast: InsertBroadcast): Promise<Broadcast> {
     const [newBroadcast] = await db.insert(broadcasts).values(broadcast as typeof broadcasts.$inferInsert).returning();
-    return newBroadcast;
+    return newBroadcast!;
   }
 
   async updateBroadcast(id: number, updates: Partial<InsertBroadcast>): Promise<Broadcast> {
@@ -108,7 +108,7 @@ export class BroadcastStorage extends CustomerStorage {
       .where(eq(broadcasts.id, id))
       .returning();
     
-    return updatedBroadcast;
+    return updatedBroadcast!;
   }
 
   async deleteBroadcast(id: number, wholesalerId: string): Promise<boolean> {
@@ -144,7 +144,7 @@ export class BroadcastStorage extends CustomerStorage {
       .where(eq(broadcasts.id, id))
       .returning();
 
-    return updatedBroadcast;
+    return updatedBroadcast!;
   }
 
   async getBroadcastStats(wholesalerId: string): Promise<{
@@ -282,13 +282,13 @@ export class BroadcastStorage extends CustomerStorage {
     if (products.length > 0) {
       const templateProductsData = products.map(p => ({
         ...p,
-        templateId: newTemplate.id
+        templateId: newTemplate!.id
       }));
       
       await db.insert(templateProducts).values(templateProductsData as (typeof templateProducts.$inferInsert)[]);
     }
 
-    return newTemplate;
+    return newTemplate!;
   }
 
   async updateMessageTemplate(id: number, template: Partial<InsertMessageTemplate>): Promise<MessageTemplate> {
@@ -298,7 +298,7 @@ export class BroadcastStorage extends CustomerStorage {
       .where(eq(messageTemplates.id, id))
       .returning();
     
-    return updatedTemplate;
+    return updatedTemplate!;
   }
 
   async deleteMessageTemplate(id: number, wholesalerId: string): Promise<boolean> {
@@ -330,7 +330,7 @@ export class BroadcastStorage extends CustomerStorage {
 
   async createTemplateProduct(templateProduct: InsertTemplateProduct): Promise<TemplateProduct> {
     const [newTemplateProduct] = await db.insert(templateProducts).values(templateProduct as typeof templateProducts.$inferInsert).returning();
-    return newTemplateProduct;
+    return newTemplateProduct!;
   }
 
   async createTemplateCampaign(campaign: InsertTemplateCampaign): Promise<TemplateCampaign> {
@@ -339,7 +339,7 @@ export class BroadcastStorage extends CustomerStorage {
       .values(campaign)
       .returning();
 
-    return newCampaign;
+    return newCampaign!;
   }
 
   async getTemplateCampaigns(wholesalerId: string): Promise<(TemplateCampaign & { 
@@ -367,7 +367,7 @@ export class BroadcastStorage extends CustomerStorage {
       .insert(stockUpdateNotifications)
       .values(notification)
       .returning();
-    return newNotification;
+    return newNotification!;
   }
 
   async getStockUpdateNotifications(wholesalerId: string): Promise<StockUpdateNotification[]> {
@@ -393,7 +393,7 @@ export class BroadcastStorage extends CustomerStorage {
       })
       .where(eq(stockUpdateNotifications.id, id))
       .returning();
-    return updated;
+    return updated!;
   }
 
   async checkForStockChanges(
@@ -471,7 +471,7 @@ export class BroadcastStorage extends CustomerStorage {
         .returning();
       
       console.log(`✅ Stock movement created successfully:`, stockMovement);
-      return stockMovement;
+      return stockMovement!;
     } catch (error) {
       console.error(`❌ CRITICAL: Stock movement creation failed:`, error);
       console.error(`❌ Movement data that failed:`, movement);
@@ -646,7 +646,7 @@ export class BroadcastStorage extends CustomerStorage {
         inviteToken: crypto.randomUUID(),
       })
       .returning();
-    return newMember;
+    return newMember!;
   }
 
   async updateTeamMember(id: number, updates: Partial<InsertTeamMember>): Promise<TeamMember> {
@@ -658,7 +658,7 @@ export class BroadcastStorage extends CustomerStorage {
       })
       .where(eq(teamMembers.id, id))
       .returning();
-    return updated;
+    return updated!;
   }
 
   async deleteTeamMember(id: number): Promise<void> {
@@ -680,13 +680,13 @@ export class BroadcastStorage extends CustomerStorage {
       .from(teamMembers)
       .where(eq(teamMembers.wholesalerId, wholesalerId));
     
-    return result.count || 0;
+    return result!.count || 0;
   }
 
   // Stock Alert operations
   async createStockAlert(alert: InsertStockAlert): Promise<StockAlert> {
     const [newAlert] = await db.insert(stockAlerts).values(alert).returning();
-    return newAlert;
+    return newAlert!;
   }
 
   async getUnresolvedStockAlerts(wholesalerId: string): Promise<(StockAlert & { product: Product })[]> {
@@ -910,7 +910,7 @@ export class BroadcastStorage extends CustomerStorage {
       .set(updates)
       .where(eq(teamMembers.id, id))
       .returning();
-    return member;
+    return member!;
   }
 
   async updateTeamMemberLastLogin(id: number): Promise<void> {
@@ -939,7 +939,7 @@ export class BroadcastStorage extends CustomerStorage {
       .select({ count: sql<number>`count(*)` })
       .from(teamMembers)
       .where(eq(teamMembers.wholesalerId, wholesalerId));
-    return result[0].count;
+    return result[0]!.count;
   }
 
 

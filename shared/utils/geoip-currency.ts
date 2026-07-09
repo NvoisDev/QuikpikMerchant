@@ -27,7 +27,6 @@ export const COUNTRY_TO_CURRENCY: Record<string, string> = {
   RO: 'RON',
   BG: 'BGN',
   RS: 'RSD',
-  HR: 'HRK',
   // Africa
   NG: 'NGN',
   ZA: 'ZAR', LS: 'ZAR', NA: 'ZAR', SZ: 'ZAR',

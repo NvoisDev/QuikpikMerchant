@@ -46,7 +46,7 @@ export async function generateProductDescription(productName: string, category?:
       temperature: 0.7,
     }, { signal: AbortSignal.timeout(25_000) });
 
-    const rawDescription = response.choices[0].message.content || "";
+    const rawDescription = response.choices[0]!.message.content || "";
     
     // Clean the description to ensure no formatting markers appear
     let cleanedDescription = cleanAIDescription(rawDescription);

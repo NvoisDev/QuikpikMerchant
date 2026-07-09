@@ -286,7 +286,7 @@ function MarketplaceSearch() {
           aria-hidden="true"
           className="absolute inset-0 w-full h-full object-cover"
           style={{ objectPosition: 'center 30%' }}
-          fetchpriority="high"
+          fetchPriority="high"
           decoding="async"
         />
       </picture>
@@ -649,7 +649,7 @@ export default function LandingPage() {
                         className="w-full h-full object-cover object-center"
                         width="448"
                         height="560"
-                        fetchpriority="high"
+                        fetchPriority="high"
                         decoding="async"
                       />
                     </picture>

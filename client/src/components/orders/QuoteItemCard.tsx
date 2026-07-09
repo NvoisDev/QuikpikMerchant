@@ -223,16 +223,16 @@ export function QuoteItemCard({
             onChange={(e) => {
               const val = e.target.value;
               if (val === '' || /^\d*\.?\d*$/.test(val)) {
-                setInputValues(prev => ({ ...prev, [sk]: { ...prev[sk], price: val } }));
+                setInputValues(prev => ({ ...prev, [sk]: { ...prev[sk]!, price: val } }));
               }
             }}
             onBlur={(e) => {
               const val = parseFloat(e.target.value);
               if (!isNaN(val) && val >= 0) {
                 updateItemPrice(index, val);
-                setInputValues(prev => ({ ...prev, [sk]: { ...prev[sk], price: val.toString() } }));
+                setInputValues(prev => ({ ...prev, [sk]: { ...prev[sk]!, price: val.toString() } }));
               } else {
-                setInputValues(prev => ({ ...prev, [sk]: { ...prev[sk], price: item.customPrice.toString() } }));
+                setInputValues(prev => ({ ...prev, [sk]: { ...prev[sk]!, price: item.customPrice.toString() } }));
               }
             }}
             className={`h-8 ${item.customPrice <= 0 ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
@@ -275,7 +275,7 @@ export function QuoteItemCard({
               onChange={(e) => {
                 const val = e.target.value;
                 if (val === '' || /^\d*$/.test(val)) {
-                  setInputValues(prev => ({ ...prev, [sk]: { ...prev[sk], qty: val } }));
+                  setInputValues(prev => ({ ...prev, [sk]: { ...prev[sk]!, qty: val } }));
                 }
               }}
               onBlur={(e) => {
@@ -283,11 +283,11 @@ export function QuoteItemCard({
                 if (!isNaN(val) && val >= 1) {
                   const baseUnits = computeBaseUnits(val, isPacks ? 'packs' : 'units', qip);
                   updateItemQuantity(index, baseUnits);
-                  setInputValues(prev => ({ ...prev, [sk]: { ...prev[sk], qty: val.toString() } }));
+                  setInputValues(prev => ({ ...prev, [sk]: { ...prev[sk]!, qty: val.toString() } }));
                 } else {
                   const defaultBase = computeBaseUnits(1, isPacks ? 'packs' : 'units', qip);
                   updateItemQuantity(index, defaultBase);
-                  setInputValues(prev => ({ ...prev, [sk]: { ...prev[sk], qty: '1' } }));
+                  setInputValues(prev => ({ ...prev, [sk]: { ...prev[sk]!, qty: '1' } }));
                 }
               }}
               className={`h-8 ${item.quantity < 1 || palletMoqViolation ? 'border-red-500 focus-visible:ring-red-500' : ''}`}

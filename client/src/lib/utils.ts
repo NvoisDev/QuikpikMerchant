@@ -14,6 +14,6 @@ export function formatNumberWithDecimals(value: number | string, decimals: numbe
   if (isNaN(num)) return '0.00';
   const fixed = num.toFixed(decimals);
   const [intPart, decPart] = fixed.split('.');
-  const formattedInt = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  const formattedInt = intPart!.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
   return decPart !== undefined ? `${formattedInt}.${decPart}` : formattedInt;
 }

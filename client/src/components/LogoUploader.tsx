@@ -60,7 +60,7 @@ export function LogoUploader({ onUploadComplete, currentLogoUrl }: LogoUploaderP
         base64Reader.onload = () => {
           const result = base64Reader.result as string;
           // Remove the data URL prefix to get just the base64 data
-          const base64Data = result.split(',')[1];
+          const base64Data = result.split(',')[1]!;
           resolve(base64Data);
         };
         base64Reader.onerror = reject;
@@ -136,7 +136,7 @@ export function LogoUploader({ onUploadComplete, currentLogoUrl }: LogoUploaderP
 
   const handleFileSelect = (files: FileList | null) => {
     if (files && files.length > 0) {
-      handleFileUpload(files[0]);
+      handleFileUpload(files[0]!);
     }
   };
 

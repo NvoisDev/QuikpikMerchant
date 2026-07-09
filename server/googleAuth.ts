@@ -474,7 +474,7 @@ export async function authenticateSession(req: any): Promise<{
       };
     }
 
-    const sessionData = JSON.parse(sessionResult[0].sess as string);
+    const sessionData = JSON.parse(sessionResult[0]!.sess as string);
     
     // Check if we have passport user data
     if (!sessionData.passport?.user) {
@@ -523,7 +523,7 @@ function extractSessionIdFromCookies(cookieString?: string): string | null {
   const sessionMatch = cookieString.match(/connect\.sid=s%3A([^;]+)/);
   if (sessionMatch && sessionMatch[1]) {
     // Decode the session ID (it's URL encoded)
-    return decodeURIComponent(sessionMatch[1]).split('.')[0];
+    return decodeURIComponent(sessionMatch[1]).split('.')[0]!;
   }
   
   return null;

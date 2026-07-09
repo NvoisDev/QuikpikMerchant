@@ -172,14 +172,14 @@ export function buildEndEmailHtml(
 
 function buildStartSMS(products: PromoProduct[], wholesaler: WholesalerInfo, storeUrl: string): string {
   if (products.length === 1) {
-    return `${wholesaler.businessName}: ${products[0].name} is now on sale! Shop now: ${storeUrl}`;
+    return `${wholesaler.businessName}: ${products[0]!.name} is now on sale! Shop now: ${storeUrl}`;
   }
   return `${wholesaler.businessName}: ${products.length} products just went on sale! Shop now: ${storeUrl}`;
 }
 
 function buildEndSMS(products: PromoProduct[], wholesaler: WholesalerInfo, storeUrl: string): string {
   if (products.length === 1) {
-    return `${wholesaler.businessName}: Last chance — ${products[0].name} deal ends today! Shop: ${storeUrl}`;
+    return `${wholesaler.businessName}: Last chance — ${products[0]!.name} deal ends today! Shop: ${storeUrl}`;
   }
   return `${wholesaler.businessName}: Last chance — ${products.length} deals end today! Shop: ${storeUrl}`;
 }
@@ -206,20 +206,20 @@ async function getWholesalerInfo(wholesalerId: string): Promise<WholesalerInfo |
   const u = rows[0];
 
   const resolvedLogoUrl =
-    u.logoType === "custom"
+    u!.logoType === "custom"
       ? `https://quikpik.app/api/logo/${wholesalerId}`
-      : u.logoUrl?.startsWith("http")
-      ? u.logoUrl
+      : u!.logoUrl?.startsWith("http")
+      ? u!.logoUrl
       : null;
 
   return {
     id: wholesalerId,
-    businessName: u.businessName || `${u.firstName || ""} ${u.lastName || ""}`.trim() || wholesalerId,
-    email: u.email,
-    phoneNumber: u.phoneNumber,
+    businessName: u!.businessName || `${u!.firstName || ""} ${u!.lastName || ""}`.trim() || wholesalerId,
+    email: u!.email,
+    phoneNumber: u!.phoneNumber,
     logoUrl: resolvedLogoUrl,
-    preferredCurrency: u.preferredCurrency,
-    defaultCurrency: u.defaultCurrency,
+    preferredCurrency: u!.preferredCurrency,
+    defaultCurrency: u!.defaultCurrency,
   };
 }
 
@@ -236,7 +236,7 @@ async function markPromotionNotified(
 
   if (rows.length === 0) return;
 
-  const offers: PromotionalOffer[] = (rows[0].promotionalOffers as PromotionalOffer[]) || [];
+  const offers: PromotionalOffer[] = (rows[0]!.promotionalOffers as PromotionalOffer[]) || [];
   const updated = offers.map((o) =>
     o.id === promoId ? { ...o, [field]: new Date().toISOString() } : o
   );

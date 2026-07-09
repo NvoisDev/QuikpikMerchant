@@ -108,8 +108,8 @@ export function FinancialsSection({ wholesalers, isAdmin }: { wholesalers: Whole
     }
     for (const w of wholesalers) {
       if (map[w.id]) {
-        map[w.id].tier = w.subscriptionTier || "free";
-        map[w.id].subRevenue = subRevenueByWholesaler[w.id] ?? 0;
+        map[w.id]!.tier = w.subscriptionTier || "free";
+        map[w.id]!.subRevenue = subRevenueByWholesaler[w.id] ?? 0;
       }
     }
     return Object.values(map).sort((a, b) => b.total - a.total);

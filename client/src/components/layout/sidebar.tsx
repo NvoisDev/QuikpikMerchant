@@ -157,7 +157,7 @@ export default function Sidebar() {
   const planTier = getBaseTier((subscriptionData as { user?: { currentPlan?: string } } | undefined)?.user?.currentPlan);
   const isPremiumUser = planTier === "premium";
   const isStandardUser = planTier === "standard";
-  const isFreeUser = planTier === "free";
+  const isFreeUser = planTier === "listing";
   const isListingTier = planTier === "listing";
 
   // collapsed = icon-rail only (desktop); "dc" is shorthand below

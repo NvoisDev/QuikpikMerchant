@@ -501,7 +501,7 @@ export function registerQuoteRoutes(app: Express): void {
           if (!item.productId) {
             const chargeLabel = item.customLabel?.trim() || 'Charge';
             await trx.insert(orderItems).values({
-              orderId: quoteOrderRow.id,
+              orderId: quoteOrderRow!.id,
               productId: null,
               quantity: item.quantity,
               unitPrice: item.customPrice.toFixed(2),
@@ -569,7 +569,7 @@ export function registerQuoteRoutes(app: Express): void {
 
               // Insert order item with primary batch ID
               await trx.insert(orderItems).values({
-                orderId: quoteOrderRow.id,
+                orderId: quoteOrderRow!.id,
                 productId: item.productId,
                 quantity: item.quantity,
                 unitPrice: item.customPrice.toFixed(2),
@@ -633,7 +633,7 @@ export function registerQuoteRoutes(app: Express): void {
               const { newUnitStock, newPalletStock } = orderResult;
 
               await trx.insert(orderItems).values({
-                orderId: quoteOrderRow.id,
+                orderId: quoteOrderRow!.id,
                 productId: item.productId,
                 quantity: item.quantity,
                 unitPrice: item.customPrice.toFixed(2),
@@ -690,7 +690,7 @@ export function registerQuoteRoutes(app: Express): void {
                 or(isNull(productBatches.expiryDate), sql`${productBatches.expiryDate} >= ${today}`)));
             const newUnitStockP = parseInt(String(batchSumRowP?.total ?? 0), 10);
             const newPalletStockP = (qipP > 0 && uppP > 0) ? Math.floor(Math.floor(newUnitStockP / qipP) / uppP) : 0;
-            await trx.insert(orderItems).values({ orderId: quoteOrderRow.id, productId: item.productId, quantity: item.quantity, unitPrice: item.customPrice.toFixed(2), total: (item.customPrice * item.quantity).toFixed(2), sellingType, batchId: primaryBatchIdP });
+            await trx.insert(orderItems).values({ orderId: quoteOrderRow!.id, productId: item.productId, quantity: item.quantity, unitPrice: item.customPrice.toFixed(2), total: (item.customPrice * item.quantity).toFixed(2), sellingType, batchId: primaryBatchIdP });
             await trx.update(products).set({ stock: newUnitStockP, palletStock: newPalletStockP, updatedAt: new Date() }).where(eq(products.id, item.productId));
             const cskey3 = `${item.productId}_units`;
             const csum3 = createPurchaseSummary.get(cskey3);
@@ -704,7 +704,7 @@ export function registerQuoteRoutes(app: Express): void {
           const stockBefore = stockBeforeCreate.get(psProductId)?.units ?? 0;
           const [productNow] = await trx.select({ stock: products.stock }).from(products).where(eq(products.id, psProductId)).limit(1);
           const stockAfter = productNow?.stock ?? 0;
-          await trx.insert(stockMovements).values({ productId: psProductId, wholesalerId, movementType: 'purchase', quantity: -psQty, unitType: 'units', stockBefore, stockAfter, reason: `Invoice order sale — ${psQty} units`, orderId: quoteOrderRow.id, customerName: quoteOrderRow.customerName ?? null, businessProfileId: quoteOrderRow.businessProfileId ?? null, batchId: psBid });
+          await trx.insert(stockMovements).values({ productId: psProductId, wholesalerId, movementType: 'purchase', quantity: -psQty, unitType: 'units', stockBefore, stockAfter, reason: `Invoice order sale — ${psQty} units`, orderId: quoteOrderRow!.id, customerName: quoteOrderRow!.customerName ?? null, businessProfileId: quoteOrderRow!.businessProfileId ?? null, batchId: psBid });
         }
 
         // Propagate any manually-set line prices to the chosen scope ('customer' →
@@ -727,9 +727,9 @@ export function registerQuoteRoutes(app: Express): void {
         await applyPriceScopePropagation(trx, {
           wholesalerId,
           customerId,
-          customerName: quoteOrderRow.customerName,
+          customerName: quoteOrderRow!.customerName,
           lines: Object.values(propagationLines),
-          orderId: quoteOrderRow.id,
+          orderId: quoteOrderRow!.id,
         });
         return quoteOrderRow;
       });
@@ -776,7 +776,7 @@ export function registerQuoteRoutes(app: Express): void {
 
           // Check if customer has previous orders with this wholesaler
           const previousOrders = await db.select({ id: orders.id }).from(orders)
-            .where(and(eq(orders.retailerId, customerId), eq(orders.wholesalerId, wholesalerId), ne(orders.id, quoteOrder.id)))
+            .where(and(eq(orders.retailerId, customerId), eq(orders.wholesalerId, wholesalerId), ne(orders.id, quoteOrder!.id)))
             .limit(1);
           const isReturning = previousOrders.length > 0;
 
@@ -804,8 +804,8 @@ export function registerQuoteRoutes(app: Express): void {
               : 'http://localhost:5000');
 
           const quoteOrderMetadata = {
-            orderId: quoteOrder.id.toString(),
-            orderNumber: quoteOrder.orderNumber,
+            orderId: quoteOrder!.id.toString(),
+            orderNumber: quoteOrder!.orderNumber,
             wholesalerId,
             customerId,
             isQuote: 'true',
@@ -819,7 +819,7 @@ export function registerQuoteRoutes(app: Express): void {
             payment_method_types: ['card'],
             line_items: lineItems,
             mode: 'payment',
-            success_url: `${quoteBaseUrl}/customer/payment-success?order=${quoteOrder.orderNumber}&wholesaler=${wholesalerId}${isReturning ? '&returning=true' : ''}${(quoteOrder.status === 'fulfilled' || quoteOrder.status === 'ready_to_collect') ? '&fulfilled=true' : ''}`,
+            success_url: `${quoteBaseUrl}/customer/payment-success?order=${quoteOrder!.orderNumber}&wholesaler=${wholesalerId}${isReturning ? '&returning=true' : ''}${(quoteOrder!.status === 'fulfilled' || quoteOrder!.status === 'ready_to_collect') ? '&fulfilled=true' : ''}`,
             cancel_url: `${quoteBaseUrl}/store/${wholesalerId}`,
             metadata: quoteOrderMetadata,
             payment_intent_data: {
@@ -856,7 +856,7 @@ export function registerQuoteRoutes(app: Express): void {
           paymentLinkUrl = session.url || '';
           paymentLinkId = session.id;
 
-          const expiryDays = (validDepositPercentage < 100 || (quoteOrder.balanceDueDays || 0) > 0) ? Math.min((quoteOrder.balanceDueDays || 0) + 3, 30) : 1;
+          const expiryDays = (validDepositPercentage < 100 || (quoteOrder!.balanceDueDays || 0) > 0) ? Math.min((quoteOrder!.balanceDueDays || 0) + 3, 30) : 1;
           // Update order with payment link
           await db.update(orders)
             .set({
@@ -864,7 +864,7 @@ export function registerQuoteRoutes(app: Express): void {
               stripePaymentLinkUrl: paymentLinkUrl,
               quoteExpiresAt: new Date(Date.now() + expiryDays * 24 * 60 * 60 * 1000),
             })
-            .where(eq(orders.id, quoteOrder.id));
+            .where(eq(orders.id, quoteOrder!.id));
 
         } catch (stripeError: any) {
           console.error(`❌ Stripe error creating quote payment link — type: ${stripeError.type}, code: ${stripeError.code}, message: ${stripeError.message}`);
@@ -902,7 +902,7 @@ export function registerQuoteRoutes(app: Express): void {
         }
         
         // Calculate balance due date for deposit orders - use persisted order value for consistency
-        const orderBalanceDueDays = quoteOrder.balanceDueDays || 0;
+        const orderBalanceDueDays = quoteOrder!.balanceDueDays || 0;
         let balanceDueText = '';
         if (isDeposit && orderBalanceDueDays > 0) {
           const dueDate = new Date();
@@ -953,7 +953,7 @@ export function registerQuoteRoutes(app: Express): void {
           // Update quote sent timestamp
           await db.update(orders)
             .set({ quoteSentAt: new Date() })
-            .where(eq(orders.id, quoteOrder.id));
+            .where(eq(orders.id, quoteOrder!.id));
         } catch (smsError) {
           console.error('❌ Failed to send quote WhatsApp:', smsError);
         }
@@ -1054,7 +1054,7 @@ export function registerQuoteRoutes(app: Express): void {
 
           await db.update(orders)
             .set({ quoteSentAt: new Date() })
-            .where(eq(orders.id, quoteOrder.id));
+            .where(eq(orders.id, quoteOrder!.id));
         } catch (customerEmailError: any) {
           console.error('⚠️ Failed to send customer invoice email (offline payment):', customerEmailError?.message);
         }
@@ -1065,13 +1065,13 @@ export function registerQuoteRoutes(app: Express): void {
         try {
           const businessName = wholesaler.businessName || `${wholesaler.firstName}'s Store`;
           const customerGreeting = customer.firstName || customer.businessName || 'there';
-          const smsBody = `Hi ${customerGreeting}! ${businessName} has raised an invoice for you. Total: ${sym}${total.toFixed(2)}. Order ref: ${quoteOrder.orderNumber}. Please check your email for full details.`;
+          const smsBody = `Hi ${customerGreeting}! ${businessName} has raised an invoice for you. Total: ${sym}${total.toFixed(2)}. Order ref: ${quoteOrder!.orderNumber}. Please check your email for full details.`;
           const result = await ReliableSMSService.sendMarketingSMS(customer.phoneNumber, smsBody);
           if (!result.success) {
-            console.warn(`⚠️ Invoice SMS notification failed [orderId=${quoteOrder.id}]: ${result.error}`);
+            console.warn(`⚠️ Invoice SMS notification failed [orderId=${quoteOrder!.id}]: ${result.error}`);
           }
         } catch (smsError: any) {
-          console.warn(`⚠️ Invoice SMS notification error [orderId=${quoteOrder.id}]:`, smsError?.message);
+          console.warn(`⚠️ Invoice SMS notification error [orderId=${quoteOrder!.id}]:`, smsError?.message);
         }
       }
 
@@ -1097,8 +1097,8 @@ export function registerQuoteRoutes(app: Express): void {
               // Prefer stored total package weight (accurate for a whole pack).
               // Fall back to per-unit weight × quantityInPack when only unit weight is stored.
               const packQty = product?.quantityInPack ?? 1;
-              const unitWeight = parseFloat(product?.weightKg || product?.weight_kg || '0');
-              const packWeight = parseFloat(product?.packWeightKg || product?.pack_weight_kg || '0');
+              const unitWeight = parseFloat((product as any)?.weightKg || (product as any)?.weight_kg || '0');
+              const packWeight = parseFloat((product as any)?.packWeightKg || (product as any)?.pack_weight_kg || '0');
               unitWeightKg = packWeight > 0 ? packWeight : unitWeight * packQty;
             }
             wholesalerTotalWeightKg += unitWeightKg * item.quantity;
@@ -1161,7 +1161,7 @@ export function registerQuoteRoutes(app: Express): void {
 
       // Log quote_created activity (non-blocking)
       logQuoteActivity({
-        quoteId: quoteOrder.id,
+        quoteId: quoteOrder!.id,
         actionType: 'quote_created',
         entityType: 'quote',
         newValue: {
@@ -1169,16 +1169,16 @@ export function registerQuoteRoutes(app: Express): void {
           customerId,
           total: total.toFixed(2),
           depositPercentage: validDepositPercentage,
-          paymentMethod: quoteOrder.paymentMethod,
+          paymentMethod: quoteOrder!.paymentMethod,
           sendVia,
         },
-        description: `Invoice ${orderNumber} created for ${quoteOrder.customerName} — £${fmtGBP(total)}${validDepositPercentage < 100 ? ` (${validDepositPercentage}% deposit)` : ''}`,
+        description: `Invoice ${orderNumber} created for ${quoteOrder!.customerName} — £${fmtGBP(total)}${validDepositPercentage < 100 ? ` (${validDepositPercentage}% deposit)` : ''}`,
         performedBy: req.user.id,
       });
 
       res.json({
         success: true,
-        orderId: quoteOrder.id,
+        orderId: quoteOrder!.id,
         orderNumber,
         paymentLink: paymentLinkUrl,
         total: total.toFixed(2),
@@ -1198,8 +1198,8 @@ export function registerQuoteRoutes(app: Express): void {
           error: msg,
           errorType: 'OUT_OF_STOCK',
           productName: stockErr.productName,
-          requested: stockErr.requested ?? (reqMatch ? parseInt(reqMatch[1]) : undefined),
-          available: stockErr.available ?? (availMatch ? parseInt(availMatch[1]) : undefined),
+          requested: stockErr.requested ?? (reqMatch ? parseInt(reqMatch[1]!) : undefined),
+          available: stockErr.available ?? (availMatch ? parseInt(availMatch[1]!) : undefined),
         });
       }
       res.status(500).json({ error: 'Failed to create invoice' });
@@ -1327,9 +1327,9 @@ export function registerQuoteRoutes(app: Express): void {
           restoredStockMap[item.productId] = { units: product.stock || 0, pallets: product.palletStock || 0 };
         }
         if (sellingType === 'pallets') {
-          restoredStockMap[item.productId].pallets += item.quantity;
+          restoredStockMap[item.productId]!.pallets += item.quantity;
         } else {
-          restoredStockMap[item.productId].units += item.quantity;
+          restoredStockMap[item.productId]!.units += item.quantity;
         }
       }
 
@@ -1350,26 +1350,26 @@ export function registerQuoteRoutes(app: Express): void {
       for (const key of Object.keys(newItemMap)) {
         const newItem = newItemMap[key];
         const [productForCheck] = await db.select().from(products)
-          .where(and(eq(products.id, newItem.productId), eq(products.wholesalerId, wholesalerId)));
+          .where(and(eq(products.id, newItem!.productId), eq(products.wholesalerId, wholesalerId)));
         if (!productForCheck) {
           return res.status(400).json({ error: 'One or more products not found', errorType: 'PRODUCT_NOT_FOUND' });
         }
         // Use post-restore stock level for validation
-        const postRestoreStock = restoredStockMap[newItem.productId] || { units: productForCheck.stock || 0, pallets: productForCheck.palletStock || 0 };
-        if (newItem.sellingType === 'units') {
+        const postRestoreStock = restoredStockMap[newItem!.productId] || { units: productForCheck.stock || 0, pallets: productForCheck.palletStock || 0 };
+        if (newItem!.sellingType === 'units') {
           const available = postRestoreStock.units;
-          if (available < newItem.quantity) {
+          if (available < newItem!.quantity) {
             return res.status(400).json({
-              error: `"${productForCheck.name}" has insufficient stock. ${available} units available, ${newItem.quantity} requested.`,
-              errorType: 'OUT_OF_STOCK', productName: productForCheck.name, available, requested: newItem.quantity,
+              error: `"${productForCheck.name}" has insufficient stock. ${available} units available, ${newItem!.quantity} requested.`,
+              errorType: 'OUT_OF_STOCK', productName: productForCheck.name, available, requested: newItem!.quantity,
             });
           }
-        } else if (newItem.sellingType === 'pallets') {
+        } else if (newItem!.sellingType === 'pallets') {
           const available = postRestoreStock.pallets;
-          if (available < newItem.quantity) {
+          if (available < newItem!.quantity) {
             return res.status(400).json({
-              error: `"${productForCheck.name}" has insufficient pallet stock. ${available} pallets available, ${newItem.quantity} requested.`,
-              errorType: 'OUT_OF_STOCK', productName: productForCheck.name, available, requested: newItem.quantity,
+              error: `"${productForCheck.name}" has insufficient pallet stock. ${available} pallets available, ${newItem!.quantity} requested.`,
+              errorType: 'OUT_OF_STOCK', productName: productForCheck.name, available, requested: newItem!.quantity,
             });
           }
         }
@@ -1803,7 +1803,7 @@ export function registerQuoteRoutes(app: Express): void {
           // Resolve product names for human-readable log entries
           const allProductIds = Array.from(new Set([
             ...existingItems.map(i => i.productId).filter((id): id is number => id !== null),
-            ...items.map(i => i.productId),
+            ...items.map(i => i.productId).filter((id): id is number => id !== null),
           ]));
           const productRows = allProductIds.length > 0
             ? await db.select({ id: products.id, name: products.name }).from(products).where(inArray(products.id, allProductIds))
@@ -1862,7 +1862,7 @@ export function registerQuoteRoutes(app: Express): void {
                 entityType: 'product',
                 entityId: String(newItem.productId),
                 newValue: { quantity: newItem.quantity, unitPrice: newItem.customPrice, sellingType: sellingTypeNew },
-                description: `${pName(newItem.productId)} added — ${newItem.quantity} ${sellingTypeNew} @ £${fmtGBP(newItem.customPrice)}`,
+                description: `${pName(newItem.productId ?? 0)} added — ${newItem.quantity} ${sellingTypeNew} @ £${fmtGBP(newItem.customPrice)}`,
                 performedBy: req.user.id,
               });
             } else {
@@ -1874,7 +1874,7 @@ export function registerQuoteRoutes(app: Express): void {
                   entityId: String(newItem.productId),
                   oldValue: { quantity: inOld.quantity },
                   newValue: { quantity: newItem.quantity },
-                  description: `${pName(newItem.productId)} quantity changed: ${inOld.quantity} → ${newItem.quantity} ${sellingTypeNew}`,
+                  description: `${pName(newItem.productId ?? 0)} quantity changed: ${inOld.quantity} → ${newItem.quantity} ${sellingTypeNew}`,
                   performedBy: req.user.id,
                 });
               }
@@ -1894,7 +1894,7 @@ export function registerQuoteRoutes(app: Express): void {
                   entityId: String(newItem.productId),
                   oldValue: { unitPrice: inOld.unitPrice },
                   newValue: { unitPrice: newItem.customPrice, priceScope: lineScope },
-                  description: `${pName(newItem.productId)} price changed${scopeNote}: £${fmtGBP(parseFloat(inOld.unitPrice || '0'))} → £${fmtGBP(newItem.customPrice)}`,
+                  description: `${pName(newItem.productId ?? 0)} price changed${scopeNote}: £${fmtGBP(parseFloat(inOld.unitPrice || '0'))} → £${fmtGBP(newItem.customPrice)}`,
                   performedBy: req.user.id,
                 });
               }

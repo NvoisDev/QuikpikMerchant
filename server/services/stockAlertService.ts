@@ -119,7 +119,7 @@ export class StockAlertService {
         const wData = wholesaler[0];
         wholesalerDataMap.set(product.wholesalerId, wData);
 
-        const prefs: NotificationPrefs = (wData.notificationPreferences as NotificationPrefs) || {};
+        const prefs: NotificationPrefs = (wData!.notificationPreferences as NotificationPrefs) || {};
         wholesalerPrefs.set(product.wholesalerId, prefs);
 
         const frequency: StockAlertFrequency = prefs.stockAlertFrequency || 'daily';
@@ -143,9 +143,9 @@ export class StockAlertService {
         );
 
         const threshold = Math.max(product.moq || 1, product.lowStockThreshold || 50);
-        const logoUrl = wData.logoType === 'custom' && wData.logoUrl
+        const logoUrl = wData!.logoType === 'custom' && wData!.logoUrl
           ? `https://quikpik.app/api/logo/${product.wholesalerId}`
-          : (wData.logoUrl?.startsWith('http') ? wData.logoUrl : undefined);
+          : (wData!.logoUrl?.startsWith('http') ? wData!.logoUrl : undefined);
 
         const alert: StockAlert = {
           productId: product.id,
@@ -153,9 +153,9 @@ export class StockAlertService {
           currentStock: product.stock || 0,
           minimumThreshold: threshold,
           wholesalerId: product.wholesalerId,
-          wholesalerName: wData.businessName || `${wData.firstName || ''} ${wData.lastName || ''}`.trim(),
-          wholesalerEmail: wData.email || undefined,
-          wholesalerPhone: wData.phoneNumber || undefined,
+          wholesalerName: wData!.businessName || `${wData!.firstName || ''} ${wData!.lastName || ''}`.trim(),
+          wholesalerEmail: wData!.email || undefined,
+          wholesalerPhone: wData!.phoneNumber || undefined,
           wholesalerLogoUrl: logoUrl,
           suggestedReorderQuantity
         };
@@ -226,8 +226,8 @@ export class StockAlertService {
     const doEmail = channel === 'email' || channel === 'both';
     const doSms = channel === 'sms' || channel === 'both';
     await Promise.allSettled([
-      doEmail ? this.sendEmailAlert(wholesaler, messages.email) : Promise.resolve(),
-      doSms ? this.sendWhatsAppAlert(wholesaler, messages.whatsapp) : Promise.resolve(),
+      doEmail ? this.sendEmailAlert(wholesaler!, messages.email) : Promise.resolve(),
+      doSms ? this.sendWhatsAppAlert(wholesaler!, messages.whatsapp) : Promise.resolve(),
     ]);
   }
 
@@ -262,11 +262,11 @@ export class StockAlertService {
 
         // Whether the member has an explicit (non-inherit) frequency preference
         const memberHasExplicitFrequency =
-          !!memberPrefs.stockAlertFrequency && memberPrefs.stockAlertFrequency !== 'inherit';
+          !!memberPrefs.stockAlertFrequency && (memberPrefs.stockAlertFrequency as string) !== 'inherit';
 
         // Resolve effective channel and frequency — fall back to owner's setting when 'inherit' or unset
         const memberChannel: StockAlertChannel =
-          (memberPrefs.stockAlertChannel && memberPrefs.stockAlertChannel !== 'inherit')
+          (memberPrefs.stockAlertChannel && (memberPrefs.stockAlertChannel as string) !== 'inherit')
             ? memberPrefs.stockAlertChannel as StockAlertChannel
             : ownerChannel;
 
@@ -313,11 +313,11 @@ export class StockAlertService {
 
         let memberNotificationSent = false;
         if (doEmail && member.email) {
-          await this.sendEmailAlert({ ...wholesaler, wholesalerEmail: member.email }, messages.email);
+          await this.sendEmailAlert({ ...wholesaler!, wholesalerEmail: member.email }, messages.email);
           memberNotificationSent = true;
         }
         if (doSms && member.phoneNumber) {
-          await this.sendWhatsAppAlert({ ...wholesaler, wholesalerPhone: member.phoneNumber }, messages.whatsapp);
+          await this.sendWhatsAppAlert({ ...wholesaler!, wholesalerPhone: member.phoneNumber }, messages.whatsapp);
           memberNotificationSent = true;
         }
 
@@ -371,7 +371,7 @@ export class StockAlertService {
     body += emailCard(`${emailHeading('Quick Actions', { size: '16px' })}<ul style="margin:0;padding-left:20px"><li style="margin-bottom:6px">Log into your dashboard to place reorders immediately</li><li style="margin-bottom:6px">Contact your suppliers to ensure timely delivery</li><li>Consider adjusting minimum stock thresholds for better planning</li></ul>`);
     body += emailButton('View Dashboard', 'https://quikpik.app/login');
 
-    return wrapCustomerEmail(body, { businessName: wholesaler.wholesalerName, logoUrl: wholesaler.wholesalerLogoUrl }, { preheader: `${alerts.length} products need restocking` });
+    return wrapCustomerEmail(body, { businessName: wholesaler!.wholesalerName, logoUrl: wholesaler!.wholesalerLogoUrl }, { preheader: `${alerts.length} products need restocking` });
   }
 
   private async sendEmailAlert(wholesaler: StockAlert, emailContent: { subject: string; body: string }): Promise<void> {

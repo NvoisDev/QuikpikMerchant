@@ -689,15 +689,15 @@ export function registerPaymentConnectRoutes(app: Express): void {
 
           if (matchingOrders.length > 0) {
             const order = matchingOrders[0];
-            if (!order.refundedAt) {
+            if (!order!.refundedAt) {
               await db.update(orders)
                 .set({
                   refundedAt: new Date(),
-                  notes: order.notes
-                    ? `${order.notes}\n[${new Date().toISOString()}] Stripe refund confirmed: ${refund.id}`
+                  notes: order!.notes
+                    ? `${order!.notes}\n[${new Date().toISOString()}] Stripe refund confirmed: ${refund.id}`
                     : `[${new Date().toISOString()}] Stripe refund confirmed: ${refund.id}`
                 })
-                .where(eq(orders.id, order.id));
+                .where(eq(orders.id, order!.id));
             }
           }
         }

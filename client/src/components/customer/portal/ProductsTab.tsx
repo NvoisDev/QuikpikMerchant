@@ -612,9 +612,9 @@ export function ProductsTab({
                         return (
                           <div
                             className="relative w-full h-full"
-                            onTouchStart={(e) => { carouselTouchStartX.current = e.touches[0].clientX; }}
+                            onTouchStart={(e) => { carouselTouchStartX.current = e.touches[0]!.clientX; }}
                             onTouchEnd={(e) => {
-                              const diff = carouselTouchStartX.current - e.changedTouches[0].clientX;
+                              const diff = carouselTouchStartX.current - e.changedTouches[0]!.clientX;
                               if (Math.abs(diff) >= 40) {
                                 setProductImageIndexes(prev => ({
                                   ...prev,
@@ -881,7 +881,7 @@ export function ProductsTab({
                                   onFocus={() => { setActiveQuantityInput(product.id); setShowQuantityHints(prev => ({...prev, [product.id]: true})); }}
                                   onBlur={() => {
                                     const v = quantityInputValues[product.id];
-                                    const p = parseInt(v) || 0;
+                                    const p = parseInt(v!) || 0;
                                     if (p === 0) {
                                       setCart(cart.filter(item => !(item.product.id === product.id && item.sellingType === 'units')));
                                     } else {
@@ -951,7 +951,7 @@ export function ProductsTab({
                                 onChange={(e) => { setQuantityInputValues(prev => ({...prev, [`${product.id}_pal`]: e.target.value})); }}
                                 onBlur={() => {
                                   const v = quantityInputValues[`${product.id}_pal`];
-                                  const p = parseInt(v) || 0;
+                                  const p = parseInt(v!) || 0;
                                   const palMoq = product.palletMoq || 1;
                                   if (p === 0) {
                                     setCart(cart.filter(item => !(item.product.id === product.id && item.sellingType === 'pallets')));
@@ -1072,9 +1072,9 @@ export function ProductsTab({
                           return (
                             <div
                               className="relative w-full h-full"
-                              onTouchStart={(e) => { carouselTouchStartX.current = e.touches[0].clientX; }}
+                              onTouchStart={(e) => { carouselTouchStartX.current = e.touches[0]!.clientX; }}
                               onTouchEnd={(e) => {
-                                const diff = carouselTouchStartX.current - e.changedTouches[0].clientX;
+                                const diff = carouselTouchStartX.current - e.changedTouches[0]!.clientX;
                                 if (Math.abs(diff) >= 40) {
                                   setProductImageIndexes(prev => ({
                                     ...prev,
@@ -1273,7 +1273,7 @@ export function ProductsTab({
                                     onFocus={() => { setActiveQuantityInput(product.id); setShowQuantityHints(prev => ({...prev, [product.id]: true})); }}
                                     onBlur={() => {
                                       const v = quantityInputValues[product.id];
-                                      const p = parseInt(v) || 0;
+                                      const p = parseInt(v!) || 0;
                                       if (p === 0) {
                                         setCart(cart.filter(item => !(item.product.id === product.id && item.sellingType === 'units')));
                                       } else {
@@ -1343,7 +1343,7 @@ export function ProductsTab({
                                   onChange={(e) => { setQuantityInputValues(prev => ({...prev, [`${product.id}_pal`]: e.target.value})); }}
                                   onBlur={() => {
                                     const v = quantityInputValues[`${product.id}_pal`];
-                                    const p = parseInt(v) || 0;
+                                    const p = parseInt(v!) || 0;
                                     const palMoq = product.palletMoq || 1;
                                     if (p === 0) {
                                       setCart(cart.filter(item => !(item.product.id === product.id && item.sellingType === 'pallets')));

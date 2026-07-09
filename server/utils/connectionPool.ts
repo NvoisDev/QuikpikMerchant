@@ -74,7 +74,7 @@ export class QueryCache {
       
       const toRemove = Math.ceil(this.maxSize * 0.1);
       for (let i = 0; i < toRemove; i++) {
-        this.cache.delete(sortedEntries[i][0]);
+        this.cache.delete(sortedEntries[i]![0]);
       }
     }
   }
@@ -364,9 +364,9 @@ export class BatchQueryProcessor {
       // Resolve individual promises
       results.forEach((result, index) => {
         if ('error' in result && result.error) {
-          batch[index].reject(result.error);
+          batch[index]!.reject(result.error);
         } else {
-          batch[index].resolve(result);
+          batch[index]!.resolve(result);
         }
       });
     } catch (error) {

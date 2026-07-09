@@ -70,7 +70,7 @@ export class BusinessProfileStorage extends DeliveryStorage {
       .insert(businessProfiles)
       .values({ ...insertData, isDefault: shouldBeDefault })
       .returning();
-    return profile;
+    return profile!;
   }
 
   async updateBusinessProfile(

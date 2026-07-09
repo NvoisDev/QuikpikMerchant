@@ -112,7 +112,7 @@ export function ThemeSwitcher({ currentTheme = 'emerald', onThemeChange }: Theme
           title="Change theme"
         >
           <Palette className="h-4 w-4" />
-          <span className="hidden sm:inline">{currentThemeData.name}</span>
+          <span className="hidden sm:inline">{currentThemeData!.name}</span>
         </Button>
       </DialogTrigger>
       

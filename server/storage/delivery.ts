@@ -151,7 +151,7 @@ export class DeliveryStorage extends CustomerMgmtStorage {
       })
       .returning();
     
-    return newAddress;
+    return newAddress!;
   }
 
   async updateDeliveryAddress(id: number, updates: Partial<InsertDeliveryAddress>): Promise<DeliveryAddress> {
@@ -175,7 +175,7 @@ export class DeliveryStorage extends CustomerMgmtStorage {
       .where(eq(deliveryAddresses.id, id))
       .returning();
     
-    return updatedAddress;
+    return updatedAddress!;
   }
 
   async deleteDeliveryAddress(id: number): Promise<void> {
@@ -258,7 +258,7 @@ export class DeliveryStorage extends CustomerMgmtStorage {
         await trx.update(collectionAddresses).set({ isDefault: false }).where(eq(collectionAddresses.wholesalerId, data.wholesalerId));
       }
       const [row] = await trx.insert(collectionAddresses).values(data).returning();
-      return row;
+      return row!;
     });
   }
 

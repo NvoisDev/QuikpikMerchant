@@ -122,7 +122,7 @@ export class CustomerStorage extends OrderStorage {
         return null;
       }
       
-      const customer = customers[0];
+      const customer = customers[0]!;
       return {
         id: customer.id,
         name: customer.name,
@@ -207,7 +207,7 @@ export class CustomerStorage extends OrderStorage {
 
           let chosen: any;
           if (withRelationship.length > 0) {
-            const chosenId = withRelationship[0].customerId;
+            const chosenId = withRelationship[0]!.customerId;
             chosen = matchingCustomers.find((c: any) => c.customer_id === chosenId);
           } else {
             // Fall back to last in array (most recently inserted tends to be last)
@@ -232,7 +232,7 @@ export class CustomerStorage extends OrderStorage {
         throw new Error(`Authentication failed: Multiple customers found with same phone number suffix. This is a security risk. Please contact support.`);
       }
 
-      const matchingCustomer = matchingCustomers[0];
+      const matchingCustomer = matchingCustomers[0]!;
       return {
         id: matchingCustomer.customer_id, // Use the actual user ID, not the member ID
         name: matchingCustomer.name,
@@ -354,7 +354,7 @@ export class CustomerStorage extends OrderStorage {
 
   async createCustomerGroup(group: InsertCustomerGroup): Promise<CustomerGroup> {
     const [newGroup] = await db.insert(customerGroups).values(group).returning();
-    return newGroup;
+    return newGroup!;
   }
 
   async updateCustomerGroup(id: number, updates: any): Promise<CustomerGroup> {
@@ -363,7 +363,7 @@ export class CustomerStorage extends OrderStorage {
       .set(updates)
       .where(eq(customerGroups.id, id))
       .returning();
-    return customerGroup;
+    return customerGroup!;
   }
 
   async deleteCustomerGroup(id: number): Promise<void> {
@@ -501,7 +501,7 @@ export class CustomerStorage extends OrderStorage {
           eq(orders.wholesalerId, wholesalerId)
         ));
       
-      const hasOrdersWithThisWholesaler = customerOrders[0]?.count > 0;
+      const hasOrdersWithThisWholesaler = customerOrders[0]!?.count > 0;
       
       if (hasOrdersWithThisWholesaler) {
         // Customer has orders with this wholesaler - only remove relationship, don't touch user record
@@ -528,7 +528,7 @@ export class CustomerStorage extends OrderStorage {
             sql`${wholesalerCustomerRelationships.wholesalerId} != ${wholesalerId}`
           ));
           
-        const hasOtherWholesalers = otherRelationships[0]?.count > 0;
+        const hasOtherWholesalers = otherRelationships[0]!?.count > 0;
         
         if (hasOtherWholesalers) {
           // Customer has other wholesaler relationships - only remove this relationship
@@ -695,7 +695,7 @@ export class CustomerStorage extends OrderStorage {
       .where(eq(users.id, customerId))
       .returning();
     
-    return updatedUser;
+    return updatedUser!;
   }
 
   async mergeCustomers(primaryCustomerId: string, duplicateCustomerIds: string[], mergedData?: any): Promise<{ mergedOrdersCount: number }> {
@@ -895,12 +895,12 @@ export class CustomerStorage extends OrderStorage {
       ));
 
     // Calculate percentage changes
-    const currentRevenue = Number(currentMonthStats.currentRevenue) || 0;
-    const previousRevenue = Number(previousMonthStats.previousRevenue) || 0;
+    const currentRevenue = Number(currentMonthStats!.currentRevenue) || 0;
+    const previousRevenue = Number(previousMonthStats!.previousRevenue) || 0;
     const revenueChange = previousRevenue > 0 ? ((currentRevenue - previousRevenue) / previousRevenue) * 100 : 0;
     
-    const currentOrders = currentMonthStats.currentOrders || 0;
-    const previousOrders = previousMonthStats.previousOrders || 0;
+    const currentOrders = currentMonthStats!.currentOrders || 0;
+    const previousOrders = previousMonthStats!.previousOrders || 0;
     const ordersChange = previousOrders > 0 ? ((currentOrders - previousOrders) / previousOrders) * 100 : 0;
 
     // Get product stats
@@ -948,14 +948,14 @@ export class CustomerStorage extends OrderStorage {
       ));
 
     return {
-      totalRevenue: Number(revenueStats.totalRevenue) || 0,
-      ordersCount: revenueStats.ordersCount || 0,
-      activeProducts: productStats.activeProducts || 0,
-      lowStockCount: lowStockStats.lowStockCount || 0,
+      totalRevenue: Number(revenueStats!.totalRevenue) || 0,
+      ordersCount: revenueStats!.ordersCount || 0,
+      activeProducts: productStats!.activeProducts || 0,
+      lowStockCount: lowStockStats!.lowStockCount || 0,
       revenueChange: Math.round(revenueChange * 100) / 100,
       ordersChange: Math.round(ordersChange * 100) / 100,
-      unpaidAmount: Number(unpaidStats.unpaidAmount) || 0,
-      unpaidCount: unpaidStats.unpaidCount || 0,
+      unpaidAmount: Number(unpaidStats!.unpaidAmount) || 0,
+      unpaidCount: unpaidStats!.unpaidCount || 0,
     };
   }
 
@@ -1024,12 +1024,12 @@ export class CustomerStorage extends OrderStorage {
       ));
 
     return {
-      totalRevenue: Number(revenueStats.totalRevenue) || 0,
-      ordersCount: revenueStats.ordersCount || 0,
-      activeProducts: productStats.activeProducts || 0,
-      lowStockCount: lowStockStats.lowStockCount || 0,
-      unpaidAmount: Number(unpaidStats.unpaidAmount) || 0,
-      unpaidCount: unpaidStats.unpaidCount || 0,
+      totalRevenue: Number(revenueStats!.totalRevenue) || 0,
+      ordersCount: revenueStats!.ordersCount || 0,
+      activeProducts: productStats!.activeProducts || 0,
+      lowStockCount: lowStockStats!.lowStockCount || 0,
+      unpaidAmount: Number(unpaidStats!.unpaidAmount) || 0,
+      unpaidCount: unpaidStats!.unpaidCount || 0,
     };
   }
 
@@ -1097,7 +1097,7 @@ export class CustomerStorage extends OrderStorage {
       })
       .where(eq(users.id, userId))
       .returning();
-    return user;
+    return user!;
   }
 
   async getUserProductCount(userId: string): Promise<number> {

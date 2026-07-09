@@ -264,7 +264,7 @@ export class QuickOrderService {
         })
         .from(orderItems)
         .leftJoin(products, eq(orderItems.productId, products.id))
-        .where(eq(orderItems.orderId, lastOrder[0].id));
+        .where(eq(orderItems.orderId, lastOrder[0]!.id));
 
       // Filter out unavailable products and adjust quantities based on current stock
       const availableItems = currentOrderItems.filter(item => 
@@ -278,12 +278,12 @@ export class QuickOrderService {
       }));
 
       return {
-        orderId: lastOrder[0].id,
-        orderNumber: lastOrder[0].orderNumber,
-        orderDate: lastOrder[0].createdAt,
+        orderId: lastOrder[0]!.id,
+        orderNumber: lastOrder[0]!.orderNumber,
+        orderDate: lastOrder[0]!.createdAt,
         items: availableItems,
         totalItems: availableItems.length,
-        originalTotal: lastOrder[0].total
+        originalTotal: lastOrder[0]!.total
       };
 
     } catch (error) {
@@ -323,7 +323,7 @@ export class QuickOrderService {
       }
     }
 
-    return mostFrequent;
+    return mostFrequent!;
   }
 }
 

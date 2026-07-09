@@ -235,7 +235,7 @@ export function registerBatchRoutes(app: Express): void {
         expiryDate: String(r.expiry_date),
         costPrice: r.cost_price ? String(r.cost_price) : null,
         status: String(r.status),
-        isExpired: String(r.expiry_date) < today,
+        isExpired: String(r.expiry_date) < today!,
       })));
     } catch (error) {
       console.error('Error fetching expiring batches:', error);

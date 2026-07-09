@@ -336,7 +336,7 @@ export function CustomerMergeDialog({
                   Cancel
                 </Button>
                 <Button
-                  onClick={() => handleMergeCustomers(selectedDuplicates[0], selectedDuplicates.slice(1))}
+                  onClick={() => handleMergeCustomers(selectedDuplicates[0]!, selectedDuplicates.slice(1))}
                   disabled={mergeCustomersMutation.isPending}
                   className="bg-green-600 hover:bg-green-700"
                 >

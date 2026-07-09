@@ -1243,7 +1243,7 @@ export function registerCampaignRoutes(app: Express): void {
     try {
       const campaignId = req.params.id;
       const [type, id] = campaignId.split('_');
-      const numericId = parseInt(id);
+      const numericId = parseInt(id!);
 
       if (type === 'broadcast') {
         // Preview single product broadcast

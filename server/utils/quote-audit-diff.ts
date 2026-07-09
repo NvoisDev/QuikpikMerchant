@@ -45,18 +45,18 @@ export function buildChargeAuditEntries(
     for (let i = 0; i < oldCharges.length; i++) {
       const oi = oldCharges[i];
       const ni = newCharges[i];
-      const oldLabel = oi.customLabel?.trim() || 'Charge';
-      const newLabel = ni.customLabel?.trim() || 'Charge';
+      const oldLabel = oi!.customLabel?.trim() || 'Charge';
+      const newLabel = ni!.customLabel?.trim() || 'Charge';
 
       const parts: string[] = [];
       if (oldLabel.toLowerCase() !== newLabel.toLowerCase()) {
         parts.push(`label: ${oldLabel}→${newLabel}`);
       }
-      if (oi.quantity !== ni.quantity) {
-        parts.push(`qty ${oi.quantity}→${ni.quantity}`);
+      if (oi!.quantity !== ni!.quantity) {
+        parts.push(`qty ${oi!.quantity}→${ni!.quantity}`);
       }
-      if (Math.abs(parseFloat(oi.unitPrice || '0') - ni.customPrice) > 0.001) {
-        parts.push(`price £${fmtGBP(parseFloat(oi.unitPrice || '0'))}→£${fmtGBP(ni.customPrice)}`);
+      if (Math.abs(parseFloat(oi!.unitPrice || '0') - ni!.customPrice) > 0.001) {
+        parts.push(`price £${fmtGBP(parseFloat(oi!.unitPrice || '0'))}→£${fmtGBP(ni!.customPrice)}`);
       }
 
       if (parts.length > 0) {

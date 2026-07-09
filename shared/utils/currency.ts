@@ -32,7 +32,7 @@ const CURRENCY_SYMBOLS: Record<string, string> = {
  */
 function formatAmountWithCommas(num: number): string {
   const [intPart, decPart] = num.toFixed(2).split('.');
-  const formattedInt = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  const formattedInt = intPart!.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
   return `${formattedInt}.${decPart}`;
 }
 

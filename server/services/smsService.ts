@@ -36,7 +36,7 @@ export async function sendSMS(params: SMSParams): Promise<boolean> {
   } catch (error: unknown) {
     console.error('❌ SMS error:', error);
     const msg = error instanceof Error ? error.message : String(error);
-    const twilioCode = (error instanceof Error) ? (error as Record<string, unknown>).code : undefined;
+    const twilioCode = (error instanceof Error) ? (error as unknown as Record<string, unknown>).code : undefined;
     await logServiceError('twilio', 'sendSMS', msg, {
       to: params.to,
       twilioCode,

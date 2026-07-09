@@ -450,7 +450,7 @@ export class ProductStorage extends UserStorageBase {
 
   async createProduct(product: InsertProduct): Promise<Product> {
     const [newProduct] = await db.insert(products).values([product as typeof products.$inferInsert]).returning();
-    return newProduct;
+    return newProduct!;
   }
 
   async updateProduct(id: number, product: Partial<InsertProduct>): Promise<Product> {
@@ -459,7 +459,7 @@ export class ProductStorage extends UserStorageBase {
       .set({ ...product, updatedAt: new Date() } as Partial<typeof products.$inferInsert>)
       .where(eq(products.id, id))
       .returning();
-    return updatedProduct;
+    return updatedProduct!;
   }
 
 
@@ -670,8 +670,8 @@ export class ProductStorage extends UserStorageBase {
         .from(products)
         .where(eq(products.id, batch.productId));
       const stockAfter = Number(productAfter?.stock ?? 0);
-      const defaultReason = newBatch.batchNumber
-        ? `New batch stock-in (ref: ${newBatch.batchNumber})`
+      const defaultReason = newBatch!.batchNumber
+        ? `New batch stock-in (ref: ${newBatch!.batchNumber})`
         : 'New batch stock-in';
       await db.insert(stockMovements).values({
         productId: batch.productId,
@@ -684,11 +684,11 @@ export class ProductStorage extends UserStorageBase {
         reason: opts?.reason ?? defaultReason,
         orderId: opts?.orderId ?? null,
         businessProfileId: opts?.businessProfileId ?? null,
-        batchId: newBatch.id,
+        batchId: newBatch!.id,
       });
     }
 
-    return newBatch;
+    return newBatch!;
   }
 
   /**
@@ -924,7 +924,7 @@ export class ProductStorage extends UserStorageBase {
   ): Promise<void> {
     const today = new Date().toISOString().split('T')[0];
 
-    const [{ total }] = await db
+    const [_totRes] = await db
       .select({ total: sum(productBatches.quantity) })
       .from(productBatches)
       .where(and(
@@ -936,7 +936,7 @@ export class ProductStorage extends UserStorageBase {
         )
       ));
 
-    const newStock = Number(total ?? 0);
+    const newStock = Number(_totRes?.total ?? 0);
 
     // Read current stock before update so we can detect a silent change
     const [prod] = await db

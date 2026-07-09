@@ -96,7 +96,7 @@ function FlaggedCustomersTable({ customers, onFix, fixing }: { customers: MapCus
                 </TableCell>
                 <TableCell className="text-xs px-4">
                   <Button size="sm" className="h-7 text-xs text-white" style={{ background: GREEN }} disabled={fixing || !edits[c.id]?.trim()}
-                    onClick={() => { if (edits[c.id]?.trim()) onFix(c.id, edits[c.id].trim()); }}>
+                    onClick={() => { if (edits[c.id]?.trim()) onFix(c.id, edits[c.id]!.trim()); }}>
                     Save & re-locate
                   </Button>
                 </TableCell>
@@ -168,8 +168,8 @@ export function CustomerMapSection({ isAdmin }: { isAdmin: boolean }) {
     const counts: Record<string, number> = { retail: 0, wholesale: 0, individual: 0, unknown: 0 };
     for (const c of customers) {
       const t = c.customerType || "unknown";
-      if (t in counts) counts[t]++;
-      else counts.unknown++;
+      if (t in counts) counts[t]!++;
+      else counts['unknown']!++;
     }
     return counts;
   }, [customers]);
@@ -189,12 +189,12 @@ export function CustomerMapSection({ isAdmin }: { isAdmin: boolean }) {
           const active = typeFilter === t;
           return (
             <div key={t} className="bg-white rounded-xl border p-3 flex items-center gap-3 cursor-pointer hover:shadow-sm transition-shadow"
-              style={{ borderColor: active ? cfg.dot : "#e5e7eb", boxShadow: active ? `0 0 0 2px ${cfg.dot}33` : undefined }}
+              style={{ borderColor: active ? cfg!.dot : "#e5e7eb", boxShadow: active ? `0 0 0 2px ${cfg!.dot}33` : undefined }}
               onClick={() => setTypeFilter(active ? "" : t)}>
-              <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ background: cfg.dot }} />
+              <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ background: cfg!.dot }} />
               <div>
-                <p className="text-xs font-semibold" style={{ color: cfg.color }}>{typeCounts[t]}</p>
-                <p className="text-xs text-gray-400">{cfg.label}</p>
+                <p className="text-xs font-semibold" style={{ color: cfg!.color }}>{typeCounts[t]}</p>
+                <p className="text-xs text-gray-400">{cfg!.label}</p>
               </div>
             </div>
           );
@@ -225,8 +225,8 @@ export function CustomerMapSection({ isAdmin }: { isAdmin: boolean }) {
           <div className="flex items-center gap-3 flex-wrap">
             {(["retail", "wholesale", "individual", "unknown"] as const).map(t => (
               <div key={t} className="flex items-center gap-1.5">
-                <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: TYPE_CONFIG[t].dot }} />
-                <span className="text-xs text-gray-500">{TYPE_CONFIG[t].label}</span>
+                <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: TYPE_CONFIG[t]!.dot }} />
+                <span className="text-xs text-gray-500">{TYPE_CONFIG[t]!.label}</span>
               </div>
             ))}
           </div>

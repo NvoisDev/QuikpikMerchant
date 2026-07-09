@@ -153,12 +153,12 @@ export default function WholesalerSelection() {
   if (wholesalers.length === 1) {
     // If only one wholesaler, redirect directly
     const wholesaler = wholesalers[0];
-    handleWholesalerSelection(wholesaler.wholesaler.id);
+    handleWholesalerSelection(wholesaler!.wholesaler.id);
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="flex flex-col items-center space-y-4">
           <Loader2 className="h-8 w-8 animate-spin text-emerald-600" />
-          <p className="text-gray-600">Redirecting to {wholesaler.wholesaler.businessName}...</p>
+          <p className="text-gray-600">Redirecting to {wholesaler!.wholesaler.businessName}...</p>
         </div>
       </div>
     );

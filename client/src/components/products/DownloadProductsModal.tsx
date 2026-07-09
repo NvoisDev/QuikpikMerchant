@@ -91,7 +91,7 @@ export default function DownloadProductsModal({ open, onClose, products, isViewe
         const wb = new ExcelJS.Workbook();
         const ws = wb.addWorksheet("Stock Summary");
         if (rows.length > 0) {
-          ws.columns = Object.keys(rows[0]).map((k) => ({ header: k, key: k, width: 20 }));
+          ws.columns = Object.keys(rows[0]!).map((k) => ({ header: k, key: k, width: 20 }));
           rows.forEach((row) => ws.addRow(row));
         }
         const buffer = await wb.xlsx.writeBuffer();
@@ -130,7 +130,7 @@ export default function DownloadProductsModal({ open, onClose, products, isViewe
         const wb = new ExcelJS.Workbook();
         const ws = wb.addWorksheet("Batch Details");
         if (batchRows.length > 0) {
-          ws.columns = Object.keys(batchRows[0]).map((k) => ({ header: k, key: k, width: 20 }));
+          ws.columns = Object.keys(batchRows[0]!).map((k) => ({ header: k, key: k, width: 20 }));
           batchRows.forEach((row) => ws.addRow(row));
         }
         const buffer = await wb.xlsx.writeBuffer();

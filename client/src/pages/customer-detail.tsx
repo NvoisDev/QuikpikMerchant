@@ -541,8 +541,8 @@ export default function CustomerDetail() {
         if (effective === null) return;
         const standard = parseFloat(item.product.price || '0');
         if (byProduct[item.productId]) {
-          byProduct[item.productId].listCount += 1;
-          if (effective < byProduct[item.productId].best) byProduct[item.productId].best = effective;
+          byProduct[item.productId]!.listCount += 1;
+          if (effective < byProduct[item.productId]!.best) byProduct[item.productId]!.best = effective;
         } else {
           byProduct[item.productId] = { name: item.product.name, standardPrice: standard, best: effective, listCount: 1 };
         }
@@ -893,15 +893,15 @@ export default function CustomerDetail() {
                   key={customerPriceLists.ids[i]}
                   variant="secondary"
                   className="cursor-pointer hover:bg-blue-100 hover:text-blue-700 transition-colors text-xs py-1 px-2 flex items-center gap-1"
-                  onClick={() => navigate(`/customers?tab=price-lists&priceListId=${customerPriceLists.ids[i]}&customerId=${customerId}&customerName=${encodeURIComponent(fullName)}`)}
+                  onClick={() => navigate(`/customers?tab=price-lists&priceListId=${customerPriceLists.ids[i]!}&customerId=${customerId}&customerName=${encodeURIComponent(fullName)}`)}
                 >
                   <Tag className="h-3 w-3" />
                   {name}
-                  {!isViewer && customerPriceLists.directIds.includes(customerPriceLists.ids[i]) && (
+                  {!isViewer && customerPriceLists.directIds.includes(customerPriceLists.ids[i]!) && (
                     <button
                       className="ml-1 hover:text-red-500 transition-colors"
                       disabled={removeFromPriceListMutation.isPending}
-                      onClick={(e) => { e.stopPropagation(); removeFromPriceListMutation.mutate(customerPriceLists.ids[i]); }}
+                      onClick={(e) => { e.stopPropagation(); removeFromPriceListMutation.mutate(customerPriceLists.ids[i]!); }}
                       aria-label={`Remove from ${name}`}
                     >
                       <X className="h-3 w-3" />
@@ -1554,11 +1554,11 @@ export default function CustomerDetail() {
                     <Badge key={i} variant="outline" className="text-xs flex items-center gap-1">
                       <Tag className="h-3 w-3" />
                       {name}
-                      {customerPriceLists.directIds.includes(customerPriceLists.ids[i]) && (
+                      {customerPriceLists.directIds.includes(customerPriceLists.ids[i]!) && (
                         <button
                           className="ml-1 hover:text-red-500 transition-colors"
                           disabled={removeFromPriceListMutation.isPending}
-                          onClick={() => removeFromPriceListMutation.mutate(customerPriceLists.ids[i])}
+                          onClick={() => removeFromPriceListMutation.mutate(customerPriceLists.ids[i]!)}
                           aria-label={`Remove from ${name}`}
                         >
                           <X className="h-3 w-3" />

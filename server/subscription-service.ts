@@ -323,10 +323,10 @@ export class SubscriptionService {
 
         // If a subscription exists, update it to the new price
         const subscription = subscriptions.data[0];
-        const updatedSubscription = await stripe.subscriptions.update(subscription.id, {
+        const updatedSubscription = await stripe.subscriptions.update(subscription!.id, {
           proration_behavior: 'none', // No new proration items — stale ones already cleared above
           items: [{
-            id: subscription.items.data[0].id,
+            id: subscription!.items.data[0]!.id,
             price: priceId, // Switch to the new plan's price ID
           }],
         });
@@ -376,12 +376,12 @@ export class SubscriptionService {
         billing_cycle_anchor: 'unchanged', // Keep the same billing cycle
         cancel_at_period_end: false, // Clear any scheduled cancellation on upgrade
         items: [{
-          id: subscription.items.data[0].id,
+          id: subscription.items.data[0]!.id,
           price: newPriceId,
         }],
         metadata: {
           ...subscription.metadata,
-          upgraded_from: subscription.items.data[0].price.id,
+          upgraded_from: subscription.items.data[0]!.price.id,
           upgraded_to: newPriceId,
           upgrade_timestamp: new Date().toISOString(),
           planId: newPlanId
@@ -426,12 +426,12 @@ export class SubscriptionService {
         billing_cycle_anchor: 'unchanged', // Keep the same billing cycle
         cancel_at_period_end: false, // Clear any scheduled cancellation so downgrade can proceed
         items: [{
-          id: subscription.items.data[0].id,
+          id: subscription.items.data[0]!.id,
           price: newPriceId, // Switch to the new (lower) plan's price ID
         }],
         metadata: {
           ...subscription.metadata,
-          downgraded_from: subscription.items.data[0].price.id,
+          downgraded_from: subscription.items.data[0]!.price.id,
           downgraded_to: newPriceId,
           downgrade_timestamp: new Date().toISOString(),
           planId: newPlanId
@@ -760,7 +760,7 @@ export class SubscriptionService {
       const periodEnd = subscription.current_period_end;
       const totalPeriod = periodEnd - periodStart;
       const remainingPeriod = periodEnd - now;
-      const currentPrice = subscription.items.data[0].price.unit_amount || 0;
+      const currentPrice = subscription.items.data[0]!.price.unit_amount || 0;
       
       // Calculate prorated credit (what they get back)
       const proratedCredit = remainingPeriod > 0 
@@ -772,7 +772,7 @@ export class SubscriptionService {
         await stripe.invoiceItems.create({
           customer: subscription.customer as string,
           amount: -Math.round(proratedCredit * 100), // Negative amount = credit
-          currency: subscription.items.data[0].price.currency,
+          currency: subscription.items.data[0]!.price.currency,
           description: `Pro-rated credit for early downgrade to Free plan from ${new Date(now * 1000).toLocaleDateString()}`,
           metadata: {
             type: 'free_downgrade_credit',
@@ -1114,7 +1114,7 @@ export class SubscriptionService {
           const stripeClient = getStripeClient();
           const stripeSub = await stripeClient.subscriptions.retrieve(sub.stripeSubscriptionId);
           await stripeClient.subscriptions.update(sub.stripeSubscriptionId, {
-            items: [{ id: stripeSub.items.data[0].id, price: targetPlan.stripePriceId }],
+            items: [{ id: stripeSub.items.data[0]!.id, price: targetPlan.stripePriceId }],
             proration_behavior: 'none',
           });
         } catch (stripeErr: any) {
@@ -1190,7 +1190,7 @@ export class SubscriptionService {
       // getPlanLimits handles 'free' → 'starter' mapping and all tier normalisation
       const limits = getPlanLimits(currentPlan || 'listing');
 
-      const limit = (limits as Record<string, unknown>)[feature];
+      const limit = (limits as unknown as Record<string, unknown>)[feature];
 
       // Feature not in limits = unlimited access
       if (limit === undefined) return true;

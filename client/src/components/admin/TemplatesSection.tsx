@@ -84,7 +84,7 @@ export function TemplatesSection({ isAdmin }: { isAdmin: boolean }) {
       return;
     }
     if (!selectedKey || !inChannel.some((t) => t.key === selectedKey)) {
-      setSelectedKey(inChannel[0].key);
+      setSelectedKey(inChannel[0]!.key);
     }
   }, [inChannel, selectedKey]);
 

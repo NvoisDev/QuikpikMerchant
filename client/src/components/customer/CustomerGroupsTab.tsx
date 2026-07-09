@@ -438,8 +438,7 @@ export function CustomerGroupsTab({
         `${customer.firstName || ''} ${customer.lastName || ''}`.toLowerCase().includes(q) ||
         (customer.businessName || '').toLowerCase().includes(q) ||
         (customer.phoneNumber || '').includes(customerSearchQuery) ||
-        (customer.email || '').toLowerCase().includes(q) ||
-        (customer.city || '').toLowerCase().includes(q);
+        (customer.email || '').toLowerCase().includes(q);
       const notAlreadyMember = !existingMemberIds.includes(customer.id);
       return matchesSearch && notAlreadyMember;
     });

@@ -108,7 +108,7 @@ export default function BatchBreakdownPanel({
                             className="text-gray-400 hover:text-gray-600"
                             onClick={() => {
                               const iso = batch.expiryDate ? String(batch.expiryDate).split('T')[0] : '';
-                              setEditingExpiryValue(iso);
+                              setEditingExpiryValue(iso!);
                               setEditingExpiryBatchId(batch.id);
                             }}
                           >

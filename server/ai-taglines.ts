@@ -79,7 +79,7 @@ Respond with JSON in this exact format:
       temperature: 0.7,
     }, { signal: AbortSignal.timeout(25_000) });
 
-    const result = JSON.parse(response.choices[0].message.content || '{}');
+    const result = JSON.parse(response.choices[0]!.message.content || '{}');
     
     return {
       greeting: result.greeting || "Hi there!",
@@ -169,7 +169,7 @@ Respond with JSON array of exactly 3 campaigns in this format:
       temperature: 0.8,
     }, { signal: AbortSignal.timeout(25_000) });
 
-    const result = JSON.parse(response.choices[0].message.content || '[]');
+    const result = JSON.parse(response.choices[0]!.message.content || '[]');
     return Array.isArray(result) ? result : [];
 
   } catch (error) {
@@ -256,7 +256,7 @@ Respond with JSON in this format:
       temperature: 0.3,
     }, { signal: AbortSignal.timeout(25_000) });
 
-    const result = JSON.parse(response.choices[0].message.content || '{}');
+    const result = JSON.parse(response.choices[0]!.message.content || '{}');
     
     return {
       recommendedTime: result.recommendedTime || "10:00",

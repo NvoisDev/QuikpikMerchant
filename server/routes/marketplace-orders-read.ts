@@ -359,7 +359,7 @@ export function registerOrderReadRoutes(app: Express): void {
       // Calculate days since last order
       let daysSinceLastOrder = undefined;
       if (orderResults.length > 0) {
-        const lastOrderDate = new Date(orderResults[0].createdAt || new Date());
+        const lastOrderDate = new Date(orderResults[0]!.createdAt || new Date());
         const now = new Date();
         daysSinceLastOrder = Math.floor((now.getTime() - lastOrderDate.getTime()) / (1000 * 60 * 60 * 24));
       }
@@ -541,13 +541,13 @@ export function registerOrderReadRoutes(app: Express): void {
               const effective = computeEffectivePrice(base, row);
               // Only apply unit override when there is a real discount/custom price (lower than base)
               if (effective < base) {
-                if (priceOverrides[row.productId] === undefined || effective < priceOverrides[row.productId]) {
+                if (priceOverrides[row.productId] === undefined || effective < priceOverrides[row.productId]!) {
                   priceOverrides[row.productId] = effective;
                 }
               }
               if (row.customPalletPrice != null) {
                 const palletEffective = parseFloat(String(row.customPalletPrice));
-                if (palletPriceOverrides[row.productId] === undefined || palletEffective < palletPriceOverrides[row.productId]) {
+                if (palletPriceOverrides[row.productId] === undefined || palletEffective < palletPriceOverrides[row.productId]!) {
                   palletPriceOverrides[row.productId] = palletEffective;
                 }
               }

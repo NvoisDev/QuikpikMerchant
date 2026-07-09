@@ -127,6 +127,7 @@ interface Order {
   notes?: string;
   cancelledAt?: string;
   retailer?: { phoneNumber?: string | null; businessName?: string | null; firstName?: string | null; lastName?: string | null; name?: string | null };
+  retailerId?: string | number | null;
   stockRestored?: boolean;
   stockRestoredCount?: number;
   readyToCollectAt?: string;
@@ -438,9 +439,9 @@ export default function OrderDetail() {
 
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
     const touch = e.touches[0];
-    if (touch.clientX <= SWIPE_EDGE_THRESHOLD) {
-      swipeTouchStartX.current = touch.clientX;
-      swipeTouchStartY.current = touch.clientY;
+    if (touch!.clientX <= SWIPE_EDGE_THRESHOLD) {
+      swipeTouchStartX.current = touch!.clientX;
+      swipeTouchStartY.current = touch!.clientY;
     } else {
       swipeTouchStartX.current = null;
       swipeTouchStartY.current = null;
@@ -450,8 +451,8 @@ export default function OrderDetail() {
   const handleTouchMove = useCallback((e: React.TouchEvent) => {
     if (swipeTouchStartX.current === null) return;
     const touch = e.touches[0];
-    const dx = touch.clientX - swipeTouchStartX.current;
-    const dy = Math.abs(touch.clientY - (swipeTouchStartY.current ?? 0));
+    const dx = touch!.clientX - swipeTouchStartX.current;
+    const dy = Math.abs(touch!.clientY - (swipeTouchStartY.current ?? 0));
     if (dy > dx) {
       swipeTouchStartX.current = null;
       setSwipeDx(0);
@@ -1857,7 +1858,7 @@ export default function OrderDetail() {
                 const itemsWithCost = (order.items || []).filter(i => i.product?.costPrice && parseFloat(i.product.costPrice) > 0);
                 const itemsWithoutCost = (order.items || []).length - itemsWithCost.length;
                 if (itemsWithCost.length === 0) return null;
-                const totalCost = itemsWithCost.reduce((sum, i) => sum + parseFloat(i.product.costPrice!) * i.quantity, 0);
+                const totalCost = itemsWithCost.reduce((sum, i) => sum + parseFloat(i.product!.costPrice!) * i.quantity, 0);
                 const revenueForCostedItems = itemsWithCost.reduce((sum, i) => sum + parseFloat(i.unitPrice) * i.quantity, 0);
                 const grossProfit = revenueForCostedItems - totalCost;
                 const marginPct = revenueForCostedItems > 0 ? (grossProfit / revenueForCostedItems) * 100 : 0;

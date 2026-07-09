@@ -546,8 +546,8 @@ export function registerAuthCoreRoutes(app: Express): void {
       res.json({
         success: true,
         user: {
-          defaultDepositPercentage: updatedUser.defaultDepositPercentage,
-          balanceDueDays: updatedUser.balanceDueDays
+          defaultDepositPercentage: updatedUser!.defaultDepositPercentage,
+          balanceDueDays: updatedUser!.balanceDueDays
         }
       });
     } catch (error) {

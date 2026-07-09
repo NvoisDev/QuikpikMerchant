@@ -721,7 +721,7 @@ export function registerCustomerAuthRoutes(app: Express): void {
       const request = await db
         .select()
         .from(customerRegistrationRequests)
-        .where(eq(customerRegistrationRequests.id, parseInt(requestId)))
+        .where(eq(customerRegistrationRequests.id, parseInt(requestId!)))
         .limit(1);
         
       if (!request[0] || request[0].wholesalerId !== userId) {
@@ -739,7 +739,7 @@ export function registerCustomerAuthRoutes(app: Express): void {
 
       // Update request status
       await storage.updateRegistrationRequestStatus(
-        parseInt(requestId), 
+        parseInt(requestId!), 
         action === 'approve' ? 'approved' : 'rejected',
         userId,
         responseMessage
@@ -798,7 +798,7 @@ export function registerCustomerAuthRoutes(app: Express): void {
 
         if (existingRelationship.length > 0) {
           // Ensure it is active (may have been deactivated previously)
-          if (existingRelationship[0].status !== 'active') {
+          if (existingRelationship[0]!.status !== 'active') {
             await db
               .update(wholesalerCustomerRelationships)
               .set({ status: 'active' })

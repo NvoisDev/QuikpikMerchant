@@ -331,7 +331,7 @@ export function registerPublicStoreRoutes(app: Express) {
         }
       }
 
-      res.json({ success: true, enquiryId: enquiry.id });
+      res.json({ success: true, enquiryId: enquiry!.id });
     } catch (err) {
       if (err instanceof z.ZodError) {
         return res.status(400).json({ message: "Invalid data", errors: err.errors });
@@ -447,7 +447,7 @@ export function registerPublicStoreRoutes(app: Express) {
       const notes = `Quote requested via store${data.enquirerBusiness ? ` by ${data.enquirerBusiness}` : ''}`;
       const [newOrder] = await db.insert(orders).values({
         wholesalerId: data.wholesalerId,
-        retailerId: provisionalCustomer.id,
+        retailerId: provisionalCustomer!.id,
         customerName: data.enquirerName,
         customerEmail: data.enquirerEmail ?? null,
         customerPhone: data.enquirerPhone ?? null,
@@ -466,7 +466,7 @@ export function registerPublicStoreRoutes(app: Express) {
       if (lineItems.length > 0) {
         await db.insert(orderItems).values(
           lineItems.map(l => ({
-            orderId: newOrder.id,
+            orderId: newOrder!.id,
             productId: l.productId,
             quantity: l.quantity,
             unitPrice: l.unitPrice.toFixed(2),
@@ -497,7 +497,7 @@ export function registerPublicStoreRoutes(app: Express) {
         productName: null,
         quantity: null,
         status: 'new',
-        orderId: newOrder.id,
+        orderId: newOrder!.id,
         cartItems: cartSnapshot,
       } as any).returning({ id: storeEnquiries.id });
 
@@ -542,7 +542,7 @@ export function registerPublicStoreRoutes(app: Express) {
                     </tr>
                   </tfoot>
                 </table>
-                <a href="https://quikpik.app/quick-quote?draftId=${newOrder.id}" style="display:inline-block;background:#16a34a;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600">View Draft Invoice →</a>
+                <a href="https://quikpik.app/quick-quote?draftId=${newOrder!.id}" style="display:inline-block;background:#16a34a;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600">View Draft Invoice →</a>
               </div>
             `,
           });
@@ -551,7 +551,7 @@ export function registerPublicStoreRoutes(app: Express) {
         }
       }
 
-      res.json({ success: true, enquiryId: enquiry.id, orderId: newOrder.id });
+      res.json({ success: true, enquiryId: enquiry!.id, orderId: newOrder!.id });
     } catch (err) {
       if (err instanceof z.ZodError) {
         return res.status(400).json({ message: "Invalid data", errors: err.errors });
@@ -701,7 +701,7 @@ export function registerPublicStoreRoutes(app: Express) {
       if (lineItems.length > 0) {
         await db.insert(orderItems).values(
           lineItems.map(l => ({
-            orderId: newOrder.id,
+            orderId: newOrder!.id,
             productId: l.productId,
             quantity: l.quantity,
             unitPrice: l.unitPrice.toFixed(2),
@@ -730,7 +730,7 @@ export function registerPublicStoreRoutes(app: Express) {
         productName: null,
         quantity: null,
         status: 'new',
-        orderId: newOrder.id,
+        orderId: newOrder!.id,
         cartItems: cartSnapshot,
       } as any).returning({ id: storeEnquiries.id });
 
@@ -770,7 +770,7 @@ export function registerPublicStoreRoutes(app: Express) {
                   </thead>
                   <tbody>${itemRows}</tbody>
                 </table>
-                <a href="https://quikpik.app/quick-quote?draftId=${newOrder.id}" style="display:inline-block;background:#16a34a;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600">View Draft Invoice →</a>
+                <a href="https://quikpik.app/quick-quote?draftId=${newOrder!.id}" style="display:inline-block;background:#16a34a;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600">View Draft Invoice →</a>
               </div>
             `,
           });
@@ -779,7 +779,7 @@ export function registerPublicStoreRoutes(app: Express) {
         }
       }
 
-      res.json({ success: true, enquiryId: enquiry.id, orderId: newOrder.id });
+      res.json({ success: true, enquiryId: enquiry!.id, orderId: newOrder!.id });
     } catch (err) {
       if (err instanceof z.ZodError) {
         return res.status(400).json({ message: "Invalid data", errors: err.errors });

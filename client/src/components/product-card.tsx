@@ -77,13 +77,13 @@ function formatPromoLabel(promo: PromotionalOffer, fmt: (v: number) => string): 
     case "percentage_discount":
       return `${promo.discountPercentage}% off`;
     case "fixed_price":
-      return `Now ${fmt(promo.fixedPrice)}`;
+      return `Now ${fmt(promo.fixedPrice ?? 0)}`;
     case "clearance":
-      return `Clearance ${fmt(promo.fixedPrice)}`;
+      return `Clearance ${fmt(promo.fixedPrice ?? 0)}`;
     case "buy_x_get_y_free":
       return `Buy ${promo.buyQuantity} Get ${promo.getQuantity} Free`;
     case "bundle_deal":
-      return `${promo.minQuantity}+ at ${fmt(promo.fixedPrice)} each`;
+      return `${promo.minQuantity}+ at ${fmt(promo.fixedPrice ?? 0)} each`;
     default:
       return promo.name || "Promotion";
   }

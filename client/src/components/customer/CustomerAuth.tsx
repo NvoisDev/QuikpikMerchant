@@ -267,7 +267,7 @@ export function CustomerAuth({ wholesalerId, onAuthSuccess, onSkipAuth, openRequ
 
       // Auto-select only when there is exactly one active store (pending stores never auto-select)
       if (activeOptions.length === 1 && options.length === 1) {
-        await completeLogin(activeOptions[0].wholesalerId);
+        await completeLogin(activeOptions[0]!.wholesalerId);
         return;
       }
 

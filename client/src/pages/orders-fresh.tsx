@@ -1690,7 +1690,7 @@ export default function OrdersFresh() {
                 <TableBody>
                   {filteredByPicking.slice(0, 50).map((order, index, arr) => {
                     const currentLabel = order.createdAt ? getDateLabel(order.createdAt) : '';
-                    const prevLabel = index > 0 && arr[index - 1].createdAt ? getDateLabel(arr[index - 1].createdAt) : '';
+                    const prevLabel = index > 0 && arr[index - 1]!.createdAt ? getDateLabel(arr[index - 1]!.createdAt) : '';
                     const showSeparator = index === 0 || currentLabel !== prevLabel;
                     return (
                       <Fragment key={order.id}>
@@ -1881,7 +1881,7 @@ export default function OrdersFresh() {
               <div className={`lg:hidden space-y-3 ${selectedOrderIds.size > 0 && !isViewer ? 'pb-28' : ''}`}>
                 {filteredByPicking.slice(0, 50).map((order, index, arr) => {
                   const currentLabel = order.createdAt ? getDateLabel(order.createdAt) : '';
-                  const prevLabel = index > 0 && arr[index - 1].createdAt ? getDateLabel(arr[index - 1].createdAt) : '';
+                  const prevLabel = index > 0 && arr[index - 1]!.createdAt ? getDateLabel(arr[index - 1]!.createdAt) : '';
                   const showSeparator = index === 0 || currentLabel !== prevLabel;
                   return (
                     <div key={order.id}>

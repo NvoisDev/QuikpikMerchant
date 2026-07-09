@@ -179,7 +179,7 @@ export function registerUtilityRoutes(app: Express, customerActionLimiter: Reque
       
       res.json({ 
         success: true, 
-        requestId: request.id,
+        requestId: request!.id,
         message: "Your access request has been sent to the wholesaler. You'll be notified once they approve your request."
       });
     } catch (error: any) {

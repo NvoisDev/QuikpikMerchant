@@ -64,9 +64,9 @@ export const PRESETS: { id: Preset; label: string }[] = [
 
 export function presetToDates(p: Preset): { from: string; to: string } | null {
   const now = new Date();
-  if (p === "this_month")    return { from: toISODate(startOfMonth(now)), to: toISODate(endOfMonth(now)) };
-  if (p === "last_month")    { const m = subMonths(now, 1); return { from: toISODate(startOfMonth(m)), to: toISODate(endOfMonth(m)) }; }
-  if (p === "last_3_months") return { from: toISODate(startOfMonth(subMonths(now, 2))), to: toISODate(endOfDay(now)) };
+  if (p === "this_month")    return { from: toISODate(startOfMonth(now))!, to: toISODate(endOfMonth(now))! };
+  if (p === "last_month")    { const m = subMonths(now, 1); return { from: toISODate(startOfMonth(m))!, to: toISODate(endOfMonth(m))! }; }
+  if (p === "last_3_months") return { from: toISODate(startOfMonth(subMonths(now, 2)))!, to: toISODate(endOfDay(now))! };
   return null;
 }
 

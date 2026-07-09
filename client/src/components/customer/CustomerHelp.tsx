@@ -244,7 +244,7 @@ interface CustomerHelpProps {
 }
 
 export default function CustomerHelp({ wholesaler }: CustomerHelpProps) {
-  const [selectedSection, setSelectedSection] = useState(helpSections[0].id);
+  const [selectedSection, setSelectedSection] = useState(helpSections[0]!.id);
   const [expandedFaqs, setExpandedFaqs] = useState<Record<string, boolean>>({});
 
   const toggleFaq = (key: string) => {

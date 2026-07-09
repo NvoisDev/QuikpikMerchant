@@ -45,8 +45,8 @@ export async function sendWelcomeEmail(params: WelcomeEmailParams): Promise<bool
   } catch (error: unknown) {
     console.error('SendGrid email error:', error);
     const msg = error instanceof Error ? error.message : String(error);
-    const statusCode = (error instanceof Error && (error as Record<string, unknown>)?.response)
-      ? ((error as Record<string, unknown>).response as Record<string, unknown>)?.status
+    const statusCode = (error instanceof Error && (error as unknown as Record<string, unknown>)?.response)
+      ? ((error as unknown as Record<string, unknown>).response as Record<string, unknown>)?.status
       : undefined;
     await logServiceError('sendgrid', 'sendWelcomeEmail', msg, {
       to: params.customerEmail,

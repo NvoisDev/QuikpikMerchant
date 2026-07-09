@@ -66,7 +66,7 @@ export function registerAddressRoutes(app: Express): void {
   // GET /api/wholesaler/customer-delivery-addresses/:customerId/:wholesalerId
   app.get('/api/wholesaler/customer-delivery-addresses/:customerId/:wholesalerId', isAuthenticated, async (req, res) => {
     try {
-      const { customerId, wholesalerId } = req.params;
+      const { customerId = '', wholesalerId = '' } = req.params;
       
       const authenticatedWholesalerId = req.user?.id;
       if (authenticatedWholesalerId !== wholesalerId) {

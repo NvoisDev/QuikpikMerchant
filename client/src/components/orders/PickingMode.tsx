@@ -59,7 +59,7 @@ export function PickingMode({ orderId, orderNumber, onClose }: Props) {
 
   // Merged view: server state + optimistic overrides
   const getItemPicked = useCallback((orderItemId: number): boolean => {
-    if (orderItemId in optimisticPicks) return optimisticPicks[orderItemId];
+    if (orderItemId in optimisticPicks) return optimisticPicks[orderItemId]!;
     return pickingState?.items.find(i => i.orderItemId === orderItemId)?.isPicked ?? false;
   }, [optimisticPicks, pickingState]);
 

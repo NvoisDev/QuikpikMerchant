@@ -1110,7 +1110,7 @@ export default function ProductFormDialog({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {(() => {
                   const stockVal = parseInt(form.watch("stock") || "0") || 0;
-                  const qip = parseInt(form.watch("quantityInPack") || "1") || 1;
+                  const qip = parseInt(String(form.watch("quantityInPack" as any) || "1")) || 1;
                   const upp = parseInt(form.watch("unitsPerPallet") || "0") || 0;
                   const derived = upp > 0 ? Math.floor(Math.floor(stockVal / qip) / upp) : null;
                   return (

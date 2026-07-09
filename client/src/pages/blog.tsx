@@ -208,7 +208,7 @@ export default function BlogPage() {
     return matchesCategory && matchesSearch;
   });
 
-  const gridPosts = filtered.filter(p => p.id !== featuredPost.id);
+  const gridPosts = filtered.filter(p => p.id !== featuredPost!.id);
 
   const handleNewsletter = (e: React.FormEvent) => {
     e.preventDefault();
