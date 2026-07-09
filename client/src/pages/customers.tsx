@@ -1,4 +1,5 @@
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
+import ExcelJS from "exceljs";
 import { useCurrency } from "@/hooks/useCurrency";
 import { FeatureLock, isListingTier } from "@/components/FeatureLock";
 import PageHeader from "@/components/PageHeader";
@@ -43,6 +44,8 @@ import {
   Share2,
   AlertTriangle,
   Trash2,
+  Download,
+  Loader2,
 } from "lucide-react";
 
 import { CustomerOrderHistory } from "@/components/customer/CustomerOrderHistory";
@@ -450,6 +453,81 @@ export default function Customers() {
     },
   });
 
+  const [isExporting, setIsExporting] = useState(false);
+
+  const exportCustomersExcel = async () => {
+    if (!customers || customers.length === 0) {
+      toast({ title: "No customers to export", variant: "destructive" });
+      return;
+    }
+    setIsExporting(true);
+    try {
+      const wb = new ExcelJS.Workbook();
+      wb.creator = "Quikpik";
+      wb.created = new Date();
+      const ws = wb.addWorksheet("Customers");
+
+      ws.columns = [
+        { header: "Store Name",      key: "storeName",    width: 28 },
+        { header: "First Name",      key: "firstName",    width: 16 },
+        { header: "Last Name",       key: "lastName",     width: 16 },
+        { header: "Email",           key: "email",        width: 28 },
+        { header: "Phone",           key: "phone",        width: 18 },
+        { header: "City",            key: "city",         width: 18 },
+        { header: "Country",         key: "country",      width: 18 },
+        { header: "Groups",          key: "groups",       width: 30 },
+        { header: "Total Orders",    key: "totalOrders",  width: 14 },
+        { header: "Total Spent (£)", key: "totalSpent",   width: 18 },
+        { header: "Unpaid (£)",      key: "totalUnpaid",  width: 14 },
+        { header: "Member Since",    key: "memberSince",  width: 16 },
+      ];
+
+      const headerRow = ws.getRow(1);
+      headerRow.font = { bold: true, color: { argb: "FFFFFFFF" } };
+      headerRow.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF16A34A" } };
+      headerRow.alignment = { vertical: "middle" };
+      headerRow.height = 20;
+
+      for (const c of customers) {
+        const storeName = c.businessName || `${c.firstName || ""} ${c.lastName || ""}`.trim() || c.phoneNumber || "";
+        ws.addRow({
+          storeName,
+          firstName: c.firstName || "",
+          lastName: c.lastName || "",
+          email: c.email || "",
+          phone: c.phoneNumber || "",
+          city: c.city || "",
+          country: c.country || "",
+          groups: (c.groupNames || []).join(", "),
+          totalOrders: c.totalOrders ?? 0,
+          totalSpent: c.totalSpent != null ? Number(c.totalSpent).toFixed(2) : "0.00",
+          totalUnpaid: c.totalUnpaid != null ? Number(c.totalUnpaid).toFixed(2) : "0.00",
+          memberSince: c.createdAt ? new Date(c.createdAt).toLocaleDateString("en-GB") : "",
+        });
+      }
+
+      ws.autoFilter = { from: "A1", to: "L1" };
+
+      const buffer = await wb.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      const today = new Date().toISOString().slice(0, 10);
+      a.download = `customers-${today}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast({ title: "Export complete", description: `${customers.length} customers downloaded.` });
+    } catch (err) {
+      console.error("Export error", err);
+      toast({ title: "Export failed", description: "Could not generate the Excel file.", variant: "destructive" });
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   const getInitials = (firstName: string, lastName?: string, businessName?: string, phoneNumber?: string) => {
     if (businessName) return businessName.slice(0, 2).toUpperCase();
     if (firstName) return `${firstName[0]}${lastName ? lastName[0] : ''}`.toUpperCase();
@@ -844,6 +922,14 @@ export default function Customers() {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
+                    <DropdownMenuItem
+                      onClick={exportCustomersExcel}
+                      disabled={isExporting || isLoadingCustomers}
+                    >
+                      {isExporting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
+                      {isExporting ? "Exporting…" : "Export to Excel"}
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={() => {
                       if (!customers || customers.length === 0) {
                         toast({ title: "No customers found", description: "Please wait for customer data to load", variant: "destructive" });
