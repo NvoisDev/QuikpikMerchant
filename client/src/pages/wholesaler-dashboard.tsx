@@ -181,6 +181,38 @@ function MarginOverview() {
     URL.revokeObjectURL(url);
   };
 
+  const exportDrillCSV = () => {
+    if (!drillData?.length || !selectedMarginProduct) return;
+    const fromStr = format(dateRange.from, "yyyy-MM-dd");
+    const toStr = format(dateRange.to, "yyyy-MM-dd");
+    const safeName = selectedMarginProduct.name.replace(/[^a-z0-9]/gi, "-").toLowerCase();
+    const filename = `margin-${safeName}-${fromStr}-to-${toStr}.csv`;
+
+    const escapeCell = (val: string) => `"${val.replace(/"/g, '""')}"`;
+    const headers = ["Invoice", "Customer", "Date", "Qty", "Unit Cost", "Revenue", "Margin £", "Margin %"];
+    const rows = drillData.map(line => [
+      escapeCell(line.orderNumber ?? `#${line.orderId}`),
+      escapeCell(line.customerName ?? ""),
+      escapeCell(new Date(line.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })),
+      String(line.quantity),
+      line.unitCost !== null ? line.unitCost.toFixed(2) : "",
+      line.revenue.toFixed(2),
+      line.margin !== null ? line.margin.toFixed(2) : "",
+      line.marginPercent !== null ? line.marginPercent.toFixed(1) : "",
+    ]);
+
+    const csv = [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  };
+
   const StatTile = ({ label, value, positive }: { label: string; value: string; positive?: boolean }) => (
     <div className="bg-slate-50 rounded-xl p-3 sm:p-4 flex flex-col gap-1">
       <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">{label}</p>
@@ -385,9 +417,20 @@ function MarginOverview() {
       <Sheet open={selectedMarginProduct !== null} onOpenChange={(open) => { if (!open) setSelectedMarginProduct(null); }}>
         <SheetContent side="right" className="w-full sm:max-w-2xl p-0 flex flex-col">
           <SheetHeader className="px-6 py-4 border-b border-slate-200 shrink-0">
-            <SheetTitle className="text-base font-semibold text-slate-900 leading-tight">
-              {selectedMarginProduct?.name}
-            </SheetTitle>
+            <div className="flex items-start justify-between gap-3">
+              <SheetTitle className="text-base font-semibold text-slate-900 leading-tight">
+                {selectedMarginProduct?.name}
+              </SheetTitle>
+              {drillData && drillData.length > 0 && (
+                <button
+                  onClick={exportDrillCSV}
+                  className="shrink-0 inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg px-3 py-1.5 transition-colors"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  Export CSV
+                </button>
+              )}
+            </div>
             {selectedMarginProduct && (
               <div className="flex flex-wrap gap-4 mt-1 text-xs text-slate-500">
                 <span>Revenue: <span className="font-medium text-slate-700">{fmt(selectedMarginProduct.revenue)}</span></span>
