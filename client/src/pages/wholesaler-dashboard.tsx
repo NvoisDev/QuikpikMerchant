@@ -455,7 +455,68 @@ function MarginOverview() {
                 <p className="text-sm">No invoices found for this product in the selected period</p>
               </div>
             ) : (
-              <div className="overflow-x-auto">
+              <>
+                {(() => {
+                  const costLines = drillData.filter(l => l.marginPercent !== null);
+                  if (costLines.length < 3) return null;
+
+                  const bucket = (d: Date, weekly: boolean) =>
+                    weekly
+                      ? format(d, "'W'ww yyyy")
+                      : format(d, "MMM yy");
+
+                  const buildGroups = (weekly: boolean) => {
+                    const map = new Map<string, { sum: number; count: number; order: number }>();
+                    costLines.forEach(l => {
+                      const d = new Date(l.createdAt);
+                      const key = bucket(d, weekly);
+                      const existing = map.get(key);
+                      if (existing) {
+                        existing.sum += l.marginPercent!;
+                        existing.count += 1;
+                      } else {
+                        map.set(key, { sum: l.marginPercent!, count: 1, order: d.getTime() });
+                      }
+                    });
+                    return Array.from(map.entries())
+                      .sort((a, b) => a[1].order - b[1].order)
+                      .map(([label, { sum, count }]) => ({ label, avg: parseFloat((sum / count).toFixed(1)) }));
+                  };
+
+                  let groups = buildGroups(false);
+                  if (groups.length < 3) groups = buildGroups(true);
+                  if (groups.length < 3) return null;
+
+                  const allPositive = groups.every(g => g.avg >= 0);
+                  const trendColor = (v: number) => v < 0 ? "#dc2626" : v < 15 ? "#d97706" : "#10b981";
+                  const dotColor = trendColor(groups[groups.length - 1].avg);
+
+                  return (
+                    <div className="px-4 pt-4 pb-2 border-b border-slate-100">
+                      <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 mb-1">Margin trend</p>
+                      <ResponsiveContainer width="100%" height={110}>
+                        <LineChart data={groups} margin={{ top: 6, right: 8, left: -20, bottom: 0 }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                          <XAxis dataKey="label" tick={{ fontSize: 10, fill: "#94a3b8" }} axisLine={false} tickLine={false} />
+                          <YAxis tick={{ fontSize: 10, fill: "#94a3b8" }} axisLine={false} tickLine={false} tickFormatter={v => `${v}%`} domain={allPositive ? [0, "auto"] : ["auto", "auto"]} />
+                          <RechartsTooltip
+                            contentStyle={{ fontSize: 11, padding: "4px 8px", border: "1px solid #e2e8f0", borderRadius: 6, background: "#fff" }}
+                            formatter={(v: number) => [`${v}%`, "Avg margin"]}
+                          />
+                          <Line
+                            type="monotone"
+                            dataKey="avg"
+                            stroke={dotColor}
+                            strokeWidth={2}
+                            dot={{ r: 3, fill: dotColor, strokeWidth: 0 }}
+                            activeDot={{ r: 4 }}
+                          />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+                  );
+                })()}
+                <div className="overflow-x-auto">
                 <table className="w-full text-xs">
                   <thead>
                     <tr className="border-b border-slate-200 bg-slate-50 sticky top-0">
@@ -505,6 +566,7 @@ function MarginOverview() {
                   Tap an invoice number to view the full order · Negative margin highlighted in red · Low margin (&lt;15%) in amber
                 </p>
               </div>
+              </>
             )}
           </div>
         </SheetContent>
