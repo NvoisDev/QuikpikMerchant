@@ -237,7 +237,10 @@ export default function BulkUploadDialog({
                       MOQ
                       <span className="ml-1 normal-case font-normal text-gray-400">(click to edit)</span>
                     </th>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Stock</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                      Stock
+                      <span className="ml-1 normal-case font-normal text-gray-400">(click to edit)</span>
+                    </th>
                     <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Unit</th>
                     <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Visibility</th>
                   </tr>
@@ -261,7 +264,14 @@ export default function BulkUploadDialog({
                           onChange={v => onUpdateProduct(index, { moq: v })}
                         />
                       </td>
-                      <td className="px-4 py-2 text-sm text-gray-900">{product.stock}</td>
+                      <td className="px-4 py-2 text-sm">
+                        <InlineNumberCell
+                          value={product.stock}
+                          min={0}
+                          isInteger
+                          onChange={v => onUpdateProduct(index, { stock: v })}
+                        />
+                      </td>
                       <td className="px-4 py-2 text-sm text-gray-900">{product.unit || 'units'} {product.unitFormat && `(${product.unitFormat})`}</td>
                       <td className="px-4 py-2 text-sm">
                         <button
