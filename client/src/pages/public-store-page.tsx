@@ -1027,6 +1027,7 @@ export default function PublicStorePage() {
               value={search}
               onChange={e => setSearch(e.target.value)}
               className={`pl-9 ${search ? 'pr-9' : ''}`}
+              autoFocus
             />
             {search && (
               <button
