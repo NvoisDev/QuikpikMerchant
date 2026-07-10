@@ -226,35 +226,102 @@ export function registerPublicStoreRoutes(app: Express) {
         )
         .orderBy(products.category);
 
-      // Supplier-directory lookup: surface public wholesalers whose name matches
-      // the query even if they have no public products (avoids zero results for
-      // exact-name searches when all products are hidden).
+      // Supplier-directory lookup: surface public wholesalers even if all their
+      // products are hidden. Runs for both text queries (match by businessName)
+      // and category-only filters (match by any product in that category,
+      // including hidden ones).
       let supplierMatches: { wholesalerId: string; businessName: string; storeSlug: string | null; logoUrl: string | null; city: string | null }[] = [];
-      if (q) {
+      if (q || category) {
         const productWholesalerIds = new Set(rows.map(r => r.wholesalerId));
-        const supplierRows = await db
-          .select({
-            wholesalerId: users.id,
-            businessName: users.businessName,
-            storeSlug: users.storeSlug,
-            logoUrl: users.logoUrl,
-            city: users.city,
-          })
-          .from(users)
-          .where(
-            and(
-              eq(users.storeVisibility, 'public'),
-              eq(users.isInactive, false),
-              ilike(users.businessName, `%${q}%`)
+
+        const supplierConditions = [
+          eq(users.storeVisibility, 'public'),
+          eq(users.isInactive, false),
+        ] as any[];
+
+        if (q) {
+          supplierConditions.push(ilike(users.businessName, `%${q}%`));
+        }
+
+        if (category) {
+          // Find wholesalers who carry products in this category even if hidden.
+          // We join products without the hiddenFromPublic filter so suppliers
+          // with fully-hidden catalogues still appear.
+          const categorySupplierIds = await db
+            .selectDistinct({ wholesalerId: products.wholesalerId })
+            .from(products)
+            .innerJoin(users, eq(products.wholesalerId, users.id))
+            .where(
+              and(
+                eq(users.storeVisibility, 'public'),
+                eq(users.isInactive, false),
+                eq(products.status, 'active'),
+                ilike(products.category, `%${category}%`)
+              )
+            );
+
+          const categoryIds = categorySupplierIds
+            .map(r => r.wholesalerId)
+            .filter((id): id is string => id != null && !productWholesalerIds.has(id));
+
+          if (categoryIds.length > 0) {
+            const categorySupplierRows = await db
+              .select({
+                wholesalerId: users.id,
+                businessName: users.businessName,
+                storeSlug: users.storeSlug,
+                logoUrl: users.logoUrl,
+                city: users.city,
+              })
+              .from(users)
+              .where(
+                and(
+                  eq(users.storeVisibility, 'public'),
+                  eq(users.isInactive, false),
+                  inArray(users.id, categoryIds)
+                )
+              )
+              .orderBy(users.businessName)
+              .limit(12);
+
+            supplierMatches = categorySupplierRows
+              .filter(s => s.businessName != null)
+              .map(s => ({ ...s, businessName: s.businessName! }));
+          }
+        }
+
+        // For text queries: also surface suppliers whose name matches, not yet
+        // covered by the category fallback or the product results.
+        if (q) {
+          const alreadyMatched = new Set([
+            ...productWholesalerIds,
+            ...supplierMatches.map(s => s.wholesalerId),
+          ]);
+          const nameSupplierRows = await db
+            .select({
+              wholesalerId: users.id,
+              businessName: users.businessName,
+              storeSlug: users.storeSlug,
+              logoUrl: users.logoUrl,
+              city: users.city,
+            })
+            .from(users)
+            .where(
+              and(
+                eq(users.storeVisibility, 'public'),
+                eq(users.isInactive, false),
+                ilike(users.businessName, `%${q}%`)
+              )
             )
-          )
-          .orderBy(users.businessName)
-          .limit(12);
-        // Only include suppliers that didn't already appear via their products
-        // and whose businessName is non-null (required for display)
-        supplierMatches = supplierRows
-          .filter(s => !productWholesalerIds.has(s.wholesalerId) && s.businessName != null)
-          .map(s => ({ ...s, businessName: s.businessName! }));
+            .orderBy(users.businessName)
+            .limit(12);
+
+          const nameMatches = nameSupplierRows
+            .filter(s => !alreadyMatched.has(s.wholesalerId) && s.businessName != null)
+            .map(s => ({ ...s, businessName: s.businessName! }));
+
+          supplierMatches = [...supplierMatches, ...nameMatches];
+        }
       }
 
       res.json({
