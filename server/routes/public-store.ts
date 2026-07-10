@@ -159,6 +159,7 @@ export function registerPublicStoreRoutes(app: Express) {
     try {
       const q = ((req.query.q as string) || '').trim();
       const category = ((req.query.category as string) || '').trim();
+      const inStockOnly = req.query.inStockOnly === 'true';
       const page = Math.max(1, parseInt(req.query.page as string) || 1);
       const limit = 24;
       const offset = (page - 1) * limit;
@@ -170,6 +171,10 @@ export function registerPublicStoreRoutes(app: Express) {
         eq(products.status, 'active'),
         eq(products.hiddenFromPublic, false),
       ] as any[];
+
+      if (inStockOnly) {
+        conditions.push(sql`${products.stock} > 0`);
+      }
 
       if (q) {
         conditions.push(

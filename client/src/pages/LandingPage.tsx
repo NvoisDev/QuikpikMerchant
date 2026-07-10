@@ -276,6 +276,7 @@ interface SupplierMatch {
 function MarketplaceSearch() {
   const [query, setQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
+  const [inStockOnly, setInStockOnly] = useState(false);
   const [results, setResults] = useState<SearchResult[]>([]);
   const [supplierMatches, setSupplierMatches] = useState<SupplierMatch[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
@@ -283,14 +284,15 @@ function MarketplaceSearch() {
   const [searched, setSearched] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const doSearch = async (q: string, cat: string) => {
-    if (!q && !cat) { setResults([]); setSupplierMatches([]); setSearched(false); return; }
+  const doSearch = async (q: string, cat: string, stockOnly: boolean) => {
+    if (!q && !cat && !stockOnly) { setResults([]); setSupplierMatches([]); setSearched(false); return; }
     setLoading(true);
     setSearched(true);
     try {
       const params = new URLSearchParams();
       if (q) params.set('q', q);
       if (cat) params.set('category', cat);
+      if (stockOnly) params.set('inStockOnly', 'true');
       const res = await fetch(`/api/public/search?${params}`);
       const data = await res.json();
       setResults(data.results || []);
@@ -302,9 +304,9 @@ function MarketplaceSearch() {
 
   useEffect(() => {
     if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(() => doSearch(query, selectedCategory), 350);
+    timerRef.current = setTimeout(() => doSearch(query, selectedCategory, inStockOnly), 350);
     return () => { if (timerRef.current) clearTimeout(timerRef.current); };
-  }, [query, selectedCategory]);
+  }, [query, selectedCategory, inStockOnly]);
 
   // Merge product-derived supplier groups with direct supplier-only matches
   const { supplierGroups: productSupplierGroups, productHits } = splitResults(results, query);
@@ -317,7 +319,7 @@ function MarketplaceSearch() {
     products: [],
   }));
   const supplierGroups = [...productSupplierGroups, ...extraSupplierGroups];
-  const hasContent = searched || query || selectedCategory;
+  const hasContent = searched || query || selectedCategory || inStockOnly;
   const hasBoth = supplierGroups.length > 0 && productHits.length > 0;
 
   return (
@@ -373,24 +375,33 @@ function MarketplaceSearch() {
           />
         </div>
 
-        {/* Category chips (once populated) */}
-        {categories.length > 0 && (
-          <div className="flex flex-wrap justify-center gap-2 mb-6">
-            {categories.slice(0, 12).map(cat => (
-              <button
-                key={cat}
-                onClick={() => setSelectedCategory(c => c === cat ? '' : cat)}
-                className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition-all ${
-                  selectedCategory === cat
-                    ? 'bg-primary text-white shadow-sm'
-                    : 'bg-white text-gray-600 border border-gray-200 hover:border-primary/40 hover:text-primary'
-                }`}
-              >
-                {cat}
-              </button>
-            ))}
-          </div>
-        )}
+        {/* Filter chips — "In stock only" always visible; category chips once populated */}
+        <div className="flex flex-wrap justify-center gap-2 mb-6">
+          <button
+            onClick={() => setInStockOnly(v => !v)}
+            className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition-all flex items-center gap-1.5 ${
+              inStockOnly
+                ? 'bg-green-600 text-white shadow-sm'
+                : 'bg-white text-gray-600 border border-gray-200 hover:border-green-500/40 hover:text-green-700'
+            }`}
+          >
+            <span className={`w-1.5 h-1.5 rounded-full inline-block flex-shrink-0 ${inStockOnly ? 'bg-green-200' : 'bg-green-400'}`} />
+            In stock only
+          </button>
+          {categories.slice(0, 12).map(cat => (
+            <button
+              key={cat}
+              onClick={() => setSelectedCategory(c => c === cat ? '' : cat)}
+              className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition-all ${
+                selectedCategory === cat
+                  ? 'bg-primary text-white shadow-sm'
+                  : 'bg-white text-gray-600 border border-gray-200 hover:border-primary/40 hover:text-primary'
+              }`}
+            >
+              {cat}
+            </button>
+          ))}
+        </div>
 
         {/* Results */}
         {loading && (
