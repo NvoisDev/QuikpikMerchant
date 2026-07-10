@@ -173,6 +173,7 @@ export function registerPublicStoreRoutes(app: Express) {
       ] as any[];
 
       if (inStockOnly) {
+        conditions.push(eq(users.stockVisible, true));
         conditions.push(sql`${products.stock} > 0`);
       }
 

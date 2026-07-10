@@ -385,7 +385,7 @@ function MarketplaceSearch() {
                 : 'bg-white text-gray-600 border border-gray-200 hover:border-green-500/40 hover:text-green-700'
             }`}
           >
-            <span className={`w-1.5 h-1.5 rounded-full inline-block flex-shrink-0 ${inStockOnly ? 'bg-green-200' : 'bg-green-400'}`} />
+            <span className={`w-1.5 h-1.5 rounded-full inline-block flex-shrink-0 ${inStockOnly ? 'bg-white' : 'bg-green-500'}`} />
             In stock only
           </button>
           {categories.slice(0, 12).map(cat => (
@@ -401,6 +401,7 @@ function MarketplaceSearch() {
               {cat}
             </button>
           ))}
+        </div>
         </div>
 
         {/* Results */}
