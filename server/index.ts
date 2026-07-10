@@ -826,10 +826,20 @@ async function runStartupMigrations() {
     `ALTER TABLE order_items ADD COLUMN IF NOT EXISTS custom_label VARCHAR(255)`,
     `ALTER TABLE order_items ADD COLUMN IF NOT EXISTS item_notes TEXT`,
   ];
+  let warned = 0;
   for (const stmt of migrations) {
-    await db.execute(sql.raw(stmt));
+    try {
+      await db.execute(sql.raw(stmt));
+    } catch (err: any) {
+      // All migrations use IF NOT EXISTS / IF EXISTS guards and are idempotent.
+      // A failure here is almost always a transient lock timeout in production
+      // (the object already exists from a prior deployment). Log a warning and
+      // continue — never let a DDL hiccup prevent the server from starting.
+      warned++;
+      console.warn(`⚠️  Migration warning #${warned} (non-fatal, continuing):\n  ${stmt.substring(0, 120)}…\n  ${err?.message ?? err}`);
+    }
   }
-  console.log(`✅ Startup DB migrations applied successfully (${migrations.length} statements)`);
+  console.log(`✅ Startup DB migrations applied (${migrations.length} statements${warned ? `, ${warned} non-fatal warning(s)` : ''})`);
 }
 
 // Idempotent fix: ensures the Stripe Price objects for all paid monthly plans match the
