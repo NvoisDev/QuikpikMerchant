@@ -196,12 +196,15 @@ export function registerPublicStoreRoutes(app: Express) {
           price: products.price,
           minOrderQuantity: products.moq,
           unitsPerPack: products.quantityInPack,
+          stock: products.stock,
           wholesalerId: users.id,
           businessName: users.businessName,
           storeSlug: users.storeSlug,
           logoUrl: users.logoUrl,
           priceDisplayMode: users.priceDisplayMode,
           city: users.city,
+          stockVisible: users.stockVisible,
+          packSizeVisible: users.packSizeVisible,
         })
         .from(products)
         .innerJoin(users, eq(products.wholesalerId, users.id))

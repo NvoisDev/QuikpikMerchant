@@ -193,12 +193,16 @@ interface SearchResult {
   images?: string[] | null;
   price: string;
   minOrderQuantity?: number | null;
+  unitsPerPack?: number | null;
+  stock?: number | null;
   wholesalerId: string;
   businessName: string;
   storeSlug?: string | null;
   logoUrl?: string | null;
   priceDisplayMode: string;
   city?: string | null;
+  stockVisible?: boolean | null;
+  packSizeVisible?: boolean | null;
 }
 
 interface WholesalerGroup {
@@ -480,6 +484,31 @@ function MarketplaceSearch() {
                         <div className="min-w-0 flex-1">
                           <p className="font-semibold text-sm text-gray-900 truncate group-hover:text-primary transition-colors leading-tight">{p.productName}</p>
                           <p className="text-[11px] text-gray-400 truncate mt-0.5">{p.businessName}</p>
+                          {/* Pack size + stock row */}
+                          {(p.packSizeVisible !== false && p.unitsPerPack) || p.stockVisible === true ? (
+                            <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                              {p.packSizeVisible !== false && p.unitsPerPack ? (
+                                <span className="text-[10px] text-gray-500 bg-gray-50 border border-gray-100 px-1.5 py-0.5 rounded-full">
+                                  {p.unitsPerPack} units/pack
+                                </span>
+                              ) : null}
+                              {p.stockVisible === true && p.stock != null ? (
+                                p.stock > 10 ? (
+                                  <span className="text-[10px] font-medium text-green-700 bg-green-50 border border-green-100 px-1.5 py-0.5 rounded-full">
+                                    In stock
+                                  </span>
+                                ) : p.stock > 0 ? (
+                                  <span className="text-[10px] font-medium text-amber-700 bg-amber-50 border border-amber-100 px-1.5 py-0.5 rounded-full">
+                                    {p.stock} left
+                                  </span>
+                                ) : (
+                                  <span className="text-[10px] font-medium text-red-600 bg-red-50 border border-red-100 px-1.5 py-0.5 rounded-full">
+                                    Out of stock
+                                  </span>
+                                )
+                              ) : null}
+                            </div>
+                          ) : null}
                         </div>
 
                         <ChevronRight className="h-4 w-4 text-gray-300 flex-shrink-0 group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
