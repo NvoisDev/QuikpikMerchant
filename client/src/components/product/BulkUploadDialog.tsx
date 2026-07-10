@@ -160,6 +160,7 @@ export default function BulkUploadDialog({
                     <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">MOQ</th>
                     <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Stock</th>
                     <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Unit</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Visibility</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
@@ -170,6 +171,12 @@ export default function BulkUploadDialog({
                       <td className="px-4 py-2 text-sm text-gray-900">{product.moq}</td>
                       <td className="px-4 py-2 text-sm text-gray-900">{product.stock}</td>
                       <td className="px-4 py-2 text-sm text-gray-900">{product.unit || 'units'} {product.unitFormat && `(${product.unitFormat})`}</td>
+                      <td className="px-4 py-2 text-sm">
+                        {product.hiddenFromPublic
+                          ? <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600">Hidden</span>
+                          : <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-700">Public</span>
+                        }
+                      </td>
                     </tr>
                   ))}
                 </tbody>
