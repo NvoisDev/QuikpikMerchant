@@ -235,6 +235,32 @@ function groupByWholesaler(results: SearchResult[]): WholesalerGroup[] {
   return Array.from(map.values()).slice(0, 12);
 }
 
+function splitResults(results: SearchResult[], query: string): {
+  supplierGroups: WholesalerGroup[];
+  productHits: SearchResult[];
+} {
+  if (!query) {
+    return { supplierGroups: [], productHits: results };
+  }
+  const q = query.toLowerCase();
+  const supplierIds = new Set<string>();
+  for (const r of results) {
+    if (r.businessName.toLowerCase().includes(q)) {
+      supplierIds.add(r.wholesalerId);
+    }
+  }
+  const supplierHits: SearchResult[] = [];
+  const productHits: SearchResult[] = [];
+  for (const r of results) {
+    if (supplierIds.has(r.wholesalerId)) {
+      supplierHits.push(r);
+    } else {
+      productHits.push(r);
+    }
+  }
+  return { supplierGroups: groupByWholesaler(supplierHits), productHits };
+}
+
 function MarketplaceSearch() {
   const [query, setQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
@@ -266,8 +292,9 @@ function MarketplaceSearch() {
     return () => { if (timerRef.current) clearTimeout(timerRef.current); };
   }, [query, selectedCategory]);
 
-  const wholesalers = groupByWholesaler(results);
+  const { supplierGroups, productHits } = splitResults(results, query);
   const hasContent = searched || query || selectedCategory;
+  const hasBoth = supplierGroups.length > 0 && productHits.length > 0;
 
   return (
     <section
@@ -348,62 +375,98 @@ function MarketplaceSearch() {
           </div>
         )}
 
-        {!loading && searched && wholesalers.length === 0 && (
+        {!loading && searched && supplierGroups.length === 0 && productHits.length === 0 && (
           <div className="text-center py-10">
             <Store className="h-9 w-9 mx-auto mb-3 text-gray-200" />
-            <p className="text-sm text-gray-400">No suppliers found — try a different search</p>
+            <p className="text-sm text-gray-400">No results found — try a different search</p>
           </div>
         )}
 
-        {!loading && wholesalers.length > 0 && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {wholesalers.map(w => (
-              <a
-                key={w.wholesalerId}
-                href={`/w/${w.storeSlug || w.wholesalerId}${query ? `?q=${encodeURIComponent(query)}` : ''}`}
-                className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 hover:shadow-md hover:border-primary/25 transition-all group flex gap-3.5 items-start"
-              >
-                {/* Logo / initials */}
-                <div className="flex-shrink-0">
-                  {w.logoUrl
-                    ? <img src={w.logoUrl} alt={w.businessName} className="h-11 w-11 rounded-xl object-contain bg-gray-50 p-1 border border-gray-100" />
-                    : (
-                      <div className="h-11 w-11 rounded-xl bg-primary flex items-center justify-center">
-                        <span className="text-white font-bold text-sm">{getInitials(w.businessName)}</span>
+        {!loading && (supplierGroups.length > 0 || productHits.length > 0) && (
+          <div className="space-y-5">
+            {/* ── Suppliers section ── */}
+            {supplierGroups.length > 0 && (
+              <div>
+                {hasBoth && (
+                  <p className="text-xs font-semibold text-white/60 uppercase tracking-wider mb-2 px-1">Suppliers</p>
+                )}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {supplierGroups.map(w => (
+                    <a
+                      key={w.wholesalerId}
+                      href={`/w/${w.storeSlug || w.wholesalerId}`}
+                      className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 hover:shadow-md hover:border-primary/25 transition-all group flex gap-3.5 items-start"
+                    >
+                      {/* Logo / initials */}
+                      <div className="flex-shrink-0">
+                        {w.logoUrl
+                          ? <img src={w.logoUrl} alt={w.businessName} className="h-11 w-11 rounded-xl object-contain bg-gray-50 p-1 border border-gray-100" />
+                          : (
+                            <div className="h-11 w-11 rounded-xl bg-primary flex items-center justify-center">
+                              <span className="text-white font-bold text-sm">{getInitials(w.businessName)}</span>
+                            </div>
+                          )
+                        }
                       </div>
-                    )
-                  }
-                </div>
 
-                {/* Info */}
-                <div className="min-w-0 flex-1">
-                  <p className="font-semibold text-sm text-gray-900 truncate group-hover:text-primary transition-colors mb-0.5">{w.businessName}</p>
-                  {w.city && (
-                    <div className="flex items-center gap-1 mb-2">
-                      <MapPin className="h-3 w-3 text-gray-300 flex-shrink-0" />
-                      <span className="text-xs text-gray-400 truncate">{w.city}</span>
-                    </div>
-                  )}
-                  {/* Matching products */}
-                  {w.products.length > 0 && (
-                    <div className="flex flex-wrap gap-1">
-                      {w.products.slice(0, 3).map(name => (
-                        <span key={name} className="inline-block bg-gray-50 border border-gray-100 text-gray-500 text-[10px] px-2 py-0.5 rounded-full truncate max-w-[120px]">
-                          {name}
+                      {/* Info */}
+                      <div className="min-w-0 flex-1">
+                        <p className="font-semibold text-sm text-gray-900 truncate group-hover:text-primary transition-colors mb-0.5">{w.businessName}</p>
+                        {w.city && (
+                          <div className="flex items-center gap-1 mb-1.5">
+                            <MapPin className="h-3 w-3 text-gray-300 flex-shrink-0" />
+                            <span className="text-xs text-gray-400 truncate">{w.city}</span>
+                          </div>
+                        )}
+                        <span className="inline-flex items-center gap-1 text-[11px] font-medium text-primary">
+                          View Store <ChevronRight className="h-3 w-3" />
                         </span>
-                      ))}
-                      {w.products.length > 3 && (
-                        <span className="inline-block bg-gray-50 border border-gray-100 text-gray-400 text-[10px] px-2 py-0.5 rounded-full">
-                          +{w.products.length - 3}
-                        </span>
-                      )}
-                    </div>
-                  )}
-                </div>
+                      </div>
 
-                <ChevronRight className="h-4 w-4 text-gray-300 flex-shrink-0 self-center group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
-              </a>
-            ))}
+                      <ChevronRight className="h-4 w-4 text-gray-300 flex-shrink-0 self-center group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* ── Products section ── */}
+            {productHits.length > 0 && (
+              <div>
+                {hasBoth && (
+                  <p className="text-xs font-semibold text-white/60 uppercase tracking-wider mb-2 px-1">Products</p>
+                )}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {productHits.slice(0, 12).map(p => {
+                    const storeUrl = `/w/${p.storeSlug || p.wholesalerId}?q=${encodeURIComponent(query)}`;
+                    const thumb = (p.images as string[] | null)?.[0] || p.imageUrl;
+                    return (
+                      <a
+                        key={p.productId}
+                        href={storeUrl}
+                        className="bg-white rounded-2xl border border-gray-100 shadow-sm p-3.5 hover:shadow-md hover:border-primary/25 transition-all group flex gap-3 items-center"
+                      >
+                        {/* Thumbnail */}
+                        <div className="flex-shrink-0 h-10 w-10 rounded-lg overflow-hidden bg-gray-50 border border-gray-100 flex items-center justify-center">
+                          {thumb
+                            ? <img src={thumb} alt={p.productName} className="h-full w-full object-cover" />
+                            : <Package className="h-4 w-4 text-gray-300" />
+                          }
+                        </div>
+
+                        {/* Info */}
+                        <div className="min-w-0 flex-1">
+                          <p className="font-semibold text-sm text-gray-900 truncate group-hover:text-primary transition-colors leading-tight">{p.productName}</p>
+                          <p className="text-[11px] text-gray-400 truncate mt-0.5">{p.businessName}</p>
+                        </div>
+
+                        <ChevronRight className="h-4 w-4 text-gray-300 flex-shrink-0 group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
+                      </a>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
