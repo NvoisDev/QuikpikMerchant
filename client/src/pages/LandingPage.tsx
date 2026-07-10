@@ -438,7 +438,9 @@ function MarketplaceSearch() {
                 )}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {productHits.slice(0, 12).map(p => {
-                    const storeUrl = `/w/${p.storeSlug || p.wholesalerId}?q=${encodeURIComponent(query)}`;
+                    const storeUrl = query.trim()
+                      ? `/w/${p.storeSlug || p.wholesalerId}?q=${encodeURIComponent(query)}`
+                      : `/w/${p.storeSlug || p.wholesalerId}`;
                     const thumb = (p.images as string[] | null)?.[0] || p.imageUrl;
                     return (
                       <a
