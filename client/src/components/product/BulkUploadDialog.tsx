@@ -60,6 +60,7 @@ interface BulkUploadDialogProps {
   onFileUpload: (event: React.ChangeEvent<HTMLInputElement>) => void;
   onConfirmUpload: () => void;
   onCancelUpload: () => void;
+  onUpdateProduct: (index: number, updates: Partial<BulkUploadRow>) => void;
   isBulkCreating: boolean;
 }
 
@@ -71,6 +72,7 @@ export default function BulkUploadDialog({
   onFileUpload,
   onConfirmUpload,
   onCancelUpload,
+  onUpdateProduct,
   isBulkCreating,
 }: BulkUploadDialogProps) {
   const { formatMoney } = useCurrency();
@@ -172,10 +174,18 @@ export default function BulkUploadDialog({
                       <td className="px-4 py-2 text-sm text-gray-900">{product.stock}</td>
                       <td className="px-4 py-2 text-sm text-gray-900">{product.unit || 'units'} {product.unitFormat && `(${product.unitFormat})`}</td>
                       <td className="px-4 py-2 text-sm">
-                        {product.hiddenFromPublic
-                          ? <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600">Hidden</span>
-                          : <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-700">Public</span>
-                        }
+                        <button
+                          type="button"
+                          onClick={() => onUpdateProduct(index, { hiddenFromPublic: !product.hiddenFromPublic })}
+                          className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-green-500"
+                          style={product.hiddenFromPublic
+                            ? { background: '#f3f4f6', color: '#4b5563' }
+                            : { background: '#dcfce7', color: '#15803d' }
+                          }
+                          title="Click to toggle visibility"
+                        >
+                          {product.hiddenFromPublic ? 'Hidden' : 'Public'}
+                        </button>
                       </td>
                     </tr>
                   ))}

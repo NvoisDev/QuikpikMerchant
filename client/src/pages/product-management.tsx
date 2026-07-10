@@ -1323,6 +1323,7 @@ export default function ProductManagement() {
           onFileUpload={handleFileUpload}
           onConfirmUpload={() => bulkCreateProductsMutation.mutate(uploadedProducts)}
           onCancelUpload={() => { setUploadedProducts([]); setUploadErrors([]); }}
+          onUpdateProduct={(index, updates) => setUploadedProducts(prev => prev.map((p, i) => i === index ? { ...p, ...updates } : p))}
           isBulkCreating={bulkCreateProductsMutation.isPending}
         />
 
