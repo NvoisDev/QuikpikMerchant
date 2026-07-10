@@ -1,9 +1,9 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { FileText, Upload, AlertCircle, CheckCircle } from "lucide-react";
+import { FileText, Upload, AlertCircle, CheckCircle, TriangleAlert, X } from "lucide-react";
 import type { BulkUploadRow } from "./types";
 import Papa from "papaparse";
-import { useState, useRef } from "react";
+import { useState, useRef, useMemo, useEffect } from "react";
 
 const CSV_TEMPLATE_ROWS = [
   {
@@ -147,6 +147,23 @@ export default function BulkUploadDialog({
   onUpdateProduct,
   isBulkCreating,
 }: BulkUploadDialogProps) {
+  const [warningDismissed, setWarningDismissed] = useState(false);
+
+  useEffect(() => {
+    setWarningDismissed(false);
+  }, [uploadedProducts.length]);
+
+  const suspiciousRows = useMemo(() => {
+    return uploadedProducts.filter(p => {
+      const price = parseFloat(p.price);
+      const moq = parseFloat(p.moq);
+      return price === 0 || isNaN(price) || moq === 0 || isNaN(moq);
+    });
+  }, [uploadedProducts]);
+
+  const hasIssues = suspiciousRows.length > 0;
+  const confirmBlocked = hasIssues && !warningDismissed;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -293,13 +310,75 @@ export default function BulkUploadDialog({
               </table>
             </div>
 
+            {hasIssues && !warningDismissed && (
+              <div className="border border-amber-300 bg-amber-50 rounded-lg p-4">
+                <div className="flex items-start gap-3">
+                  <TriangleAlert className="h-5 w-5 text-amber-500 mt-0.5 shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-sm font-semibold text-amber-800">
+                      {suspiciousRows.length} product{suspiciousRows.length > 1 ? "s have" : " has"} a zero or missing price / MOQ
+                    </h3>
+                    <p className="mt-1 text-sm text-amber-700">
+                      These products will be created at £0.00 or with MOQ 0 unless you fix them first. Click each value in the table above to edit it inline.
+                    </p>
+                    <ul className="mt-2 text-sm text-amber-800 list-disc list-inside space-y-0.5">
+                      {suspiciousRows.map((p, i) => {
+                        const price = parseFloat(p.price);
+                        const moq = parseFloat(p.moq);
+                        const issues: string[] = [];
+                        if (price === 0 || isNaN(price)) issues.push("price is 0");
+                        if (moq === 0 || isNaN(moq)) issues.push("MOQ is 0");
+                        return (
+                          <li key={i}>
+                            <span className="font-medium">{p.name}</span> — {issues.join(", ")}
+                          </li>
+                        );
+                      })}
+                    </ul>
+                    <button
+                      type="button"
+                      onClick={() => setWarningDismissed(true)}
+                      className="mt-3 text-xs text-amber-700 underline hover:text-amber-900 focus:outline-none"
+                    >
+                      I understand, confirm anyway
+                    </button>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setWarningDismissed(true)}
+                    className="shrink-0 text-amber-500 hover:text-amber-700 focus:outline-none"
+                    aria-label="Dismiss warning"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {hasIssues && warningDismissed && (
+              <div className="flex items-center gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-3 py-2">
+                <TriangleAlert className="h-3.5 w-3.5 shrink-0" />
+                <span>Uploading with zero/missing prices — fix values in the table above to remove this warning.</span>
+                <button
+                  type="button"
+                  onClick={() => setWarningDismissed(false)}
+                  className="ml-auto underline hover:text-amber-900 focus:outline-none"
+                >
+                  Show details
+                </button>
+              </div>
+            )}
+
             <div className="flex justify-end space-x-3">
               <Button variant="outline" onClick={onCancelUpload}>
                 Cancel
               </Button>
               <Button
                 onClick={onConfirmUpload}
-                disabled={isBulkCreating || uploadedProducts.length === 0}
+                disabled={isBulkCreating || uploadedProducts.length === 0 || confirmBlocked}
+                variant={confirmBlocked ? "outline" : "default"}
+                className={confirmBlocked ? "border-amber-400 text-amber-700 bg-amber-50 hover:bg-amber-100 cursor-not-allowed" : ""}
+                title={confirmBlocked ? "Fix zero prices/MOQs above or dismiss the warning before confirming" : undefined}
               >
                 {isBulkCreating ? "Creating..." : `Create ${uploadedProducts.length} Products`}
               </Button>
