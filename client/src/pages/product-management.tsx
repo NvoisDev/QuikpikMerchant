@@ -925,6 +925,8 @@ export default function ProductManagement() {
   const processUploadedData = (data: Record<string, string>[]) => {
     const errors: string[] = [];
     const validProducts: BulkUploadRow[] = [];
+    const boolTrue = (v: string | undefined) => v?.toLowerCase() === 'true';
+    const boolFalse = (v: string | undefined) => v?.toLowerCase() === 'false';
     data.forEach((row, index) => {
       const rowNumber = index + 1;
       if (!row.name || !row.price || !row.moq || !row.stock) {
@@ -948,19 +950,19 @@ export default function ProductManagement() {
       }
       validProducts.push({
         name: row.name, description: row.description || "", price: row.price,
-        promoPrice: row.promoPrice || "", promoActive: row.promoActive === 'true',
+        promoPrice: row.promoPrice || "", promoActive: boolTrue(row.promoActive),
         currency: row.currency || user?.preferredCurrency || "GBP",
         moq: row.moq, stock: row.stock, category: row.category || "",
-        imageUrl: row.imageUrl || "", priceVisible: row.priceVisible !== 'false',
-        hiddenFromPublic: row.hiddenFromPublic === 'true',
+        imageUrl: row.imageUrl || "", priceVisible: !boolFalse(row.priceVisible),
+        hiddenFromPublic: boolTrue(row.hiddenFromPublic),
         status: row.status || "active", unit: row.unit || "units",
         unitFormat: row.unitFormat || "none", sellingFormat: row.sellingFormat || "units",
         unitsPerPallet: row.unitsPerPallet || "", palletPrice: row.palletPrice || "",
         palletMoq: row.palletMoq || "", palletStock: row.palletStock || "",
         palletWeight: row.palletWeight || "", temperatureRequirement: row.temperatureRequirement || "ambient",
         contentCategory: row.contentCategory || "general",
-        specialHandling: { fragile: row.specialHandling_fragile === 'true', perishable: row.specialHandling_perishable === 'true', hazardous: row.specialHandling_hazardous === 'true' },
-        deliveryOptions: { pickup: row.deliveryOptions_pickup !== 'false', delivery: row.deliveryOptions_delivery !== 'false' },
+        specialHandling: { fragile: boolTrue(row.specialHandling_fragile), perishable: boolTrue(row.specialHandling_perishable), hazardous: boolTrue(row.specialHandling_hazardous) },
+        deliveryOptions: { pickup: !boolFalse(row.deliveryOptions_pickup), delivery: !boolFalse(row.deliveryOptions_delivery) },
       });
     });
     setUploadErrors(errors);
