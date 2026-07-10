@@ -402,7 +402,6 @@ function MarketplaceSearch() {
             </button>
           ))}
         </div>
-        </div>
 
         {/* Results */}
         {loading && (
