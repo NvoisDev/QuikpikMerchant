@@ -203,6 +203,7 @@ export function registerPublicStoreRoutes(app: Express) {
           minOrderQuantity: products.moq,
           unitsPerPack: products.quantityInPack,
           unitWeightKg: products.unitWeightKg,
+          packQuantity: products.packQuantity,
           stock: products.stock,
           wholesalerId: users.id,
           businessName: users.businessName,

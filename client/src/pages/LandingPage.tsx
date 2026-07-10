@@ -195,6 +195,7 @@ interface SearchResult {
   minOrderQuantity?: number | null;
   unitsPerPack?: number | null;
   unitWeightKg?: number | null;
+  packQuantity?: number | null;
   stock?: number | null;
   wholesalerId: string;
   businessName: string;
@@ -506,7 +507,10 @@ function MarketplaceSearch() {
                               ) : null}
                               {p.packSizeVisible !== false && p.unitWeightKg ? (
                                 <span className="text-[10px] text-gray-500 bg-gray-50 border border-gray-100 px-1.5 py-0.5 rounded-full">
-                                  {p.unitWeightKg}kg
+                                  {(() => {
+                                    const multiplier = p.packQuantity ?? p.unitsPerPack;
+                                    return multiplier && multiplier > 1 ? `${multiplier} × ${p.unitWeightKg}kg` : `${p.unitWeightKg}kg`;
+                                  })()}
                                 </span>
                               ) : null}
                               {p.stockVisible === true && p.stock != null ? (
