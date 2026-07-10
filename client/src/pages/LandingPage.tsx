@@ -498,18 +498,19 @@ function MarketplaceSearch() {
                           <p className="font-semibold text-sm text-gray-900 truncate group-hover:text-primary transition-colors leading-tight">{p.productName}</p>
                           <p className="text-[11px] text-gray-400 truncate mt-0.5">{p.businessName}</p>
                           {/* Pack size + stock row */}
-                          {(p.packSizeVisible !== false && (p.unitsPerPack || p.unitWeightKg)) || (p.stockVisible === true && p.stock != null) ? (
+                          {(p.packSizeVisible !== false && (p.unitsPerPack || parseFloat(String(p.unitWeightKg ?? 0)) > 0)) || (p.stockVisible === true && p.stock != null) ? (
                             <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                               {p.packSizeVisible !== false && p.unitsPerPack ? (
                                 <span className="text-[10px] text-gray-500 bg-gray-50 border border-gray-100 px-1.5 py-0.5 rounded-full">
                                   {p.unitsPerPack} units/pack
                                 </span>
                               ) : null}
-                              {p.packSizeVisible !== false && p.unitWeightKg ? (
+                              {p.packSizeVisible !== false && parseFloat(String(p.unitWeightKg ?? 0)) > 0 ? (
                                 <span className="text-[10px] text-gray-500 bg-gray-50 border border-gray-100 px-1.5 py-0.5 rounded-full">
                                   {(() => {
                                     const multiplier = p.packQuantity ?? p.unitsPerPack;
-                                    return multiplier && multiplier > 1 ? `${multiplier} × ${p.unitWeightKg}kg` : `${p.unitWeightKg}kg`;
+                                    const wt = parseFloat(String(p.unitWeightKg));
+                                    return multiplier && multiplier > 1 ? `${multiplier} × ${wt}kg` : `${wt}kg`;
                                   })()}
                                 </span>
                               ) : null}
