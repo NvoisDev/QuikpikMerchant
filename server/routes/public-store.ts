@@ -226,8 +226,40 @@ export function registerPublicStoreRoutes(app: Express) {
         )
         .orderBy(products.category);
 
+      // Supplier-directory lookup: surface public wholesalers whose name matches
+      // the query even if they have no public products (avoids zero results for
+      // exact-name searches when all products are hidden).
+      let supplierMatches: { wholesalerId: string; businessName: string; storeSlug: string | null; logoUrl: string | null; city: string | null }[] = [];
+      if (q) {
+        const productWholesalerIds = new Set(rows.map(r => r.wholesalerId));
+        const supplierRows = await db
+          .select({
+            wholesalerId: users.id,
+            businessName: users.businessName,
+            storeSlug: users.storeSlug,
+            logoUrl: users.logoUrl,
+            city: users.city,
+          })
+          .from(users)
+          .where(
+            and(
+              eq(users.storeVisibility, 'public'),
+              eq(users.isInactive, false),
+              ilike(users.businessName, `%${q}%`)
+            )
+          )
+          .orderBy(users.businessName)
+          .limit(12);
+        // Only include suppliers that didn't already appear via their products
+        // and whose businessName is non-null (required for display)
+        supplierMatches = supplierRows
+          .filter(s => !productWholesalerIds.has(s.wholesalerId) && s.businessName != null)
+          .map(s => ({ ...s, businessName: s.businessName! }));
+      }
+
       res.json({
         results: rows,
+        supplierMatches,
         categories: categoryRows.map(r => r.category).filter(Boolean),
         page,
         hasMore: rows.length === limit,

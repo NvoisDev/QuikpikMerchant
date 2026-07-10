@@ -261,17 +261,26 @@ function splitResults(results: SearchResult[], query: string): {
   return { supplierGroups: groupByWholesaler(supplierHits), productHits };
 }
 
+interface SupplierMatch {
+  wholesalerId: string;
+  businessName: string;
+  storeSlug?: string | null;
+  logoUrl?: string | null;
+  city?: string | null;
+}
+
 function MarketplaceSearch() {
   const [query, setQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
+  const [supplierMatches, setSupplierMatches] = useState<SupplierMatch[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const doSearch = async (q: string, cat: string) => {
-    if (!q && !cat) { setResults([]); setSearched(false); return; }
+    if (!q && !cat) { setResults([]); setSupplierMatches([]); setSearched(false); return; }
     setLoading(true);
     setSearched(true);
     try {
@@ -281,6 +290,7 @@ function MarketplaceSearch() {
       const res = await fetch(`/api/public/search?${params}`);
       const data = await res.json();
       setResults(data.results || []);
+      setSupplierMatches(data.supplierMatches || []);
       if (data.categories?.length) setCategories(data.categories);
     } catch { /* silent */ }
     setLoading(false);
@@ -292,7 +302,17 @@ function MarketplaceSearch() {
     return () => { if (timerRef.current) clearTimeout(timerRef.current); };
   }, [query, selectedCategory]);
 
-  const { supplierGroups, productHits } = splitResults(results, query);
+  // Merge product-derived supplier groups with direct supplier-only matches
+  const { supplierGroups: productSupplierGroups, productHits } = splitResults(results, query);
+  const extraSupplierGroups: WholesalerGroup[] = supplierMatches.map(s => ({
+    wholesalerId: s.wholesalerId,
+    businessName: s.businessName,
+    storeSlug: s.storeSlug,
+    logoUrl: s.logoUrl,
+    city: s.city,
+    products: [],
+  }));
+  const supplierGroups = [...productSupplierGroups, ...extraSupplierGroups];
   const hasContent = searched || query || selectedCategory;
   const hasBoth = supplierGroups.length > 0 && productHits.length > 0;
 
