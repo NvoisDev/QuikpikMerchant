@@ -1,9 +1,9 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { FileText, Upload, AlertCircle, CheckCircle } from "lucide-react";
-import { useCurrency } from "@/hooks/useCurrency";
 import type { BulkUploadRow } from "./types";
 import Papa from "papaparse";
+import { useState, useRef } from "react";
 
 const CSV_TEMPLATE_ROWS = [
   {
@@ -64,6 +64,78 @@ interface BulkUploadDialogProps {
   isBulkCreating: boolean;
 }
 
+function InlineNumberCell({
+  value,
+  min,
+  isInteger,
+  onChange,
+}: {
+  value: string;
+  min: number;
+  isInteger?: boolean;
+  onChange: (v: string) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(value);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const isInvalid = (() => {
+    const n = parseFloat(draft);
+    if (isNaN(n) || n < min) return true;
+    if (isInteger && !Number.isInteger(n)) return true;
+    return false;
+  })();
+
+  const commit = () => {
+    if (!isInvalid) {
+      onChange(draft);
+    } else {
+      setDraft(value);
+    }
+    setEditing(false);
+  };
+
+  if (!editing) {
+    return (
+      <button
+        type="button"
+        className="group flex items-center gap-1 rounded px-1 py-0.5 text-sm text-gray-900 hover:bg-green-50 hover:ring-1 hover:ring-green-300 focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors"
+        title="Click to edit"
+        onClick={() => {
+          setDraft(value);
+          setEditing(true);
+          setTimeout(() => inputRef.current?.select(), 0);
+        }}
+      >
+        {value}
+        <span className="opacity-0 group-hover:opacity-60 text-xs text-green-600">✎</span>
+      </button>
+    );
+  }
+
+  return (
+    <input
+      ref={inputRef}
+      autoFocus
+      type="number"
+      step={isInteger ? "1" : "0.01"}
+      min={min}
+      value={draft}
+      onChange={e => setDraft(e.target.value)}
+      onBlur={commit}
+      onKeyDown={e => {
+        if (e.key === "Enter") commit();
+        if (e.key === "Escape") { setDraft(value); setEditing(false); }
+      }}
+      className={`w-20 rounded border px-1.5 py-0.5 text-sm focus:outline-none focus:ring-2 ${
+        isInvalid
+          ? "border-red-400 bg-red-50 text-red-700 focus:ring-red-400"
+          : "border-green-400 bg-green-50 text-gray-900 focus:ring-green-500"
+      }`}
+    />
+  );
+}
+
 export default function BulkUploadDialog({
   open,
   onOpenChange,
@@ -75,7 +147,6 @@ export default function BulkUploadDialog({
   onUpdateProduct,
   isBulkCreating,
 }: BulkUploadDialogProps) {
-  const { formatMoney } = useCurrency();
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -158,8 +229,14 @@ export default function BulkUploadDialog({
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Price</th>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">MOQ</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                      Price
+                      <span className="ml-1 normal-case font-normal text-gray-400">(click to edit)</span>
+                    </th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                      MOQ
+                      <span className="ml-1 normal-case font-normal text-gray-400">(click to edit)</span>
+                    </th>
                     <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Stock</th>
                     <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Unit</th>
                     <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Visibility</th>
@@ -169,8 +246,21 @@ export default function BulkUploadDialog({
                   {uploadedProducts.map((product, index) => (
                     <tr key={index}>
                       <td className="px-4 py-2 text-sm text-gray-900">{product.name}</td>
-                      <td className="px-4 py-2 text-sm text-gray-900">{formatMoney(parseFloat(product.price))}</td>
-                      <td className="px-4 py-2 text-sm text-gray-900">{product.moq}</td>
+                      <td className="px-4 py-2 text-sm">
+                        <InlineNumberCell
+                          value={product.price}
+                          min={0}
+                          onChange={v => onUpdateProduct(index, { price: v })}
+                        />
+                      </td>
+                      <td className="px-4 py-2 text-sm">
+                        <InlineNumberCell
+                          value={product.moq}
+                          min={1}
+                          isInteger
+                          onChange={v => onUpdateProduct(index, { moq: v })}
+                        />
+                      </td>
                       <td className="px-4 py-2 text-sm text-gray-900">{product.stock}</td>
                       <td className="px-4 py-2 text-sm text-gray-900">{product.unit || 'units'} {product.unitFormat && `(${product.unitFormat})`}</td>
                       <td className="px-4 py-2 text-sm">
