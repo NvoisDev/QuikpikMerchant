@@ -1,0 +1,57 @@
+I’ve identified a UX issue with marketplace search that I’d like to improve.
+
+Current problem
+
+The marketplace search currently returns both products and suppliers.
+
+When a user searches for a supplier (or part of a supplier’s name), the supplier card appears correctly in the search results. However, when the user clicks the supplier card, they are taken to the supplier’s product page with the original search term still applied as a product filter.
+
+Example:
+
+* User searches “Haq”
+* Supplier Haq Global appears in results ✅
+* User clicks the supplier
+* They land on Haq Global’s store
+* The page immediately says “No products found” because it is still trying to search for a product called “Haq” rather than simply opening the supplier’s store.
+
+This is confusing because the supplier was found successfully, yet the user is shown an empty store.
+
+Proposed solution
+
+I think supplier discovery should behave differently from product discovery.
+
+When the search result is identified as a supplier:
+
+* Clicking the supplier card should open the supplier’s storefront with no product search filter applied.
+* The supplier card should also have a prominent View Store button that always opens the full store.
+* If the user wants to search within that supplier’s products afterwards, they can use the search bar on the supplier page.
+
+Additional improvements
+
+Please review the marketplace search experience and recommend the best UX.
+
+Things to consider:
+
+* Detect whether the query best matches a supplier or a product.
+* Allow partial supplier name matching (e.g. “Haq”, “Global”, “Bel”).
+* Clearly separate supplier results from product results when both exist.
+* If a supplier is selected, clear the marketplace search context before navigating to their store.
+* Ensure the search state does not leak into the supplier storefront.
+* Preserve existing product search behaviour and do not introduce regressions.
+
+What I’d like from you
+
+1. Audit the current marketplace search flow end-to-end.
+2. Explain why the supplier search term is persisting into the supplier page.
+3. Recommend the cleanest architecture for supplier vs product navigation.
+4. Implement the solution using best UX practices.
+5. Regression test:
+    * Product search
+    * Supplier search
+    * Partial supplier names
+    * Clicking supplier cards
+    * View Store button
+    * Browser back/forward navigation
+    * Mobile and desktop behaviour
+
+The goal is for supplier discovery to feel natural: finding a supplier should take the user directly into that supplier’s storefront, while product searches should continue filtering products as they do today.
