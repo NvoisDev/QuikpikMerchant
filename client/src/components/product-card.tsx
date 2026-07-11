@@ -160,11 +160,12 @@ function ProductCard({
     if (product.unitSize) {
       return `${qty} × ${formatWeight(product.unitSize)}${uom}`;
     }
-    // Derive from totalPackageWeight ÷ packQuantity (totalPackageWeight is in kg)
+    // Derive from totalPackageWeight ÷ packQuantity (totalPackageWeight is always in kg,
+    // so the derived unitWt is also in kg — do NOT append uom here)
     const totalWt = product.totalPackageWeight ? parseFloat(product.totalPackageWeight) : 0;
     if (totalWt > 0) {
       const unitWt = totalWt / qty;
-      return `${qty} × ${formatWeight(unitWt)}${uom}`;
+      return `${qty} × ${formatWeight(unitWt)}kg`;
     }
     return null;
   };

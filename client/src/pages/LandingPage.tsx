@@ -510,7 +510,7 @@ function MarketplaceSearch() {
                                 const unitKg = parseFloat(String(p.unitWeightKg ?? 0));
 
                                 if (pq > 1 && p.unitSize && p.unitOfMeasure) {
-                                  // Full format: "20 kg/pack · 20 × 1kg" or "20 kg/pack · 40 × 500g"
+                                  // Full format with explicit size: "20 kg/pack · 20 × 1kg" or "20 kg/pack · 40 × 500g"
                                   const prefix = packKg > 0 ? `${packKg} kg/pack · ` : '';
                                   return (
                                     <span className="text-[10px] text-gray-500 bg-gray-50 border border-gray-100 px-1.5 py-0.5 rounded-full">
@@ -518,8 +518,17 @@ function MarketplaceSearch() {
                                     </span>
                                   );
                                 }
+                                if (pq > 1 && packKg > 0) {
+                                  // Fallback: unitSize not set but totalPackageWeight available — derive unit weight in kg
+                                  const unitWt = +(packKg / pq).toFixed(3);
+                                  return (
+                                    <span className="text-[10px] text-gray-500 bg-gray-50 border border-gray-100 px-1.5 py-0.5 rounded-full">
+                                      {packKg} kg/pack · {pq} × {unitWt}kg
+                                    </span>
+                                  );
+                                }
                                 if (pq > 1) {
-                                  // Pack count only (no unit size data): "40/case"
+                                  // No weight data at all: "40/case"
                                   return (
                                     <span className="text-[10px] text-gray-500 bg-gray-50 border border-gray-100 px-1.5 py-0.5 rounded-full">
                                       {pq}/case
