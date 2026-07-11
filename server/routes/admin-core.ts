@@ -330,6 +330,7 @@ export function registerAdminCoreRoutes(app: Express): void {
         .where(and(
           eq(users.isTestAccount, false),
           eq(users.isInactive, false),
+          inArray(orders.paymentStatus, ['paid', 'part_paid']),
           from ? gte(orders.createdAt, new Date(from)) : undefined,
           toDate ? lte(orders.createdAt, toDate) : undefined,
           filterWholesalerId ? eq(orders.wholesalerId, filterWholesalerId) : undefined,

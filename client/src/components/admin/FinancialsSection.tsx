@@ -148,9 +148,18 @@ export function FinancialsSection({ wholesalers, isAdmin }: { wholesalers: Whole
               {p.label}
             </button>
           ))}
-          <input type="date" value={customFrom} onChange={e => { setCustomFrom(e.target.value); setPreset("all_time"); }} className="text-xs border border-gray-200 rounded-lg px-2 py-1 h-7 text-gray-600 focus:outline-none" />
-          <span className="text-xs text-gray-400">–</span>
-          <input type="date" value={customTo} onChange={e => { setCustomTo(e.target.value); setPreset("all_time"); }} className="text-xs border border-gray-200 rounded-lg px-2 py-1 h-7 text-gray-600 focus:outline-none" />
+          {!customFrom && !customTo && preset === "all_time" ? (
+            <span className="text-xs text-gray-400 px-2 py-1 h-7 flex items-center border border-dashed border-gray-200 rounded-lg cursor-pointer hover:border-gray-300"
+              onClick={() => setCustomFrom(format(new Date(), "yyyy-MM-dd"))}>
+              Custom range…
+            </span>
+          ) : (
+            <>
+              <input type="date" value={customFrom} onChange={e => { setCustomFrom(e.target.value); setPreset("all_time"); }} className="text-xs border border-gray-200 rounded-lg px-2 py-1 h-7 text-gray-600 focus:outline-none" />
+              <span className="text-xs text-gray-400">–</span>
+              <input type="date" value={customTo} onChange={e => { setCustomTo(e.target.value); setPreset("all_time"); }} className="text-xs border border-gray-200 rounded-lg px-2 py-1 h-7 text-gray-600 focus:outline-none" />
+            </>
+          )}
           <select value={wholesalerFilter} onChange={e => { setWholesalerFilter(e.target.value); setPage(1); }} className="text-xs border border-gray-200 rounded-lg px-2 py-1 h-7 text-gray-600 focus:outline-none bg-white">
             <option value="">All wholesalers</option>
             {wholesalers.map(w => <option key={w.id} value={w.id}>{w.businessName ?? `${w.firstName ?? ""} ${w.lastName ?? ""}`}</option>)}
