@@ -443,11 +443,17 @@ export default function PublicProductPage() {
                 MOQ · {product.minOrderQuantity} units
               </span>
             )}
-            {showPackSize && (
-              <span className="flex-none text-[11px] font-semibold bg-gray-50 text-gray-600 border border-gray-100 rounded-full px-2.5 py-1">
-                {product.packQuantity} × {parseFloat(String(product.unitSize))}{product.unitOfMeasure}
-              </span>
-            )}
+            {showPackSize && (() => {
+              const qty = product.packQuantity ?? 0;
+              const unitW = parseFloat(String(product.unitSize ?? 0));
+              const uom = product.unitOfMeasure ?? '';
+              const total = uom === 'kg' && qty > 0 ? qty * unitW : 0;
+              return (
+                <span className="flex-none text-[11px] font-semibold bg-gray-50 text-gray-600 border border-gray-100 rounded-full px-2.5 py-1">
+                  {total > 0 ? `${total} kg/pack · ` : ''}{qty} × {unitW}{uom}
+                </span>
+              );
+            })()}
             {product.views > 1 && (
               <span className="flex-none text-[11px] font-medium text-gray-400 border border-gray-100 rounded-full px-2.5 py-1 flex items-center gap-1">
                 <Eye className="h-2.5 w-2.5" /> {product.views.toLocaleString()} views

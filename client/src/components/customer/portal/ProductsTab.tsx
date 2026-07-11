@@ -743,7 +743,13 @@ export function ProductsTab({
                             || (product.totalPackageWeight ? parseFloat(product.totalPackageWeight) : 0);
                           const palw = product.palletWeight ? parseFloat(String(product.palletWeight)) : 0;
                           const parts: string[] = [];
-                          if (pw > 0) parts.push(`${formatWeight(pw)} kg/pack`);
+                          if (pw > 0) {
+                            const qty = product.packQuantity;
+                            const uSize = product.unitSize ? parseFloat(product.unitSize) : 0;
+                            const uom = product.unitOfMeasure ?? '';
+                            const breakdown = qty && uSize > 0 ? ` · ${qty} × ${formatWeight(uSize)}${uom}` : '';
+                            parts.push(`${formatWeight(pw)} kg/pack${breakdown}`);
+                          }
                           if (palw > 0 && (product.sellingFormat === 'pallets' || product.sellingFormat === 'both')) {
                             parts.push(`${formatWeight(palw)} kg/pallet`);
                           }
@@ -1187,7 +1193,13 @@ export function ProductsTab({
                               || (product.totalPackageWeight ? parseFloat(product.totalPackageWeight) : 0);
                             const palw = product.palletWeight ? parseFloat(String(product.palletWeight)) : 0;
                             const parts: string[] = [];
-                            if (pw > 0) parts.push(`${formatWeight(pw)} kg/pack`);
+                            if (pw > 0) {
+                              const qty = product.packQuantity;
+                              const uSize = product.unitSize ? parseFloat(product.unitSize) : 0;
+                              const uom = product.unitOfMeasure ?? '';
+                              const breakdown = qty && uSize > 0 ? ` · ${qty} × ${formatWeight(uSize)}${uom}` : '';
+                              parts.push(`${formatWeight(pw)} kg/pack${breakdown}`);
+                            }
                             if (palw > 0 && (product.sellingFormat === 'pallets' || product.sellingFormat === 'both')) {
                               parts.push(`${formatWeight(palw)} kg/pallet`);
                             }
