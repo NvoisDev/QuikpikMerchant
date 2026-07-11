@@ -269,6 +269,8 @@ export default function QuickQuote() {
   const [highlightedProductIndex, setHighlightedProductIndex] = useState(0);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const highlightedItemRef = useRef<HTMLDivElement>(null);
+  const [highlightedCustomerIndex, setHighlightedCustomerIndex] = useState(0);
+  const highlightedCustomerRef = useRef<HTMLButtonElement>(null);
   const [addCustomerDialogOpen, setAddCustomerDialogOpen] = useState(false);
   const [sendMethod, setSendMethod] = useState<'share' | 'link'>('share');
   const [sendSmsNotification, setSendSmsNotification] = useState(true);
@@ -414,6 +416,13 @@ export default function QuickQuote() {
       highlightedItemRef.current.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     }
   }, [highlightedProductIndex, productDialogOpen]);
+
+  // Scroll highlighted customer row into view when index changes via keyboard
+  useEffect(() => {
+    if (customerDropdownOpen && highlightedCustomerRef.current) {
+      highlightedCustomerRef.current.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
+  }, [highlightedCustomerIndex, customerDropdownOpen]);
 
   // Pre-fill form from draft when data is available
   useEffect(() => {
@@ -1727,7 +1736,8 @@ export default function QuickQuote() {
                 open={customerDropdownOpen}
                 onOpenChange={(open) => {
                   setCustomerDropdownOpen(open);
-                  if (!open) setCustomerSearch('');
+                  if (!open) { setCustomerSearch(''); setHighlightedCustomerIndex(0); }
+                  if (open) setHighlightedCustomerIndex(0);
                 }}
               >
                 <SheetTrigger asChild>
@@ -1753,41 +1763,88 @@ export default function QuickQuote() {
                     <SheetTitle className="text-base">Select Customer</SheetTitle>
                     <Input
                       autoFocus
-                      placeholder="Search by name or number..."
+                      placeholder="Search by name or number… ↑↓ to navigate · Enter to select"
                       value={customerSearch}
-                      onChange={(e) => setCustomerSearch(e.target.value)}
+                      onChange={(e) => { setCustomerSearch(e.target.value); setHighlightedCustomerIndex(0); }}
                       className="mt-2"
-                    />
-                  </SheetHeader>
-                  <div className="flex-1 overflow-y-auto">
-                    {(() => {
-                      const renderRow = (customer: Customer) => (
-                        <button
-                          key={customer.id}
-                          className={`w-full flex items-center gap-3 px-4 py-2 text-left hover:bg-gray-50 transition-colors ${selectedCustomer?.id === customer.id ? 'bg-green-50' : ''}`}
-                          onClick={() => {
+                      onKeyDown={(e) => {
+                        const q = customerSearch.toLowerCase();
+                        const frequent = customerSearch ? [] : [...customers]
+                          .filter((c) => (c.totalOrders ?? 0) > 0)
+                          .sort((a, b) => {
+                            const ao = a.totalOrders ?? 0; const bo = b.totalOrders ?? 0;
+                            if (bo !== ao) return bo - ao;
+                            const ad = a.lastOrderDate ? new Date(a.lastOrderDate).getTime() : 0;
+                            const bd = b.lastOrderDate ? new Date(b.lastOrderDate).getTime() : 0;
+                            return bd - ad;
+                          }).slice(0, 5);
+                        const visibleCustomers = customerSearch
+                          ? customers.filter((c) => {
+                              const name = (c.businessName || `${c.firstName || ''} ${c.lastName || ''}`.trim()).toLowerCase();
+                              const phone = (c.phoneNumber || '').toLowerCase();
+                              return name.includes(q) || phone.includes(q);
+                            })
+                          : [...frequent, ...customers];
+                        if (e.key === 'ArrowDown') {
+                          e.preventDefault();
+                          setHighlightedCustomerIndex(i => Math.max(0, Math.min(i + 1, visibleCustomers.length - 1)));
+                        } else if (e.key === 'ArrowUp') {
+                          e.preventDefault();
+                          setHighlightedCustomerIndex(i => Math.max(i - 1, 0));
+                        } else if (e.key === 'Enter') {
+                          e.preventDefault();
+                          const customer = visibleCustomers[highlightedCustomerIndex];
+                          if (customer) {
                             setSelectedCustomer(customer);
                             setDeliveryAddressId(null);
                             setDeliveryAddressText('');
                             setUseCustomAddress(false);
                             setCustomerSearch('');
+                            setHighlightedCustomerIndex(0);
                             setCustomerDropdownOpen(false);
-                          }}
-                        >
-                          <Avatar className="h-8 w-8 flex-shrink-0">
-                            <AvatarFallback className="bg-blue-100 text-blue-600 text-xs">
-                              {getCustomerInitials(customer)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className="flex flex-col min-w-0 flex-1">
-                            <span className="text-sm font-semibold text-gray-900 truncate">{customer.businessName || `${customer.firstName || ''} ${customer.lastName || ''}`.trim() || customer.phoneNumber || 'Unknown'}</span>
-                            <span className="text-xs text-gray-500 truncate">{customer.phoneNumber || 'No phone'}</span>
-                          </div>
-                          <Check
-                            className={`h-4 w-4 flex-shrink-0 text-green-600 ${selectedCustomer?.id === customer.id ? 'opacity-100' : 'opacity-0'}`}
-                          />
-                        </button>
-                      );
+                          }
+                        } else if (e.key === 'Escape') {
+                          setCustomerDropdownOpen(false);
+                        }
+                      }}
+                    />
+                  </SheetHeader>
+                  <div className="flex-1 overflow-y-auto">
+                    {(() => {
+                      const selectCustomer = (customer: Customer) => {
+                        setSelectedCustomer(customer);
+                        setDeliveryAddressId(null);
+                        setDeliveryAddressText('');
+                        setUseCustomAddress(false);
+                        setCustomerSearch('');
+                        setHighlightedCustomerIndex(0);
+                        setCustomerDropdownOpen(false);
+                      };
+
+                      const renderRow = (customer: Customer, flatIdx: number) => {
+                        const isHighlighted = flatIdx === highlightedCustomerIndex;
+                        return (
+                          <button
+                            key={`${customer.id}-${flatIdx}`}
+                            ref={isHighlighted ? highlightedCustomerRef : undefined}
+                            className={`w-full flex items-center gap-3 px-4 py-2 text-left transition-colors ${isHighlighted ? 'bg-blue-50 ring-1 ring-inset ring-blue-200' : selectedCustomer?.id === customer.id ? 'bg-green-50' : 'hover:bg-gray-50'}`}
+                            onClick={() => selectCustomer(customer)}
+                          >
+                            <Avatar className="h-8 w-8 flex-shrink-0">
+                              <AvatarFallback className="bg-blue-100 text-blue-600 text-xs">
+                                {getCustomerInitials(customer)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="flex flex-col min-w-0 flex-1">
+                              <span className="text-sm font-semibold text-gray-900 truncate">{customer.businessName || `${customer.firstName || ''} ${customer.lastName || ''}`.trim() || customer.phoneNumber || 'Unknown'}</span>
+                              <span className="text-xs text-gray-500 truncate">{customer.phoneNumber || 'No phone'}</span>
+                            </div>
+                            <Check
+                              className={`h-4 w-4 flex-shrink-0 text-green-600 ${selectedCustomer?.id === customer.id ? 'opacity-100' : 'opacity-0'}`}
+                            />
+                          </button>
+                        );
+                      };
 
                       const sectionHeader = (label: string) => (
                         <div className="px-4 py-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500 bg-slate-50 border-b border-slate-200">
@@ -1809,7 +1866,7 @@ export default function QuickQuote() {
                         }
                         return (
                           <div className="divide-y divide-gray-100">
-                            {filtered.map(renderRow)}
+                            {filtered.map((c, i) => renderRow(c, i))}
                           </div>
                         );
                       }
@@ -1838,13 +1895,13 @@ export default function QuickQuote() {
                             <>
                               {sectionHeader('Frequently contacted')}
                               <div className="divide-y divide-gray-100">
-                                {frequent.map(renderRow)}
+                                {frequent.map((c, i) => renderRow(c, i))}
                               </div>
                             </>
                           )}
                           {frequent.length > 0 && sectionHeader('All customers')}
                           <div className="divide-y divide-gray-100">
-                            {customers.map(renderRow)}
+                            {customers.map((c, i) => renderRow(c, frequent.length + i))}
                           </div>
                         </>
                       );
