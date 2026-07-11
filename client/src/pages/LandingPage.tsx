@@ -193,9 +193,9 @@ interface SearchResult {
   images?: string[] | null;
   price: string;
   minOrderQuantity?: number | null;
-  unitsPerPack?: number | null;
   unitWeightKg?: number | null;
   packQuantity?: number | null;
+  totalPackageWeight?: number | null;
   stock?: number | null;
   wholesalerId: string;
   businessName: string;
@@ -500,16 +500,33 @@ function MarketplaceSearch() {
                           {/* Pack size + stock row */}
                           {(p.packSizeVisible !== false && ((p.packQuantity && p.packQuantity > 1) || parseFloat(String(p.unitWeightKg ?? 0)) > 0)) || (p.stockVisible === true && p.stock != null) ? (
                             <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                              {p.packSizeVisible !== false && parseFloat(String(p.unitWeightKg ?? 0)) > 0 ? (
-                                <span className="text-[10px] text-gray-500 bg-gray-50 border border-gray-100 px-1.5 py-0.5 rounded-full">
-                                  {parseFloat(String(p.unitWeightKg))}kg
-                                </span>
-                              ) : null}
-                              {p.packSizeVisible !== false && p.packQuantity && p.packQuantity > 1 ? (
-                                <span className="text-[10px] text-gray-500 bg-gray-50 border border-gray-100 px-1.5 py-0.5 rounded-full">
-                                  {p.packQuantity}/case
-                                </span>
-                              ) : null}
+                              {p.packSizeVisible !== false && (() => {
+                                const wt = parseFloat(String(p.unitWeightKg ?? 0));
+                                const pq = p.packQuantity ?? 0;
+                                const total = parseFloat(String(p.totalPackageWeight ?? 0)) || (pq * wt);
+                                if (pq > 1 && wt > 0) {
+                                  return (
+                                    <span className="text-[10px] text-gray-500 bg-gray-50 border border-gray-100 px-1.5 py-0.5 rounded-full">
+                                      {total} kg/pack · {pq} × {wt}kg
+                                    </span>
+                                  );
+                                }
+                                if (wt > 0) {
+                                  return (
+                                    <span className="text-[10px] text-gray-500 bg-gray-50 border border-gray-100 px-1.5 py-0.5 rounded-full">
+                                      {wt}kg
+                                    </span>
+                                  );
+                                }
+                                if (pq > 1) {
+                                  return (
+                                    <span className="text-[10px] text-gray-500 bg-gray-50 border border-gray-100 px-1.5 py-0.5 rounded-full">
+                                      {pq}/case
+                                    </span>
+                                  );
+                                }
+                                return null;
+                              })()}
                               {p.stockVisible === true && p.stock != null ? (
                                 p.stock > 10 ? (
                                   <span className="text-[10px] font-medium text-green-700 bg-green-50 border border-green-100 px-1.5 py-0.5 rounded-full">
