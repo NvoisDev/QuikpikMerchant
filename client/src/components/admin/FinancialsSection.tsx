@@ -232,7 +232,7 @@ export function FinancialsSection({ wholesalers, isAdmin }: { wholesalers: Whole
         <StatCard label="Buyer Fees"        value={isLoading ? "…" : fmt(revenueTotals.totalCustomerFees)}  sub={avgBuyerFee != null ? `Avg. ${fmt(avgBuyerFee)} per order` : "—"} icon={<TrendingUp className="h-4 w-4" />} color={BLUE} />
         <StatCard label="Merchant Fees"     value={isLoading ? "…" : fmt(revenueTotals.totalPlatformFees)}  sub={avgMerchantFee != null ? `Avg. ${fmt(avgMerchantFee)} per order` : "—"} icon={<TrendingUp className="h-4 w-4" />} color={AMBER} />
         <StatCard label="Order Revenue"     value={isLoading ? "…" : fmt(revenueTotals.totalGrossRevenue)}  sub="Buyer + merchant fees"  icon={<TrendingUp className="h-4 w-4" />} color={GREEN} />
-        <StatCard label="Period GMV"        value={isLoading ? "…" : fmt(revenueTotals.totalGMV)}           sub="Gross merchandise value" icon={<DollarSign className="h-4 w-4" />} color={PURPLE} />
+        <StatCard label="Revenue GMV"        value={isLoading ? "…" : fmt(revenueTotals.totalGMV)}           sub="Fee-generating orders only" icon={<DollarSign className="h-4 w-4" />} color={PURPLE} />
         <StatCard label="Subscriptions"      value={isLoading ? "…" : fmt(totalSubRevenue)}               sub={subSub}                  icon={<Users className="h-4 w-4" />}    color="#4f46e5" />
       </div>
 
@@ -247,8 +247,13 @@ export function FinancialsSection({ wholesalers, isAdmin }: { wholesalers: Whole
       <Card className="border-gray-200 shadow-none rounded-xl">
         <CardContent className="px-4 py-3 flex flex-wrap gap-6">
           <div><p className="text-xs text-gray-400">Overall Take Rate</p><p className="text-sm font-bold text-indigo-600">{pct(revenueTotals.totalGrossRevenue || 0, revenueTotals.totalGMV || 0)}</p></div>
-          <div><p className="text-xs text-gray-400">Orders in period</p><p className="text-sm font-bold text-gray-800">{formatNumber(revenueOrders.length)}</p></div>
+          <div><p className="text-xs text-gray-400">Fee-generating orders</p><p className="text-sm font-bold text-gray-800">{formatNumber(revenueOrders.length)}</p></div>
           <div><p className="text-xs text-gray-400">Avg. order value</p><p className="text-sm font-bold text-gray-800">{revenueOrders.length > 0 ? fmt((revenueTotals.totalGMV || 0) / revenueOrders.length) : "—"}</p></div>
+          <div>
+            <p className="text-xs text-gray-400">Total Platform GMV</p>
+            <p className="text-sm font-bold text-gray-500">{isLoading ? "…" : fmt(revenueData?.totalPlatformGMV ?? 0)}</p>
+            <p className="text-[10px] text-gray-400">All non-cancelled orders</p>
+          </div>
         </CardContent>
       </Card>
 
