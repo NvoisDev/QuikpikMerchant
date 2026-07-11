@@ -194,6 +194,8 @@ export function QuoteItemCard({
               )}
             </div>
 
+            {/* Fixed-height meta block — reserves space for two lines so all cards share the same baseline */}
+            <div className="min-h-[36px] sm:min-h-0">
             {/* Meta line 1: price · stock */}
             <div className="flex items-center gap-1 mt-0.5">
               <span className="text-[11px] text-gray-400">
@@ -227,6 +229,7 @@ export function QuoteItemCard({
                 )}
               </div>
             )}
+            </div>{/* end fixed-height meta block */}
           </div>
 
           {/* Delete — mobile only */}
@@ -239,8 +242,8 @@ export function QuoteItemCard({
           </button>
         </div>
 
-        {/* ─ Mode toggle (full-width segmented control on mobile; compact inline on desktop) ─ */}
-        {showModeSelector && onSwitchMode && (
+        {/* ─ Toggle zone — always occupies min-h-[44px] on mobile for uniform card height ─ */}
+        {showModeSelector && onSwitchMode ? (
           <div className="flex mt-2 pl-7 sm:pl-0 sm:mt-0">
             <div className="flex flex-1 sm:flex-none rounded-md border border-gray-200 overflow-hidden min-h-[44px] sm:min-h-0">
               {showUnits && (
@@ -275,10 +278,17 @@ export function QuoteItemCard({
               )}
             </div>
           </div>
+        ) : (
+          /* Placeholder — mobile only, keeps inputs row at the same vertical position as toggle cards */
+          <div className="flex mt-2 pl-7 sm:hidden min-h-[44px] items-center">
+            <span className="text-xs text-gray-400">
+              Selling in: {item.sellingType === 'pallets' ? 'Pallets' : isPacks ? 'Packs' : 'Units'}
+            </span>
+          </div>
         )}
 
         {/* ─ Inputs row (indented on mobile to align under name; inline on desktop) ─ */}
-        <div className="flex items-start gap-1.5 mt-1.5 sm:mt-0 pl-7 sm:pl-0">
+        <div className="flex items-center gap-1.5 mt-1.5 sm:mt-0 pl-7 sm:pl-0">
           {/* Qty input */}
           <div className="w-14 sm:w-16 shrink-0">
             <div className="text-[10px] text-gray-400 mb-0.5 text-center">
@@ -427,7 +437,7 @@ export function QuoteItemCard({
       )}
 
       {/* ── Cost + Margin footer (weight removed — now stacked under Total) ── */}
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-2.5 py-1 border-t border-dashed border-gray-100 bg-gray-50">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-2.5 py-2 border-t border-dashed border-gray-100 bg-gray-50">
         <div className="flex items-center gap-1.5">
           <span className="text-[11px] text-gray-400">Cost</span>
           <Input
