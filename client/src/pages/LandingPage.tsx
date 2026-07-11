@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { computePackWeightKg } from "@shared/utils/product";
 import { useCanonical } from "@/hooks/useCanonical";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -503,27 +504,33 @@ function MarketplaceSearch() {
                           {(p.packSizeVisible !== false && ((p.packQuantity && p.packQuantity > 1) || parseFloat(String(p.unitWeightKg ?? 0)) > 0 || (p.unitOfMeasure === 'kg' && parseFloat(String(p.unitSize ?? 0)) > 0))) || (p.stockVisible === true && p.stock != null) ? (
                             <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                               {p.packSizeVisible !== false && (() => {
-                                const wt = parseFloat(String(p.unitWeightKg ?? 0)) || (p.unitOfMeasure === 'kg' ? parseFloat(String(p.unitSize ?? 0)) : 0);
                                 const pq = p.packQuantity ?? 0;
-                                const total = parseFloat(String(p.totalPackageWeight ?? 0)) || (pq > 0 && wt > 0 ? +(pq * wt).toFixed(3) : 0);
-                                if (pq > 1 && wt > 0) {
+                                const packKg = parseFloat(String(p.totalPackageWeight ?? 0))
+                                  || computePackWeightKg(pq, p.unitSize, p.unitOfMeasure);
+                                const unitKg = parseFloat(String(p.unitWeightKg ?? 0));
+
+                                if (pq > 1 && p.unitSize && p.unitOfMeasure) {
+                                  // Full format: "20 kg/pack · 20 × 1kg" or "20 kg/pack · 40 × 500g"
+                                  const prefix = packKg > 0 ? `${packKg} kg/pack · ` : '';
                                   return (
                                     <span className="text-[10px] text-gray-500 bg-gray-50 border border-gray-100 px-1.5 py-0.5 rounded-full">
-                                      {total} kg/pack · {pq} × {wt}kg
-                                    </span>
-                                  );
-                                }
-                                if (wt > 0) {
-                                  return (
-                                    <span className="text-[10px] text-gray-500 bg-gray-50 border border-gray-100 px-1.5 py-0.5 rounded-full">
-                                      {wt}kg
+                                      {prefix}{pq} × {p.unitSize}{p.unitOfMeasure}
                                     </span>
                                   );
                                 }
                                 if (pq > 1) {
+                                  // Pack count only (no unit size data): "40/case"
                                   return (
                                     <span className="text-[10px] text-gray-500 bg-gray-50 border border-gray-100 px-1.5 py-0.5 rounded-full">
                                       {pq}/case
+                                    </span>
+                                  );
+                                }
+                                if (unitKg > 0) {
+                                  // Single-unit product with weight field: "10kg"
+                                  return (
+                                    <span className="text-[10px] text-gray-500 bg-gray-50 border border-gray-100 px-1.5 py-0.5 rounded-full">
+                                      {unitKg}kg
                                     </span>
                                   );
                                 }
