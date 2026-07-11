@@ -1973,7 +1973,7 @@ export default function QuickQuote() {
                         placeholder="Search products..."
                         value={productSearch}
                         onChange={(e) => setProductSearch(e.target.value)}
-                        className="pl-9"
+                        className="pl-9 h-8 text-sm"
                       />
                     </div>
                     {priceLists.length > 0 && (
@@ -1981,7 +1981,7 @@ export default function QuickQuote() {
                         <button
                           type="button"
                           onClick={() => setPickerPriceListId(null)}
-                          className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${pickerPriceListId === null ? 'bg-green-600 text-white border-green-600' : 'bg-white text-gray-600 border-gray-300 hover:border-green-400'}`}
+                          className={`px-2 py-0.5 rounded-full text-[11px] font-medium border transition-colors ${pickerPriceListId === null ? 'bg-green-600 text-white border-green-600' : 'bg-white text-gray-600 border-gray-300 hover:border-green-400'}`}
                         >
                           Standard
                         </button>
@@ -1990,7 +1990,7 @@ export default function QuickQuote() {
                             key={pl.id}
                             type="button"
                             onClick={() => setPickerPriceListId(pl.id)}
-                            className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${pickerPriceListId === pl.id ? 'bg-green-600 text-white border-green-600' : 'bg-white text-gray-600 border-gray-300 hover:border-green-400'}`}
+                            className={`px-2 py-0.5 rounded-full text-[11px] font-medium border transition-colors ${pickerPriceListId === pl.id ? 'bg-green-600 text-white border-green-600' : 'bg-white text-gray-600 border-gray-300 hover:border-green-400'}`}
                           >
                             {pl.name}
                           </button>
@@ -2004,7 +2004,7 @@ export default function QuickQuote() {
                         p.name.toLowerCase().includes(productSearch.toLowerCase())
                       );
                       return (
-                    <div className="grid grid-cols-1 gap-3 mt-4">
+                    <div className="grid grid-cols-1 gap-2 mt-2">
                       {filteredProducts.length === 0 ? (
                         <p className="text-sm text-gray-500 text-center py-6">No products found</p>
                       ) : null}
@@ -2028,9 +2028,9 @@ export default function QuickQuote() {
                           }
                         }
                         return (
-                        <div key={product.id} className="p-3 border rounded-lg">
-                          <div className="flex items-center gap-2 mb-2">
-                            <span className="font-medium">{product.name}</span>
+                        <div key={product.id} className="p-2 border rounded-lg">
+                          <div className="flex items-center gap-1.5 mb-1">
+                            <span className="text-sm font-medium">{product.name}</span>
                             {activePromos.map((offer: any, oi: number) => (
                               <Badge key={oi} variant="secondary" className={
                                 offer.type === 'percentage_discount' ? 'bg-red-100 text-red-700 text-xs' :
@@ -2049,7 +2049,7 @@ export default function QuickQuote() {
                               </Badge>
                             ))}
                           </div>
-                          <div className="flex flex-wrap gap-2">
+                          <div className="flex flex-wrap gap-1.5">
                             {(() => {
                               const availableUnits = product.totalBatchStock ?? product.stock;
                               const unitInStock = availableUnits > 0;
@@ -2067,8 +2067,8 @@ export default function QuickQuote() {
                                   Per Unit
                                   {unitPriceChanged && <span className="text-[10px] bg-green-100 text-green-700 px-1 rounded">List</span>}
                                 </div>
-                                <div className="mt-1">
-                                  <div className={`font-semibold ${unitInStock ? 'text-green-600' : 'text-gray-400'}`}>
+                                <div>
+                                  <div className={`font-semibold text-sm ${unitInStock ? 'text-green-600' : 'text-gray-400'}`}>
                                     {promoUnitPrice !== null ? (
                                       <>
                                         <span className="line-through text-gray-400 font-normal mr-1">{formatMoney(product.price)}</span>
@@ -2083,12 +2083,10 @@ export default function QuickQuote() {
                                       <>{formatMoney(resolvedUnit)}</>
                                     )}
                                   </div>
-                                  <div className={`text-xs mt-0.5 ${unitInStock ? 'text-gray-500' : 'text-red-500 font-medium'}`}>
+                                  <div className={`text-[11px] mt-0.5 ${unitInStock ? 'text-gray-500' : 'text-red-500 font-medium'}`}>
                                     {unitInStock ? `${availableUnits} units` : 'Out of stock'}
-                                  </div>
-                                  {unitInStock && product.batchCount && product.batchCount > 0 && (
-                                    <div className="text-xs mt-0.5 text-gray-400">
-                                      {product.batchCount} batch{product.batchCount !== 1 ? 'es' : ''}
+                                    {unitInStock && product.batchCount && product.batchCount > 0 && (
+                                      <> · {product.batchCount} batch{product.batchCount !== 1 ? 'es' : ''}
                                       {product.nearestExpiry && (() => {
                                         const exp = new Date(product.nearestExpiry);
                                         const now = new Date(); now.setHours(0, 0, 0, 0);
@@ -2098,10 +2096,11 @@ export default function QuickQuote() {
                                         if (diff <= 30) return <span className="text-amber-600"> · Exp {fmt}</span>;
                                         return <span> · Exp {fmt}</span>;
                                       })()}
-                                    </div>
-                                  )}
+                                      </>
+                                    )}
+                                  </div>
                                   {product.costPrice && (
-                                    <div className="text-xs mt-1 text-gray-400">
+                                    <div className="text-[11px] mt-0.5 text-gray-400">
                                       {(() => {
                                         const cost = parseFloat(product.costPrice);
                                         const sell = parseFloat(product.price);
@@ -2109,7 +2108,7 @@ export default function QuickQuote() {
                                         const mPct = sell > 0 ? ((mAmt / sell) * 100).toFixed(0) : '0';
                                         return (
                                           <>
-                                            Cost {formatMoney(cost)} | Margin{' '}
+                                            Cost {formatMoney(cost)} · Margin{' '}
                                             <span className={mAmt < 0 ? 'text-red-500' : 'text-green-600'}>
                                               {formatMoney(mAmt)} ({mPct}%)
                                             </span>
@@ -2140,8 +2139,8 @@ export default function QuickQuote() {
                                 onClick={() => palletInStock && addProduct(product, 'pallets')}
                               >
                                 <div className={`text-xs font-medium ${palletInStock ? 'text-blue-600' : 'text-gray-400'}`}>Per Pallet</div>
-                                <div className="mt-1">
-                                  <div className={`font-semibold ${palletInStock ? 'text-blue-600' : 'text-gray-400'}`}>
+                                <div>
+                                  <div className={`font-semibold text-sm ${palletInStock ? 'text-blue-600' : 'text-gray-400'}`}>
                                     {promoPalletPrice !== null ? (
                                       <>
                                         <span className="line-through text-gray-400 font-normal mr-1">{formatMoney(product.palletPrice)}</span>
@@ -2151,11 +2150,14 @@ export default function QuickQuote() {
                                       <>{formatMoney(product.palletPrice)}</>
                                     )}
                                   </div>
-                                  <div className={`text-xs mt-0.5 ${palletInStock ? 'text-gray-500' : 'text-red-500 font-medium'}`}>
+                                  <div className={`text-[11px] mt-0.5 ${palletInStock ? 'text-gray-500' : 'text-red-500 font-medium'}`}>
                                     {palletInStock ? `${product.palletStock} pallets` : 'Out of stock'}
+                                    {palletInStock && product.unitsPerPallet && (
+                                      <> · {product.unitsPerPallet} units/pallet</>
+                                    )}
                                   </div>
                                   {product.costPrice && product.unitsPerPallet && (
-                                    <div className="text-xs mt-1 text-gray-400">
+                                    <div className="text-[11px] mt-0.5 text-gray-400">
                                       {(() => {
                                         const palletCost = parseFloat(product.costPrice) * product.unitsPerPallet;
                                         const palletSell = parseFloat(product.palletPrice!);
@@ -2163,7 +2165,7 @@ export default function QuickQuote() {
                                         const mPct = palletSell > 0 ? ((mAmt / palletSell) * 100).toFixed(0) : '0';
                                         return (
                                           <>
-                                            Cost {formatMoney(palletCost)} | Margin{' '}
+                                            Cost {formatMoney(palletCost)} · Margin{' '}
                                             <span className={mAmt < 0 ? 'text-red-500' : 'text-green-600'}>
                                               {formatMoney(mAmt)} ({mPct}%)
                                             </span>
@@ -2173,11 +2175,6 @@ export default function QuickQuote() {
                                     </div>
                                   )}
                                 </div>
-                                {product.unitsPerPallet && (
-                                  <div className="text-xs text-gray-400 mt-1">
-                                    ({product.unitsPerPallet} units/pallet)
-                                  </div>
-                                )}
                               </div>
                               );
                             })()}
