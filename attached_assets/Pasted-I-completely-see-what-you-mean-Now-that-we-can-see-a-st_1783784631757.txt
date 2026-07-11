@@ -1,0 +1,22 @@
+I completely see what you mean. Now that we can see a standard card (Ogi) right next to a wholesale card (Amala), the lack of uniformity becomes really obvious.
+Because the "Units / Pallets" toggle was dropped right into the middle of the card, it pushes everything down on the Amala card, destroying the vertical rhythm and grid alignment between items. The boxes don't line up, the labels are uneven, and it creates a choppy scrolling experience.
+To fix this and get true uniformity of space, your agent needs to treat all cards with the same structural layout, whether they have a toggle or not.
+Here is a prompt for your agent to enforce consistent grid alignment, spacing, and component heights across the board.
+Agent Prompt: Enforce UI Uniformity and Grid Spacing Across Invoice Cards
+OBJECTIVE
+Refactor the itemized invoice card components (Ogi and Amala in image_9.png) to achieve complete uniformity of space, strict vertical rhythm, and consistent visual alignment across both standard and wholesale items.
+CRITICAL LAYOUT & GRID RULES
+ * Uniform Card Structure (The "Placeholder" Rule):
+   * Every card must share the exact same structural skeleton and internal padding, regardless of the product type.
+   * Standard Items (like Ogi): If a product does not utilize a Unit/Pallet toggle, do not let the layout collapse. Instead, keep a fixed hidden or blank structural area where the toggle would sit, OR always render the unit context as static text in that exact space (e.g., a subtle text indicator saying Selling in: Units). This ensures the Qty, Price/unit, and Total rows sit at the exact same vertical coordinate on every single card.
+ * Strict Text and Meta Alignment:
+   * Equalize the height of the product metadata block below the product names.
+   * Use a fixed 2-line layout constraint for the metadata line. For standard items with only 1 line of data, add an empty spacer line (min-h-[32px] or equivalent) so the toggle/input rows below it always start at the exact same vertical baseline.
+ * Horizontal Input & Total Grid Alignment:
+   * Create a strict horizontal flex or grid alignment for the Qty, Price/unit, and Total column.
+   * The Total column (£8.00 / 400 kg) must be vertically centered relative to the input boxes to its left (align-items: center).
+ * Bottom Margin Strip Spacing:
+   * Standardize the padding inside the bottom gray strip (Cost / Margin).
+   * Increase vertical padding to py-2 (approx. 8px top and bottom) so the green text (Margin £6.00) is never tightly squished against the card's bottom border. Ensure this height is identical on every card.
+EXPECTED VISUAL OUTCOME
+When scrolling through the invoice list, the input fields, total values, and borders of the Ogi card and Amala card should line up perfectly along a shared vertical grid line, restoring a clean, uniform, and premium UI rhythm.
