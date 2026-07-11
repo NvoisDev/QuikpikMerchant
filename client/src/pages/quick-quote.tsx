@@ -2030,9 +2030,10 @@ export default function QuickQuote() {
                       <Plus className="h-4 w-4 mr-1" /> Add Product
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                  <DialogContent className="left-0 top-0 translate-x-0 translate-y-0 w-full max-w-none h-full max-h-none rounded-none flex flex-col gap-0 p-0 sm:left-[50%] sm:top-[50%] sm:translate-x-[-50%] sm:translate-y-[-50%] sm:max-w-2xl sm:w-auto sm:h-auto sm:max-h-[90vh] sm:rounded-lg sm:block sm:gap-4 sm:p-6 sm:overflow-y-auto">
+                    <div className="flex-none px-4 pt-4 pb-2 sm:p-0">
                     <DialogHeader>
-                      <DialogTitle>Select Product</DialogTitle>
+                      <DialogTitle className="pr-8 sm:pr-0">Select Product</DialogTitle>
                     </DialogHeader>
                     <div className="relative mt-2">
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -2103,6 +2104,8 @@ export default function QuickQuote() {
                         ))}
                       </div>
                     )}
+                    </div>
+                    <div className="flex-1 overflow-y-auto px-4 pb-4 sm:p-0 sm:overflow-visible">
                     {(() => {
                       const addedProductIds = new Set(quoteItems.map(qi => qi.productId));
                       const filteredProducts = products.filter((p) =>
@@ -2297,6 +2300,7 @@ export default function QuickQuote() {
                     </div>
                       );
                     })()}
+                    </div>
                   </DialogContent>
                 </Dialog>
               </div>
