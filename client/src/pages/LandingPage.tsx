@@ -514,7 +514,7 @@ function MarketplaceSearch() {
                                   const prefix = packKg > 0 ? `${packKg} kg/pack · ` : '';
                                   return (
                                     <span className="text-[10px] text-gray-500 bg-gray-50 border border-gray-100 px-1.5 py-0.5 rounded-full">
-                                      {prefix}{pq} × {p.unitSize}{p.unitOfMeasure}
+                                      {prefix}{pq} × {+p.unitSize}{p.unitOfMeasure}
                                     </span>
                                   );
                                 }
