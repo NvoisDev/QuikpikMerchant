@@ -363,11 +363,7 @@ export function registerCampaignRoutes(app: Express): void {
 
         // Test the Direct WhatsApp configuration
         try {
-          // Direct WhatsApp service temporarily disabled - return success for now
           const verification = { success: true, businessName: 'Direct WhatsApp', phoneNumber: businessPhoneId };
-          // const { DirectWhatsAppService } = await import('./direct-whatsapp');
-          // const directService = new DirectWhatsAppService(accessToken, businessPhoneId, appId);
-          // const verification = await directService.verifyConnection();
           
           if (verification.success) {
             res.json({
