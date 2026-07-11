@@ -116,6 +116,9 @@ export function QuoteItemCard({
   const compareQty = item.sellingType === 'pallets' ? liveDisplayQty : liveBaseQty;
   const isOverStock = item.stockCount !== undefined && compareQty > item.stockCount;
 
+  const hasPackDims = !!(item.packQuantity && item.unitSize && item.unitOfMeasure);
+  const hasWeight = item.weightKg > 0;
+
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   if (isCollapsed) {
@@ -157,22 +160,24 @@ export function QuoteItemCard({
 
   return (
     <div className="rounded-md border border-gray-200 bg-white overflow-hidden">
-      {/* ── Main area: two rows on mobile, single row on desktop ── */}
-      <div className="px-2.5 py-1.5 sm:flex sm:items-center sm:gap-1.5">
+      {/* ── Main area: stacked on mobile, single flex row on desktop ── */}
+      <div className="px-2.5 py-1.5 sm:flex sm:items-start sm:gap-1.5">
 
         {/* ─ Name row ─ */}
-        <div className="flex items-center gap-1.5 sm:flex-1 sm:min-w-0">
+        <div className="flex items-start gap-1.5 sm:flex-1 sm:min-w-0">
           {/* Collapse toggle */}
           <button
             type="button"
             onClick={() => setIsCollapsed(true)}
-            className="text-gray-300 hover:text-gray-600 transition-colors shrink-0 p-0.5 rounded"
+            className="text-gray-300 hover:text-gray-600 transition-colors shrink-0 p-0.5 rounded mt-0.5"
             aria-label="Collapse item"
           >
             <ChevronUp className="h-4 w-4" />
           </button>
-          {/* Name + meta */}
+
+          {/* Name + two-line meta */}
           <div className="flex-1 min-w-0">
+            {/* Name + badges */}
             <div className="flex items-center gap-1.5 flex-wrap">
               <span className="text-sm font-medium text-gray-900 truncate leading-tight">
                 {item.productName}
@@ -188,73 +193,92 @@ export function QuoteItemCard({
                 </Badge>
               )}
             </div>
-            {/* Secondary meta: original price + pack/weight/stock */}
-            <div className="flex flex-wrap items-center gap-x-2 gap-y-0 mt-0.5">
+
+            {/* Meta line 1: price · stock */}
+            <div className="flex items-center gap-1 mt-0.5">
               <span className="text-[11px] text-gray-400">
                 {formatCurrency(item.originalPrice)}/{priceLabel}
               </span>
-              {item.packQuantity && item.unitSize && item.unitOfMeasure && (
-                <span className="text-[11px] text-gray-400">
-                  {item.packQuantity}×{formatWeight(item.unitSize)}{item.unitOfMeasure}
-                </span>
-              )}
-              {item.weightKg > 0 && (
-                <span className="text-[11px] text-gray-400">
-                  {formatWeight(item.weightKg)}kg/{item.sellingType === 'pallets' ? 'pallet' : item.packQuantity && item.packQuantity > 1 ? 'pack' : 'unit'}
-                </span>
-              )}
               {item.stockCount !== undefined && (
-                <span className={`text-[11px] font-medium ${isOverStock ? 'text-red-500' : 'text-gray-400'}`}>
-                  {item.stockCount} {stockUnitLabel}{item.stockCount !== 1 ? 's' : ''} in stock
-                </span>
+                <>
+                  <span className="text-[11px] text-gray-300">·</span>
+                  <span className={`text-[11px] font-medium ${isOverStock ? 'text-red-500' : 'text-gray-400'}`}>
+                    {item.stockCount} {stockUnitLabel}{item.stockCount !== 1 ? 's' : ''} in stock
+                  </span>
+                </>
               )}
             </div>
+
+            {/* Meta line 2: dimensions · weight (only when present) */}
+            {(hasPackDims || hasWeight) && (
+              <div className="flex items-center gap-1">
+                {hasPackDims && (
+                  <span className="text-[11px] text-gray-400">
+                    {item.packQuantity}×{formatWeight(item.unitSize!)}{item.unitOfMeasure}
+                  </span>
+                )}
+                {hasPackDims && hasWeight && (
+                  <span className="text-[11px] text-gray-300">·</span>
+                )}
+                {hasWeight && (
+                  <span className="text-[11px] text-gray-400">
+                    {formatWeight(item.weightKg)}kg/{item.sellingType === 'pallets' ? 'pallet' : item.packQuantity && item.packQuantity > 1 ? 'pack' : 'unit'}
+                  </span>
+                )}
+              </div>
+            )}
           </div>
+
           {/* Delete — mobile only */}
           <button
             onClick={() => removeItem(index)}
-            className="sm:hidden text-gray-300 hover:text-red-500 transition-colors shrink-0 p-0.5 rounded"
+            className="sm:hidden text-gray-300 hover:text-red-500 transition-colors shrink-0 p-0.5 rounded mt-0.5"
             aria-label="Remove item"
           >
             <Trash2 className="h-4 w-4" />
           </button>
         </div>
 
-        {/* ─ Inputs row (indented on mobile to align under name) ─ */}
-        <div className="flex items-center gap-1.5 mt-1.5 sm:mt-0 pl-7 sm:pl-0">
-          {/* Mode selector (compact pill strip) */}
-          {showModeSelector && onSwitchMode && (
-            <div className="flex rounded overflow-hidden border border-gray-200 text-[10px] shrink-0">
+        {/* ─ Mode toggle (full-width segmented control on mobile; compact inline on desktop) ─ */}
+        {showModeSelector && onSwitchMode && (
+          <div className="flex mt-2 pl-7 sm:pl-0 sm:mt-0">
+            <div className="flex flex-1 sm:flex-none rounded-md border border-gray-200 overflow-hidden min-h-[44px] sm:min-h-0">
               {showUnits && (
                 <button
                   type="button"
                   onClick={() => onSwitchMode('units')}
-                  className={`px-1.5 py-0.5 transition-colors ${activeMode === 'units' ? 'bg-gray-700 text-white font-medium' : 'bg-white text-gray-500 hover:bg-gray-50'}`}
+                  className={`flex-1 sm:flex-none sm:px-1.5 sm:py-0.5 flex items-center justify-center transition-colors font-medium text-sm sm:text-[10px]
+                    ${activeMode === 'units' ? 'bg-gray-800 text-white' : 'bg-white text-gray-500 hover:bg-gray-50'}`}
                 >
-                  U
+                  Units
                 </button>
               )}
               {showPacks && (
                 <button
                   type="button"
                   onClick={() => onSwitchMode('packs')}
-                  className={`px-1.5 py-0.5 border-l transition-colors ${activeMode === 'packs' ? 'bg-blue-600 text-white font-medium' : 'bg-white text-gray-500 hover:bg-gray-50'}`}
+                  className={`flex-1 sm:flex-none sm:px-1.5 sm:py-0.5 flex items-center justify-center border-l transition-colors font-medium text-sm sm:text-[10px]
+                    ${activeMode === 'packs' ? 'bg-blue-600 text-white' : 'bg-white text-gray-500 hover:bg-gray-50'}`}
                 >
-                  Pk
+                  Packs
                 </button>
               )}
               {showPallets && (
                 <button
                   type="button"
                   onClick={() => onSwitchMode('pallets')}
-                  className={`px-1.5 py-0.5 border-l transition-colors ${activeMode === 'pallets' ? 'bg-blue-700 text-white font-medium' : 'bg-white text-gray-500 hover:bg-gray-50'}`}
+                  className={`flex-1 sm:flex-none sm:px-1.5 sm:py-0.5 flex items-center justify-center border-l transition-colors font-medium text-sm sm:text-[10px]
+                    ${activeMode === 'pallets' ? 'bg-blue-700 text-white' : 'bg-white text-gray-500 hover:bg-gray-50'}`}
                 >
-                  Pl
+                  Pallets
                 </button>
               )}
             </div>
-          )}
+          </div>
+        )}
 
+        {/* ─ Inputs row (indented on mobile to align under name; inline on desktop) ─ */}
+        <div className="flex items-start gap-1.5 mt-1.5 sm:mt-0 pl-7 sm:pl-0">
           {/* Qty input */}
           <div className="w-14 sm:w-16 shrink-0">
             <div className="text-[10px] text-gray-400 mb-0.5 text-center">
@@ -283,7 +307,7 @@ export function QuoteItemCard({
                   setInputValues(prev => ({ ...prev, [sk]: { ...prev[sk]!, qty: '1' } }));
                 }
               }}
-              className={`h-7 text-xs text-center px-1 ${item.quantity < 1 || palletMoqViolation ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
+              className={`h-11 sm:h-7 text-xs text-center px-1 ${item.quantity < 1 || palletMoqViolation ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
             />
           </div>
 
@@ -310,16 +334,21 @@ export function QuoteItemCard({
                   setInputValues(prev => ({ ...prev, [sk]: { ...prev[sk]!, price: item.customPrice.toString() } }));
                 }
               }}
-              className={`h-7 text-xs text-center px-1 ${item.customPrice <= 0 ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
+              className={`h-11 sm:h-7 text-xs text-center px-1 ${item.customPrice <= 0 ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
             />
           </div>
 
-          {/* Total */}
+          {/* Total + weight stacked */}
           <div className="w-14 sm:w-16 shrink-0 text-right">
             <div className="text-[10px] text-gray-400 mb-0.5">Total</div>
-            <div className="text-sm font-semibold text-gray-900 leading-7">
+            <div className="text-sm font-semibold text-gray-900 leading-none">
               {formatCurrency(item.customPrice * item.quantity)}
             </div>
+            {hasWeight && (
+              <div className="text-[10px] text-gray-400 mt-1 leading-none">
+                {formatWeight(item.weightKg * item.quantity)} kg
+              </div>
+            )}
           </div>
 
           {/* Delete — desktop only */}
@@ -397,7 +426,7 @@ export function QuoteItemCard({
         </div>
       )}
 
-      {/* ── Cost + Margin footer ── */}
+      {/* ── Cost + Margin footer (weight removed — now stacked under Total) ── */}
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-2.5 py-1 border-t border-dashed border-gray-100 bg-gray-50">
         <div className="flex items-center gap-1.5">
           <span className="text-[11px] text-gray-400">Cost</span>
@@ -426,11 +455,6 @@ export function QuoteItemCard({
         <span className={`text-[11px] font-medium ${isNegativeMargin ? 'text-red-600' : 'text-green-700'}`}>
           {formatCurrency(marginAmt)} ({marginPct.toFixed(1)}%)
         </span>
-        {item.weightKg > 0 && (
-          <span className="text-[11px] text-gray-400 ml-auto">
-            {formatWeight(item.weightKg * item.quantity)} kg
-          </span>
-        )}
       </div>
     </div>
   );
