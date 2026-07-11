@@ -266,6 +266,9 @@ export default function QuickQuote() {
   const [productDialogOpen, setProductDialogOpen] = useState(false);
   const [productSearch, setProductSearch] = useState("");
   const [pickerPriceListId, setPickerPriceListId] = useState<number | null>(null);
+  const [highlightedProductIndex, setHighlightedProductIndex] = useState(0);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const highlightedItemRef = useRef<HTMLDivElement>(null);
   const [addCustomerDialogOpen, setAddCustomerDialogOpen] = useState(false);
   const [sendMethod, setSendMethod] = useState<'share' | 'link'>('share');
   const [sendSmsNotification, setSendSmsNotification] = useState(true);
@@ -404,6 +407,13 @@ export default function QuickQuote() {
     () => (editingDraftId ? allDrafts.find((d: any) => d.id === editingDraftId) ?? null : null),
     [editingDraftId, allDrafts]
   );
+
+  // Scroll highlighted product card into view when index changes via keyboard
+  useEffect(() => {
+    if (productDialogOpen && highlightedItemRef.current) {
+      highlightedItemRef.current.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
+  }, [highlightedProductIndex, productDialogOpen]);
 
   // Pre-fill form from draft when data is available
   useEffect(() => {
@@ -1957,7 +1967,7 @@ export default function QuickQuote() {
                   <Package className="h-5 w-5 shrink-0" />
                   Invoice Items{quoteItems.length > 0 && <span className="text-gray-500 font-normal"> ({quoteItems.length})</span>}
                 </CardTitle>
-                <Dialog open={productDialogOpen} onOpenChange={(open) => { setProductDialogOpen(open); if (open) { setProductSearch(""); setPickerPriceListId(null); } }}>
+                <Dialog open={productDialogOpen} onOpenChange={(open) => { setProductDialogOpen(open); if (open) { setProductSearch(""); setPickerPriceListId(null); setHighlightedProductIndex(0); setTimeout(() => searchInputRef.current?.focus(), 50); } }}>
                   <DialogTrigger asChild>
                     <Button size="sm" className="bg-green-600 hover:bg-green-700 shrink-0">
                       <Plus className="h-4 w-4 mr-1" /> Add Product
@@ -1970,10 +1980,40 @@ export default function QuickQuote() {
                     <div className="relative mt-2">
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                       <Input
-                        placeholder="Search products..."
+                        ref={searchInputRef}
+                        placeholder="Search products… ↑↓ to navigate · Enter to add · Tab for pallet"
                         value={productSearch}
-                        onChange={(e) => setProductSearch(e.target.value)}
+                        onChange={(e) => { setProductSearch(e.target.value); setHighlightedProductIndex(0); }}
                         className="pl-9 h-8 text-sm"
+                        onKeyDown={(e) => {
+                          const addedProductIds = new Set(quoteItems.map(qi => qi.productId));
+                          const filteredProducts = products.filter((p) =>
+                            !addedProductIds.has(p.id) &&
+                            p.name.toLowerCase().includes(productSearch.toLowerCase())
+                          );
+                          if (e.key === 'ArrowDown') {
+                            e.preventDefault();
+                            setHighlightedProductIndex(i => Math.min(i + 1, filteredProducts.length - 1));
+                          } else if (e.key === 'ArrowUp') {
+                            e.preventDefault();
+                            setHighlightedProductIndex(i => Math.max(i - 1, 0));
+                          } else if (e.key === 'Enter') {
+                            e.preventDefault();
+                            const product = filteredProducts[highlightedProductIndex];
+                            if (product) {
+                              const availableUnits = product.totalBatchStock ?? product.stock;
+                              if (availableUnits > 0) addProduct(product, 'units');
+                            }
+                          } else if (e.key === 'Tab') {
+                            const product = filteredProducts[highlightedProductIndex];
+                            if (product && (product.palletStock || 0) > 0) {
+                              e.preventDefault();
+                              addProduct(product, 'pallets');
+                            }
+                          } else if (e.key === 'Escape') {
+                            setProductDialogOpen(false);
+                          }
+                        }}
                       />
                     </div>
                     {priceLists.length > 0 && (
@@ -2008,7 +2048,8 @@ export default function QuickQuote() {
                       {filteredProducts.length === 0 ? (
                         <p className="text-sm text-gray-500 text-center py-6">No products found</p>
                       ) : null}
-                      {filteredProducts.map((product) => {
+                      {filteredProducts.map((product, productIdx) => {
+                        const isHighlighted = productIdx === highlightedProductIndex;
                         const now = new Date();
                         const activePromos = (product.promotionalOffers || []).filter((o: any) => {
                           if (o.isActive === false) return false;
@@ -2028,7 +2069,12 @@ export default function QuickQuote() {
                           }
                         }
                         return (
-                        <div key={product.id} className="p-2 border rounded-lg">
+                        <div
+                          key={product.id}
+                          ref={isHighlighted ? highlightedItemRef : undefined}
+                          onMouseEnter={() => setHighlightedProductIndex(productIdx)}
+                          className={`p-2 border rounded-lg transition-colors ${isHighlighted ? 'border-green-500 bg-green-50 ring-1 ring-green-400' : ''}`}
+                        >
                           <div className="flex items-center gap-1.5 mb-1">
                             <span className="text-sm font-medium">{product.name}</span>
                             {activePromos.map((offer: any, oi: number) => (
