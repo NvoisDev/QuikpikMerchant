@@ -1,6 +1,7 @@
+import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, Percent, AlertTriangle } from "lucide-react";
+import { Trash2, Percent, AlertTriangle, ChevronDown, ChevronUp } from "lucide-react";
 import { computeBaseUnits } from "@shared/quote-units";
 
 interface QuoteItem {
@@ -115,10 +116,58 @@ export function QuoteItemCard({
   const compareQty = item.sellingType === 'pallets' ? liveDisplayQty : liveBaseQty;
   const isOverStock = item.stockCount !== undefined && compareQty > item.stockCount;
 
+  const [isCollapsed, setIsCollapsed] = useState(false);
+
+  if (isCollapsed) {
+    return (
+      <div className="rounded-md border border-gray-200 bg-white overflow-hidden">
+        <div className="flex items-center gap-1.5 px-2.5 py-1.5">
+          <button
+            type="button"
+            onClick={() => setIsCollapsed(false)}
+            className="text-gray-300 hover:text-gray-600 transition-colors shrink-0 p-0.5 rounded"
+            aria-label="Expand item"
+          >
+            <ChevronDown className="h-4 w-4" />
+          </button>
+          <span className="flex-1 min-w-0 text-sm font-medium text-gray-900 truncate leading-tight">
+            {item.productName}
+          </span>
+          <span className="text-sm text-gray-500 shrink-0">
+            {isPacks
+              ? `${Math.max(1, Math.round(item.quantity / qip))} pk`
+              : item.sellingType === 'pallets'
+              ? `${item.quantity} pl`
+              : `${item.quantity}`}
+          </span>
+          <span className="w-16 text-sm font-semibold text-gray-900 text-right shrink-0">
+            {formatCurrency(item.customPrice * item.quantity)}
+          </span>
+          <button
+            onClick={() => removeItem(index)}
+            className="text-gray-300 hover:text-red-500 transition-colors shrink-0 p-0.5 rounded"
+            aria-label="Remove item"
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="rounded-md border border-gray-200 bg-white overflow-hidden">
       {/* ── Main compact row ── */}
       <div className="flex items-center gap-1.5 px-2.5 py-1.5">
+        {/* Collapse toggle */}
+        <button
+          type="button"
+          onClick={() => setIsCollapsed(true)}
+          className="text-gray-300 hover:text-gray-600 transition-colors shrink-0 p-0.5 rounded"
+          aria-label="Collapse item"
+        >
+          <ChevronUp className="h-4 w-4" />
+        </button>
         {/* Name + meta */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5 flex-wrap">
