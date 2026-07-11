@@ -2197,10 +2197,10 @@ export default function QuickQuote() {
                   <p className="text-sm">Click "Add Product" to start building your invoice</p>
                 </div>
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-1.5">
                   {quoteItems.map((item, index) => (
                     item.isMiscCharge ? (
-                      <div key={item.stableId} className="flex items-start gap-3 p-3 rounded-lg border border-amber-200 bg-amber-50">
+                      <div key={item.stableId} className="flex items-center gap-2 px-2.5 py-1.5 rounded-md border border-amber-200 bg-amber-50">
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
                             <span className="font-medium text-sm text-gray-900">{item.customLabel}</span>
