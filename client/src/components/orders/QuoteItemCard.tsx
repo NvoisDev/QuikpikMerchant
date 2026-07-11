@@ -74,7 +74,7 @@ export function QuoteItemCard({
   const showUnits = item.sellingFormat !== 'pallets' && !!item.unitPrice;
   const showPacks = qip > 1 && item.sellingFormat !== 'pallets' && item.sellingFormat !== 'units';
   const showPallets = !!item.palletPrice && item.sellingFormat !== 'units';
-  const showModeSelector = (showPacks || showPallets) && (showUnits || showPacks || showPallets);
+  const showModeSelector = [showUnits, showPacks, showPallets].filter(Boolean).length > 1;
 
   const liveDisplayQty = parseInt(inputValues[sk]?.qty ?? '') || (
     isPacks ? Math.max(1, Math.round(item.quantity / qip)) : item.quantity
@@ -209,8 +209,8 @@ export function QuoteItemCard({
               )}
             </div>
 
-            {/* Meta line 2: dimensions · weight (only when present) */}
-            {(hasPackDims || hasWeight) && (
+            {/* Meta line 2: dimensions · weight (only when both are present) */}
+            {(hasPackDims && hasWeight) && (
               <div className="flex items-center gap-1">
                 {hasPackDims && (
                   <span className="text-[11px] text-gray-400">
