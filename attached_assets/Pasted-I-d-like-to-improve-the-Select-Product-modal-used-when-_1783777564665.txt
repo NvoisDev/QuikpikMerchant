@@ -1,0 +1,119 @@
+I’d like to improve the Select Product modal used when wholesalers are creating invoices. This is one of the most frequently used screens in the platform, so the priority is speed, readability and efficiency, not adding new features.
+
+Objective
+
+Redesign the existing UI to make it significantly more compact and easier to scan while keeping all existing functionality and information.
+
+Do not add any new features, buttons, or data. This is purely a UI/UX refinement.
+
+Areas to improve
+
+Overall density
+
+* Reduce the overall scale of the modal by approximately 10–15%.
+* Display significantly more products on screen without making the interface feel cramped.
+* Reduce unnecessary whitespace throughout the modal.
+
+Product cards
+
+The current cards are too tall and occupy too much vertical space.
+
+Please:
+
+* Reduce vertical padding.
+* Reduce spacing between each line of information.
+* Reduce the spacing between cards.
+* Keep the cards easy to tap on mobile.
+
+The goal is to fit approximately 2–3 product cards on screen instead of around one and a half.
+
+Typography
+
+Improve the visual hierarchy.
+
+* Product name should remain the primary element but slightly smaller and less dominant.
+* Price should remain the most visually important value.
+* Secondary information (stock, batches, cost, margin) should be smaller and lighter.
+
+Suggested hierarchy:
+
+* Product name
+* Price
+* Stock & batch
+* Cost & margin
+
+Compress information
+
+Without removing any information:
+
+Instead of:
+
+* 9 units
+* 1 batch
+
+Display:
+
+9 units • 1 batch
+
+Instead of:
+
+Cost £25.77
+Margin £14.23 (36%)
+
+Display:
+
+Cost £25.77 • Margin £14.23 (36%)
+
+This reduces vertical height while improving scanability.
+
+Search bar
+
+Reduce the height of the search input slightly so it consumes less space while remaining easy to use on mobile.
+
+Filter chips
+
+Reduce:
+
+* chip height
+* horizontal padding
+* font size
+
+The chips should still be easy to tap but consume less vertical space.
+
+Visual style
+
+Aim for a clean, modern B2B interface inspired by apps like Shopify, Stripe Dashboard, Square and Linear.
+
+The interface should feel:
+
+* lightweight
+* fast
+* professional
+* optimised for users creating invoices all day
+
+Constraints
+
+Do not change:
+
+* functionality
+* business logic
+* filtering behaviour
+* search behaviour
+* product selection
+* pricing calculations
+* inventory calculations
+* stock display
+* responsiveness
+
+This should be a presentation-only refactor.
+
+Success criteria
+
+A wholesaler should be able to:
+
+* see more products without scrolling
+* scan prices and stock almost instantly
+* add products to invoices faster
+* feel like the interface is lighter and more responsive without learning anything new.
+
+Before implementing, review the current component and propose any additional UI refinements that improve speed and usability while keeping the experience familiar and avoiding unnecessary redesign.
