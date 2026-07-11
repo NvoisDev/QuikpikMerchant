@@ -2002,13 +2002,22 @@ export default function QuickQuote() {
                             const product = filteredProducts[highlightedProductIndex];
                             if (product) {
                               const availableUnits = product.totalBatchStock ?? product.stock;
-                              if (availableUnits > 0) addProduct(product, 'units');
+                              if (availableUnits > 0) {
+                                addProduct(product, 'units');
+                              } else {
+                                toast({ title: 'Product is out of stock', variant: 'destructive' });
+                              }
                             }
                           } else if (e.key === 'Tab') {
                             const product = filteredProducts[highlightedProductIndex];
-                            if (product && (product.palletStock || 0) > 0) {
-                              e.preventDefault();
-                              addProduct(product, 'pallets');
+                            if (product) {
+                              if ((product.palletStock || 0) > 0) {
+                                e.preventDefault();
+                                addProduct(product, 'pallets');
+                              } else {
+                                e.preventDefault();
+                                toast({ title: 'Product is out of stock', variant: 'destructive' });
+                              }
                             }
                           } else if (e.key === 'Escape') {
                             setProductDialogOpen(false);
