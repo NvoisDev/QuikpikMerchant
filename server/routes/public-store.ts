@@ -124,7 +124,7 @@ export function registerPublicStoreRoutes(app: Express) {
             eq(products.hiddenFromPublic, false)
           )
         )
-        .orderBy(products.name);
+        .orderBy(sql`LOWER(${products.name})`);
 
       // Redact fields the wholesaler has chosen to hide so they never reach public clients
       const showPrices = (wholesaler.priceDisplayMode ?? 'hidden') === 'shown';
@@ -217,7 +217,7 @@ export function registerPublicStoreRoutes(app: Express) {
         .from(products)
         .innerJoin(users, eq(products.wholesalerId, users.id))
         .where(and(...conditions))
-        .orderBy(products.name)
+        .orderBy(sql`LOWER(${products.name})`)
         .limit(limit)
         .offset(offset);
 
