@@ -2152,7 +2152,7 @@ export default function QuickQuote() {
                                   </div>
                                   <div className={`text-[11px] mt-0.5 ${palletInStock ? 'text-gray-500' : 'text-red-500 font-medium'}`}>
                                     {palletInStock ? `${product.palletStock} pallets` : 'Out of stock'}
-                                    {palletInStock && product.unitsPerPallet && (
+                                    {product.unitsPerPallet && (
                                       <> · {product.unitsPerPallet} units/pallet</>
                                     )}
                                   </div>
