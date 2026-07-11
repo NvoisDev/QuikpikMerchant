@@ -198,9 +198,6 @@ function ProductCard({
             Min. order: {product.minOrderQuantity} units
           </p>
         )}
-        {showPackSize && product.unitsPerPack && (
-          <p className="text-[11px] text-gray-400 mb-1">{product.unitsPerPack} units/pack</p>
-        )}
 
         {showStock && product.stock != null && (
           (product.stock > 0 || (product.palletStock ?? 0) > 0) ? (
