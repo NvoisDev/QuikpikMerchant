@@ -157,165 +157,180 @@ export function QuoteItemCard({
 
   return (
     <div className="rounded-md border border-gray-200 bg-white overflow-hidden">
-      {/* ── Main compact row ── */}
-      <div className="flex items-center gap-1.5 px-2.5 py-1.5">
-        {/* Collapse toggle */}
-        <button
-          type="button"
-          onClick={() => setIsCollapsed(true)}
-          className="text-gray-300 hover:text-gray-600 transition-colors shrink-0 p-0.5 rounded"
-          aria-label="Collapse item"
-        >
-          <ChevronUp className="h-4 w-4" />
-        </button>
-        {/* Name + meta */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <span className="text-sm font-medium text-gray-900 truncate leading-tight">
-              {item.productName}
-            </span>
-            {item.sellingType === 'pallets' && !showModeSelector && (
-              <Badge variant="secondary" className="bg-blue-100 text-blue-700 text-[10px] px-1 py-0 leading-tight h-4">
-                Pallet
-              </Badge>
-            )}
-            {discountPct && (
-              <Badge variant="secondary" className="bg-green-100 text-green-700 text-[10px] px-1 py-0 leading-tight h-4 flex items-center gap-0.5">
-                <Percent className="h-2.5 w-2.5" />{discountPct}% off
-              </Badge>
-            )}
-          </div>
-          {/* Secondary meta: original price + pack/weight/stock */}
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-0 mt-0.5">
-            <span className="text-[11px] text-gray-400">
-              {formatCurrency(item.originalPrice)}/{priceLabel}
-            </span>
-            {item.packQuantity && item.unitSize && item.unitOfMeasure && (
+      {/* ── Main area: two rows on mobile, single row on desktop ── */}
+      <div className="px-2.5 py-1.5 sm:flex sm:items-center sm:gap-1.5">
+
+        {/* ─ Name row ─ */}
+        <div className="flex items-center gap-1.5 sm:flex-1 sm:min-w-0">
+          {/* Collapse toggle */}
+          <button
+            type="button"
+            onClick={() => setIsCollapsed(true)}
+            className="text-gray-300 hover:text-gray-600 transition-colors shrink-0 p-0.5 rounded"
+            aria-label="Collapse item"
+          >
+            <ChevronUp className="h-4 w-4" />
+          </button>
+          {/* Name + meta */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="text-sm font-medium text-gray-900 truncate leading-tight">
+                {item.productName}
+              </span>
+              {item.sellingType === 'pallets' && !showModeSelector && (
+                <Badge variant="secondary" className="bg-blue-100 text-blue-700 text-[10px] px-1 py-0 leading-tight h-4">
+                  Pallet
+                </Badge>
+              )}
+              {discountPct && (
+                <Badge variant="secondary" className="bg-green-100 text-green-700 text-[10px] px-1 py-0 leading-tight h-4 flex items-center gap-0.5">
+                  <Percent className="h-2.5 w-2.5" />{discountPct}% off
+                </Badge>
+              )}
+            </div>
+            {/* Secondary meta: original price + pack/weight/stock */}
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-0 mt-0.5">
               <span className="text-[11px] text-gray-400">
-                {item.packQuantity}×{formatWeight(item.unitSize)}{item.unitOfMeasure}
+                {formatCurrency(item.originalPrice)}/{priceLabel}
               </span>
-            )}
-            {item.weightKg > 0 && (
-              <span className="text-[11px] text-gray-400">
-                {formatWeight(item.weightKg)}kg/{item.sellingType === 'pallets' ? 'pallet' : item.packQuantity && item.packQuantity > 1 ? 'pack' : 'unit'}
-              </span>
-            )}
-            {item.stockCount !== undefined && (
-              <span className={`text-[11px] font-medium ${isOverStock ? 'text-red-500' : 'text-gray-400'}`}>
-                {item.stockCount} {stockUnitLabel}{item.stockCount !== 1 ? 's' : ''} in stock
-              </span>
-            )}
+              {item.packQuantity && item.unitSize && item.unitOfMeasure && (
+                <span className="text-[11px] text-gray-400">
+                  {item.packQuantity}×{formatWeight(item.unitSize)}{item.unitOfMeasure}
+                </span>
+              )}
+              {item.weightKg > 0 && (
+                <span className="text-[11px] text-gray-400">
+                  {formatWeight(item.weightKg)}kg/{item.sellingType === 'pallets' ? 'pallet' : item.packQuantity && item.packQuantity > 1 ? 'pack' : 'unit'}
+                </span>
+              )}
+              {item.stockCount !== undefined && (
+                <span className={`text-[11px] font-medium ${isOverStock ? 'text-red-500' : 'text-gray-400'}`}>
+                  {item.stockCount} {stockUnitLabel}{item.stockCount !== 1 ? 's' : ''} in stock
+                </span>
+              )}
+            </div>
           </div>
+          {/* Delete — mobile only */}
+          <button
+            onClick={() => removeItem(index)}
+            className="sm:hidden text-gray-300 hover:text-red-500 transition-colors shrink-0 p-0.5 rounded"
+            aria-label="Remove item"
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
         </div>
 
-        {/* Mode selector (compact pill strip) */}
-        {showModeSelector && onSwitchMode && (
-          <div className="flex rounded overflow-hidden border border-gray-200 text-[10px] shrink-0">
-            {showUnits && (
-              <button
-                type="button"
-                onClick={() => onSwitchMode('units')}
-                className={`px-1.5 py-0.5 transition-colors ${activeMode === 'units' ? 'bg-gray-700 text-white font-medium' : 'bg-white text-gray-500 hover:bg-gray-50'}`}
-              >
-                U
-              </button>
-            )}
-            {showPacks && (
-              <button
-                type="button"
-                onClick={() => onSwitchMode('packs')}
-                className={`px-1.5 py-0.5 border-l transition-colors ${activeMode === 'packs' ? 'bg-blue-600 text-white font-medium' : 'bg-white text-gray-500 hover:bg-gray-50'}`}
-              >
-                Pk
-              </button>
-            )}
-            {showPallets && (
-              <button
-                type="button"
-                onClick={() => onSwitchMode('pallets')}
-                className={`px-1.5 py-0.5 border-l transition-colors ${activeMode === 'pallets' ? 'bg-blue-700 text-white font-medium' : 'bg-white text-gray-500 hover:bg-gray-50'}`}
-              >
-                Pl
-              </button>
-            )}
+        {/* ─ Inputs row (indented on mobile to align under name) ─ */}
+        <div className="flex items-center gap-1.5 mt-1.5 sm:mt-0 pl-7 sm:pl-0">
+          {/* Mode selector (compact pill strip) */}
+          {showModeSelector && onSwitchMode && (
+            <div className="flex rounded overflow-hidden border border-gray-200 text-[10px] shrink-0">
+              {showUnits && (
+                <button
+                  type="button"
+                  onClick={() => onSwitchMode('units')}
+                  className={`px-1.5 py-0.5 transition-colors ${activeMode === 'units' ? 'bg-gray-700 text-white font-medium' : 'bg-white text-gray-500 hover:bg-gray-50'}`}
+                >
+                  U
+                </button>
+              )}
+              {showPacks && (
+                <button
+                  type="button"
+                  onClick={() => onSwitchMode('packs')}
+                  className={`px-1.5 py-0.5 border-l transition-colors ${activeMode === 'packs' ? 'bg-blue-600 text-white font-medium' : 'bg-white text-gray-500 hover:bg-gray-50'}`}
+                >
+                  Pk
+                </button>
+              )}
+              {showPallets && (
+                <button
+                  type="button"
+                  onClick={() => onSwitchMode('pallets')}
+                  className={`px-1.5 py-0.5 border-l transition-colors ${activeMode === 'pallets' ? 'bg-blue-700 text-white font-medium' : 'bg-white text-gray-500 hover:bg-gray-50'}`}
+                >
+                  Pl
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Qty input */}
+          <div className="w-14 sm:w-16 shrink-0">
+            <div className="text-[10px] text-gray-400 mb-0.5 text-center">
+              {item.sellingType === 'pallets' ? 'Pallets' : isPacks ? 'Packs' : 'Qty'}
+            </div>
+            <Input
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              value={inputValues[sk]?.qty ?? (isPacks ? Math.max(1, Math.round(item.quantity / qip)).toString() : item.quantity.toString())}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (val === '' || /^\d*$/.test(val)) {
+                  setInputValues(prev => ({ ...prev, [sk]: { ...prev[sk]!, qty: val } }));
+                }
+              }}
+              onBlur={(e) => {
+                const val = parseInt(e.target.value);
+                if (!isNaN(val) && val >= 1) {
+                  const baseUnits = computeBaseUnits(val, isPacks ? 'packs' : 'units', qip);
+                  updateItemQuantity(index, baseUnits);
+                  setInputValues(prev => ({ ...prev, [sk]: { ...prev[sk]!, qty: val.toString() } }));
+                } else {
+                  const defaultBase = computeBaseUnits(1, isPacks ? 'packs' : 'units', qip);
+                  updateItemQuantity(index, defaultBase);
+                  setInputValues(prev => ({ ...prev, [sk]: { ...prev[sk]!, qty: '1' } }));
+                }
+              }}
+              className={`h-7 text-xs text-center px-1 ${item.quantity < 1 || palletMoqViolation ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
+            />
           </div>
-        )}
 
-        {/* Qty input */}
-        <div className="w-16 shrink-0">
-          <div className="text-[10px] text-gray-400 mb-0.5 text-center">
-            {item.sellingType === 'pallets' ? 'Pallets' : isPacks ? 'Packs' : 'Qty'}
+          {/* Price input */}
+          <div className="w-16 sm:w-20 shrink-0">
+            <div className="text-[10px] text-gray-400 mb-0.5 text-center">Price/{priceLabel}</div>
+            <Input
+              type="text"
+              inputMode="decimal"
+              pattern="[0-9]*\.?[0-9]*"
+              value={inputValues[sk]?.price ?? item.customPrice.toString()}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (val === '' || /^\d*\.?\d*$/.test(val)) {
+                  setInputValues(prev => ({ ...prev, [sk]: { ...prev[sk]!, price: val } }));
+                }
+              }}
+              onBlur={(e) => {
+                const val = parseFloat(e.target.value);
+                if (!isNaN(val) && val >= 0) {
+                  updateItemPrice(index, val);
+                  setInputValues(prev => ({ ...prev, [sk]: { ...prev[sk]!, price: val.toString() } }));
+                } else {
+                  setInputValues(prev => ({ ...prev, [sk]: { ...prev[sk]!, price: item.customPrice.toString() } }));
+                }
+              }}
+              className={`h-7 text-xs text-center px-1 ${item.customPrice <= 0 ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
+            />
           </div>
-          <Input
-            type="text"
-            inputMode="numeric"
-            pattern="[0-9]*"
-            value={inputValues[sk]?.qty ?? (isPacks ? Math.max(1, Math.round(item.quantity / qip)).toString() : item.quantity.toString())}
-            onChange={(e) => {
-              const val = e.target.value;
-              if (val === '' || /^\d*$/.test(val)) {
-                setInputValues(prev => ({ ...prev, [sk]: { ...prev[sk]!, qty: val } }));
-              }
-            }}
-            onBlur={(e) => {
-              const val = parseInt(e.target.value);
-              if (!isNaN(val) && val >= 1) {
-                const baseUnits = computeBaseUnits(val, isPacks ? 'packs' : 'units', qip);
-                updateItemQuantity(index, baseUnits);
-                setInputValues(prev => ({ ...prev, [sk]: { ...prev[sk]!, qty: val.toString() } }));
-              } else {
-                const defaultBase = computeBaseUnits(1, isPacks ? 'packs' : 'units', qip);
-                updateItemQuantity(index, defaultBase);
-                setInputValues(prev => ({ ...prev, [sk]: { ...prev[sk]!, qty: '1' } }));
-              }
-            }}
-            className={`h-7 text-xs text-center px-1 ${item.quantity < 1 || palletMoqViolation ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
-          />
-        </div>
 
-        {/* Price input */}
-        <div className="w-20 shrink-0">
-          <div className="text-[10px] text-gray-400 mb-0.5 text-center">Price/{priceLabel}</div>
-          <Input
-            type="text"
-            inputMode="decimal"
-            pattern="[0-9]*\.?[0-9]*"
-            value={inputValues[sk]?.price ?? item.customPrice.toString()}
-            onChange={(e) => {
-              const val = e.target.value;
-              if (val === '' || /^\d*\.?\d*$/.test(val)) {
-                setInputValues(prev => ({ ...prev, [sk]: { ...prev[sk]!, price: val } }));
-              }
-            }}
-            onBlur={(e) => {
-              const val = parseFloat(e.target.value);
-              if (!isNaN(val) && val >= 0) {
-                updateItemPrice(index, val);
-                setInputValues(prev => ({ ...prev, [sk]: { ...prev[sk]!, price: val.toString() } }));
-              } else {
-                setInputValues(prev => ({ ...prev, [sk]: { ...prev[sk]!, price: item.customPrice.toString() } }));
-              }
-            }}
-            className={`h-7 text-xs text-center px-1 ${item.customPrice <= 0 ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
-          />
-        </div>
-
-        {/* Total */}
-        <div className="w-16 shrink-0 text-right">
-          <div className="text-[10px] text-gray-400 mb-0.5">Total</div>
-          <div className="text-sm font-semibold text-gray-900 leading-7">
-            {formatCurrency(item.customPrice * item.quantity)}
+          {/* Total */}
+          <div className="w-14 sm:w-16 shrink-0 text-right">
+            <div className="text-[10px] text-gray-400 mb-0.5">Total</div>
+            <div className="text-sm font-semibold text-gray-900 leading-7">
+              {formatCurrency(item.customPrice * item.quantity)}
+            </div>
           </div>
-        </div>
 
-        {/* Delete */}
-        <button
-          onClick={() => removeItem(index)}
-          className="text-gray-300 hover:text-red-500 transition-colors shrink-0 p-0.5 rounded"
-          aria-label="Remove item"
-        >
-          <Trash2 className="h-4 w-4" />
-        </button>
+          {/* Delete — desktop only */}
+          <button
+            onClick={() => removeItem(index)}
+            className="hidden sm:block text-gray-300 hover:text-red-500 transition-colors shrink-0 p-0.5 rounded"
+            aria-label="Remove item"
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
+        </div>
       </div>
 
       {/* ── Inline expansion row (validation errors, pack/pallet hints, price scope) ── */}
@@ -383,7 +398,7 @@ export function QuoteItemCard({
       )}
 
       {/* ── Cost + Margin footer ── */}
-      <div className="flex items-center gap-3 px-2.5 py-1 border-t border-dashed border-gray-100 bg-gray-50">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-2.5 py-1 border-t border-dashed border-gray-100 bg-gray-50">
         <div className="flex items-center gap-1.5">
           <span className="text-[11px] text-gray-400">Cost</span>
           <Input
