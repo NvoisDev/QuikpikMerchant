@@ -390,6 +390,27 @@ export function registerAdminCoreRoutes(app: Express): void {
         );
       }
 
+      // Plan MRR per wholesaler from active subscriptions — covers all paying wholesalers
+      // even when Stripe webhook audit logs are incomplete
+      const activePlanSubs = await db
+        .select({
+          userId: userSubscriptions.userId,
+          monthlyPrice: subscriptionPlans.monthlyPrice,
+          billingInterval: subscriptionPlans.billingInterval,
+        })
+        .from(userSubscriptions)
+        .innerJoin(subscriptionPlans, eq(userSubscriptions.planId, subscriptionPlans.planId))
+        .where(sql`${userSubscriptions.status} IN ('active','trialing','past_due')`);
+
+      const planMRRByWholesaler: Record<string, number> = {};
+      for (const s of activePlanSubs) {
+        if (!s.userId) continue;
+        const price = parseFloat(s.monthlyPrice as string) || 0;
+        planMRRByWholesaler[s.userId] = parseFloat(
+          (s.billingInterval === 'yearly' ? price / 12 : price).toFixed(2)
+        );
+      }
+
       res.json({
         orders: processedOrders,
         totals: {
@@ -399,6 +420,7 @@ export function registerAdminCoreRoutes(app: Express): void {
           totalSubscriptionRevenue, subscriptionPaymentCount,
         },
         subRevenueByWholesaler,
+        planMRRByWholesaler,
       });
     } catch (error) {
       console.error('Admin revenue error:', error);

@@ -72,7 +72,7 @@ export interface RevenueOrder {
   refundedAt?: string | null; refundAmount?: string | null;
 }
 
-export interface RevenueData { orders: RevenueOrder[]; totals: RevenueTotals; subRevenueByWholesaler?: Record<string, number>; }
+export interface RevenueData { orders: RevenueOrder[]; totals: RevenueTotals; subRevenueByWholesaler?: Record<string, number>; planMRRByWholesaler?: Record<string, number>; }
 
 export interface PayoutStatusData {
   available: number; pending: number; currency: string;

@@ -91,6 +91,7 @@ export function FinancialsSection({ wholesalers, isAdmin }: { wholesalers: Whole
     : "No payments in period";
 
   const subRevenueByWholesaler = revenueData?.subRevenueByWholesaler ?? {};
+  const planMRRByWholesaler = revenueData?.planMRRByWholesaler ?? {};
 
   const wholesalerRevenueSummary = useMemo(() => {
     const map: Record<string, WholesalerRevenueSummary> = {};
@@ -109,11 +110,11 @@ export function FinancialsSection({ wholesalers, isAdmin }: { wholesalers: Whole
     for (const w of wholesalers) {
       if (map[w.id]) {
         map[w.id]!.tier = w.subscriptionTier || "free";
-        map[w.id]!.subRevenue = subRevenueByWholesaler[w.id] ?? 0;
+        map[w.id]!.subRevenue = planMRRByWholesaler[w.id] ?? subRevenueByWholesaler[w.id] ?? 0;
       }
     }
     return Object.values(map).sort((a, b) => b.total - a.total);
-  }, [revenueOrders, wholesalers, subRevenueByWholesaler]);
+  }, [revenueOrders, wholesalers, subRevenueByWholesaler, planMRRByWholesaler]);
 
   const paged = revenueOrders.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   const totalPages = Math.ceil(revenueOrders.length / PAGE_SIZE);
@@ -262,7 +263,7 @@ export function FinancialsSection({ wholesalers, isAdmin }: { wholesalers: Whole
             <Table>
               <TableHeader>
                 <TableRow className="hover:bg-transparent bg-blue-50">
-                  {["Wholesaler","Plan","Orders","GMV","Buyer Fees","Merchant Fees","Total Earned","Sub Revenue","Stripe Fees","Gross Profit","Take Rate"].map((h, i) => (
+                  {["Wholesaler","Plan","Orders","GMV","Buyer Fees","Merchant Fees","Total Earned","Plan MRR","Stripe Fees","Gross Profit","Take Rate"].map((h, i) => (
                     <TableHead key={i} className={`text-xs font-semibold text-blue-700${[1,2,3,4,5,7,8,9,10].includes(i) ? " hidden sm:table-cell" : ""}`}>{h}</TableHead>
                   ))}
                 </TableRow>
