@@ -61,7 +61,7 @@ export interface RevenueTotals {
   totalCustomerFees: number; totalPlatformFees: number; totalGrossRevenue: number; totalGMV: number;
   totalStripeProcessingFees: number; totalGrossProfit: number; grossMarginPct: number;
   totalSubscriptionRevenue: number; subscriptionPaymentCount: number;
-  totalDiscountGiven: number;
+  totalDiscountGiven: number; totalPromoLoss: number;
 }
 
 export interface RevenueOrder {
@@ -73,7 +73,7 @@ export interface RevenueOrder {
   refundedAt?: string | null; refundAmount?: string | null;
 }
 
-export interface RevenueData { orders: RevenueOrder[]; totals: RevenueTotals; subRevenueByWholesaler?: Record<string, number>; discountByWholesaler?: Record<string, number>; }
+export interface RevenueData { orders: RevenueOrder[]; totals: RevenueTotals; subRevenueByWholesaler?: Record<string, number>; discountByWholesaler?: Record<string, number>; promoLossByWholesaler?: Record<string, number>; }
 
 export interface PayoutStatusData {
   available: number; pending: number; currency: string;
@@ -105,7 +105,7 @@ export interface ProductRow {
 export interface WholesalerRevenueSummary {
   name: string; tier: string; orders: number; gmv: number;
   buyerFees: number; merchantFees: number; total: number;
-  stripeFees: number; grossProfit: number; subRevenue: number; discountGiven: number;
+  stripeFees: number; grossProfit: number; subRevenue: number; discountGiven: number; promoLoss: number;
 }
 
 export interface WholesalerOrderRow {

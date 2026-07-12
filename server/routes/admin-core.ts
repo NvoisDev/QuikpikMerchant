@@ -38,6 +38,7 @@ import {
   gte, inArray, isNull, lte, or, orders, requireAuth, sql, storage,
   subscriptionAuditLogs, subscriptionPlans, SubscriptionService, teamMembers, unlockForUpgrade, userSubscriptions, users,
 } from "./shared";
+import { promotionAnalytics } from "@shared/schema";
 import { getProductLimit } from "../utils/plan-tier";
 import { sendWholesalerSuspendedEmail, sendWholesalerReinstatedEmail } from "../sendgrid-service";
 
@@ -398,6 +399,37 @@ export function registerAdminCoreRoutes(app: Express): void {
         );
       }
 
+      // Query promotional revenue losses from promotionAnalytics
+      const promoConditions = [
+        ...(from ? [gte(promotionAnalytics.campaignSentAt, new Date(from))] : []),
+        ...(toDate ? [lte(promotionAnalytics.campaignSentAt, toDate)] : []),
+        ...(filterWholesalerId ? [eq(promotionAnalytics.wholesalerId, filterWholesalerId)] : []),
+      ];
+      const promoRows = await db
+        .select({
+          wholesalerId: promotionAnalytics.wholesalerId,
+          revenueLoss: sql<string>`SUM(COALESCE(${promotionAnalytics.revenueLoss}, 0))`,
+        })
+        .from(promotionAnalytics)
+        .innerJoin(users, eq(promotionAnalytics.wholesalerId, users.id))
+        .where(and(
+          eq(users.isTestAccount, false),
+          eq(users.isInactive, false),
+          ...(promoConditions.length ? promoConditions : []),
+        ))
+        .groupBy(promotionAnalytics.wholesalerId);
+
+      const promoLossByWholesaler: Record<string, number> = {};
+      let totalPromoLoss = 0;
+      for (const row of promoRows) {
+        const loss = parseFloat(row.revenueLoss || '0');
+        if (loss > 0) {
+          promoLossByWholesaler[row.wholesalerId] = parseFloat(loss.toFixed(2));
+          totalPromoLoss += loss;
+        }
+      }
+      totalPromoLoss = parseFloat(totalPromoLoss.toFixed(2));
+
       res.json({
         orders: processedOrders,
         totals: {
@@ -406,9 +438,11 @@ export function registerAdminCoreRoutes(app: Express): void {
           totalGrossProfit, grossMarginPct,
           totalSubscriptionRevenue, subscriptionPaymentCount,
           totalDiscountGiven: parseFloat(totalDiscountGiven.toFixed(2)),
+          totalPromoLoss,
         },
         subRevenueByWholesaler,
         discountByWholesaler,
+        promoLossByWholesaler,
       });
     } catch (error) {
       console.error('Admin revenue error:', error);

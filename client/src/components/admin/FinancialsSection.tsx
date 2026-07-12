@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { Calendar, TrendingUp, DollarSign, CreditCard, Users, RefreshCw } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Calendar, TrendingUp, DollarSign, CreditCard, Users, RefreshCw, Info } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { format } from "date-fns";
@@ -83,7 +84,7 @@ export function FinancialsSection({ wholesalers, isAdmin }: { wholesalers: Whole
   });
 
   const revenueOrders: RevenueOrder[] = revenueData?.orders ?? [];
-  const revenueTotals: RevenueTotals = revenueData?.totals ?? { totalCustomerFees: 0, totalPlatformFees: 0, totalGrossRevenue: 0, totalGMV: 0, totalStripeProcessingFees: 0, totalGrossProfit: 0, grossMarginPct: 0, totalSubscriptionRevenue: 0, subscriptionPaymentCount: 0, totalDiscountGiven: 0 };
+  const revenueTotals: RevenueTotals = revenueData?.totals ?? { totalCustomerFees: 0, totalPlatformFees: 0, totalGrossRevenue: 0, totalGMV: 0, totalStripeProcessingFees: 0, totalGrossProfit: 0, grossMarginPct: 0, totalSubscriptionRevenue: 0, subscriptionPaymentCount: 0, totalDiscountGiven: 0, totalPromoLoss: 0 };
 
   const orderCount = revenueOrders.length;
   const avgBuyerFee = orderCount > 0 ? revenueTotals.totalCustomerFees / orderCount : null;
@@ -97,13 +98,14 @@ export function FinancialsSection({ wholesalers, isAdmin }: { wholesalers: Whole
 
   const subRevenueByWholesaler = revenueData?.subRevenueByWholesaler ?? {};
   const discountByWholesaler = revenueData?.discountByWholesaler ?? {};
+  const promoLossByWholesaler = revenueData?.promoLossByWholesaler ?? {};
 
   const wholesalerRevenueSummary = useMemo(() => {
     const map: Record<string, WholesalerRevenueSummary> = {};
     for (const o of revenueOrders) {
       if (o.status === "cancelled") continue;
       const key = o.wholesalerId ?? "unknown";
-      if (!map[key]) map[key] = { name: o.wholesalerName ?? "Unknown", tier: "", orders: 0, gmv: 0, buyerFees: 0, merchantFees: 0, total: 0, stripeFees: 0, grossProfit: 0, subRevenue: 0, discountGiven: 0 };
+      if (!map[key]) map[key] = { name: o.wholesalerName ?? "Unknown", tier: "", orders: 0, gmv: 0, buyerFees: 0, merchantFees: 0, total: 0, stripeFees: 0, grossProfit: 0, subRevenue: 0, discountGiven: 0, promoLoss: 0 };
       map[key].orders++;
       map[key].gmv += Number(o.subtotal || 0);
       map[key].buyerFees += Number(o.customerTransactionFee || 0);
@@ -117,10 +119,11 @@ export function FinancialsSection({ wholesalers, isAdmin }: { wholesalers: Whole
         map[w.id]!.tier = w.subscriptionTier || "free";
         map[w.id]!.subRevenue = subRevenueByWholesaler[w.id] ?? 0;
         map[w.id]!.discountGiven = discountByWholesaler[w.id] ?? 0;
+        map[w.id]!.promoLoss = promoLossByWholesaler[w.id] ?? 0;
       }
     }
     return Object.values(map).sort((a, b) => b.total - a.total);
-  }, [revenueOrders, wholesalers, subRevenueByWholesaler, discountByWholesaler]);
+  }, [revenueOrders, wholesalers, subRevenueByWholesaler, discountByWholesaler, promoLossByWholesaler]);
 
   const paged = revenueOrders.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   const totalPages = Math.ceil(revenueOrders.length / PAGE_SIZE);
@@ -285,7 +288,24 @@ export function FinancialsSection({ wholesalers, isAdmin }: { wholesalers: Whole
                     <TableCell className="hidden sm:table-cell text-xs text-right font-medium" style={{ color: AMBER }}>{fmt(w.merchantFees)}</TableCell>
                     <TableCell className="text-xs text-right font-semibold text-gray-900">{fmt(w.total)}</TableCell>
                     <TableCell className="hidden sm:table-cell text-xs text-right font-medium" style={{ color: "#4f46e5" }}>{w.subRevenue > 0 ? fmt(w.subRevenue) : "—"}</TableCell>
-                    <TableCell className="hidden sm:table-cell text-xs text-right font-medium text-amber-600">{w.discountGiven > 0 ? `-${fmt(w.discountGiven)}` : "—"}</TableCell>
+                    <TableCell className="hidden sm:table-cell text-xs text-right font-medium text-amber-600">
+                      {(w.discountGiven > 0 || w.promoLoss > 0) ? (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="flex items-center justify-end gap-1 cursor-default">
+                                -{fmt(w.discountGiven + w.promoLoss)}
+                                <Info className="h-3 w-3 opacity-40" />
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent side="top" className="max-w-[200px] text-xs space-y-1">
+                              {w.discountGiven > 0 && <p>Manual: -{fmt(w.discountGiven)}</p>}
+                              {w.promoLoss > 0 && <p>Promotional: -{fmt(w.promoLoss)}</p>}
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      ) : "—"}
+                    </TableCell>
                     <TableCell className="hidden sm:table-cell text-xs text-right font-medium" style={{ color: RED }}>-{fmt(w.stripeFees)}</TableCell>
                     <TableCell className="hidden sm:table-cell text-xs text-right font-semibold" style={{ color: GREEN }}>{fmt(w.grossProfit)}</TableCell>
                     <TableCell className="hidden sm:table-cell text-xs text-right font-medium text-indigo-600">{pct(w.total, w.gmv)}</TableCell>
