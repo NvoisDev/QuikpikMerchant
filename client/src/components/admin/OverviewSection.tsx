@@ -1,6 +1,8 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Building2, ShoppingCart, Package, TrendingUp, DollarSign, AlertTriangle, AlertCircle, Star, Info,
   TrendingDown, Minus,
@@ -203,7 +205,11 @@ export function OverviewSection({ stats, statsLoading, revenueData, revenueLoadi
   );
 }
 
+type RangeOption = "3" | "6" | "12" | "all";
+
 function SubscriptionMonthlyTable({ rows, loading }: { rows: Array<{ month: string; listing: number; starter: number; standard: number; premium: number; total: number }>; loading: boolean }) {
+  const [range, setRange] = useState<RangeOption>("all");
+
   const fmtMonth = (ym: string) => {
     const [y, m] = ym.split("-");
     const d = new Date(Number(y), Number(m) - 1, 1);
@@ -219,9 +225,19 @@ function SubscriptionMonthlyTable({ rows, loading }: { rows: Array<{ month: stri
     );
   }
 
-  const maxTotal = Math.max(...rows.map(r => r.total), 1);
+  const filteredRows = (() => {
+    if (range === "all") return rows;
+    const n = Number(range);
+    const now = new Date();
+    const cutoff = new Date(now.getFullYear(), now.getMonth() - n + 1, 1);
+    const cutoffStr = `${cutoff.getFullYear()}-${String(cutoff.getMonth() + 1).padStart(2, "0")}`;
+    return rows.filter(r => r.month >= cutoffStr);
+  })();
 
-  const getTrend = (idx: number, currTotal: number): { pct: number | null; dir: "up" | "down" | "flat" } => {
+  const maxTotal = Math.max(...filteredRows.map(r => r.total), 1);
+
+  const getTrend = (month: string, currTotal: number): { pct: number | null; dir: "up" | "down" | "flat" } => {
+    const idx = rows.findIndex(r => r.month === month);
     const priorRow = rows[idx + 1];
     if (!priorRow) return { pct: null, dir: "flat" };
     const prev = priorRow.total;
@@ -233,7 +249,23 @@ function SubscriptionMonthlyTable({ rows, loading }: { rows: Array<{ month: stri
 
   return (
     <div>
-      <p className="text-xs font-semibold text-gray-500 mb-2">Monthly Collected (by tier)</p>
+      <div className="flex items-center justify-between mb-2">
+        <p className="text-xs font-semibold text-gray-500">Monthly Collected (by tier)</p>
+        <Select value={range} onValueChange={(v) => setRange(v as RangeOption)}>
+          <SelectTrigger className="h-6 text-xs w-36 border-gray-200 rounded-lg">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="3">Last 3 months</SelectItem>
+            <SelectItem value="6">Last 6 months</SelectItem>
+            <SelectItem value="12">Last 12 months</SelectItem>
+            <SelectItem value="all">All time</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      {filteredRows.length === 0 ? (
+        <p className="text-xs text-gray-400 text-center py-3">No data for the selected period.</p>
+      ) : (
       <div className="overflow-x-auto">
         <table className="w-full text-xs">
           <thead>
@@ -248,8 +280,8 @@ function SubscriptionMonthlyTable({ rows, loading }: { rows: Array<{ month: stri
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
-            {rows.map((r, idx) => {
-              const trend = getTrend(idx, r.total);
+            {filteredRows.map(r => {
+              const trend = getTrend(r.month, r.total);
               return (
                 <tr key={r.month} className="hover:bg-gray-50/60 transition-colors">
                   <td className="py-1.5 pr-3 font-medium text-gray-600 whitespace-nowrap">{fmtMonth(r.month)}</td>
@@ -293,6 +325,7 @@ function SubscriptionMonthlyTable({ rows, loading }: { rows: Array<{ month: stri
           </tbody>
         </table>
       </div>
+      )}
     </div>
   );
 }
