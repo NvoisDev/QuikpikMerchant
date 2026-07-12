@@ -1301,10 +1301,8 @@ export function registerAdminCoreRoutes(app: Express): void {
 
       let inserted = 0;
       let skippedDuplicate = 0;
-      let skippedNoSub = 0;
       let skippedBillingReason = 0;
       let skippedZeroAmount = 0;
-      let noUserMatch = 0;
       let invalidPlan = 0;
       let failed = 0;
 
@@ -1316,35 +1314,47 @@ export function registerAdminCoreRoutes(app: Express): void {
         return res.status(500).json({ error: 'Live Stripe key not configured' });
       }
 
-      // Fetch all non-test Quikpik wholesalers that have a Stripe customer ID
+      // Fetch all non-test Quikpik wholesalers that have both a Stripe customer ID and
+      // a subscription ID. Iterating per-subscription (not per-customer) means the subId
+      // is always known from our DB — we never need to read invoice.subscription from the
+      // Stripe response (which is null in SDK v18 list responses by default).
       const wholesalers = await db
-        .select({ id: users.id, businessName: users.businessName, stripeCustomerId: users.stripeCustomerId })
+        .select({
+          id: users.id,
+          businessName: users.businessName,
+          stripeCustomerId: users.stripeCustomerId,
+          stripeSubscriptionId: users.stripeSubscriptionId,
+        })
         .from(users)
         .where(and(
           eq(users.isTestAccount, false),
           eq(users.isInactive, false),
           sql`${users.stripeCustomerId} IS NOT NULL`,
+          sql`${users.stripeSubscriptionId} IS NOT NULL`,
         ));
 
       console.log(`🔄 Backfill: processing invoices for ${wholesalers.length} wholesalers`);
 
       for (const wholesaler of wholesalers) {
         const custId = wholesaler.stripeCustomerId!;
-        console.log(`  → ${wholesaler.businessName} (${custId})`);
+        const subId = wholesaler.stripeSubscriptionId!;
+        console.log(`  → ${wholesaler.businessName} (sub=${subId})`);
 
-        // Page through all paid invoices for this customer
+        // Page through all paid invoices for this subscription.
+        // Using subscription filter means subId is always known from our DB —
+        // no dependency on invoice.subscription field (null in Stripe SDK v18 lists).
         let hasMore = true;
         let startingAfter: string | undefined;
 
         while (hasMore) {
-          const params: Stripe.InvoiceListParams = { customer: custId, status: 'paid', limit: 100 };
+          const params: Stripe.InvoiceListParams = { subscription: subId, status: 'paid', limit: 100 };
           if (startingAfter) params.starting_after = startingAfter;
 
           let invoices: Stripe.ApiList<Stripe.Invoice>;
           try {
             invoices = await stripe.invoices.list(params);
           } catch (err) {
-            console.error(`❌ Backfill: failed to list invoices for ${custId}:`, err);
+            console.error(`❌ Backfill: failed to list invoices for sub ${subId}:`, err);
             break;
           }
 
@@ -1367,19 +1377,6 @@ export function registerAdminCoreRoutes(app: Express): void {
               if (amountPaid <= 0) {
                 console.log(`      → SKIP: zero amount`);
                 skippedZeroAmount++;
-                continue;
-              }
-
-              // Require a linked subscription — guards against one-off invoices
-              const subId = typeof invoice.subscription === 'string'
-                ? invoice.subscription
-                : typeof invoice.subscription === 'object' && invoice.subscription !== null
-                  ? (invoice.subscription as Stripe.Subscription).id
-                  : null;
-
-              if (!subId) {
-                console.log(`      → SKIP: no subscription linked`);
-                skippedNoSub++;
                 continue;
               }
 
@@ -1465,9 +1462,9 @@ export function registerAdminCoreRoutes(app: Express): void {
         }
       }
 
-      const skipped = skippedDuplicate + skippedNoSub + skippedBillingReason + skippedZeroAmount;
-      console.log(`✅ Backfill complete: ${inserted} inserted, ${skippedDuplicate} duplicates, ${skippedNoSub} no-sub, ${skippedBillingReason} billing-reason, ${skippedZeroAmount} zero-amount, ${noUserMatch} no-user, ${invalidPlan} no-plan, ${failed} failed`);
-      return res.json({ success: true, inserted, skipped, failed, noUserMatch, invalidPlan, skippedDuplicate });
+      const skipped = skippedDuplicate + skippedBillingReason + skippedZeroAmount;
+      console.log(`✅ Backfill complete: ${inserted} inserted, ${skippedDuplicate} duplicates, ${skippedBillingReason} billing-reason, ${skippedZeroAmount} zero-amount, ${invalidPlan} no-plan, ${failed} failed`);
+      return res.json({ success: true, inserted, skipped, failed, invalidPlan, skippedDuplicate });
     } catch (error) {
       console.error('❌ Admin backfill-stripe error:', error);
       res.status(500).json({ error: 'Failed to run Stripe backfill' });
