@@ -638,6 +638,14 @@ export class OrderStorage extends ProductStorage {
           .from(products)
           .where(eq(products.id, item.productId!));
         
+        // Defense-in-depth: abort if product belongs to a different wholesaler
+        if (currentProduct && currentProduct.wholesalerId !== orderData.wholesalerId) {
+          throw new Error(
+            `Tenant isolation violation: product ${item.productId} belongs to wholesaler ` +
+            `${currentProduct.wholesalerId}, not ${orderData.wholesalerId}`
+          );
+        }
+
         if (currentProduct) {
           const sellingType = (item.sellingType || 'units') as 'units' | 'pallets';
           const orderedQuantity = item.quantity;

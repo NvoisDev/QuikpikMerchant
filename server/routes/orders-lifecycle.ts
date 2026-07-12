@@ -1540,6 +1540,11 @@ export function registerOrderLifecycleRoutes(app: Express): void {
         return res.status(400).json({ message: "Order must contain at least one item" });
       }
 
+      // Resolve the effective wholesaler — team members carry wholesalerId on their session
+      const effectiveWholesalerId: string = (req.user.role === 'team_member' && req.user.wholesalerId)
+        ? req.user.wholesalerId
+        : userId;
+
       let subtotal = 0;
       let orderItemsList: any[] = [];
 
@@ -1547,6 +1552,11 @@ export function registerOrderLifecycleRoutes(app: Express): void {
         const product = await storage.getProduct(item.productId);
         if (!product) {
           return res.status(400).json({ message: `Product ${item.productId} not found` });
+        }
+
+        // Tenant isolation: every line item must belong to the caller's wholesaler account
+        if (product.wholesalerId !== effectiveWholesalerId) {
+          return res.status(403).json({ message: `Product ${item.productId} does not belong to your account` });
         }
 
         if (item.quantity < product.moq) {
@@ -1572,8 +1582,7 @@ export function registerOrderLifecycleRoutes(app: Express): void {
         });
       }
 
-      const firstProduct = await storage.getProduct(items[0].productId);
-      const wholesalerId = firstProduct!.wholesalerId;
+      const wholesalerId = effectiveWholesalerId;
 
       const orderFingerprint = computeOrderFingerprint(
         userId, wholesalerId, items, deliveryAddress, notes, collectionAddressId
