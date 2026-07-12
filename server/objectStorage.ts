@@ -89,15 +89,32 @@ export class ObjectStorageService {
 
   // Downloads an object to the response.
   async downloadObject(file: File, res: Response, cacheTtlSec: number = 3600) {
+    const SAFE_IMAGE_TYPES = new Set([
+      "image/png",
+      "image/jpeg",
+      "image/gif",
+      "image/webp",
+      "image/avif",
+    ]);
     try {
       // Get file metadata
       const [metadata] = await file.getMetadata();
-      
+
+      const contentType: string = (metadata as any)?.contentType ?? "";
+      const storedType = (contentType.split(";")[0] ?? "").trim().toLowerCase();
+      const safeType = SAFE_IMAGE_TYPES.has(storedType) ? storedType : null;
+
+      if (!safeType) {
+        return res.status(415).json({ error: "Unsupported media type" });
+      }
+
       // Set appropriate headers
       res.set({
-        "Content-Type": metadata.contentType || "application/octet-stream",
+        "Content-Type": safeType,
         "Content-Length": metadata.size,
         "Cache-Control": `public, max-age=${cacheTtlSec}`,
+        "X-Content-Type-Options": "nosniff",
+        "Content-Disposition": "inline",
       });
 
       // Stream the file to the response

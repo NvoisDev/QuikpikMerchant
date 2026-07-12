@@ -5,6 +5,8 @@ import {
   storage, sum, users
 } from "./shared";
 
+import { isSafeStaticUrl } from '../utils/safeFetch.js';
+
 export function registerSystemRoutes(app: Express): void {
   // GET /api/health
   app.get('/api/health', healthCheck);
@@ -35,7 +37,7 @@ export function registerSystemRoutes(app: Express): void {
   });
 
   // POST /api/logo-upload-url
-  app.post('/api/logo-upload-url', async (req, res) => {
+  app.post('/api/logo-upload-url', requireAuth, async (req, res) => {
     try {
       
       // Check if object storage is configured
@@ -72,6 +74,10 @@ export function registerSystemRoutes(app: Express): void {
       
       if (!logoUrl || typeof logoUrl !== 'string') {
         return res.status(400).json({ error: 'Valid logo URL required' });
+      }
+
+      if (!isSafeStaticUrl(logoUrl)) {
+        return res.status(400).json({ error: 'Invalid or disallowed logo URL' });
       }
       
       if (!req.user) {

@@ -10,7 +10,8 @@ export async function fetchLogoBuffer(
   url: string,
 ): Promise<{ buffer: Buffer; extension: 'png' | 'jpeg' | 'gif' } | null> {
   try {
-    const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
+    const { safeFetch } = await import('./safeFetch.js');
+    const res = await safeFetch(url, { signal: AbortSignal.timeout(5000) });
     if (!res.ok) return null;
     const ct = res.headers.get('content-type') || '';
     const extension: 'png' | 'jpeg' | 'gif' = ct.includes('png')

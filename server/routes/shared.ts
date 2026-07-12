@@ -709,7 +709,8 @@ export async function buildInvoicePdf(order: any, wholesaler: any, showTransacti
     } catch (e) { console.warn('[pdf-builder] Logo data URI decode failed:', e instanceof Error ? e.message : e); }
   } else if (logoUrl) {
     try {
-      const resp = await fetch(logoUrl);
+      const { safeFetch } = await import('../utils/safeFetch.js');
+      const resp = await safeFetch(logoUrl, { signal: AbortSignal.timeout(5000) });
       if (resp.ok) {
         const raw = Buffer.from(await resp.arrayBuffer());
         const ct = resp.headers.get('content-type') || '';
