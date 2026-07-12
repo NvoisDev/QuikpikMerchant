@@ -115,11 +115,16 @@ export function FinancialsSection({ wholesalers, isAdmin }: { wholesalers: Whole
       map[key].grossProfit += Number(o.grossProfit || 0);
     }
     for (const w of wholesalers) {
-      if (map[w.id]) {
+      const promoLoss = promoLossByWholesaler[w.id] ?? 0;
+      const subRevenue = subRevenueByWholesaler[w.id] ?? 0;
+      const discountGiven = discountByWholesaler[w.id] ?? 0;
+      if (!map[w.id] && promoLoss > 0) {
+        map[w.id] = { name: (w.businessName ?? `${w.firstName ?? ""} ${w.lastName ?? ""}`.trim()) || "Unknown", tier: w.subscriptionTier || "free", orders: 0, gmv: 0, buyerFees: 0, merchantFees: 0, total: 0, stripeFees: 0, grossProfit: 0, subRevenue, discountGiven, promoLoss };
+      } else if (map[w.id]) {
         map[w.id]!.tier = w.subscriptionTier || "free";
-        map[w.id]!.subRevenue = subRevenueByWholesaler[w.id] ?? 0;
-        map[w.id]!.discountGiven = discountByWholesaler[w.id] ?? 0;
-        map[w.id]!.promoLoss = promoLossByWholesaler[w.id] ?? 0;
+        map[w.id]!.subRevenue = subRevenue;
+        map[w.id]!.discountGiven = discountGiven;
+        map[w.id]!.promoLoss = promoLoss;
       }
     }
     return Object.values(map).sort((a, b) => b.total - a.total);
