@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   Building2, ShoppingCart, Package, TrendingUp, DollarSign, AlertTriangle, AlertCircle, Star, Info,
+  TrendingDown, Minus,
 } from "lucide-react";
 import { formatNumber } from "@/lib/currencies";
 import {
@@ -220,6 +221,16 @@ function SubscriptionMonthlyTable({ rows, loading }: { rows: Array<{ month: stri
 
   const maxTotal = Math.max(...rows.map(r => r.total), 1);
 
+  const getTrend = (idx: number, currTotal: number): { pct: number | null; dir: "up" | "down" | "flat" } => {
+    const priorRow = rows[idx + 1];
+    if (!priorRow) return { pct: null, dir: "flat" };
+    const prev = priorRow.total;
+    if (prev === 0) return { pct: null, dir: "flat" };
+    const pct = ((currTotal - prev) / prev) * 100;
+    if (Math.abs(pct) < 0.05) return { pct: 0, dir: "flat" };
+    return { pct, dir: pct > 0 ? "up" : "down" };
+  };
+
   return (
     <div>
       <p className="text-xs font-semibold text-gray-500 mb-2">Monthly Collected (by tier)</p>
@@ -237,24 +248,48 @@ function SubscriptionMonthlyTable({ rows, loading }: { rows: Array<{ month: stri
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
-            {rows.map(r => (
-              <tr key={r.month} className="hover:bg-gray-50/60 transition-colors">
-                <td className="py-1.5 pr-3 font-medium text-gray-600 whitespace-nowrap">{fmtMonth(r.month)}</td>
-                <td className="py-1.5 px-2 text-right text-gray-400">{r.listing > 0 ? fmt(r.listing) : <span className="text-gray-200">—</span>}</td>
-                <td className="py-1.5 px-2 text-right text-blue-600">{r.starter > 0 ? fmt(r.starter) : <span className="text-gray-200">—</span>}</td>
-                <td className="py-1.5 px-2 text-right text-emerald-600">{r.standard > 0 ? fmt(r.standard) : <span className="text-gray-200">—</span>}</td>
-                <td className="py-1.5 px-2 text-right text-purple-600">{r.premium > 0 ? fmt(r.premium) : <span className="text-gray-200">—</span>}</td>
-                <td className="py-1.5 pl-2 text-right font-semibold text-gray-800 whitespace-nowrap">{fmt(r.total)}</td>
-                <td className="py-1.5 pl-3 hidden sm:table-cell">
-                  <div className="flex items-center">
-                    <div
-                      className="h-1.5 rounded-full bg-emerald-400"
-                      style={{ width: `${Math.round((r.total / maxTotal) * 96)}px`, minWidth: r.total > 0 ? "3px" : "0" }}
-                    />
-                  </div>
-                </td>
-              </tr>
-            ))}
+            {rows.map((r, idx) => {
+              const trend = getTrend(idx, r.total);
+              return (
+                <tr key={r.month} className="hover:bg-gray-50/60 transition-colors">
+                  <td className="py-1.5 pr-3 font-medium text-gray-600 whitespace-nowrap">{fmtMonth(r.month)}</td>
+                  <td className="py-1.5 px-2 text-right text-gray-400">{r.listing > 0 ? fmt(r.listing) : <span className="text-gray-200">—</span>}</td>
+                  <td className="py-1.5 px-2 text-right text-blue-600">{r.starter > 0 ? fmt(r.starter) : <span className="text-gray-200">—</span>}</td>
+                  <td className="py-1.5 px-2 text-right text-emerald-600">{r.standard > 0 ? fmt(r.standard) : <span className="text-gray-200">—</span>}</td>
+                  <td className="py-1.5 px-2 text-right text-purple-600">{r.premium > 0 ? fmt(r.premium) : <span className="text-gray-200">—</span>}</td>
+                  <td className="py-1.5 pl-2 text-right font-semibold text-gray-800 whitespace-nowrap">
+                    <span className="inline-flex items-center gap-1 justify-end">
+                      {fmt(r.total)}
+                      {trend.dir === "up" && (
+                        <span className="inline-flex items-center gap-0.5 text-emerald-600 font-medium">
+                          <TrendingUp className="h-3 w-3" />
+                          <span>{trend.pct!.toFixed(1)}%</span>
+                        </span>
+                      )}
+                      {trend.dir === "down" && (
+                        <span className="inline-flex items-center gap-0.5 text-red-500 font-medium">
+                          <TrendingDown className="h-3 w-3" />
+                          <span>{Math.abs(trend.pct!).toFixed(1)}%</span>
+                        </span>
+                      )}
+                      {trend.dir === "flat" && trend.pct !== null && (
+                        <span className="inline-flex items-center text-gray-400">
+                          <Minus className="h-3 w-3" />
+                        </span>
+                      )}
+                    </span>
+                  </td>
+                  <td className="py-1.5 pl-3 hidden sm:table-cell">
+                    <div className="flex items-center">
+                      <div
+                        className="h-1.5 rounded-full bg-emerald-400"
+                        style={{ width: `${Math.round((r.total / maxTotal) * 96)}px`, minWidth: r.total > 0 ? "3px" : "0" }}
+                      />
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
