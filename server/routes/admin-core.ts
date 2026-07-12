@@ -1295,8 +1295,9 @@ export function registerAdminCoreRoutes(app: Express): void {
     try {
       if (!ADMIN_EMAILS.includes(getAdminEmail(req) || "")) return res.status(403).json({ error: 'Forbidden' });
 
-      // Only subscription_create and subscription_cycle represent real recurring revenue
-      const VALID_BILLING_REASONS = new Set(['subscription_create', 'subscription_cycle']);
+      // Accept any subscription-related billing reason — guard against non-subscription
+      // invoices is done below via the subId check (requires a linked subscription)
+      const SKIP_BILLING_REASONS = new Set(['manual', 'upcoming', null, undefined]);
 
       let inserted = 0;
       let skipped = 0;
@@ -1340,9 +1341,9 @@ export function registerAdminCoreRoutes(app: Express): void {
 
         for (const invoice of invoices.data) {
           try {
-            // Only process subscription renewal / creation payments
+            // Skip non-subscription invoice types; require a linked subscription ID below
             const billingReason = invoice.billing_reason as string | null;
-            if (!billingReason || !VALID_BILLING_REASONS.has(billingReason)) {
+            if (SKIP_BILLING_REASONS.has(billingReason as any)) {
               skipped++;
               continue;
             }
