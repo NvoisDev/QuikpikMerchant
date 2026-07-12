@@ -324,6 +324,7 @@ export function registerAdminCoreRoutes(app: Express): void {
           paymentStatus: orders.paymentStatus, createdAt: orders.createdAt,
           stripeActualFee: orders.stripeActualFee, paymentMethod: orders.paymentMethod,
           refundedAt: orders.refundedAt, amountRefunded: orders.amountRefunded,
+          invoiceDiscount: orders.invoiceDiscount,
         })
         .from(orders)
         .innerJoin(users, eq(orders.wholesalerId, users.id))
@@ -337,11 +338,13 @@ export function registerAdminCoreRoutes(app: Express): void {
         .orderBy(desc(orders.createdAt))
         .limit(1000);
 
-      let totalCustomerFees = 0, totalPlatformFees = 0, totalGMV = 0, totalStripeProcessingFees = 0;
+      let totalCustomerFees = 0, totalPlatformFees = 0, totalGMV = 0, totalStripeProcessingFees = 0, totalDiscountGiven = 0;
+      const discountByWholesaler: Record<string, number> = {};
       const processedOrders = recentOrders.map(o => {
         const custFee = parseFloat(o.customerTransactionFee || '0');
         const platFee = parseFloat(o.platformFee || '0');
         const sub = parseFloat(o.subtotal || '0');
+        const discount = parseFloat(o.invoiceDiscount || '0');
         const isCancelled = o.status === 'cancelled';
         const stripePaymentMethods = ['card', 'payment_link'];
         const isStripePayment = stripePaymentMethods.includes(o.paymentMethod ?? '');
@@ -354,6 +357,11 @@ export function registerAdminCoreRoutes(app: Express): void {
           totalPlatformFees += platFee;
           totalGMV += sub;
           totalStripeProcessingFees += stripeFee;
+          if (discount > 0) {
+            totalDiscountGiven += discount;
+            const wid = o.wholesalerId ?? 'unknown';
+            discountByWholesaler[wid] = parseFloat(((discountByWholesaler[wid] ?? 0) + discount).toFixed(2));
+          }
         }
         return {
           ...o, customerTransactionFee: custFee, platformFee: platFee, subtotal: sub,
@@ -397,8 +405,10 @@ export function registerAdminCoreRoutes(app: Express): void {
           totalStripeProcessingFees: parseFloat(totalStripeProcessingFees.toFixed(2)),
           totalGrossProfit, grossMarginPct,
           totalSubscriptionRevenue, subscriptionPaymentCount,
+          totalDiscountGiven: parseFloat(totalDiscountGiven.toFixed(2)),
         },
         subRevenueByWholesaler,
+        discountByWholesaler,
       });
     } catch (error) {
       console.error('Admin revenue error:', error);

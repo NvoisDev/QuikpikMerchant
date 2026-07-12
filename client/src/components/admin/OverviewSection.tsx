@@ -107,7 +107,10 @@ export function OverviewSection({ stats, statsLoading, revenueData, revenueLoadi
           <CardContent className="px-4 pb-4 space-y-2.5">
             <Row label="Buyer fees"     value={revenueLoading ? "—" : fmt(revenueTotals.totalCustomerFees)}  color={BLUE} />
             <Row label="Merchant fees"  value={revenueLoading ? "—" : fmt(revenueTotals.totalPlatformFees)}  color={AMBER} />
-            <Row label="Subscription MRR" value={fmt(subMRR)} color={PURPLE} />
+            <Row label="Subscription revenue" value={revenueLoading ? "—" : fmt(revenueTotals.totalSubscriptionRevenue ?? 0)} color={PURPLE} />
+            {!revenueLoading && (revenueTotals.totalDiscountGiven ?? 0) > 0 && (
+              <Row label="Discounts given" value={`-${fmt(revenueTotals.totalDiscountGiven)}`} color="text-amber-600" />
+            )}
             <div className="pt-1.5 border-t border-gray-100 space-y-1.5">
               <div className="flex items-center justify-between">
                 <TooltipProvider>
@@ -128,7 +131,7 @@ export function OverviewSection({ stats, statsLoading, revenueData, revenueLoadi
                 </TooltipProvider>
                 <span className={`text-sm font-bold ${GREEN}`}>{revenueLoading ? "—" : fmt(revenueTotals.totalGrossProfit || 0)}</span>
               </div>
-              <Row label="Total earned (profit + MRR)" value={revenueLoading ? "—" : fmt((revenueTotals.totalGrossProfit || 0) + subMRR)} color={GREEN} bold />
+              <Row label="Total earned (profit + sub revenue)" value={revenueLoading ? "—" : fmt((revenueTotals.totalGrossProfit || 0) + (revenueTotals.totalSubscriptionRevenue ?? 0))} color={GREEN} bold />
             </div>
           </CardContent>
         </Card>
