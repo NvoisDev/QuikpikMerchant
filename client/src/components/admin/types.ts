@@ -8,7 +8,7 @@ export interface PlatformStats {
   todayOrders: number; todayRevenue: number;
   totalGMV: number; totalCustomerFees: number; totalPlatformFees: number; totalGrossRevenue: number;
   newWholesalersThisMonth: number; subscriptionRevenueMRR: number;
-  subscriptionBreakdown: { listing?: { count: number; mrr: number }; starter?: { count: number; mrr: number }; standard: { count: number; mrr: number }; premium: { count: number; mrr: number } };
+  subscriptionBreakdown: { listing?: { count: number; mrr: number; collected: number }; starter?: { count: number; mrr: number; collected: number }; standard: { count: number; mrr: number; collected: number }; premium: { count: number; mrr: number; collected: number } };
   homepageFeaturedWholesalers: number;
 }
 

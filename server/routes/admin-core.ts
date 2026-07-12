@@ -58,7 +58,7 @@ export function registerAdminCoreRoutes(app: Express): void {
         return new Date(refUTC.getTime() - ukH * 3_600_000);
       })();
 
-      const [allWholesalers, allOrdersData, newWholesalers, planRows, subPlanRows] = await Promise.all([
+      const [allWholesalers, allOrdersData, newWholesalers, planRows, subPlanRows, collectedRows] = await Promise.all([
         db.select({ id: users.id, subscriptionTier: users.subscriptionTier, archived: users.archived, subscriptionStatus: users.subscriptionStatus, showOnHomepage: users.showOnHomepage })
           .from(users).where(and(eq(users.role, 'wholesaler'), eq(users.isTestAccount, false), eq(users.isInactive, false))),
         db.select({
@@ -77,6 +77,19 @@ export function registerAdminCoreRoutes(app: Express): void {
         db.select({ userId: userSubscriptions.userId, planId: userSubscriptions.planId })
           .from(userSubscriptions)
           .where(sql`${userSubscriptions.status} IN ('active','trialing','past_due')`),
+        db.select({
+          toTier: subscriptionAuditLogs.toTier,
+          totalCollected: sql<string>`COALESCE(SUM(${subscriptionAuditLogs.amount}), 0)`,
+        })
+          .from(subscriptionAuditLogs)
+          .innerJoin(users, eq(subscriptionAuditLogs.userId, users.id))
+          .where(and(
+            eq(subscriptionAuditLogs.eventType, 'payment_success'),
+            eq(users.role, 'wholesaler'),
+            eq(users.isTestAccount, false),
+            eq(users.isInactive, false),
+          ))
+          .groupBy(subscriptionAuditLogs.toTier),
       ]);
 
       // Map userId → exact planId from active subscription record
@@ -101,6 +114,23 @@ export function registerAdminCoreRoutes(app: Express): void {
         premium:  allWholesalers.filter(w => w.subscriptionTier === 'premium'  || w.subscriptionTier?.startsWith('premium_')).length,
       };
 
+      // Build collected-per-tier map from audit log payment_success events
+      // toTier may be an exact planId (e.g. 'starter_annual') — bucket using same prefix logic
+      let starterCollected = 0, listingCollected = 0, standardCollected = 0, premiumCollected = 0;
+      for (const row of collectedRows) {
+        const tier = row.toTier || 'free';
+        const amt = parseFloat(row.totalCollected || '0');
+        if (!tier || tier === 'free' || tier === 'listing' || tier.startsWith('listing_')) {
+          listingCollected += amt;
+        } else if (tier === 'starter' || tier.startsWith('starter_')) {
+          starterCollected += amt;
+        } else if (tier === 'standard' || tier.startsWith('standard_')) {
+          standardCollected += amt;
+        } else if (tier === 'premium' || tier.startsWith('premium_')) {
+          premiumCollected += amt;
+        }
+      }
+
       // Sum MRR using each wholesaler's exact planId from userSubscriptions (captures custom pricing)
       // Fall back to subscriptionTier if no subscription record exists
       let starterCount = 0, listingCount = 0, standardCount = 0, premiumCount = 0;
@@ -122,10 +152,10 @@ export function registerAdminCoreRoutes(app: Express): void {
       }
       const subscriptionMRR = starterMRR + listingMRR + standardMRR + premiumMRR;
       const subscriptionBreakdown = {
-        starter:  { count: starterCount,  mrr: starterMRR  },
-        listing:  { count: listingCount,  mrr: listingMRR  },
-        standard: { count: standardCount, mrr: standardMRR },
-        premium:  { count: premiumCount,  mrr: premiumMRR  },
+        starter:  { count: starterCount,  mrr: starterMRR,  collected: starterCollected  },
+        listing:  { count: listingCount,  mrr: listingMRR,  collected: listingCollected  },
+        standard: { count: standardCount, mrr: standardMRR, collected: standardCollected },
+        premium:  { count: premiumCount,  mrr: premiumMRR,  collected: premiumCollected  },
       };
 
       let totalGMV = 0, totalCustomerFees = 0, totalPlatformFees = 0;

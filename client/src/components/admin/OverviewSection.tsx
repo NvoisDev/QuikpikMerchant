@@ -16,7 +16,7 @@ export function OverviewSection({ stats, statsLoading, revenueData, revenueLoadi
   isAdmin: boolean; onNavigate: (section: SectionId) => void;
 }) {
   const subMRR: number = stats?.subscriptionRevenueMRR ?? 0;
-  const subBreakdown = stats?.subscriptionBreakdown ?? { listing: { count: 0, mrr: 0 }, starter: { count: 0, mrr: 0 }, standard: { count: 0, mrr: 0 }, premium: { count: 0, mrr: 0 } };
+  const subBreakdown = stats?.subscriptionBreakdown ?? { listing: { count: 0, mrr: 0, collected: 0 }, starter: { count: 0, mrr: 0, collected: 0 }, standard: { count: 0, mrr: 0, collected: 0 }, premium: { count: 0, mrr: 0, collected: 0 } };
   const revenueTotals = revenueData?.totals ?? ({} as RevenueTotals);
 
   const { data: alerts } = useQuery<AlertsData>({
@@ -166,26 +166,31 @@ export function OverviewSection({ stats, statsLoading, revenueData, revenueLoadi
               <p className="text-xs text-gray-500 font-medium mb-1">Listing</p>
               <p className="text-lg font-bold text-gray-600">{subBreakdown.listing?.count ?? 0} <span className="text-sm font-normal">active</span></p>
               <p className="text-xs text-gray-400 mt-0.5">{fmt(subBreakdown.listing?.mrr ?? 0)}/mo</p>
+              <p className="text-xs text-gray-500 mt-1 font-medium">{fmt(subBreakdown.listing?.collected ?? 0)} collected</p>
             </div>
             <div className="rounded-xl border p-3 bg-blue-50 border-blue-100">
               <p className="text-xs text-blue-600 font-medium mb-1">Starter</p>
               <p className="text-lg font-bold text-blue-700">{subBreakdown.starter?.count ?? 0} <span className="text-sm font-normal">active</span></p>
               <p className="text-xs text-blue-500 mt-0.5">{fmt(subBreakdown.starter?.mrr ?? 0)}/mo</p>
+              <p className="text-xs text-blue-600 mt-1 font-medium">{fmt(subBreakdown.starter?.collected ?? 0)} collected</p>
             </div>
             <div className="rounded-xl border p-3 bg-emerald-50 border-emerald-100">
               <p className="text-xs text-emerald-600 font-medium mb-1">Standard</p>
               <p className="text-lg font-bold text-emerald-700">{subBreakdown.standard.count} <span className="text-sm font-normal">active</span></p>
               <p className="text-xs text-emerald-500 mt-0.5">{fmt(subBreakdown.standard.mrr)}/mo</p>
+              <p className="text-xs text-emerald-600 mt-1 font-medium">{fmt(subBreakdown.standard.collected ?? 0)} collected</p>
             </div>
             <div className="rounded-xl border p-3 bg-purple-50 border-purple-100">
               <p className="text-xs text-purple-600 font-medium mb-1">Premium</p>
               <p className="text-lg font-bold text-purple-700">{subBreakdown.premium.count} <span className="text-sm font-normal">active</span></p>
               <p className="text-xs text-purple-500 mt-0.5">{fmt(subBreakdown.premium.mrr)}/mo</p>
+              <p className="text-xs text-purple-600 mt-1 font-medium">{fmt(subBreakdown.premium.collected ?? 0)} collected</p>
             </div>
             <div className="rounded-xl border p-3 bg-gray-900 border-gray-800 col-span-2 sm:col-span-1">
               <p className="text-xs text-gray-400 font-medium mb-1">Total MRR</p>
               <p className="text-lg font-bold text-white">{fmt(subMRR)}<span className="text-sm font-normal">/mo</span></p>
               <p className="text-xs text-gray-400 mt-0.5">{fmt(subMRR * 12)}/yr est.</p>
+              <p className="text-xs text-gray-300 mt-1 font-medium">{fmt((subBreakdown.listing?.collected ?? 0) + (subBreakdown.starter?.collected ?? 0) + (subBreakdown.standard.collected ?? 0) + (subBreakdown.premium.collected ?? 0))} total</p>
             </div>
           </div>
         </CardContent>
