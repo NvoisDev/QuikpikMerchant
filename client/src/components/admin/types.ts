@@ -10,6 +10,7 @@ export interface PlatformStats {
   newWholesalersThisMonth: number; subscriptionRevenueMRR: number;
   subscriptionBreakdown: { listing?: { count: number; mrr: number; collected: number }; starter?: { count: number; mrr: number; collected: number }; standard: { count: number; mrr: number; collected: number }; premium: { count: number; mrr: number; collected: number } };
   homepageFeaturedWholesalers: number;
+  subscriptionMonthlyBreakdown: Array<{ month: string; listing: number; starter: number; standard: number; premium: number; total: number }>;
 }
 
 export interface AlertsData {

@@ -160,7 +160,7 @@ export function OverviewSection({ stats, statsLoading, revenueData, revenueLoadi
       {/* Subscription breakdown */}
       <Card className="border-gray-200 shadow-none rounded-xl">
         <CardHeader className="pb-2 pt-4 px-4"><CardTitle className="text-sm font-semibold text-gray-700">Subscription Revenue</CardTitle></CardHeader>
-        <CardContent className="px-4 pb-4">
+        <CardContent className="px-4 pb-4 space-y-4">
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
             <div className="rounded-xl border p-3 bg-gray-50 border-gray-200">
               <p className="text-xs text-gray-500 font-medium mb-1">Listing</p>
@@ -193,8 +193,71 @@ export function OverviewSection({ stats, statsLoading, revenueData, revenueLoadi
               <p className="text-xs text-gray-300 mt-1 font-medium">{fmt((subBreakdown.listing?.collected ?? 0) + (subBreakdown.starter?.collected ?? 0) + (subBreakdown.standard.collected ?? 0) + (subBreakdown.premium.collected ?? 0))} total</p>
             </div>
           </div>
+
+          {/* Monthly collected breakdown table */}
+          <SubscriptionMonthlyTable rows={stats?.subscriptionMonthlyBreakdown ?? []} loading={statsLoading} />
         </CardContent>
       </Card>
+    </div>
+  );
+}
+
+function SubscriptionMonthlyTable({ rows, loading }: { rows: Array<{ month: string; listing: number; starter: number; standard: number; premium: number; total: number }>; loading: boolean }) {
+  const fmtMonth = (ym: string) => {
+    const [y, m] = ym.split("-");
+    const d = new Date(Number(y), Number(m) - 1, 1);
+    return d.toLocaleDateString("en-GB", { month: "short", year: "numeric" });
+  };
+
+  if (loading) {
+    return <div className="h-24 animate-pulse bg-gray-50 rounded-lg" />;
+  }
+  if (!rows || rows.length === 0) {
+    return (
+      <p className="text-xs text-gray-400 text-center py-3">No subscription payments recorded yet.</p>
+    );
+  }
+
+  const maxTotal = Math.max(...rows.map(r => r.total), 1);
+
+  return (
+    <div>
+      <p className="text-xs font-semibold text-gray-500 mb-2">Monthly Collected (by tier)</p>
+      <div className="overflow-x-auto">
+        <table className="w-full text-xs">
+          <thead>
+            <tr className="border-b border-gray-100">
+              <th className="text-left pb-1.5 font-medium text-gray-400 pr-3 w-20">Month</th>
+              <th className="text-right pb-1.5 font-medium text-gray-400 px-2">Listing</th>
+              <th className="text-right pb-1.5 font-medium text-blue-400 px-2">Starter</th>
+              <th className="text-right pb-1.5 font-medium text-emerald-500 px-2">Standard</th>
+              <th className="text-right pb-1.5 font-medium text-purple-500 px-2">Premium</th>
+              <th className="text-right pb-1.5 font-medium text-gray-700 pl-2">Total</th>
+              <th className="pl-3 pb-1.5 w-24 hidden sm:table-cell"></th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-50">
+            {rows.map(r => (
+              <tr key={r.month} className="hover:bg-gray-50/60 transition-colors">
+                <td className="py-1.5 pr-3 font-medium text-gray-600 whitespace-nowrap">{fmtMonth(r.month)}</td>
+                <td className="py-1.5 px-2 text-right text-gray-400">{r.listing > 0 ? fmt(r.listing) : <span className="text-gray-200">—</span>}</td>
+                <td className="py-1.5 px-2 text-right text-blue-600">{r.starter > 0 ? fmt(r.starter) : <span className="text-gray-200">—</span>}</td>
+                <td className="py-1.5 px-2 text-right text-emerald-600">{r.standard > 0 ? fmt(r.standard) : <span className="text-gray-200">—</span>}</td>
+                <td className="py-1.5 px-2 text-right text-purple-600">{r.premium > 0 ? fmt(r.premium) : <span className="text-gray-200">—</span>}</td>
+                <td className="py-1.5 pl-2 text-right font-semibold text-gray-800 whitespace-nowrap">{fmt(r.total)}</td>
+                <td className="py-1.5 pl-3 hidden sm:table-cell">
+                  <div className="flex items-center">
+                    <div
+                      className="h-1.5 rounded-full bg-emerald-400"
+                      style={{ width: `${Math.round((r.total / maxTotal) * 96)}px`, minWidth: r.total > 0 ? "3px" : "0" }}
+                    />
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

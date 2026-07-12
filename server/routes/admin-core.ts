@@ -58,7 +58,7 @@ export function registerAdminCoreRoutes(app: Express): void {
         return new Date(refUTC.getTime() - ukH * 3_600_000);
       })();
 
-      const [allWholesalers, allOrdersData, newWholesalers, planRows, subPlanRows, collectedRows] = await Promise.all([
+      const [allWholesalers, allOrdersData, newWholesalers, planRows, subPlanRows, collectedRows, monthlyCollectedRows] = await Promise.all([
         db.select({ id: users.id, subscriptionTier: users.subscriptionTier, archived: users.archived, subscriptionStatus: users.subscriptionStatus, showOnHomepage: users.showOnHomepage })
           .from(users).where(and(eq(users.role, 'wholesaler'), eq(users.isTestAccount, false), eq(users.isInactive, false))),
         db.select({
@@ -90,6 +90,21 @@ export function registerAdminCoreRoutes(app: Express): void {
             eq(users.isInactive, false),
           ))
           .groupBy(subscriptionAuditLogs.toTier),
+        db.select({
+          month: sql<string>`TO_CHAR(${subscriptionAuditLogs.timestamp}, 'YYYY-MM')`,
+          toTier: subscriptionAuditLogs.toTier,
+          totalCollected: sql<string>`COALESCE(SUM(${subscriptionAuditLogs.amount}), 0)`,
+        })
+          .from(subscriptionAuditLogs)
+          .innerJoin(users, eq(subscriptionAuditLogs.userId, users.id))
+          .where(and(
+            eq(subscriptionAuditLogs.eventType, 'payment_success'),
+            eq(users.role, 'wholesaler'),
+            eq(users.isTestAccount, false),
+            eq(users.isInactive, false),
+          ))
+          .groupBy(sql`TO_CHAR(${subscriptionAuditLogs.timestamp}, 'YYYY-MM')`, subscriptionAuditLogs.toTier)
+          .orderBy(sql`TO_CHAR(${subscriptionAuditLogs.timestamp}, 'YYYY-MM') DESC`),
       ]);
 
       // Map userId → exact planId from active subscription record
@@ -151,6 +166,30 @@ export function registerAdminCoreRoutes(app: Express): void {
         }
       }
       const subscriptionMRR = starterMRR + listingMRR + standardMRR + premiumMRR;
+
+      // Build monthly breakdown map: month → { listing, starter, standard, premium, total }
+      const monthlyMap: Record<string, { listing: number; starter: number; standard: number; premium: number; total: number }> = {};
+      for (const row of monthlyCollectedRows) {
+        const month = row.month;
+        if (!month) continue;
+        if (!monthlyMap[month]) monthlyMap[month] = { listing: 0, starter: 0, standard: 0, premium: 0, total: 0 };
+        const amt = parseFloat(row.totalCollected || '0');
+        const tier = row.toTier || 'free';
+        if (!tier || tier === 'free' || tier === 'listing' || tier.startsWith('listing_')) {
+          monthlyMap[month].listing += amt;
+        } else if (tier === 'starter' || tier.startsWith('starter_')) {
+          monthlyMap[month].starter += amt;
+        } else if (tier === 'standard' || tier.startsWith('standard_')) {
+          monthlyMap[month].standard += amt;
+        } else if (tier === 'premium' || tier.startsWith('premium_')) {
+          monthlyMap[month].premium += amt;
+        }
+        monthlyMap[month].total += amt;
+      }
+      const subscriptionMonthlyBreakdown = Object.entries(monthlyMap)
+        .map(([month, v]) => ({ month, ...v }))
+        .sort((a, b) => b.month.localeCompare(a.month));
+
       const subscriptionBreakdown = {
         starter:  { count: starterCount,  mrr: starterMRR,  collected: starterCollected  },
         listing:  { count: listingCount,  mrr: listingMRR,  collected: listingCollected  },
@@ -191,6 +230,7 @@ export function registerAdminCoreRoutes(app: Express): void {
         newWholesalersThisMonth: Number(newWholesalers[0]?.count || 0),
         subscriptionRevenueMRR: subscriptionMRR,
         subscriptionBreakdown,
+        subscriptionMonthlyBreakdown,
       });
     } catch (error) {
       console.error('Admin platform-stats error:', error);
