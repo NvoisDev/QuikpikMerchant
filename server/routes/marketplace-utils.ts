@@ -58,14 +58,25 @@ export function registerUtilityRoutes(app: Express, customerActionLimiter: Reque
   });
 
   // GET /api/customer-accessible-wholesalers/:phoneNumber
-  app.get('/api/customer-accessible-wholesalers/:phoneNumber', async (req, res) => {
+  // Requires an authenticated customer session. The URL phone param is ignored —
+  // we look up the verified phone from the session owner's own customer record so
+  // a caller can only ever list their OWN wholesalers, never probe other numbers.
+  app.get('/api/customer-accessible-wholesalers/:phoneNumber', customerActionLimiter, async (req: any, res) => {
     try {
-      const phoneNumber = req.params.phoneNumber;
-      const decodedPhoneNumber = decodeURIComponent(phoneNumber);
-      const lastFourDigits = decodedPhoneNumber.slice(-4);
+      // Require an existing customer session (proof of phone possession via OTP).
+      const customerSession = req.session?.customerAuth;
+      if (!customerSession?.customerId) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
 
-      // Get all wholesalers where this customer is registered
-      const accessibleWholesalers = await storage.getWholesalersForCustomer(lastFourDigits);
+      // Resolve the verified phone from the session owner's own customer record.
+      // The URL parameter is intentionally ignored to prevent phone oracle attacks.
+      const customerRecord = await storage.getUser(customerSession.customerId);
+      if (!customerRecord || !customerRecord.phoneNumber) {
+        return res.status(400).json({ message: "No verified phone number on account" });
+      }
+
+      const accessibleWholesalers = await storage.getWholesalersForCustomer(customerRecord.phoneNumber);
       
       res.json(accessibleWholesalers);
     } catch (error) {
@@ -110,9 +121,8 @@ export function registerUtilityRoutes(app: Express, customerActionLimiter: Reque
         return res.status(400).json({ error: "Missing required fields" });
       }
       
-      // Check if customer already has access
-      const lastFourDigits = customerPhone.slice(-4);
-      const existingAccess = await storage.getWholesalersForCustomer(lastFourDigits);
+      // Check if customer already has access (full phone match, not 4-digit suffix)
+      const existingAccess = await storage.getWholesalersForCustomer(customerPhone);
       if (existingAccess.some(w => w.id === wholesalerId)) {
         return res.status(400).json({ error: "You already have access to this wholesaler" });
       }
@@ -194,8 +204,8 @@ export function registerUtilityRoutes(app: Express, customerActionLimiter: Reque
     }
   });
 
-  // GET /api/dashboard/multi-wholesaler-stats
-  app.get('/api/dashboard/multi-wholesaler-stats', async (req: any, res) => {
+  // GET /api/dashboard/multi-wholesaler-stats — wholesaler session required
+  app.get('/api/dashboard/multi-wholesaler-stats', requireAuth, async (req: any, res) => {
     try {
       const multiWholesalerStats = await db.execute(`
         SELECT 

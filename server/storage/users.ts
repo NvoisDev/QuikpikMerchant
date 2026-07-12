@@ -97,25 +97,29 @@ export class UserStorageBase {
     return user;
   }
 
-  async getAllWholesalers(): Promise<{ id: string; businessName: string; email: string; logoType: string; logoUrl: string; firstName: string; lastName: string }[]> {
+  async getAllWholesalers(): Promise<{ id: string; businessName: string; logoType: string; logoUrl: string; firstName: string; lastName: string }[]> {
+    // Only return public, active wholesalers — email is intentionally excluded to
+    // prevent public enumeration of tenant contact details.
     const wholesalers = await db
       .select({
         id: users.id,
         businessName: users.businessName,
-        email: users.email,
         logoType: users.logoType,
         logoUrl: users.logoUrl,
         firstName: users.firstName,
         lastName: users.lastName
       })
       .from(users)
-      .where(eq(users.role, 'wholesaler'))
+      .where(and(
+        eq(users.role, 'wholesaler'),
+        eq(users.storeVisibility, 'public'),
+        eq(users.isInactive, false),
+      ))
       .orderBy(users.businessName);
     
     return wholesalers.map(w => ({
       id: w.id,
       businessName: w.businessName || 'Business',
-      email: w.email || '',
       logoType: w.logoType || 'business',
       logoUrl: w.logoUrl || '',
       firstName: w.firstName || '',

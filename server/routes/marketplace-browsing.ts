@@ -134,6 +134,38 @@ export function registerBrowsingRoutes(app: Express): void {
         }
       }
 
+      // 🔒 VISIBILITY GATE: Only serve products from public, active stores to
+      // unauthenticated callers OR customers with an active relationship with
+      // this specific wholesaler.  A generic session alone is NOT sufficient —
+      // only the owning customer may access a private store's catalog.
+      const sessionCustomerId = (req.session as any)?.customerAuth?.customerId as string | undefined;
+
+      const visibilityCheck = await db.execute(
+        sql`SELECT store_visibility, is_inactive FROM users WHERE id = ${wholesalerId} AND role = 'wholesaler' LIMIT 1`
+      );
+      if (visibilityCheck.rows.length === 0) {
+        return res.status(404).json({ error: 'Wholesaler not found' });
+      }
+      const storeRow = visibilityCheck.rows[0] as any;
+      const isPublicStore = storeRow.store_visibility === 'public' && !storeRow.is_inactive;
+
+      if (!isPublicStore) {
+        // Private store — require an authenticated customer AND an active relationship
+        if (!sessionCustomerId) {
+          return res.status(403).json({ error: 'This store is not publicly accessible' });
+        }
+        const relCheck = await db.execute(
+          sql`SELECT 1 FROM wholesaler_customer_relationships
+              WHERE wholesaler_id = ${wholesalerId}
+                AND customer_id = ${sessionCustomerId}
+                AND status = 'active'
+              LIMIT 1`
+        );
+        if (relCheck.rows.length === 0) {
+          return res.status(403).json({ error: 'You do not have access to this store' });
+        }
+      }
+
       // 🔒 SUBSCRIPTION FEATURE GATING: Check wholesaler's subscription limits
       const limits = await getUserPlanLimits(wholesalerId);
       const productLimit = limits.limits.products;
@@ -165,7 +197,9 @@ export function registerBrowsingRoutes(app: Express): void {
             WHERE status = 'active' AND expiry_date IS NOT NULL AND expiry_date >= CURRENT_DATE
             GROUP BY product_id
           ) b ON b.product_id = p.id
-          WHERE p.wholesaler_id = ${wholesalerId} AND p.status = 'active'
+          WHERE p.wholesaler_id = ${wholesalerId}
+            AND p.status = 'active'
+            AND (${isPublicStore} = false OR p.hidden_from_public IS NULL OR p.hidden_from_public = false)
           ORDER BY p.created_at DESC
           LIMIT ${effectiveLimit}
         `);
@@ -371,7 +405,7 @@ export function registerBrowsingRoutes(app: Express): void {
     }
   });
 
-  // GET /api/wholesalers/all
+  // GET /api/wholesalers/all — only returns public, active wholesalers; no PII
   app.get("/api/wholesalers/all", async (req, res) => {
     try {
       const wholesalers = await storage.getAllWholesalers();
@@ -382,7 +416,7 @@ export function registerBrowsingRoutes(app: Express): void {
     }
   });
 
-  // GET /api/wholesaler/:id
+  // GET /api/wholesaler/:id — returns only public, safe fields (no email/PII)
   app.get("/api/wholesaler/:id", async (req, res) => {
     try {
       const { id } = req.params;
@@ -392,11 +426,16 @@ export function registerBrowsingRoutes(app: Express): void {
         return res.status(404).json({ message: "Wholesaler not found" });
       }
 
+      // Only expose public stores; private/inactive stores should not be discoverable
+      if (wholesaler.storeVisibility !== 'public' || wholesaler.isInactive) {
+        return res.status(404).json({ message: "Wholesaler not found" });
+      }
+
+      // Return only display-safe fields — never email or contact details
       res.json({
         id: wholesaler.id,
         businessName: wholesaler.businessName || null,
         firstName: wholesaler.firstName || null,
-        email: wholesaler.email
       });
     } catch (error) {
       console.error("Error looking up wholesaler:", error);
@@ -432,6 +471,30 @@ export function registerBrowsingRoutes(app: Express): void {
 
       if (!wholesaler) {
         return res.status(404).json({ message: "Wholesaler not found" });
+      }
+
+      // 🔒 VISIBILITY GATE: Only expose public, active wholesaler profiles to
+      // unauthenticated callers OR customers with an active relationship with
+      // this specific wholesaler (relationship-scoped, not generic session).
+      const profileSessionCustomerId = (req.session as any)?.customerAuth?.customerId as string | undefined;
+      const isPublicProfile = (wholesaler as any).storeVisibility === 'public' && !(wholesaler as any).isInactive;
+
+      if (!isPublicProfile) {
+        if (!profileSessionCustomerId) {
+          return res.status(404).json({ message: "Wholesaler not found" });
+        }
+        // Resolve the internal user ID for the relationship check (param may be a slug)
+        const resolvedProfileId = (wholesaler as any).id as string;
+        const profileRelCheck = await db.execute(
+          sql`SELECT 1 FROM wholesaler_customer_relationships
+              WHERE wholesaler_id = ${resolvedProfileId}
+                AND customer_id = ${profileSessionCustomerId}
+                AND status = 'active'
+              LIMIT 1`
+        );
+        if (profileRelCheck.rows.length === 0) {
+          return res.status(404).json({ message: "Wholesaler not found" });
+        }
       }
 
       // Include the effective fee config so the checkout dialog can display the
@@ -484,14 +547,38 @@ export function registerBrowsingRoutes(app: Express): void {
         return res.status(404).json({ message: "Product not found" });
       }
 
-      if (product.id === 23) {
-      }
-
       // Get wholesaler details
       const wholesaler = await storage.getUser(product.wholesalerId);
 
       if (!wholesaler) {
         return res.status(404).json({ message: "Wholesaler not found" });
+      }
+
+      // 🔒 VISIBILITY GATE: Only expose products from public, active stores to
+      // unauthenticated callers OR customers with an active relationship with
+      // this specific wholesaler (relationship-scoped, not generic session).
+      const detailSessionCustomerId = (req.session as any)?.customerAuth?.customerId as string | undefined;
+      const isPublicWholesaler = wholesaler.storeVisibility === 'public' && !wholesaler.isInactive;
+
+      if (!isPublicWholesaler) {
+        if (!detailSessionCustomerId) {
+          return res.status(403).json({ message: "This product is not publicly accessible" });
+        }
+        const relCheck = await db.execute(
+          sql`SELECT 1 FROM wholesaler_customer_relationships
+              WHERE wholesaler_id = ${product.wholesalerId}
+                AND customer_id = ${detailSessionCustomerId}
+                AND status = 'active'
+              LIMIT 1`
+        );
+        if (relCheck.rows.length === 0) {
+          return res.status(403).json({ message: "This product is not publicly accessible" });
+        }
+      }
+
+      // Always gate on product-level visibility flag for public stores
+      if (isPublicWholesaler && (product as any).hiddenFromPublic) {
+        return res.status(403).json({ message: "This product is not publicly accessible" });
       }
 
       // Resolve custom price list pricing if customer is authenticated

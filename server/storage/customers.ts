@@ -248,9 +248,15 @@ export class CustomerStorage extends OrderStorage {
     }
   }
 
-  async getWholesalersForCustomer(lastFourDigits: string): Promise<{ id: string; businessName: string; logoUrl?: string; logoType?: string; storeTagline?: string; location?: string; rating?: number }[]> {
+  async getWholesalersForCustomer(phoneNumber: string): Promise<{ id: string; businessName: string; logoUrl?: string; logoType?: string; storeTagline?: string; location?: string; rating?: number }[]> {
     try {
-      
+      // Normalise the supplied phone to E.164 so that "+447911123456",
+      // "07911123456", and "447911123456" all resolve to the same customer row.
+      // We also match on the raw value supplied in case normalisation strips a
+      // country-code variant already stored without the leading "+".
+      const normalised = this.formatPhoneToInternational(phoneNumber);
+      const digitsOnly = phoneNumber.replace(/\D/g, '');
+
       // Find all wholesalers where this customer has active relationships using the new multi-wholesaler system
       const accessibleWholesalers = await db.execute(sql`
         SELECT DISTINCT
@@ -272,9 +278,12 @@ export class CustomerStorage extends OrderStorage {
           AND wcr.status = 'active'
           AND c.role = 'customer'
           AND (
-            (c.phone_number IS NOT NULL AND RIGHT(c.phone_number, 4) = ${lastFourDigits})
-            OR 
-            (c.business_phone IS NOT NULL AND RIGHT(c.business_phone, 4) = ${lastFourDigits})
+            c.phone_number = ${normalised}
+            OR c.phone_number = ${phoneNumber}
+            OR REGEXP_REPLACE(c.phone_number, '[^0-9]', '', 'g') = ${digitsOnly}
+            OR c.business_phone = ${normalised}
+            OR c.business_phone = ${phoneNumber}
+            OR REGEXP_REPLACE(c.business_phone, '[^0-9]', '', 'g') = ${digitsOnly}
           )
         ORDER BY u.business_name
       `);
@@ -1148,8 +1157,21 @@ export class CustomerStorage extends OrderStorage {
         return [];
       }
       
+      // 🔒 VISIBILITY GATE: Only serve products from public, active wholesalers.
+      // This is a customer-facing API — private stores must not be readable here.
+      const wholesalerVisCheck = await db.execute(sql`
+        SELECT store_visibility, is_inactive
+        FROM users
+        WHERE id = ${filters.wholesalerId} AND role = 'wholesaler'
+        LIMIT 1
+      `);
+      if (wholesalerVisCheck.rows.length === 0) return [];
+      const visRow = wholesalerVisCheck.rows[0] as any;
+      if (visRow.store_visibility !== 'public' || visRow.is_inactive) return [];
+
       // Get products using an explicit column list — cost_price is intentionally
       // excluded here because getMarketplaceProducts is a customer-facing API.
+      // hidden_from_public products are never returned to unauthenticated callers.
       const productsResult = await db.execute(sql`
         SELECT id, name, description, price, currency, moq, stock,
                image_url, images, category, status, wholesaler_id,
@@ -1159,7 +1181,9 @@ export class CustomerStorage extends OrderStorage {
                units_per_pallet, pallet_price, pallet_moq, pallet_stock,
                pallet_weight, unit_weight, created_at, updated_at
         FROM products 
-        WHERE wholesaler_id = ${filters.wholesalerId} AND status = 'active'
+        WHERE wholesaler_id = ${filters.wholesalerId}
+          AND status = 'active'
+          AND (hidden_from_public IS NULL OR hidden_from_public = false)
         LIMIT 100
       `);
       type MarketplaceProductRow = Record<string, unknown> & { price: string; created_at: unknown; wholesaler: { rating?: number } };
@@ -1296,8 +1320,12 @@ export class CustomerStorage extends OrderStorage {
     category?: string;
     minRating?: number;
   }): Promise<(User & { products: Product[]; rating?: number; totalOrders?: number })[]> {
-    // Get wholesalers
-    let whereConditions = [eq(users.role, 'wholesaler')];
+    // Get wholesalers — only public, active stores are returned to the public directory
+    let whereConditions = [
+      eq(users.role, 'wholesaler'),
+      eq(users.storeVisibility, 'public'),
+      eq(users.isInactive, false),
+    ];
     
     if (filters.search) {
       whereConditions.push(
@@ -1313,15 +1341,13 @@ export class CustomerStorage extends OrderStorage {
       whereConditions.push(sql`${users.businessAddress} ILIKE ${`%${filters.location}%`}`);
     }
 
-    // Explicit column selection — never SELECT * so no sensitive fields
-    // (password hash, Stripe IDs, subscription details, fees) reach the customer.
-    // `email` is retained as a customer-facing contact fallback; `firstName` and
-    // `lastName` are used for name display and avatar initials when businessName
-    // is absent.  Truly sensitive fields are not selected.
+    // Public-safe column selection for the marketplace directory.
+    // Contact details (email, phone numbers, precise address) are intentionally
+    // excluded — only display and operational fields needed for the directory
+    // listing are returned.  This mirrors the redaction applied in public-store.ts.
     const wholesalers = await db
       .select({
         id: users.id,
-        email: users.email,
         firstName: users.firstName,
         lastName: users.lastName,
         businessName: users.businessName,
@@ -1331,9 +1357,6 @@ export class CustomerStorage extends OrderStorage {
         logoType: users.logoType,
         storeTagline: users.storeTagline,
         storeSlug: users.storeSlug,
-        businessAddress: users.businessAddress,
-        businessPhone: users.businessPhone,
-        businessEmail: users.businessEmail,
         businessDescription: users.businessDescription,
         businessType: users.businessType,
         defaultCurrency: users.defaultCurrency,
@@ -1341,20 +1364,10 @@ export class CustomerStorage extends OrderStorage {
         defaultCountryCode: users.defaultCountryCode,
         enablePickup: users.enablePickup,
         enableDelivery: users.enableDelivery,
-        deliveryFlatRate: users.deliveryFlatRate,
-        deliveryNote: users.deliveryNote,
-        pickupAddress: users.pickupAddress,
-        pickupInstructions: users.pickupInstructions,
         allowPayLater: users.allowPayLater,
         whatsappEnabled: users.whatsappEnabled,
-        showPricesToWholesalers: users.showPricesToWholesalers,
-        timezone: users.timezone,
-        phoneNumber: users.phoneNumber,
         city: users.city,
-        state: users.state,
         country: users.country,
-        postalCode: users.postalCode,
-        streetAddress: users.streetAddress,
         createdAt: users.createdAt,
         updatedAt: users.updatedAt,
         isVerified: users.isVerified,
@@ -1419,7 +1432,7 @@ export class CustomerStorage extends OrderStorage {
                whatsapp_enabled, show_prices_to_wholesalers,
                timezone, phone_number, city, state, country, postal_code, street_address,
                price_display_mode, enquiries_enabled,
-               is_verified,
+               is_verified, store_visibility, is_inactive,
                created_at, updated_at
         FROM users 
         WHERE (id = ${id} OR store_slug = ${id}) AND role = 'wholesaler'
@@ -1524,6 +1537,8 @@ export class CustomerStorage extends OrderStorage {
         priceDisplayMode: (wholesaler.price_display_mode as string) || 'hidden',
         enquiriesEnabled: wholesaler.enquiries_enabled !== false,
         isVerified: wholesaler.is_verified === true || wholesaler.is_verified === 1,
+        storeVisibility: (wholesaler.store_visibility as string) || 'private',
+        isInactive: wholesaler.is_inactive === true || wholesaler.is_inactive === 1,
       };
 
       return {
