@@ -108,7 +108,7 @@ function MarginOverview() {
   useEffect(() => {
     if (!lsKey) return;
     const stored = localStorage.getItem(lsKey);
-    if (stored !== null) setTargetInput(stored);
+    setTargetInput(stored ?? "");
   }, [lsKey]);
 
   const handleTargetChange = (val: string) => {
@@ -246,7 +246,7 @@ function MarginOverview() {
       )}
       {gap && (
         <p className={`text-xs font-semibold mt-0.5 ${gap.positive ? "text-emerald-600" : "text-red-500"}`}>
-          {gap.positive ? "+" : ""}{gap.value} vs target
+          {gap.positive ? "+" : "−"}{gap.value} vs target
         </p>
       )}
     </div>
