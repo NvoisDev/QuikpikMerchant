@@ -91,11 +91,34 @@ interface MarginSummary {
 }
 
 function MarginOverview() {
+  const { user } = useAuth();
   const [dateRange, setDateRange] = useState<DateRange>({
     from: subDays(startOfToday(), 29),
     to: endOfDay(startOfToday()),
     label: "Last 30 days",
   });
+
+  const lsKey = user?.id ? `margin_target_pct_${user.id}` : null;
+  const [targetInput, setTargetInput] = useState<string>(() => {
+    if (typeof window === "undefined") return "";
+    const stored = user?.id ? localStorage.getItem(`margin_target_pct_${user.id}`) : null;
+    return stored ?? "";
+  });
+
+  useEffect(() => {
+    if (!lsKey) return;
+    const stored = localStorage.getItem(lsKey);
+    if (stored !== null) setTargetInput(stored);
+  }, [lsKey]);
+
+  const handleTargetChange = (val: string) => {
+    const cleaned = val.replace(/[^0-9.]/g, "").slice(0, 5);
+    setTargetInput(cleaned);
+    if (lsKey) localStorage.setItem(lsKey, cleaned);
+  };
+
+  const targetPctNum = parseFloat(targetInput);
+  const hasTarget = !isNaN(targetPctNum) && targetPctNum > 0;
 
   const { data: marginData, isLoading } = useQuery<MarginSummary>({
     queryKey: ["/api/analytics/margin-summary", dateRange.from.toISOString(), dateRange.to.toISOString()],
@@ -214,10 +237,18 @@ function MarginOverview() {
     URL.revokeObjectURL(url);
   };
 
-  const StatTile = ({ label, value, positive }: { label: string; value: string; positive?: boolean }) => (
+  const StatTile = ({ label, value, positive, target, gap }: { label: string; value: string; positive?: boolean; target?: string; gap?: { value: string; positive: boolean } }) => (
     <div className="bg-slate-50 rounded-xl p-3 sm:p-4 flex flex-col gap-1">
       <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">{label}</p>
       <p className={`text-xl sm:text-2xl font-bold ${positive === undefined ? "text-slate-900" : positive ? "text-emerald-600" : "text-red-500"}`}>{value}</p>
+      {target && (
+        <p className="text-xs text-slate-400 mt-0.5">Target: <span className="text-slate-600 font-medium">{target}</span></p>
+      )}
+      {gap && (
+        <p className={`text-xs font-semibold mt-0.5 ${gap.positive ? "text-emerald-600" : "text-red-500"}`}>
+          {gap.positive ? "+" : ""}{gap.value} vs target
+        </p>
+      )}
     </div>
   );
 
@@ -260,7 +291,19 @@ function MarginOverview() {
               </CardTitle>
               <p className="text-sm text-gray-600 mt-1">Estimated gross margin based on batch cost prices</p>
             </div>
-            <div className="flex-shrink-0">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 flex-shrink-0">
+              <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5">
+                <span className="text-xs text-slate-500 whitespace-nowrap">Target margin</span>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  value={targetInput}
+                  onChange={e => handleTargetChange(e.target.value)}
+                  placeholder="e.g. 40"
+                  className="w-12 text-xs font-medium text-slate-800 bg-transparent border-none outline-none text-center"
+                />
+                <span className="text-xs text-slate-500">%</span>
+              </div>
               <DateRangePicker value={dateRange} onChange={setDateRange} className="w-full sm:w-auto text-sm" />
             </div>
           </div>
@@ -289,12 +332,31 @@ function MarginOverview() {
                   <span>Some products have no cost data — those items are excluded from margin totals.</span>
                 </div>
               )}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <StatTile label="Total Revenue (excl. fees)" value={fmt(marginData.total.revenue)} />
-                <StatTile label="Est. Cost" value={fmt(marginData.total.cost)} />
-                <StatTile label="Margin (£)" value={fmt(marginData.total.margin)} positive={marginData.total.margin >= 0} />
-                <StatTile label="Margin %" value={pct(marginData.total.marginPercent)} positive={marginData.total.marginPercent >= 0} />
-              </div>
+              {(() => {
+                const targetMarginAmt = hasTarget ? marginData.total.revenue * targetPctNum / 100 : null;
+                const gapAmt = targetMarginAmt !== null ? marginData.total.margin - targetMarginAmt : null;
+                const gapPct = hasTarget ? marginData.total.marginPercent - targetPctNum : null;
+                return (
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <StatTile label="Total Revenue (excl. fees)" value={fmt(marginData.total.revenue)} />
+                    <StatTile label="Est. Cost" value={fmt(marginData.total.cost)} />
+                    <StatTile
+                      label="Margin (£)"
+                      value={fmt(marginData.total.margin)}
+                      positive={marginData.total.margin >= 0}
+                      target={targetMarginAmt !== null ? fmt(targetMarginAmt) : undefined}
+                      gap={gapAmt !== null ? { value: fmt(Math.abs(gapAmt)), positive: gapAmt >= 0 } : undefined}
+                    />
+                    <StatTile
+                      label="Margin %"
+                      value={pct(marginData.total.marginPercent)}
+                      positive={marginData.total.marginPercent >= 0}
+                      target={hasTarget ? `${targetPctNum.toFixed(1)}%` : undefined}
+                      gap={gapPct !== null ? { value: `${Math.abs(gapPct).toFixed(1)}%`, positive: gapPct >= 0 } : undefined}
+                    />
+                  </div>
+                );
+              })()}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <SegmentCard
                   label="Invoices"
