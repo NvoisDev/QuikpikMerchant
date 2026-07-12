@@ -3,7 +3,7 @@ import rateLimit from "express-rate-limit";
 import {
   createOrUpdateUser, createResetExpiration, db, emailBadge, emailCard, emailHeading,
   eq, formatPhoneToInternational, generateResetToken, getEmailLogoUrl, getGoogleAuthUrl, getPlanLimits,
-  hashPassword, hashResetToken, passwordResetAttempts, recoveryAttempts,
+  hashPassword, hashResetToken, passwordResetAttempts,
   requireAuth, requireNotViewer, sendEmail, sendPasswordResetEmail,
   sgMail, sql, storage, users, validatePassword, verifyGoogleToken, verifyPassword,
   wrapCustomerEmail, GoogleAuthBlockedError,
@@ -299,72 +299,6 @@ export function registerAuthCoreRoutes(app: Express): void {
     } catch (error) {
       console.error('Profile completion error:', error);
       res.status(500).json({ success: false, message: 'Failed to complete profile' });
-    }
-  });
-
-  // POST /api/auth/recover
-  app.post('/api/auth/recover', async (req: any, res) => {
-    const clientIP = req.ip || 'unknown';
-    const { email } = req.body;
-    const timestamp = new Date().toISOString();
-
-    const recoverySecret = process.env.RECOVERY_SECRET;
-    const providedSecret = req.headers['x-recovery-secret'];
-    if (!recoverySecret || !providedSecret || providedSecret !== recoverySecret) {
-      console.warn(`[auth/recover] BLOCKED — missing or invalid secret | ip=${clientIP} email=${email ?? '(none)'} ts=${timestamp}`);
-      return res.status(403).json({ error: 'Unauthorized - Contact support for account recovery' });
-    }
-
-    const now = Date.now();
-    const ipKey = `ip:${clientIP}`;
-    const ipEntry = recoveryAttempts.get(ipKey);
-    if (ipEntry) {
-      if (now - ipEntry.lastAttempt > 3_600_000) {
-        ipEntry.count = 0;
-      }
-      if (ipEntry.count >= 3) {
-        console.warn(`[auth/recover] RATE-LIMITED | ip=${clientIP} email=${email ?? '(none)'} ts=${timestamp}`);
-        return res.status(429).json({ error: 'Too many recovery attempts. Try again later.' });
-      }
-    }
-    recoveryAttempts.set(ipKey, { count: (ipEntry?.count ?? 0) + 1, lastAttempt: now });
-
-    try {
-      if (!email || (email !== 'hello@quikpik.co' && email !== 'mogunjemilua@gmail.com')) {
-        console.warn(`[auth/recover] REJECTED — email not on allowlist | ip=${clientIP} email=${email ?? '(none)'} ts=${timestamp}`);
-        return res.status(403).json({ error: 'Unauthorized - Contact support for account recovery' });
-      }
-
-      const user = await storage.getUserByEmail(email);
-      if (!user) {
-        console.warn(`[auth/recover] REJECTED — user not found | ip=${clientIP} email=${email} ts=${timestamp}`);
-        return res.status(404).json({ error: 'User not found' });
-      }
-
-      if (user.role !== 'wholesaler') {
-        console.warn(`[auth/recover] REJECTED — non-wholesaler role=${user.role} | ip=${clientIP} email=${email} ts=${timestamp}`);
-        return res.status(403).json({ error: 'Access denied - Only wholesaler accounts can be recovered' });
-      }
-
-      const sessionUser = {
-        id: user.id, email: user.email, firstName: user.firstName,
-        lastName: user.lastName, role: user.role, businessName: user.businessName, isTeamMember: false
-      };
-
-      req.session!.userId = user.id;
-      req.session!.user = sessionUser;
-
-      req.session.save((err: any) => {
-        if (err) {
-          console.error(`[auth/recover] SESSION SAVE ERROR | ip=${clientIP} email=${email} ts=${timestamp}`, err);
-          return res.status(500).json({ error: 'Session save failed' });
-        }
-        console.info(`[auth/recover] SUCCESS | ip=${clientIP} email=${email} userId=${user.id} ts=${timestamp}`);
-        res.json({ success: true, message: 'Authentication recovered', user: { id: user.id, email: user.email } });
-      });
-    } catch (error) {
-      console.error(`[auth/recover] ERROR | ip=${clientIP} email=${email ?? '(none)'} ts=${timestamp}`, error);
-      res.status(500).json({ error: 'Recovery failed' });
     }
   });
 
