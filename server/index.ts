@@ -825,6 +825,8 @@ async function runStartupMigrations() {
     // free-text note. Both are nullable so existing product rows are unaffected.
     `ALTER TABLE order_items ADD COLUMN IF NOT EXISTS custom_label VARCHAR(255)`,
     `ALTER TABLE order_items ADD COLUMN IF NOT EXISTS item_notes TEXT`,
+    // One-time cleanup: cancel any seed orders stuck in 'processing' (idempotent no-op once done)
+    `UPDATE orders SET status = 'cancelled' WHERE status = 'processing' AND order_number LIKE 'SEED-%'`,
   ];
   let warned = 0;
   for (const stmt of migrations) {
