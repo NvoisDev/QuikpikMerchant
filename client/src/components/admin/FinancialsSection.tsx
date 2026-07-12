@@ -252,10 +252,11 @@ export function FinancialsSection({ wholesalers, isAdmin }: { wholesalers: Whole
       </div>
 
       {/* Gross profit cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <StatCard label="Stripe Fees"  value={isLoading ? "…" : fmt(revenueTotals.totalStripeProcessingFees)}  sub="Actual · est. 1.4%+£0.20 fallback"  icon={<CreditCard className="h-4 w-4" />}  color={RED} />
         <StatCard label="Gross Profit"         value={isLoading ? "…" : fmt(revenueTotals.totalGrossProfit)}           sub="Revenue minus Stripe fees" icon={<TrendingUp className="h-4 w-4" />}  color={GREEN} />
         <StatCard label="Gross Margin"         value={isLoading ? "…" : `${revenueTotals.grossMarginPct ?? 0}%`}       sub="Profit / order revenue"    icon={<TrendingUp className="h-4 w-4" />}  color={PURPLE} />
+        <StatCard label="Promo Losses"         value={isLoading ? "…" : (revenueTotals.totalPromoLoss > 0 ? `-${fmt(revenueTotals.totalPromoLoss)}` : "—")}  sub="Promotional revenue loss"  icon={<TrendingUp className="h-4 w-4" />}  color={AMBER} />
       </div>
 
       {/* Take rate */}
