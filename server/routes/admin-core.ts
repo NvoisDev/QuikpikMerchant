@@ -330,7 +330,6 @@ export function registerAdminCoreRoutes(app: Express): void {
         .where(and(
           eq(users.isTestAccount, false),
           eq(users.isInactive, false),
-          sql`(coalesce(${orders.customerTransactionFee}::numeric, 0) > 0 OR coalesce(${orders.platformFee}::numeric, 0) > 0)`,
           from ? gte(orders.createdAt, new Date(from)) : undefined,
           toDate ? lte(orders.createdAt, toDate) : undefined,
           filterWholesalerId ? eq(orders.wholesalerId, filterWholesalerId) : undefined,
@@ -391,22 +390,6 @@ export function registerAdminCoreRoutes(app: Express): void {
         );
       }
 
-      // Total platform GMV — all non-cancelled orders regardless of fee structure,
-      // used as context alongside the fee-generating GMV above
-      const platformGMVRows = await db
-        .select({ gmv: sql<string>`coalesce(sum(${orders.subtotal}::numeric), 0)` })
-        .from(orders)
-        .innerJoin(users, eq(orders.wholesalerId, users.id))
-        .where(and(
-          eq(users.isTestAccount, false),
-          eq(users.isInactive, false),
-          sql`${orders.status} != 'cancelled'`,
-          from ? gte(orders.createdAt, new Date(from)) : undefined,
-          toDate ? lte(orders.createdAt, toDate) : undefined,
-          filterWholesalerId ? eq(orders.wholesalerId, filterWholesalerId) : undefined,
-        ));
-      const totalPlatformGMV = parseFloat(platformGMVRows[0]?.gmv ?? '0');
-
       res.json({
         orders: processedOrders,
         totals: {
@@ -416,7 +399,6 @@ export function registerAdminCoreRoutes(app: Express): void {
           totalSubscriptionRevenue, subscriptionPaymentCount,
         },
         subRevenueByWholesaler,
-        totalPlatformGMV,
       });
     } catch (error) {
       console.error('Admin revenue error:', error);
