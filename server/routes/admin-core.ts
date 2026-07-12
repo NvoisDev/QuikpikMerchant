@@ -1290,20 +1290,23 @@ export function registerAdminCoreRoutes(app: Express): void {
   // POST /api/admin/subscriptions/backfill-stripe
   // One-time (idempotent) backfill: imports all historical paid Stripe invoices
   // into subscriptionAuditLogs so past revenue appears in the dashboard.
-  // Uses the Invoices API (no retention limit) instead of the Events API (30-day limit).
+  // Fetches invoices per-customer (per known Quikpik wholesaler) for reliable matching.
   app.post('/api/admin/subscriptions/backfill-stripe', requireAuth, async (req: any, res) => {
     try {
       if (!ADMIN_EMAILS.includes(getAdminEmail(req) || "")) return res.status(403).json({ error: 'Forbidden' });
 
-      // Accept any subscription-related billing reason — guard against non-subscription
-      // invoices is done below via the subId check (requires a linked subscription)
-      const SKIP_BILLING_REASONS = new Set(['manual', 'upcoming', null, undefined]);
+      // Only skip explicitly manual/upcoming invoices. null/undefined billing_reason is fine —
+      // non-subscription invoices are caught later by the !subId guard.
+      const SKIP_BILLING_REASONS = new Set(['manual', 'upcoming']);
 
       let inserted = 0;
-      let skipped = 0;
-      let failed = 0;
+      let skippedDuplicate = 0;
+      let skippedNoSub = 0;
+      let skippedBillingReason = 0;
+      let skippedZeroAmount = 0;
       let noUserMatch = 0;
       let invalidPlan = 0;
+      let failed = 0;
 
       // Live Stripe only — test-account payments must not appear in revenue dashboards
       let stripe: ReturnType<typeof getStripeClient>;
@@ -1313,149 +1316,158 @@ export function registerAdminCoreRoutes(app: Express): void {
         return res.status(500).json({ error: 'Live Stripe key not configured' });
       }
 
-      // Build a lookup of stripeSubscriptionId → userId for secondary matching
-      const subIdToUserId: Record<string, string> = {};
-      const subRows = await db
-        .select({ userId: userSubscriptions.userId, stripeSubscriptionId: userSubscriptions.stripeSubscriptionId })
-        .from(userSubscriptions)
-        .where(sql`${userSubscriptions.stripeSubscriptionId} IS NOT NULL`);
-      for (const r of subRows) {
-        if (r.stripeSubscriptionId && r.userId) subIdToUserId[r.stripeSubscriptionId] = r.userId;
-      }
+      // Fetch all non-test Quikpik wholesalers that have a Stripe customer ID
+      const wholesalers = await db
+        .select({ id: users.id, businessName: users.businessName, stripeCustomerId: users.stripeCustomerId })
+        .from(users)
+        .where(and(
+          eq(users.isTestAccount, false),
+          eq(users.isInactive, false),
+          sql`${users.stripeCustomerId} IS NOT NULL`,
+        ));
 
-      // Page through all paid invoices — invoices persist permanently (no 30-day limit)
-      let hasMore = true;
-      let startingAfter: string | undefined;
+      console.log(`🔄 Backfill: processing invoices for ${wholesalers.length} wholesalers`);
 
-      while (hasMore) {
-        const params: Stripe.InvoiceListParams = { status: 'paid', limit: 100 };
-        if (startingAfter) params.starting_after = startingAfter;
+      for (const wholesaler of wholesalers) {
+        const custId = wholesaler.stripeCustomerId!;
+        console.log(`  → ${wholesaler.businessName} (${custId})`);
 
-        let invoices: Stripe.ApiList<Stripe.Invoice>;
-        try {
-          invoices = await stripe.invoices.list(params);
-        } catch (err) {
-          console.error('❌ Backfill: failed to list invoices:', err);
-          break;
-        }
+        // Page through all paid invoices for this customer
+        let hasMore = true;
+        let startingAfter: string | undefined;
 
-        for (const invoice of invoices.data) {
+        while (hasMore) {
+          const params: Stripe.InvoiceListParams = { customer: custId, status: 'paid', limit: 100 };
+          if (startingAfter) params.starting_after = startingAfter;
+
+          let invoices: Stripe.ApiList<Stripe.Invoice>;
           try {
-            // Skip non-subscription invoice types; require a linked subscription ID below
-            const billingReason = invoice.billing_reason as string | null;
-            if (SKIP_BILLING_REASONS.has(billingReason as any)) {
-              skipped++;
-              continue;
-            }
+            invoices = await stripe.invoices.list(params);
+          } catch (err) {
+            console.error(`❌ Backfill: failed to list invoices for ${custId}:`, err);
+            break;
+          }
 
-            const amountPaid = (invoice.amount_paid ?? 0) / 100;
-            if (amountPaid <= 0) { skipped++; continue; }
+          console.log(`    Stripe returned ${invoices.data.length} paid invoice(s)`);
 
-            const custId = typeof invoice.customer === 'string'
-              ? invoice.customer
-              : typeof invoice.customer === 'object' && invoice.customer !== null
-                ? (invoice.customer as Stripe.Customer).id
-                : null;
-            const subId = typeof invoice.subscription === 'string'
-              ? invoice.subscription
-              : typeof invoice.subscription === 'object' && invoice.subscription !== null
-                ? (invoice.subscription as Stripe.Subscription).id
-                : null;
-
-            if (!custId || !subId) { skipped++; continue; }
-
-            // Resolve the live (non-test) user — primary: stripeCustomerId, secondary: userSubscriptions.stripeSubscriptionId
-            let bfUser: { id: string } | undefined;
-            const [byCustomer] = await db.select({ id: users.id })
-              .from(users).where(and(eq(users.stripeCustomerId, custId), eq(users.isTestAccount, false)));
-            if (byCustomer) {
-              bfUser = byCustomer;
-            } else if (subIdToUserId[subId]) {
-              // Secondary match: look up user via stored subscription ID
-              const [bySub] = await db.select({ id: users.id, isTestAccount: users.isTestAccount })
-                .from(users).where(and(eq(users.id, subIdToUserId[subId]!), eq(users.isTestAccount, false)));
-              if (bySub) bfUser = bySub;
-            }
-            if (!bfUser) { noUserMatch++; skipped++; continue; }
-
-            // Idempotency: check by stripeInvoiceId (new rows) OR by reason LIKE %invoiceId%
-            // (pre-existing rows written before this column existed). Invoice IDs are globally
-            // unique in Stripe, so either check is collision-free.
-            const invoiceId = invoice.id;
-            // Use paid_at for accuracy; fall back to invoice.created
-            const paidAt = (invoice.status_transitions as any)?.paid_at ?? null;
-            const invoiceTimestamp = new Date((paidAt ?? invoice.created) * 1000);
-            const [existing] = await db.select({ id: subscriptionAuditLogs.id })
-              .from(subscriptionAuditLogs)
-              .where(
-                or(
-                  invoiceId ? eq(subscriptionAuditLogs.stripeInvoiceId, invoiceId) : sql`1=0`,
-                  and(
-                    eq(subscriptionAuditLogs.stripeSubscriptionId, subId),
-                    sql`${subscriptionAuditLogs.reason} LIKE ${`%${invoiceId}%`}`,
-                  ),
-                )
-              )
-              .limit(1);
-
-            if (existing) { skipped++; continue; }
-
-            // Resolve plan tier from subscription
-            let planId: string | undefined;
+          for (const invoice of invoices.data) {
             try {
-              const bfSub = await stripe.subscriptions.retrieve(subId);
-              const priceId = bfSub.items?.data?.[0]?.price?.id;
-              if (priceId) {
-                const [planRow] = await db.select().from(subscriptionPlans)
-                  .where(eq(subscriptionPlans.stripePriceId, priceId));
-                planId = planRow?.planId && planRow.planId !== 'free' ? planRow.planId : undefined;
-                if (!planId) {
-                  const unitAmount = bfSub.items?.data?.[0]?.price?.unit_amount ?? 0;
-                  if (unitAmount >= 4999) planId = 'premium';
-                  else if (unitAmount >= 1999) planId = 'standard';
-                }
+              const invoiceId = invoice.id;
+              const billingReason = (invoice as any).billing_reason as string | null | undefined;
+              const amountPaid = (invoice.amount_paid ?? 0) / 100;
+
+              console.log(`    Invoice ${invoiceId}: billing_reason=${billingReason}, amount=${amountPaid}`);
+
+              if (billingReason != null && SKIP_BILLING_REASONS.has(billingReason)) {
+                console.log(`      → SKIP: billing_reason=${billingReason}`);
+                skippedBillingReason++;
+                continue;
               }
-            } catch {
-              // Subscription may be deleted; fall back to invoice line items
+
+              if (amountPaid <= 0) {
+                console.log(`      → SKIP: zero amount`);
+                skippedZeroAmount++;
+                continue;
+              }
+
+              // Require a linked subscription — guards against one-off invoices
+              const subId = typeof invoice.subscription === 'string'
+                ? invoice.subscription
+                : typeof invoice.subscription === 'object' && invoice.subscription !== null
+                  ? (invoice.subscription as Stripe.Subscription).id
+                  : null;
+
+              if (!subId) {
+                console.log(`      → SKIP: no subscription linked`);
+                skippedNoSub++;
+                continue;
+              }
+
+              // Idempotency: check by stripeInvoiceId (new rows) OR by reason LIKE %invoiceId%
+              // (pre-existing rows written before this column existed).
+              const paidAt = (invoice.status_transitions as any)?.paid_at ?? null;
+              const invoiceTimestamp = new Date((paidAt ?? invoice.created) * 1000);
+              const [existing] = await db.select({ id: subscriptionAuditLogs.id })
+                .from(subscriptionAuditLogs)
+                .where(
+                  or(
+                    invoiceId ? eq(subscriptionAuditLogs.stripeInvoiceId, invoiceId) : sql`1=0`,
+                    and(
+                      eq(subscriptionAuditLogs.stripeSubscriptionId, subId),
+                      sql`${subscriptionAuditLogs.reason} LIKE ${`%${invoiceId}%`}`,
+                    ),
+                  )
+                )
+                .limit(1);
+
+              if (existing) {
+                console.log(`      → SKIP: already in audit log (id=${existing.id})`);
+                skippedDuplicate++;
+                continue;
+              }
+
+              // Resolve plan tier from invoice line items first (reflects plan at billing time),
+              // fall back to current subscription if needed.
+              let planId: string | undefined;
               const lineItem = invoice.lines?.data?.[0];
-              const unitAmount = (lineItem as any)?.price?.unit_amount ?? 0;
-              if (unitAmount >= 4999) planId = 'premium';
-              else if (unitAmount >= 1999) planId = 'standard';
+              const invPriceId = (lineItem as any)?.price?.id as string | undefined;
+              const invUnitAmount: number = (lineItem as any)?.price?.unit_amount ?? 0;
+
+              if (invPriceId) {
+                const [planRow] = await db.select().from(subscriptionPlans)
+                  .where(eq(subscriptionPlans.stripePriceId, invPriceId));
+                planId = planRow?.planId && planRow.planId !== 'free' ? planRow.planId : undefined;
+              }
+              if (!planId) {
+                // Fallback: derive from amount paid or unit_amount
+                const cents = invUnitAmount || Math.round(amountPaid * 100);
+                if (cents >= 9999) planId = 'premium';
+                else if (cents >= 4999) planId = 'standard';
+                else if (cents >= 2999) planId = 'starter';
+                else if (cents >= 1999) planId = 'listing';
+              }
+
+              console.log(`      → planId=${planId} (priceId=${invPriceId}, unitAmount=${invUnitAmount})`);
+
+              if (!planId || planId === 'free') {
+                console.log(`      → SKIP: could not resolve plan`);
+                invalidPlan++;
+                continue;
+              }
+
+              const currency = (invoice.currency ?? 'gbp').toUpperCase();
+
+              await db.insert(subscriptionAuditLogs).values({
+                userId: wholesaler.id,
+                eventType: 'payment_success',
+                toTier: planId,
+                amount: amountPaid.toFixed(2),
+                currency,
+                stripeSubscriptionId: subId,
+                stripeInvoiceId: invoiceId,
+                stripeCustomerId: custId,
+                reason: `Stripe invoice ${invoiceId} — ${billingReason ?? 'subscription'} [backfilled]`,
+                timestamp: invoiceTimestamp,
+              });
+
+              console.log(`      ✅ INSERTED: £${amountPaid} ${planId} for ${wholesaler.businessName}`);
+              inserted++;
+            } catch (rowErr) {
+              console.error(`❌ Backfill: error processing invoice ${invoice.id}:`, rowErr);
+              failed++;
             }
+          }
 
-            if (!planId || planId === 'free') { invalidPlan++; skipped++; continue; }
-
-            const currency = (invoice.currency ?? 'gbp').toUpperCase();
-
-            await db.insert(subscriptionAuditLogs).values({
-              userId: bfUser.id,
-              eventType: 'payment_success',
-              toTier: planId,
-              amount: amountPaid.toFixed(2),
-              currency,
-              stripeSubscriptionId: subId,
-              stripeInvoiceId: invoiceId,
-              stripeCustomerId: custId,
-              reason: `Stripe invoice ${invoiceId} — ${billingReason} [backfilled]`,
-              timestamp: invoiceTimestamp,
-            });
-
-            inserted++;
-          } catch (rowErr) {
-            console.error('❌ Backfill: error processing invoice:', invoice.id, rowErr);
-            failed++;
+          hasMore = invoices.has_more && invoices.data.length > 0;
+          if (invoices.data.length > 0) {
+            startingAfter = invoices.data[invoices.data.length - 1]!.id;
           }
         }
-
-        // Update pagination state outside the inner invoice loop
-        hasMore = invoices.has_more && invoices.data.length > 0;
-        if (invoices.data.length > 0) {
-          startingAfter = invoices.data[invoices.data.length - 1]!.id;
-        }
       }
 
-      console.log(`✅ Backfill complete: ${inserted} inserted, ${skipped} skipped (${noUserMatch} no user match, ${invalidPlan} no plan), ${failed} failed`);
-      return res.json({ success: true, inserted, skipped, failed, noUserMatch, invalidPlan });
+      const skipped = skippedDuplicate + skippedNoSub + skippedBillingReason + skippedZeroAmount;
+      console.log(`✅ Backfill complete: ${inserted} inserted, ${skippedDuplicate} duplicates, ${skippedNoSub} no-sub, ${skippedBillingReason} billing-reason, ${skippedZeroAmount} zero-amount, ${noUserMatch} no-user, ${invalidPlan} no-plan, ${failed} failed`);
+      return res.json({ success: true, inserted, skipped, failed, noUserMatch, invalidPlan, skippedDuplicate });
     } catch (error) {
       console.error('❌ Admin backfill-stripe error:', error);
       res.status(500).json({ error: 'Failed to run Stripe backfill' });

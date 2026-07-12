@@ -33,8 +33,7 @@ export function FinancialsSection({ wholesalers, isAdmin }: { wholesalers: Whole
     onSuccess: async (res: any) => {
       const data = await res.json();
       const parts = [`${data.inserted} new payment${data.inserted !== 1 ? "s" : ""} inserted`];
-      if ((data.skipped - (data.noUserMatch ?? 0) - (data.invalidPlan ?? 0)) > 0)
-        parts.push(`${data.skipped - (data.noUserMatch ?? 0) - (data.invalidPlan ?? 0)} already existed`);
+      if (data.skippedDuplicate > 0) parts.push(`${data.skippedDuplicate} already existed`);
       if (data.noUserMatch) parts.push(`${data.noUserMatch} invoices had no matching wholesaler`);
       if (data.invalidPlan) parts.push(`${data.invalidPlan} invoices had no recognised plan`);
       if (data.failed) parts.push(`${data.failed} errors`);
