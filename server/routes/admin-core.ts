@@ -390,27 +390,6 @@ export function registerAdminCoreRoutes(app: Express): void {
         );
       }
 
-      // Plan MRR per wholesaler from active subscriptions — covers all paying wholesalers
-      // even when Stripe webhook audit logs are incomplete
-      const activePlanSubs = await db
-        .select({
-          userId: userSubscriptions.userId,
-          monthlyPrice: subscriptionPlans.monthlyPrice,
-          billingInterval: subscriptionPlans.billingInterval,
-        })
-        .from(userSubscriptions)
-        .innerJoin(subscriptionPlans, eq(userSubscriptions.planId, subscriptionPlans.planId))
-        .where(sql`${userSubscriptions.status} IN ('active','trialing','past_due')`);
-
-      const planMRRByWholesaler: Record<string, number> = {};
-      for (const s of activePlanSubs) {
-        if (!s.userId) continue;
-        const price = parseFloat(s.monthlyPrice as string) || 0;
-        planMRRByWholesaler[s.userId] = parseFloat(
-          (s.billingInterval === 'yearly' ? price / 12 : price).toFixed(2)
-        );
-      }
-
       res.json({
         orders: processedOrders,
         totals: {
@@ -420,7 +399,6 @@ export function registerAdminCoreRoutes(app: Express): void {
           totalSubscriptionRevenue, subscriptionPaymentCount,
         },
         subRevenueByWholesaler,
-        planMRRByWholesaler,
       });
     } catch (error) {
       console.error('Admin revenue error:', error);
@@ -1323,6 +1301,8 @@ export function registerAdminCoreRoutes(app: Express): void {
       let inserted = 0;
       let skipped = 0;
       let failed = 0;
+      let noUserMatch = 0;
+      let invalidPlan = 0;
 
       // Live Stripe only — test-account payments must not appear in revenue dashboards
       let stripe: ReturnType<typeof getStripeClient>;
@@ -1330,6 +1310,16 @@ export function registerAdminCoreRoutes(app: Express): void {
         stripe = getStripeClient(false);
       } catch {
         return res.status(500).json({ error: 'Live Stripe key not configured' });
+      }
+
+      // Build a lookup of stripeSubscriptionId → userId for secondary matching
+      const subIdToUserId: Record<string, string> = {};
+      const subRows = await db
+        .select({ userId: userSubscriptions.userId, stripeSubscriptionId: userSubscriptions.stripeSubscriptionId })
+        .from(userSubscriptions)
+        .where(sql`${userSubscriptions.stripeSubscriptionId} IS NOT NULL`);
+      for (const r of subRows) {
+        if (r.stripeSubscriptionId && r.userId) subIdToUserId[r.stripeSubscriptionId] = r.userId;
       }
 
       // Page through all paid invoices — invoices persist permanently (no 30-day limit)
@@ -1373,10 +1363,19 @@ export function registerAdminCoreRoutes(app: Express): void {
 
             if (!custId || !subId) { skipped++; continue; }
 
-            // Resolve the live (non-test) user
-            const [bfUser] = await db.select({ id: users.id, isTestAccount: users.isTestAccount })
+            // Resolve the live (non-test) user — primary: stripeCustomerId, secondary: userSubscriptions.stripeSubscriptionId
+            let bfUser: { id: string } | undefined;
+            const [byCustomer] = await db.select({ id: users.id })
               .from(users).where(and(eq(users.stripeCustomerId, custId), eq(users.isTestAccount, false)));
-            if (!bfUser) { skipped++; continue; }
+            if (byCustomer) {
+              bfUser = byCustomer;
+            } else if (subIdToUserId[subId]) {
+              // Secondary match: look up user via stored subscription ID
+              const [bySub] = await db.select({ id: users.id, isTestAccount: users.isTestAccount })
+                .from(users).where(and(eq(users.id, subIdToUserId[subId]!), eq(users.isTestAccount, false)));
+              if (bySub) bfUser = bySub;
+            }
+            if (!bfUser) { noUserMatch++; skipped++; continue; }
 
             // Idempotency: check by stripeInvoiceId (new rows) OR by reason LIKE %invoiceId%
             // (pre-existing rows written before this column existed). Invoice IDs are globally
@@ -1423,7 +1422,7 @@ export function registerAdminCoreRoutes(app: Express): void {
               else if (unitAmount >= 1999) planId = 'standard';
             }
 
-            if (!planId || planId === 'free') { skipped++; continue; }
+            if (!planId || planId === 'free') { invalidPlan++; skipped++; continue; }
 
             const currency = (invoice.currency ?? 'gbp').toUpperCase();
 
@@ -1454,8 +1453,8 @@ export function registerAdminCoreRoutes(app: Express): void {
         }
       }
 
-      console.log(`✅ Backfill complete: ${inserted} inserted, ${skipped} skipped, ${failed} failed`);
-      return res.json({ success: true, inserted, skipped, failed });
+      console.log(`✅ Backfill complete: ${inserted} inserted, ${skipped} skipped (${noUserMatch} no user match, ${invalidPlan} no plan), ${failed} failed`);
+      return res.json({ success: true, inserted, skipped, failed, noUserMatch, invalidPlan });
     } catch (error) {
       console.error('❌ Admin backfill-stripe error:', error);
       res.status(500).json({ error: 'Failed to run Stripe backfill' });
