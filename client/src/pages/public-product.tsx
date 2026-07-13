@@ -42,6 +42,8 @@ interface PublicProduct {
   packQuantity?: number | null;
   unitSize?: string | null;
   unitOfMeasure?: string | null;
+  rrp?: string | null;
+  rrpVisible?: boolean;
   priceVisible?: boolean;
   moqVisible?: boolean;
   stockVisible?: boolean;
@@ -421,10 +423,32 @@ export default function PublicProductPage() {
 
           {/* Price */}
           {showPrice ? (
-            <p className="mt-1 text-lg font-bold text-emerald-600">
-              {formatCurrency(parseFloat(product.price), "GBP")}
-              <span className="text-sm font-normal text-gray-400 ml-2">per unit</span>
-            </p>
+            <div className="mt-1">
+              <div className="flex items-baseline flex-wrap gap-x-2 gap-y-0.5">
+                <p className="text-lg font-bold text-emerald-600">
+                  {formatCurrency(parseFloat(product.price), "GBP")}
+                  <span className="text-sm font-normal text-gray-400 ml-2">per unit</span>
+                </p>
+                {(() => {
+                  const rrpNum = product.rrpVisible && product.rrp ? parseFloat(product.rrp) : 0;
+                  const priceNum = parseFloat(product.price);
+                  const pctOff = rrpNum > 0 && priceNum < rrpNum
+                    ? Math.round((1 - priceNum / rrpNum) * 100)
+                    : 0;
+                  if (pctOff <= 0) return null;
+                  return (
+                    <span className="text-[11px] font-semibold bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full">
+                      {pctOff}% off RRP
+                    </span>
+                  );
+                })()}
+              </div>
+              {product.rrpVisible && product.rrp && parseFloat(product.rrp) > parseFloat(product.price) && (
+                <p className="text-xs text-gray-400 mt-0.5">
+                  RRP: <span className="line-through">{formatCurrency(parseFloat(product.rrp), "GBP")}</span>
+                </p>
+              )}
+            </div>
           ) : (
             <p className="mt-1 text-sm font-medium text-gray-400 italic">Price on request</p>
           )}

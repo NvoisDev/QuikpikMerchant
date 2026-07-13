@@ -1093,12 +1093,15 @@ export function registerProductRoutes(app: Express): void {
       const moqVisible = wholesaler.moqVisible !== false;
       const stockVisible = wholesaler.stockVisible === true;
       const packSizeVisible = wholesaler.packSizeVisible !== false;
+      const rrpVisible = wholesaler.rrpVisible === true;
 
       res.json({
         id: product.id.toString(),
         name: product.name,
         description: product.description || '',
         price: priceVisible ? product.price : null,
+        rrp: rrpVisible ? (product.rrp ?? null) : null,
+        rrpVisible,
         category: product.category || 'General',
         images,
         wholesaler: {
