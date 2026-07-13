@@ -1432,6 +1432,7 @@ export class CustomerStorage extends OrderStorage {
                whatsapp_enabled, show_prices_to_wholesalers,
                timezone, phone_number, city, state, country, postal_code, street_address,
                price_display_mode, enquiries_enabled,
+               rrp_visible,
                is_verified, store_visibility, is_inactive,
                created_at, updated_at
         FROM users 
@@ -1535,6 +1536,7 @@ export class CustomerStorage extends OrderStorage {
         allowPayLater: wholesaler.allow_pay_later || false,
         storeSlug: wholesaler.store_slug || null,
         priceDisplayMode: (wholesaler.price_display_mode as string) || 'hidden',
+        rrpVisible: wholesaler.rrp_visible === true || wholesaler.rrp_visible === 1,
         enquiriesEnabled: wholesaler.enquiries_enabled !== false,
         isVerified: wholesaler.is_verified === true || wholesaler.is_verified === 1,
         storeVisibility: (wholesaler.store_visibility as string) || 'private',

@@ -48,6 +48,8 @@ interface RawProductRow {
   created_at: unknown;
   nearest_expiry: unknown;
   business_name: unknown;
+  rrp: string | null;
+  rrp_visible: boolean | null;
 }
 import {
   computeEffectivePrice,
@@ -187,7 +189,9 @@ export function registerBrowsingRoutes(app: Express): void {
                  p.price_visible, p.pack_quantity, p.unit_of_measure,
                  p.unit_size, p.selling_format, p.delivery_excluded,
                  p.units_per_pallet, p.pallet_price, p.pallet_moq, p.pallet_stock, p.pallet_weight,
+                 p.rrp,
                  COALESCE(u.business_name, u.first_name || ' ' || u.last_name, u.email) as business_name,
+                 u.rrp_visible,
                  b.nearest_expiry
           FROM products p
           LEFT JOIN users u ON u.id = p.wholesaler_id
@@ -269,6 +273,7 @@ export function registerBrowsingRoutes(app: Express): void {
           promoPrice: livePromoPrice,
           promoActive: livePromoActive,
           promotionalOffers: parsedOffers,
+          rrp: row.rrp_visible === true ? (row.rrp || null) : null,
           createdAt: row.created_at,
           isExpiringSoon: (() => {
             if (!row.nearest_expiry) return false;
@@ -290,7 +295,7 @@ export function registerBrowsingRoutes(app: Express): void {
             unitOfMeasure: unknown; unitSize: unknown; sellingFormat: string; deliveryExcluded: boolean;
             unitsPerPallet: unknown; palletPrice: unknown; palletMoq: unknown; palletStock: unknown;
             palletWeight: unknown; promoPrice: string | null; promoActive: boolean;
-            promotionalOffers: unknown[]; createdAt: unknown; isExpiringSoon: boolean;
+            promotionalOffers: unknown[]; rrp: string | null; createdAt: unknown; isExpiringSoon: boolean;
             wholesaler: { id: string; businessName: unknown; defaultCurrency: string; rating: number };
             customPrice?: string; standardPrice?: string; hasPriceList?: boolean;
           };

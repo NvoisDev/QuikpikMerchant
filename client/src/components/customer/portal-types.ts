@@ -64,6 +64,7 @@ export interface Product {
   brand?: string | null;
   size?: string | null;
 
+  rrp?: string | null;
   customPrice?: string;
   standardPrice?: string;
   hasPriceList?: boolean;
@@ -106,6 +107,7 @@ export interface WholesalerPortal {
   enableDelivery?: boolean;
   effectiveFeeConfig?: { percentage: number; fixed: number };
   priceDisplayMode?: string;
+  rrpVisible?: boolean;
 }
 
 export interface AuthenticatedCustomer {

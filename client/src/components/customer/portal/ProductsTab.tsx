@@ -73,6 +73,7 @@ interface ProductsTabProps {
   setModalQuantity: (q: number) => void;
   setShowUnitSelectionModal: (v: boolean) => void;
   priceDisplayMode?: string;
+  rrpVisible?: boolean;
   authenticatedCustomer?: AuthenticatedCustomer | null;
   wholesalerId?: string;
   showQuoteModal: boolean;
@@ -122,6 +123,7 @@ export function ProductsTab({
   setModalQuantity,
   setShowUnitSelectionModal,
   priceDisplayMode,
+  rrpVisible,
   authenticatedCustomer,
   wholesalerId,
   showQuoteModal,
@@ -817,14 +819,37 @@ export function ProductsTab({
                       <div className="flex items-end justify-between mt-2">
                         <div className="w-full">
                           {!pricesHidden && (
-                            <PriceDisplay
-                              price={pricing.effectivePrice}
-                              originalPrice={pricing.effectivePrice !== pricing.originalPrice ? pricing.originalPrice : undefined}
-                              currency={'GBP'}
-                              isGuestMode={isTrueGuestMode}
-                              size="medium"
-                              showStrikethrough={true}
-                            />
+                            <div>
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <PriceDisplay
+                                  price={pricing.effectivePrice}
+                                  originalPrice={pricing.effectivePrice !== pricing.originalPrice ? pricing.originalPrice : undefined}
+                                  currency={wholesaler?.preferredCurrency || wholesaler?.defaultCurrency || 'GBP'}
+                                  isGuestMode={isTrueGuestMode}
+                                  size="medium"
+                                  showStrikethrough={true}
+                                />
+                                {rrpVisible && product.rrp != null && (() => {
+                                  const rrpNum = parseFloat(product.rrp);
+                                  const priceNum = pricing.effectivePrice;
+                                  const pctOff = rrpNum > 0 && priceNum < rrpNum ? Math.round((1 - priceNum / rrpNum) * 100) : 0;
+                                  return pctOff > 0 ? (
+                                    <span className="text-[10px] font-semibold bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full">
+                                      {pctOff}% off RRP
+                                    </span>
+                                  ) : null;
+                                })()}
+                              </div>
+                              {rrpVisible && product.rrp != null && (() => {
+                                const rrpNum = parseFloat(product.rrp);
+                                const priceNum = pricing.effectivePrice;
+                                return rrpNum > priceNum ? (
+                                  <p className="text-[11px] text-gray-400 line-through mt-0.5">
+                                    RRP {formatCurrency(product.rrp, wholesaler?.preferredCurrency || wholesaler?.defaultCurrency || 'GBP')}
+                                  </p>
+                                ) : null;
+                              })()}
+                            </div>
                           )}
                           {product.moq && product.moq > 1 && !cartItem && (
                             <p className="text-xs text-gray-500 mt-0.5">Min {product.moq} units</p>
@@ -1216,14 +1241,37 @@ export function ProductsTab({
                         )}
                         <div className="mt-1.5">
                           {!pricesHidden && (
-                            <PriceDisplay
-                              price={pricing.effectivePrice}
-                              originalPrice={pricing.effectivePrice !== pricing.originalPrice ? pricing.originalPrice : undefined}
-                              currency={wholesaler?.preferredCurrency || wholesaler?.defaultCurrency || 'GBP'}
-                              isGuestMode={isTrueGuestMode}
-                              size="medium"
-                              showStrikethrough={true}
-                            />
+                            <div>
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <PriceDisplay
+                                  price={pricing.effectivePrice}
+                                  originalPrice={pricing.effectivePrice !== pricing.originalPrice ? pricing.originalPrice : undefined}
+                                  currency={wholesaler?.preferredCurrency || wholesaler?.defaultCurrency || 'GBP'}
+                                  isGuestMode={isTrueGuestMode}
+                                  size="medium"
+                                  showStrikethrough={true}
+                                />
+                                {rrpVisible && product.rrp != null && (() => {
+                                  const rrpNum = parseFloat(product.rrp);
+                                  const priceNum = pricing.effectivePrice;
+                                  const pctOff = rrpNum > 0 && priceNum < rrpNum ? Math.round((1 - priceNum / rrpNum) * 100) : 0;
+                                  return pctOff > 0 ? (
+                                    <span className="text-[10px] font-semibold bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full">
+                                      {pctOff}% off RRP
+                                    </span>
+                                  ) : null;
+                                })()}
+                              </div>
+                              {rrpVisible && product.rrp != null && (() => {
+                                const rrpNum = parseFloat(product.rrp);
+                                const priceNum = pricing.effectivePrice;
+                                return rrpNum > priceNum ? (
+                                  <p className="text-[11px] text-gray-400 line-through mt-0.5">
+                                    RRP {formatCurrency(product.rrp, wholesaler?.preferredCurrency || wholesaler?.defaultCurrency || 'GBP')}
+                                  </p>
+                                ) : null;
+                              })()}
+                            </div>
                           )}
                           {!pricesHidden && hasPalletPricing && !cartItemUnits && !cartItemPallets && (
                             <p className="text-xs text-blue-600 mt-0.5 flex items-center gap-1">

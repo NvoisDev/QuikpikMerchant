@@ -2304,6 +2304,7 @@ export default function CustomerPortal() {
                 setModalQuantity={setModalQuantity}
                 setShowUnitSelectionModal={setShowUnitSelectionModal}
                 priceDisplayMode={wholesaler?.priceDisplayMode || 'hidden'}
+                rrpVisible={wholesaler?.rrpVisible === true}
                 authenticatedCustomer={authenticatedCustomer}
                 wholesalerId={wholesalerId}
                 showQuoteModal={showPortalQuoteModal}
