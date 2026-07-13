@@ -310,6 +310,7 @@ export const users = pgTable("users", {
   moqVisible: boolean("moq_visible").default(true),
   stockVisible: boolean("stock_visible").default(false),
   packSizeVisible: boolean("pack_size_visible").default(true),
+  rrpVisible: boolean("rrp_visible").default(false),
   storeDescription: text("store_description"),
   deliveryRegions: varchar("delivery_regions", { length: 500 }),
 
@@ -591,6 +592,9 @@ export const products = pgTable("products", {
   
   // Cost price for margin calculations (wholesaler internal — never shown to customers)
   costPrice: decimal("cost_price", { precision: 10, scale: 2 }),
+
+  // RRP — recommended retail price, shown on the public store when rrpVisible is enabled on the wholesaler
+  rrp: decimal("rrp", { precision: 10, scale: 2 }),
 
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),

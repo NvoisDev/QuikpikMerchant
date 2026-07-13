@@ -715,6 +715,7 @@ function PublicStoreSettings({ user }: { user: any }) {
   const [showMoq, setShowMoq] = useState(user?.moqVisible ?? true);
   const [showStock, setShowStock] = useState(user?.stockVisible ?? false);
   const [showPackSize, setShowPackSize] = useState(user?.packSizeVisible ?? true);
+  const [showRrp, setShowRrp] = useState(user?.rrpVisible ?? false);
   const [description, setDescription] = useState(user?.storeDescription || '');
   const [regions, setRegions] = useState(user?.deliveryRegions || '');
   const [showOnHomepage, setShowOnHomepage] = useState(user?.showOnHomepage ?? false);
@@ -732,6 +733,7 @@ function PublicStoreSettings({ user }: { user: any }) {
     setShowMoq(user?.moqVisible ?? true);
     setShowStock(user?.stockVisible ?? false);
     setShowPackSize(user?.packSizeVisible ?? true);
+    setShowRrp(user?.rrpVisible ?? false);
     setDescription(user?.storeDescription || '');
     setRegions(user?.deliveryRegions || '');
     setShowOnHomepage(user?.showOnHomepage ?? false);
@@ -741,7 +743,7 @@ function PublicStoreSettings({ user }: { user: any }) {
     setPortalAllowPayLater(user?.allowPayLater ?? false);
     setPortalDeliveryNote(user?.deliveryNote || '');
     setPortalPickupInstructions(user?.pickupInstructions || '');
-  }, [user?.storeVisibility, user?.priceDisplayMode, user?.moqVisible, user?.stockVisible, user?.packSizeVisible, user?.storeDescription, user?.deliveryRegions, user?.showOnHomepage, user?.minOrderAmount, user?.whatsappContactVisible, user?.showOwnerName, user?.allowPayLater, user?.deliveryNote, user?.pickupInstructions]);
+  }, [user?.storeVisibility, user?.priceDisplayMode, user?.moqVisible, user?.stockVisible, user?.packSizeVisible, user?.rrpVisible, user?.storeDescription, user?.deliveryRegions, user?.showOnHomepage, user?.minOrderAmount, user?.whatsappContactVisible, user?.showOwnerName, user?.allowPayLater, user?.deliveryNote, user?.pickupInstructions]);
 
   const storeSlug = user?.storeSlug || user?.id || '';
   const publicUrl = `${window.location.origin}/w/${storeSlug}`;
@@ -755,6 +757,7 @@ function PublicStoreSettings({ user }: { user: any }) {
         moqVisible: showMoq,
         stockVisible: showStock,
         packSizeVisible: showPackSize,
+        rrpVisible: showRrp,
         storeDescription: description.trim() || null,
         deliveryRegions: regions.trim() || null,
         showOnHomepage,
@@ -821,6 +824,13 @@ function PublicStoreSettings({ user }: { user: any }) {
               <p className="text-xs text-gray-500 mt-0.5">Show units per pack and pack weight.</p>
             </div>
             <Switch checked={showPackSize} onCheckedChange={setShowPackSize} />
+          </div>
+          <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
+            <div className="pr-3">
+              <p className="text-sm font-medium text-gray-900">Show RRP on store</p>
+              <p className="text-xs text-gray-500 mt-0.5">Customers will see the recommended retail price alongside your wholesale price to show their saving. Also unlocks the RRP field in product settings.</p>
+            </div>
+            <Switch checked={showRrp} onCheckedChange={setShowRrp} />
           </div>
         </div>
       </div>

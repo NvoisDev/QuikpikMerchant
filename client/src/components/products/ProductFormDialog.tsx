@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
+import { useAuth } from "@/hooks/useAuth";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -61,6 +62,7 @@ export const productFormSchema = z.object({
   }).optional(),
   promotionalOffers: z.array(z.unknown()).optional(),
   costPrice: z.union([z.string(), z.number(), z.null()]).optional().transform((val) => val ? val.toString() : ""),
+  rrp: z.union([z.string(), z.number(), z.null()]).optional().transform((val) => val ? val.toString() : ""),
 });
 
 export type ProductFormData = z.infer<typeof productFormSchema>;
@@ -80,6 +82,7 @@ interface ProductFormDialogProps {
   onNavigateAfterSave: (dest: string) => void;
   onUpgradeRequired: () => void;
   defaultLowStockThreshold?: number;
+  rrpVisible?: boolean;
 }
 
 function resizeImage(file: File, maxSizeKB: number = 500): Promise<string> {
@@ -122,7 +125,9 @@ export default function ProductFormDialog({
   onNavigateAfterSave,
   onUpgradeRequired,
   defaultLowStockThreshold = 50,
+  rrpVisible = false,
 }: ProductFormDialogProps) {
+  const { user: authUser } = useAuth();
   const { formatMoney } = useCurrency();
   const { toast } = useToast();
   const [, navigate] = useLocation();
@@ -179,6 +184,7 @@ export default function ProductFormDialog({
       specialHandling: { fragile: false, perishable: false, hazardous: false },
       promotionalOffers: [],
       costPrice: "",
+      rrp: "",
     },
   });
 
@@ -255,6 +261,7 @@ export default function ProductFormDialog({
             specialHandling: editingProduct.specialHandling || { fragile: false, perishable: false, hazardous: false },
             promotionalOffers: Array.isArray(editingProduct.promotionalOffers) ? editingProduct.promotionalOffers : [],
             costPrice: String(editingProduct.costPrice || ""),
+            rrp: String((editingProduct as any).rrp || ""),
           };
           form.reset(safeData as Parameters<typeof form.reset>[0]);
           // Baseline for proportional pallet scaling + the ▲/▼ note.
@@ -488,6 +495,7 @@ export default function ProductFormDialog({
         lowStockThreshold: data.lowStockThreshold ? parseInt(data.lowStockThreshold) : defaultLowStockThreshold,
         shelfLife: data.shelfLife ? parseInt(data.shelfLife) : null,
         costPrice: data.costPrice && data.costPrice !== "" ? parseFloat(data.costPrice) : null,
+        rrp: data.rrp && data.rrp !== "" ? parseFloat(data.rrp) : null,
         promotionalOffers: data.promotionalOffers || [],
       };
       return await apiRequest("POST", "/api/products", productData);
@@ -531,6 +539,7 @@ export default function ProductFormDialog({
         shelfLife: productData.shelfLife ? parseInt(productData.shelfLife) : null,
         sellingFormat: productData.sellingFormat || "units",
         costPrice: productData.costPrice && productData.costPrice !== "" ? parseFloat(productData.costPrice) : null,
+        rrp: productData.rrp && productData.rrp !== "" ? parseFloat(productData.rrp) : null,
         promotionalOffers: productData.promotionalOffers || [],
       };
       // Stock is managed exclusively via Manage Stock for batch-tracked products.
@@ -705,6 +714,48 @@ export default function ProductFormDialog({
                   </FormItem>
                 )}
               />
+              {rrpVisible && (
+                <FormField
+                  control={form.control}
+                  name="rrp"
+                  render={({ field }) => {
+                    const costPrice = parseFloat(form.watch("costPrice") || "");
+                    const marginTarget = authUser?.id
+                      ? parseFloat(localStorage.getItem(`margin_target_pct_${authUser.id}`) || "")
+                      : NaN;
+                    const suggested =
+                      !isNaN(costPrice) && costPrice > 0 && !isNaN(marginTarget) && marginTarget > 0 && marginTarget < 100
+                        ? (costPrice / (1 - marginTarget / 100)).toFixed(2)
+                        : null;
+                    return (
+                      <FormItem>
+                        <FormLabel>RRP (£) <span className="text-gray-400 font-normal text-xs">optional</span></FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            placeholder={suggested ? `Suggested: ${suggested}` : "0.00"}
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormDescription className="text-xs text-muted-foreground">
+                          Recommended retail price shown to customers on your public store.
+                          {suggested && !field.value && (
+                            <button
+                              type="button"
+                              className="ml-1 text-green-600 hover:underline"
+                              onClick={() => field.onChange(suggested)}
+                            >
+                              Use {suggested}
+                            </button>
+                          )}
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    );
+                  }}
+                />
+              )}
               <FormField
                 control={form.control}
                 name="currency"

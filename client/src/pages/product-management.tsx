@@ -1338,6 +1338,7 @@ export default function ProductManagement() {
           onNavigateAfterSave={(dest) => { setNavigateBackTo(null); navigate(dest); }}
           onUpgradeRequired={() => setShowUpgradeModal(true)}
           defaultLowStockThreshold={user?.defaultLowStockThreshold || 50}
+          rrpVisible={user?.rrpVisible === true}
         />
 
         {/* Filters and Search */}

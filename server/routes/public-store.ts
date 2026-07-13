@@ -57,6 +57,7 @@ export function registerPublicStoreRoutes(app: Express) {
           moqVisible: users.moqVisible,
           stockVisible: users.stockVisible,
           packSizeVisible: users.packSizeVisible,
+          rrpVisible: users.rrpVisible,
           deliveryRegions: users.deliveryRegions,
           city: users.city,
           country: users.country,
@@ -112,6 +113,7 @@ export function registerPublicStoreRoutes(app: Express) {
           stock: products.stock,
           palletStock: products.palletStock,
           minOrderQuantity: products.moq,
+          rrp: products.rrp,
           unitWeightKg: products.unitWeightKg,
           totalPackageWeight: products.totalPackageWeight,
           packQuantity: products.packQuantity,
@@ -131,6 +133,7 @@ export function registerPublicStoreRoutes(app: Express) {
       const showMoq = wholesaler.moqVisible !== false;
       const showStock = wholesaler.stockVisible === true;
       const showPackSize = wholesaler.packSizeVisible !== false;
+      const showRrp = wholesaler.rrpVisible === true;
       const sanitizedProducts = publicProducts.map((p) => ({
         ...p,
         price: showPrices ? p.price : null,
@@ -143,6 +146,7 @@ export function registerPublicStoreRoutes(app: Express) {
         unitWeightKg: showPackSize ? p.unitWeightKg : null,
         totalPackageWeight: showPackSize ? p.totalPackageWeight : null,
         packQuantity: showPackSize ? p.packQuantity : null,
+        rrp: showRrp ? p.rrp : null,
       }));
 
       res.set('Cache-Control', 'public, max-age=30, stale-while-revalidate=60');

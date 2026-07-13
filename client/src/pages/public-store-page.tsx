@@ -32,6 +32,7 @@ interface PublicProduct {
   unitWeightKg?: string | null;
   totalPackageWeight?: string | null;
   packQuantity?: number | null;
+  rrp?: string | null;
 }
 
 interface PublicWholesaler {
@@ -46,6 +47,7 @@ interface PublicWholesaler {
   moqVisible?: boolean;
   stockVisible?: boolean;
   packSizeVisible?: boolean;
+  rrpVisible?: boolean;
   deliveryRegions?: string | null;
   city?: string | null;
   country?: string | null;
@@ -117,6 +119,7 @@ function ProductCard({
   showMoq,
   showStock,
   showPackSize,
+  showRrp,
   currency,
   cartQty,
   index,
@@ -128,6 +131,7 @@ function ProductCard({
   showMoq: boolean;
   showStock: boolean;
   showPackSize: boolean;
+  showRrp: boolean;
   currency: string;
   cartQty: number;
   index: number;
@@ -210,10 +214,33 @@ function ProductCard({
         )}
 
         {showPrices && product.price != null && (
-          <p className="text-base font-bold text-gray-900 mb-2">
-            {formatCurrency(product.price, currency)}
-            <span className="text-xs font-normal text-gray-400 ml-1">/ unit</span>
-          </p>
+          <div className="mb-2">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <p className="text-base font-bold text-gray-900">
+                {formatCurrency(product.price, currency)}
+                <span className="text-xs font-normal text-gray-400 ml-1">/ unit</span>
+              </p>
+              {showRrp && product.rrp != null && (() => {
+                const rrpNum = parseFloat(product.rrp);
+                const priceNum = parseFloat(product.price);
+                const pctOff = rrpNum > 0 && priceNum < rrpNum ? Math.round((1 - priceNum / rrpNum) * 100) : 0;
+                return pctOff > 0 ? (
+                  <span className="text-[10px] font-semibold bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full">
+                    {pctOff}% off RRP
+                  </span>
+                ) : null;
+              })()}
+            </div>
+            {showRrp && product.rrp != null && (() => {
+              const rrpNum = parseFloat(product.rrp);
+              const priceNum = parseFloat(product.price);
+              return rrpNum > priceNum ? (
+                <p className="text-[11px] text-gray-400 line-through mt-0.5">
+                  RRP {formatCurrency(product.rrp, currency)}
+                </p>
+              ) : null;
+            })()}
+          </div>
         )}
 
         {inCart ? (
@@ -1081,6 +1108,7 @@ export default function PublicStorePage() {
                 showMoq={wholesaler.moqVisible !== false}
                 showStock={wholesaler.stockVisible === true}
                 showPackSize={wholesaler.packSizeVisible !== false}
+                showRrp={wholesaler.rrpVisible === true}
                 currency={currency}
                 cartQty={getQty(product.id)}
                 index={idx}

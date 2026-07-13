@@ -827,6 +827,9 @@ async function runStartupMigrations() {
     `ALTER TABLE order_items ADD COLUMN IF NOT EXISTS item_notes TEXT`,
     // One-time cleanup: cancel any seed orders stuck in 'processing' (idempotent no-op once done)
     `UPDATE orders SET status = 'cancelled' WHERE status = 'processing' AND order_number LIKE 'SEED-%'`,
+    // RRP per product with store-level toggle
+    `ALTER TABLE products ADD COLUMN IF NOT EXISTS rrp DECIMAL(10, 2)`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS rrp_visible BOOLEAN NOT NULL DEFAULT FALSE`,
   ];
   let warned = 0;
   for (const stmt of migrations) {
