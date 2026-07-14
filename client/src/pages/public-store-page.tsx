@@ -141,7 +141,7 @@ function QtyInput({
         onCommit(Math.max(0, n));
       }}
       onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur(); }}
-      className={`text-sm font-semibold ${colorClass} w-8 text-center bg-transparent outline-none focus:ring-1 focus:ring-emerald-400 rounded appearance-none [&::-webkit-inner-spin-button]:hidden [&::-webkit-outer-spin-button]:hidden [-moz-appearance:textfield]`}
+      className={`text-sm font-semibold ${colorClass} w-10 text-center bg-white border border-gray-300 rounded-md px-1 outline-none focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400 appearance-none [&::-webkit-inner-spin-button]:hidden [&::-webkit-outer-spin-button]:hidden [-moz-appearance:textfield]`}
     />
   );
 }
