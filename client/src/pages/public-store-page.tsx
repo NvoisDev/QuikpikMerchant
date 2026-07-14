@@ -114,6 +114,38 @@ function WholesalerLogo({ wholesaler }: { wholesaler: PublicWholesaler }) {
   );
 }
 
+function QtyInput({
+  value,
+  onCommit,
+  colorClass = "text-emerald-800",
+}: {
+  value: number;
+  onCommit: (newQty: number) => void;
+  colorClass?: string;
+}) {
+  const [draft, setDraft] = useState<string | null>(null);
+  const display = draft !== null ? draft : String(value);
+
+  return (
+    <input
+      type="number"
+      inputMode="numeric"
+      pattern="[0-9]*"
+      value={display}
+      onChange={e => setDraft(e.target.value)}
+      onFocus={e => { setDraft(String(value)); e.target.select(); }}
+      onBlur={() => {
+        const n = parseInt(draft ?? '', 10);
+        setDraft(null);
+        if (draft === '' || draft === null || isNaN(n)) return;
+        onCommit(Math.max(0, n));
+      }}
+      onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+      className={`text-sm font-semibold ${colorClass} w-8 text-center bg-transparent outline-none focus:ring-1 focus:ring-emerald-400 rounded appearance-none [&::-webkit-inner-spin-button]:hidden [&::-webkit-outer-spin-button]:hidden [-moz-appearance:textfield]`}
+    />
+  );
+}
+
 function ProductCard({
   product,
   priceDisplayMode,
@@ -252,7 +284,7 @@ function ProductCard({
             >
               <Minus className="h-3 w-3" />
             </button>
-            <span className="text-sm font-semibold text-emerald-800 min-w-[20px] text-center">{cartQty}</span>
+            <QtyInput value={cartQty} onCommit={qty => onUpdateQty(product.id, qty)} colorClass="text-emerald-800" />
             <button
               onClick={() => onUpdateQty(product.id, cartQty + 1)}
               className="w-6 h-6 flex items-center justify-center rounded-full hover:bg-emerald-200 transition-colors text-emerald-700"
@@ -354,7 +386,7 @@ function CartDrawer({
                     >
                       <Minus className="h-3 w-3" />
                     </button>
-                    <span className="text-sm font-semibold text-gray-800 min-w-[24px] text-center">{item.quantity}</span>
+                    <QtyInput value={item.quantity} onCommit={qty => onUpdateQty(item.productId, qty)} colorClass="text-gray-800" />
                     <button
                       onClick={() => onUpdateQty(item.productId, item.quantity + 1)}
                       className="w-6 h-6 flex items-center justify-center rounded-full border border-gray-200 hover:bg-gray-100 text-gray-500 transition-colors"
