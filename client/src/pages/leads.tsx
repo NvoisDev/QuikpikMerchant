@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import { formatPhoneForWhatsApp } from "@shared/utils/currency";
 import { Link } from "wouter";
 import PageHeader from "@/components/PageHeader";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -675,7 +676,7 @@ function EnquiryDrawer({ enquiry, onClose }: { enquiry: StoreEnquiry; onClose: (
         <div className="p-4 border-t space-y-2">
           {enquiry.enquirerPhone && (
             <a
-              href={`https://wa.me/${enquiry.enquirerPhone.replace(/\D/g, '')}`}
+              href={`https://wa.me/${formatPhoneForWhatsApp(enquiry.enquirerPhone)}`}
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center justify-center gap-2 w-full py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-sm font-medium transition-colors"

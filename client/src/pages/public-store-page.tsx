@@ -13,6 +13,7 @@ import {
   Tag, ShoppingCart, Plus, Minus, CheckCircle, Trash2,
 } from "lucide-react";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
+import { formatPhoneForWhatsApp } from "@shared/utils/currency";
 
 interface PublicProduct {
   id: number;
@@ -939,7 +940,7 @@ export default function PublicStorePage() {
           <div className="flex items-center gap-1.5 sm:gap-2">
             {wholesaler.whatsappContactVisible !== false && wholesaler.phoneNumber && (
               <a
-                href={`https://wa.me/${wholesaler.phoneNumber.replace(/\D/g, '')}`}
+                href={`https://wa.me/${formatPhoneForWhatsApp(wholesaler.phoneNumber)}`}
                 target="_blank"
                 rel="noreferrer"
               >

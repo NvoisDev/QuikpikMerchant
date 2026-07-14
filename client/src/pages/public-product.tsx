@@ -19,6 +19,7 @@ import {
   Heart,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/currencies";
+import { formatPhoneForWhatsApp } from "@shared/utils/currency";
 import { cleanAIDescription } from "@shared/utils";
 import { useSavedProducts } from "@/hooks/useSavedProducts";
 
@@ -541,7 +542,7 @@ export default function PublicProductPage() {
             {/* Secondary — WhatsApp (only if phone visible) */}
             {product.wholesaler.phoneNumber && (
               <a
-                href={`https://wa.me/${product.wholesaler.phoneNumber.replace(/\D/g, "")}?text=${encodeURIComponent(`Hi, I'm interested in ${product.name}`)}`}
+                href={`https://wa.me/${formatPhoneForWhatsApp(product.wholesaler.phoneNumber)}?text=${encodeURIComponent(`Hi, I'm interested in ${product.name}`)}`}
                 target="_blank"
                 rel="noreferrer"
                 className="flex items-center justify-center gap-2 w-full border border-gray-200 text-gray-700 hover:bg-gray-50 rounded-lg py-2.5 text-sm font-medium transition-colors"

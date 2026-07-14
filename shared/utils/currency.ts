@@ -103,6 +103,20 @@ export const formatNumber = (num: number | string): string => {
 };
 
 /**
+ * Format a phone number for use in a WhatsApp wa.me link.
+ * Strips all non-digit characters, then converts local UK format (leading 0)
+ * to E.164 digits by replacing the leading 0 with 44. Numbers already in
+ * international format (e.g. starting with 44, 1, 234…) are left as-is.
+ * Returns an empty string if the input is falsy.
+ */
+export const formatPhoneForWhatsApp = (phone: string | null | undefined): string => {
+  if (!phone) return '';
+  const digits = phone.replace(/\D/g, '');
+  if (digits.startsWith('0')) return '44' + digits.slice(1);
+  return digits;
+};
+
+/**
  * Format a weight or size value, stripping unnecessary trailing zeros.
  * Caps at 2 decimal places so fractions are readable but not over-precise.
  * Examples: "5.000" → "5", "20.00" → "20", "5.5" → "5.5", "5.25" → "5.25"
