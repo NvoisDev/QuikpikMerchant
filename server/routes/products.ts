@@ -73,6 +73,9 @@ export function registerProductRoutes(app: Express): void {
         .filter((p: any) => p.status === 'active')
         .sort((a: any, b: any) => (a.name || '').localeCompare(b.name || ''));
 
+      const wholesaler = await storage.getUser(wholesalerId);
+      const showRrp = wholesaler?.rrpVisible === true;
+
       const rows = allProducts.map((p: any) => {
         const hasPallets = p.palletPrice != null;
         const numericSize = p.unitSize != null ? String(parseFloat(String(p.unitSize))) : null;
@@ -88,10 +91,9 @@ export function registerProductRoutes(app: Express): void {
           unitPrice: parseFloat(p.price || '0'),
           palletPrice,
           unitsPerPallet,
+          rrp: (showRrp && p.rrp != null) ? parseFloat(String(p.rrp)).toFixed(2) : null,
         };
       });
-
-      const wholesaler = await storage.getUser(wholesalerId);
       const businessName = wholesaler?.businessName || 'Standard Price List';
       const logoUrl = getEmailLogoUrl(wholesalerId, wholesaler?.logoType, wholesaler?.logoUrl, wholesaler?.updatedAt);
       let logoBuffer: Buffer | undefined;
@@ -106,7 +108,7 @@ export function registerProductRoutes(app: Express): void {
       const safeName = businessName.replace(/[/\\?%*:|"<>]/g, '-');
 
       if (format === 'pdf') {
-        const pdfBuffer = await buildBrandedPdf({ rows, subtitle, logoBuffer, businessName });
+        const pdfBuffer = await buildBrandedPdf({ rows, subtitle, logoBuffer, businessName, showRrp });
         res.setHeader('Content-Type', 'application/pdf');
         res.setHeader('Content-Disposition', `attachment; filename="${safeName} - Standard Price List.pdf"`);
         return res.send(pdfBuffer);
@@ -119,6 +121,7 @@ export function registerProductRoutes(app: Express): void {
         logoBuffer,
         logoExtension,
         businessName,
+        showRrp,
       });
       const buf = Buffer.from(await wb.xlsx.writeBuffer());
       res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');

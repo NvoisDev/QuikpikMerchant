@@ -47,6 +47,9 @@ async function getPriceListRows(wholesalerId: string, listId: number) {
     .where(and(eq(priceLists.id, listId), eq(priceLists.wholesalerId, wholesalerId)));
   if (!list) throw new Error("Price list not found");
 
+  const wholesaler = await storage.getUser(wholesalerId);
+  const showRrp = wholesaler?.rrpVisible === true;
+
   const rawItems = await db
     .select()
     .from(priceListItems)
@@ -89,12 +92,13 @@ async function getPriceListRows(wholesalerId: string, listId: number) {
       unitPrice,
       palletPrice,
       unitsPerPallet: hasPallets && p.unitsPerPallet != null ? p.unitsPerPallet : '',
+      rrp: (showRrp && p.rrp != null) ? parseFloat(String(p.rrp)).toFixed(2) : null,
     };
   };
 
   const priceListRows = allProducts.filter((p) => priceListMap.has(p.id)).map(buildRow);
   const standardRows = allProducts.filter((p) => !priceListMap.has(p.id)).map(buildRow);
-  return { list, rows: [...priceListRows, ...standardRows] };
+  return { list, rows: [...priceListRows, ...standardRows], showRrp };
 }
 
 async function fetchWholesalerBranding(wholesalerId: string) {
@@ -111,21 +115,21 @@ async function fetchWholesalerBranding(wholesalerId: string) {
 }
 
 async function buildPriceListWorkbook(wholesalerId: string, listId: number) {
-  const { list, rows } = await getPriceListRows(wholesalerId, listId);
+  const { list, rows, showRrp } = await getPriceListRows(wholesalerId, listId);
   const { businessName, logoBuffer, logoExtension } = await fetchWholesalerBranding(wholesalerId);
   const safeName = list.name.replace(/[/\\?%*:|"<>]/g, "-");
   const filename = `${safeName} - Price List.xlsx`;
   const dateStr = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
-  return buildBrandedWorkbook({ rows, subtitle: `${list.name} · ${dateStr}`, filename, logoBuffer, logoExtension, businessName });
+  return buildBrandedWorkbook({ rows, subtitle: `${list.name} · ${dateStr}`, filename, logoBuffer, logoExtension, businessName, showRrp });
 }
 
 async function buildPriceListPdf(wholesalerId: string, listId: number) {
-  const { list, rows } = await getPriceListRows(wholesalerId, listId);
+  const { list, rows, showRrp } = await getPriceListRows(wholesalerId, listId);
   const { businessName, logoBuffer } = await fetchWholesalerBranding(wholesalerId);
   const safeName = list.name.replace(/[/\\?%*:|"<>]/g, "-");
   const filename = `${safeName} - Price List.pdf`;
   const dateStr = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
-  const pdfBuffer = await buildBrandedPdf({ rows, subtitle: `${list.name} · ${dateStr}`, logoBuffer, businessName });
+  const pdfBuffer = await buildBrandedPdf({ rows, subtitle: `${list.name} · ${dateStr}`, logoBuffer, businessName, showRrp });
   return { pdfBuffer, filename };
 }
 
