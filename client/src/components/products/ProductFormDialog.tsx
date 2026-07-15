@@ -739,7 +739,7 @@ export default function ProductFormDialog({
                           />
                         </FormControl>
                         <FormDescription className="text-xs text-muted-foreground">
-                          Recommended retail price shown to customers on your public store.
+                          The price your customers should sell this product at per unit (their end-customer price).
                           {suggested && !field.value && (
                             <button
                               type="button"
