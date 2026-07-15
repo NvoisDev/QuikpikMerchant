@@ -729,7 +729,7 @@ export default function ProductFormDialog({
                         : null;
                     return (
                       <FormItem>
-                        <FormLabel>RRP (£) <span className="text-gray-400 font-normal text-xs">optional</span></FormLabel>
+                        <FormLabel>Unit RRP (£) <span className="text-gray-400 font-normal text-xs">optional</span></FormLabel>
                         <FormControl>
                           <Input
                             type="number"

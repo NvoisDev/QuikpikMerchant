@@ -1463,6 +1463,7 @@ export const insertProductSchema = createInsertSchema(products).omit({
   promotionalOffers: z.array(z.any()).optional().default([]),
   expiryDate: z.union([z.string(), z.null()]).optional().transform((val) => (val === "" || val === undefined) ? null : val),
   costPrice: z.union([z.string(), z.number(), z.null()]).optional().transform((val) => val !== null && val !== undefined && val !== "" ? val.toString() : null),
+  rrp: z.union([z.string(), z.number(), z.null()]).optional().transform((val) => val !== null && val !== undefined && val !== "" ? val.toString() : null),
 });
 export type InsertProduct = z.infer<typeof insertProductSchema>;
 export type Product = typeof products.$inferSelect;
