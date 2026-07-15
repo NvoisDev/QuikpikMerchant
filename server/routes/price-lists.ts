@@ -98,7 +98,9 @@ async function getPriceListRows(wholesalerId: string, listId: number) {
 
   const priceListRows = allProducts.filter((p) => priceListMap.has(p.id)).map(buildRow);
   const standardRows = allProducts.filter((p) => !priceListMap.has(p.id)).map(buildRow);
-  return { list, rows: [...priceListRows, ...standardRows], showRrp };
+  const allRows = [...priceListRows, ...standardRows];
+  const effectiveShowRrp = showRrp && allRows.some(r => r.rrp != null);
+  return { list, rows: allRows, showRrp: effectiveShowRrp };
 }
 
 async function fetchWholesalerBranding(wholesalerId: string) {
