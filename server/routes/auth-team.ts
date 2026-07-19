@@ -596,7 +596,7 @@ export function registerAuthTeamRoutes(app: Express): void {
         return res.status(401).json({ message: "Invalid email or password" });
       }
 
-      if (user.subscriptionTier !== 'team_member') {
+      if (user.role !== 'team_member') {
         return res.status(401).json({ message: "Please use the Business Owner tab to sign in" });
       }
 
