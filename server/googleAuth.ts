@@ -329,11 +329,19 @@ export const requireAuth = async (req: Request, res: Response, next: NextFunctio
         req.user = user;
         // Enrich team members with their role from the teamMembers table so
         // downstream endpoints can use req.user.teamMemberRole directly.
+        // Also block suspended team members from using an existing session.
         if (user.role === 'team_member' && user.wholesalerId) {
           try {
             const members = await storage.getTeamMembers(user.wholesalerId);
             const member = members.find((m: any) => m.email === user.email);
-            if (member) req.user.teamMemberRole = member.role;
+            if (member) {
+              if (member.status === 'suspended') {
+                console.log(`🚫 SECURITY: Blocked suspended team member (${user.email}) from ${req.method} ${req.url}`);
+                req.session?.destroy(() => {});
+                return res.status(403).json({ error: 'account_suspended', message: 'Your account has been suspended. Please contact your account administrator.' });
+              }
+              req.user.teamMemberRole = member.role;
+            }
           } catch (err) {
             console.warn(`⚠️ Could not enrich teamMemberRole for ${user.email}:`, err);
           }
@@ -383,12 +391,20 @@ export const requireAuth = async (req: Request, res: Response, next: NextFunctio
         }
 
         req.user = user;
-        // Enrich team members with their role from the teamMembers table
+        // Enrich team members with their role from the teamMembers table.
+        // Also block suspended team members from using an existing session.
         if (user.role === 'team_member' && user.wholesalerId) {
           try {
             const members = await storage.getTeamMembers(user.wholesalerId);
             const member = members.find((m: any) => m.email === user.email);
-            if (member) req.user.teamMemberRole = member.role;
+            if (member) {
+              if (member.status === 'suspended') {
+                console.log(`🚫 SECURITY: Blocked suspended team member (${user.email}) from ${req.method} ${req.url} [legacy]`);
+                req.session?.destroy(() => {});
+                return res.status(403).json({ error: 'account_suspended', message: 'Your account has been suspended. Please contact your account administrator.' });
+              }
+              req.user.teamMemberRole = member.role;
+            }
           } catch (err) {
             console.warn(`⚠️ Could not enrich teamMemberRole for ${user.email}:`, err);
           }
