@@ -339,7 +339,8 @@ async function getCurrentPriceListCount(userId: string): Promise<number> {
       .from(priceLists)
       .where(and(
         eq(priceLists.wholesalerId, userId),
-        eq(priceLists.isLocked, false)
+        eq(priceLists.isLocked, false),
+        eq(priceLists.isPersonal, false)
       ));
     return result[0]?.value ?? 0;
   } catch (error) {
