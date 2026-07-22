@@ -448,6 +448,18 @@ export function CustomerGroupsTab({
     return (member.businessName || member.firstName || member.name || (member.phoneNumber || member.phone_number || '').replace(/\D/g, '').slice(-2) || '?').charAt(0);
   };
 
+  const formatPhoneNumber = (raw: string | undefined | null): string => {
+    if (!raw) return '';
+    const digits = raw.replace(/\s+/g, '');
+    if (digits.startsWith('+44') && digits.length === 13) {
+      return `+44 ${digits.slice(3, 7)} ${digits.slice(7, 10)} ${digits.slice(10)}`;
+    }
+    if (digits.startsWith('+') && digits.length > 10) {
+      return `${digits.slice(0, 3)} ${digits.slice(3, 7)} ${digits.slice(7)}`;
+    }
+    return raw;
+  };
+
   const getDisplayName = (c: Customer | null | undefined) =>
     c?.businessName || `${c?.firstName || ''} ${c?.lastName || ''}`.trim() || c?.phoneNumber || 'Unknown';
 
@@ -756,19 +768,19 @@ export function CustomerGroupsTab({
       <Dialog open={isViewMembersDialogOpen} onOpenChange={setIsViewMembersDialogOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>
-              {selectedGroup?.name} Members
+            <DialogTitle className="leading-snug break-words pr-6">
+              {selectedGroup?.name}
             </DialogTitle>
             <DialogDescription>
-              View all members in this customer group
+              {groupMembers.length} {groupMembers.length === 1 ? 'member' : 'members'}
             </DialogDescription>
           </DialogHeader>
 
           <div>
             {groupMembers.length > 0 ? (
-              <div className="-mx-1 max-h-[60vh] overflow-y-auto divide-y divide-slate-100">
+              <div className="-mx-1 max-h-[70vh] overflow-y-auto divide-y divide-slate-100">
                 {groupMembers.map((member: GroupMember, index: number) => (
-                  <div key={index} className="flex items-center justify-between gap-3 px-1 py-2.5">
+                  <div key={index} className="flex items-center justify-between gap-3 px-1 py-2.5 rounded-lg hover:bg-slate-50 transition-colors">
                     <div className="flex items-center gap-3 min-w-0">
                       <Avatar className="h-9 w-9 flex-shrink-0">
                         <AvatarFallback className="bg-blue-100 text-blue-700 text-xs font-medium">
@@ -779,7 +791,7 @@ export function CustomerGroupsTab({
                         <p className="text-sm font-semibold text-slate-900 truncate">
                           {member.businessName || `${member.firstName || ''} ${member.lastName || ''}`.trim() || member.name || member.phoneNumber || member.phone_number || 'Unknown'}
                         </p>
-                        <p className="text-xs text-slate-500 truncate">{member.phoneNumber || member.phone_number}</p>
+                        <p className="text-xs text-slate-500 truncate">{formatPhoneNumber(member.phoneNumber || member.phone_number)}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-1.5 flex-shrink-0">
