@@ -9,6 +9,7 @@ import { resolveWholesalerId } from "../utils/resolveWholesalerId";
 import { sendEmail } from "../sendgrid-service";
 import { fetchLogoBuffer, buildBrandedWorkbook, buildBrandedPdf } from '../utils/price-list-export';
 import { getEmailLogoUrl } from '../email-templates';
+import { computeRrpMargin } from './catalogue-export-margin';
 
 export function registerProductRoutes(app: Express): void {
   // GET /api/products
@@ -89,14 +90,9 @@ export function registerProductRoutes(app: Express): void {
         const unitsPerPallet: number | '' = hasPallets && p.unitsPerPallet != null ? p.unitsPerPallet : '';
         const unitPriceNum = parseFloat(p.price || '0');
         const rrpNum = p.rrp != null ? parseFloat(String(p.rrp)) : null;
-        const qty = Number(p.packQuantity ?? p.quantityInPack ?? 1);
-        let rrpMargin: number | null = null;
-        if (showRrpMargin && rrpNum != null && qty > 0) {
-          const rrpPack = rrpNum * qty;
-          if (rrpPack > 0) {
-            rrpMargin = ((rrpPack - unitPriceNum) / rrpPack) * 100;
-          }
-        }
+        const rrpMargin: number | null = showRrpMargin
+          ? computeRrpMargin({ packQuantity: p.packQuantity, quantityInPack: p.quantityInPack, unitPrice: unitPriceNum, rrp: rrpNum })
+          : null;
         // Retailer economics: cost = unitPrice, rrp per unit, profit, margin, bulk buy (moq × cost)
         let retailerRrp: number | null = null;
         let retailerProfit: number | null = null;
