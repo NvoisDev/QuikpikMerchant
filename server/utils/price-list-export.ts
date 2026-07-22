@@ -11,7 +11,6 @@ export interface PriceRow {
   retailerRrp?: number | null;
   retailerProfit?: number | null;
   retailerMargin?: number | null;
-  bulkBuy?: number | null;
 }
 
 export async function fetchLogoBuffer(
@@ -59,12 +58,18 @@ export async function buildBrandedWorkbook({
   const wb = new ExcelJS.Workbook();
   const ws = wb.addWorksheet('Price List');
 
-  const extraCols = (showRrp ? 1 : 0) + (showRrpMargin ? 1 : 0);
-  const retailerCols = showRetailerEconomics ? 5 : 0;
-  const colCount = 5 + extraCols + retailerCols;
+  // When retailer economics is ON: suppress standalone RRP/Margin cols — RETAIL section covers them.
+  // Layout: 4 basic (Name, Pack, CasePrice, PalletPrice) + 4 retail = 8 cols (no Units/Pallet).
+  const extraCols = showRetailerEconomics ? 0 : (showRrp ? 1 : 0) + (showRrpMargin ? 1 : 0);
+  const colCount = showRetailerEconomics ? 8 : 5 + extraCols;
 
-  // Column widths — preserved exactly from pre-feature state so toggle-off output is unchanged
-  if (showRrp && showRrpMargin) {
+  // Column widths
+  if (showRetailerEconomics) {
+    // Unified 8-column retail economics layout
+    ws.getColumn(1).width = 35; ws.getColumn(2).width = 18; ws.getColumn(3).width = 14;
+    ws.getColumn(4).width = 18; ws.getColumn(5).width = 18; ws.getColumn(6).width = 14;
+    ws.getColumn(7).width = 14; ws.getColumn(8).width = 16;
+  } else if (showRrp && showRrpMargin) {
     ws.getColumn(1).width = 30; ws.getColumn(2).width = 18; ws.getColumn(3).width = 13;
     ws.getColumn(4).width = 13; ws.getColumn(5).width = 15; ws.getColumn(6).width = 14;
     ws.getColumn(7).width = 16;
@@ -77,14 +82,6 @@ export async function buildBrandedWorkbook({
   } else {
     ws.getColumn(1).width = 35; ws.getColumn(2).width = 18; ws.getColumn(3).width = 14;
     ws.getColumn(4).width = 18; ws.getColumn(5).width = 16;
-  }
-  if (showRetailerEconomics) {
-    const base = 5 + extraCols;
-    ws.getColumn(base + 1).width = 18; // Total Cost per Unit (Retailer)
-    ws.getColumn(base + 2).width = 14; // RRP (Retailer)
-    ws.getColumn(base + 3).width = 14; // Profit (Retailer)
-    ws.getColumn(base + 4).width = 14; // Retail Margin
-    ws.getColumn(base + 5).width = 14; // Bulk Buy
   }
 
   const emptyCells = Array(colCount).fill('');
@@ -104,29 +101,29 @@ export async function buildBrandedWorkbook({
   const r3 = ws.addRow(emptyCells);
   r3.height = 8;
 
-  // Logo embedded top-right (anchored to rows 1-3, safe regardless of header rows below)
+  // Logo embedded top-right (anchored to rows 1-3)
   if (logoBuffer && logoExtension) {
     try {
       const imageId = wb.addImage({ buffer: logoBuffer, extension: logoExtension });
-      const logoTlCol = showRrp && showRrpMargin ? 5 : (showRrp || showRrpMargin) ? 4 : 3;
+      const logoTlCol = showRetailerEconomics
+        ? 3
+        : (showRrp && showRrpMargin ? 5 : (showRrp || showRrpMargin) ? 4 : 3);
       const logoBrCol = logoTlCol + 1.99;
       ws.addImage(imageId, { tl: { col: logoTlCol, row: 0 }, br: { col: logoBrCol, row: 2.99 } } as any);
     } catch {}
   }
 
-  // Row 4 (optional): "Retail" group header row spanning the 5 retailer columns
+  // Row 4 (optional): "Retail" group header spanning the 4 retailer columns
   if (showRetailerEconomics) {
-    const firstRetailCol = 5 + extraCols + 1; // 1-indexed
-    const lastRetailCol = firstRetailCol + 4;
+    const firstRetailCol = 5; // always col 5 in the 8-column layout
+    const lastRetailCol = 8;  // 4 retail cols
     const retailGroupRow = ws.addRow(emptyCells);
     retailGroupRow.height = 16;
-    // Fill retailer cells with light-green background
     for (let c = firstRetailCol; c <= lastRetailCol; c++) {
       const cell = retailGroupRow.getCell(c);
       cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFf0fdf4' } };
       cell.border = { bottom: { style: 'thin', color: { argb: 'FF86efac' } } };
     }
-    // Merge and label
     ws.mergeCells(retailGroupRow.number, firstRetailCol, retailGroupRow.number, lastRetailCol);
     const labelCell = retailGroupRow.getCell(firstRetailCol);
     labelCell.value = 'Retail';
@@ -135,19 +132,26 @@ export async function buildBrandedWorkbook({
   }
 
   // Column headers
-  let baseHeaders: string[];
-  if (showRrp && showRrpMargin) {
-    baseHeaders = ['Product Name', 'Pack Size / Unit', 'Unit Price', 'Unit RRP', 'RRP Margin %', 'Pallet Price', 'Units per Pallet'];
-  } else if (showRrp) {
-    baseHeaders = ['Product Name', 'Pack Size / Unit', 'Unit Price', 'Unit RRP', 'Pallet Price', 'Units per Pallet'];
-  } else if (showRrpMargin) {
-    baseHeaders = ['Product Name', 'Pack Size / Unit', 'Unit Price', 'RRP Margin %', 'Pallet Price', 'Units per Pallet'];
+  let headers: string[];
+  if (showRetailerEconomics) {
+    // 4 basic + 4 retail — standalone RRP/Margin suppressed (covered by RETAIL section)
+    headers = [
+      'Product Name', 'Pack Size / Unit', 'Case Price', 'Pallet Price',
+      'Cost per Unit', 'RRP', 'Profit per Unit', 'Retail Margin (%)',
+    ];
   } else {
-    baseHeaders = ['Product Name', 'Pack Size / Unit', 'Unit Price', 'Pallet Price', 'Units per Pallet'];
+    let baseHeaders: string[];
+    if (showRrp && showRrpMargin) {
+      baseHeaders = ['Product Name', 'Pack Size / Unit', 'Unit Price', 'Unit RRP', 'RRP Margin %', 'Pallet Price', 'Units per Pallet'];
+    } else if (showRrp) {
+      baseHeaders = ['Product Name', 'Pack Size / Unit', 'Unit Price', 'Unit RRP', 'Pallet Price', 'Units per Pallet'];
+    } else if (showRrpMargin) {
+      baseHeaders = ['Product Name', 'Pack Size / Unit', 'Unit Price', 'RRP Margin %', 'Pallet Price', 'Units per Pallet'];
+    } else {
+      baseHeaders = ['Product Name', 'Pack Size / Unit', 'Unit Price', 'Pallet Price', 'Units per Pallet'];
+    }
+    headers = baseHeaders;
   }
-  const headers = showRetailerEconomics
-    ? [...baseHeaders, 'Total Cost per Unit (Retailer)', 'RRP (Retailer)', 'Profit (Retailer)', 'Retail Margin (per unit)', 'Bulk Buy']
-    : baseHeaders;
 
   const headerRow = ws.addRow(headers);
   headerRow.height = 20;
@@ -157,10 +161,9 @@ export async function buildBrandedWorkbook({
     cell.border = { bottom: { style: 'thin', color: { argb: 'FFD1D5DB' } } };
     cell.alignment = { vertical: 'middle' };
   });
-  // Shade the retailer header cells green
+  // Shade the 4 retailer header cells green
   if (showRetailerEconomics) {
-    const firstRetailCol = 5 + extraCols + 1;
-    for (let c = firstRetailCol; c <= firstRetailCol + 4; c++) {
+    for (let c = 5; c <= 8; c++) {
       const cell = headerRow.getCell(c);
       cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFdcfce7' } };
     }
@@ -171,7 +174,10 @@ export async function buildBrandedWorkbook({
     const marginDisplay = row.rrpMargin != null ? parseFloat(row.rrpMargin.toFixed(1)) : '—';
     let baseValues: any[];
 
-    if (showRrp && showRrpMargin) {
+    if (showRetailerEconomics) {
+      // 4-col basic: Name, Pack, CasePrice, PalletPrice (no Units/Pallet in this layout)
+      baseValues = [row.name, row.packSize, row.unitPrice, row.palletPrice];
+    } else if (showRrp && showRrpMargin) {
       baseValues = [row.name, row.packSize, row.unitPrice, row.rrp || '—', marginDisplay, row.palletPrice, row.unitsPerPallet];
     } else if (showRrp) {
       baseValues = [row.name, row.packSize, row.unitPrice, row.rrp || '—', row.palletPrice, row.unitsPerPallet];
@@ -186,33 +192,32 @@ export async function buildBrandedWorkbook({
       row.retailerRrp != null ? row.retailerRrp : '—',
       row.retailerProfit != null ? row.retailerProfit : '—',
       row.retailerMargin != null ? parseFloat(row.retailerMargin.toFixed(1)) : '—',
-      row.bulkBuy != null ? row.bulkBuy : '—',
     ] : [];
 
     const dr = ws.addRow([...baseValues, ...retailValues]);
     dr.height = 18;
-    dr.getCell(3).numFmt = '#,##0.00';
+    dr.getCell(3).numFmt = '#,##0.00'; // price col always at position 3
 
     // Pallet price format
-    const palletCol = showRrp && showRrpMargin ? 6 : (showRrp || showRrpMargin) ? 5 : 4;
+    const palletCol = showRetailerEconomics
+      ? 4
+      : (showRrp && showRrpMargin ? 6 : (showRrp || showRrpMargin) ? 5 : 4);
     if (baseValues[palletCol - 1] !== '') dr.getCell(palletCol).numFmt = '#,##0.00';
 
-    // RRP margin format
-    if (showRrpMargin && row.rrpMargin != null) {
+    // RRP margin % format (only in non-retailer-economics layout)
+    if (!showRetailerEconomics && showRrpMargin && row.rrpMargin != null) {
       const marginCol = showRrp ? 5 : 4;
       dr.getCell(marginCol).numFmt = '0.0"%"';
     }
 
     // Retailer column formats
     if (showRetailerEconomics) {
-      const base = 5 + extraCols;
-      dr.getCell(base + 1).numFmt = '#,##0.00'; // Total Cost
-      if (row.retailerRrp != null) dr.getCell(base + 2).numFmt = '#,##0.00'; // RRP
+      const base = 4; // cols 1-4 are basic in this layout
+      dr.getCell(base + 1).numFmt = '#,##0.00'; // Cost per Unit
+      if (row.retailerRrp != null)    dr.getCell(base + 2).numFmt = '#,##0.00'; // RRP
       if (row.retailerProfit != null) dr.getCell(base + 3).numFmt = '#,##0.00'; // Profit
-      if (row.retailerMargin != null) dr.getCell(base + 4).numFmt = '0.0"%"'; // Margin
-      if (row.bulkBuy != null) dr.getCell(base + 5).numFmt = '#,##0.00'; // Bulk Buy
-      // Light background on retailer cells
-      for (let c = base + 1; c <= base + 5; c++) {
+      if (row.retailerMargin != null) dr.getCell(base + 4).numFmt = '0.0"%"';   // Margin
+      for (let c = base + 1; c <= base + 4; c++) {
         dr.getCell(c).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFf9fefb' } };
       }
     }
@@ -240,7 +245,6 @@ export async function buildBrandedPdf({
 }): Promise<Buffer> {
   const PDFDocument = (await import('pdfkit')).default;
 
-  // Use landscape when retailer economics are shown — adds ~250pt usable width
   const landscape = showRetailerEconomics;
 
   return new Promise((resolve, reject) => {
@@ -254,18 +258,15 @@ export async function buildBrandedPdf({
     const pageW = doc.page.width - margin * 2;
     const green = '#16a34a';
 
-    // Logo top-right
     if (logoBuffer) {
       try {
         doc.image(logoBuffer, doc.page.width - 205, 48, { fit: [155, 62] });
       } catch {}
     }
 
-    // Business name + subtitle top-left
     doc.fillColor(green).font('Helvetica-Bold').fontSize(18).text(businessName, margin, 50, { width: 310 });
     doc.fillColor('#6b7280').font('Helvetica').fontSize(9).text(subtitle, margin, 74, { width: 310 });
 
-    // Divider
     const divY = 120;
     doc.strokeColor('#d1d5db').lineWidth(1)
       .moveTo(margin, divY).lineTo(doc.page.width - margin, divY).stroke();
@@ -274,62 +275,19 @@ export async function buildBrandedPdf({
     let cols: Array<{ label: string; x: number; width: number }>;
 
     if (showRetailerEconomics) {
-      // Landscape layout — base wholesale cols + 5 retailer cols
-      if (showRrp && showRrpMargin) {
-        cols = [
-          { label: 'Product Name',         x: 50,  width: 120 },
-          { label: 'Pack Size / Unit',      x: 175, width: 70  },
-          { label: 'Unit Price',            x: 250, width: 52  },
-          { label: 'Unit RRP',              x: 307, width: 52  },
-          { label: 'RRP Margin %',          x: 364, width: 52  },
-          { label: 'Pallet Price',          x: 421, width: 52  },
-          { label: 'Cost per Unit',         x: 478, width: 58  },
-          { label: 'RRP (Retailer)',        x: 541, width: 52  },
-          { label: 'Profit per Unit',       x: 598, width: 52  },
-          { label: 'Retail Margin (per unit)', x: 655, width: 52  },
-          { label: 'Bulk Buy',              x: 712, width: 54  },
-        ];
-      } else if (showRrp) {
-        cols = [
-          { label: 'Product Name',         x: 50,  width: 130 },
-          { label: 'Pack Size / Unit',      x: 185, width: 75  },
-          { label: 'Unit Price',            x: 265, width: 55  },
-          { label: 'Unit RRP',              x: 325, width: 55  },
-          { label: 'Pallet Price',          x: 385, width: 55  },
-          { label: 'Cost per Unit',         x: 445, width: 62  },
-          { label: 'RRP (Retailer)',        x: 512, width: 56  },
-          { label: 'Profit per Unit',       x: 573, width: 56  },
-          { label: 'Retail Margin (per unit)', x: 634, width: 54  },
-          { label: 'Bulk Buy',              x: 693, width: 58  },
-        ];
-      } else if (showRrpMargin) {
-        cols = [
-          { label: 'Product Name',         x: 50,  width: 130 },
-          { label: 'Pack Size / Unit',      x: 185, width: 75  },
-          { label: 'Unit Price',            x: 265, width: 55  },
-          { label: 'RRP Margin %',          x: 325, width: 55  },
-          { label: 'Pallet Price',          x: 385, width: 55  },
-          { label: 'Cost per Unit',         x: 445, width: 62  },
-          { label: 'RRP (Retailer)',        x: 512, width: 56  },
-          { label: 'Profit per Unit',       x: 573, width: 56  },
-          { label: 'Retail Margin (per unit)', x: 634, width: 54  },
-          { label: 'Bulk Buy',              x: 693, width: 58  },
-        ];
-      } else {
-        cols = [
-          { label: 'Product Name',         x: 50,  width: 155 },
-          { label: 'Pack Size / Unit',      x: 210, width: 85  },
-          { label: 'Unit Price',            x: 300, width: 60  },
-          { label: 'Pallet Price',          x: 365, width: 60  },
-          { label: 'Cost per Unit',         x: 430, width: 65  },
-          { label: 'RRP (Retailer)',        x: 500, width: 58  },
-          { label: 'Profit per Unit',       x: 563, width: 58  },
-          { label: 'Retail Margin (per unit)', x: 626, width: 58  },
-          { label: 'Bulk Buy',              x: 689, width: 62  },
-        ];
-      }
+      // Single 8-column landscape layout — standalone RRP/Margin suppressed regardless of toggles
+      cols = [
+        { label: 'Product Name',      x: 50,  width: 150 },
+        { label: 'Pack Size / Unit',  x: 205, width: 80  },
+        { label: 'Case Price',        x: 290, width: 62  },
+        { label: 'Pallet Price',      x: 357, width: 62  },
+        { label: 'Cost per Unit',     x: 424, width: 68  },
+        { label: 'RRP',               x: 497, width: 65  },
+        { label: 'Profit per Unit',   x: 567, width: 65  },
+        { label: 'Retail Margin (%)', x: 637, width: 70  },
+      ];
     } else {
-      // Portrait layout — original columns
+      // Portrait layout — original columns, completely unchanged
       if (showRrp && showRrpMargin) {
         cols = [
           { label: 'Product Name',    x: 50,  width: 145 },
@@ -367,7 +325,7 @@ export async function buildBrandedPdf({
 
     let y = divY + 14;
 
-    // Optional "Retail" section label above the retailer columns
+    // Optional "RETAIL" section label above the retailer columns
     if (showRetailerEconomics) {
       const retailStartIdx = cols.findIndex(c => c.label === 'Cost per Unit');
       if (retailStartIdx >= 0) {
@@ -409,41 +367,18 @@ export async function buildBrandedPdf({
       doc.fillColor('#111827');
 
       if (showRetailerEconomics) {
-        const [c0, c1, c2, c3, c4] = [cols[0]!, cols[1]!, cols[2]!, cols[3]!, cols[4]!];
-        doc.text(row.name,     c0.x, y, { width: c0.width, lineBreak: false });
-        doc.text(row.packSize, c1.x, y, { width: c1.width, lineBreak: false });
-        doc.text(priceStr,     c2.x, y, { width: c2.width, lineBreak: false });
-
-        if (showRrp && showRrpMargin) {
-          doc.text(row.rrp || '—', c3.x, y, { width: c3.width, lineBreak: false });
-          doc.text(marginStr, c4.x, y, { width: c4.width, lineBreak: false });
-          doc.text(palletStr, cols[5]!.x, y, { width: cols[5]!.width, lineBreak: false });
-          const retailBase = 6;
-          doc.text(retailCostStr, cols[retailBase]!.x, y, { width: cols[retailBase]!.width, lineBreak: false });
-          doc.text(row.retailerRrp != null ? row.retailerRrp.toFixed(2) : '—', cols[retailBase+1]!.x, y, { width: cols[retailBase+1]!.width, lineBreak: false });
-          doc.text(row.retailerProfit != null ? row.retailerProfit.toFixed(2) : '—', cols[retailBase+2]!.x, y, { width: cols[retailBase+2]!.width, lineBreak: false });
-          doc.text(row.retailerMargin != null ? `${row.retailerMargin.toFixed(1)}%` : '—', cols[retailBase+3]!.x, y, { width: cols[retailBase+3]!.width, lineBreak: false });
-          doc.text(row.bulkBuy != null ? row.bulkBuy.toFixed(2) : '—', cols[retailBase+4]!.x, y, { width: cols[retailBase+4]!.width, lineBreak: false });
-        } else if (showRrp || showRrpMargin) {
-          doc.text(showRrp ? (row.rrp || '—') : marginStr, c3.x, y, { width: c3.width, lineBreak: false });
-          doc.text(palletStr, c4.x, y, { width: c4.width, lineBreak: false });
-          const retailBase = 5;
-          doc.text(retailCostStr, cols[retailBase]!.x, y, { width: cols[retailBase]!.width, lineBreak: false });
-          doc.text(row.retailerRrp != null ? row.retailerRrp.toFixed(2) : '—', cols[retailBase+1]!.x, y, { width: cols[retailBase+1]!.width, lineBreak: false });
-          doc.text(row.retailerProfit != null ? row.retailerProfit.toFixed(2) : '—', cols[retailBase+2]!.x, y, { width: cols[retailBase+2]!.width, lineBreak: false });
-          doc.text(row.retailerMargin != null ? `${row.retailerMargin.toFixed(1)}%` : '—', cols[retailBase+3]!.x, y, { width: cols[retailBase+3]!.width, lineBreak: false });
-          doc.text(row.bulkBuy != null ? row.bulkBuy.toFixed(2) : '—', cols[retailBase+4]!.x, y, { width: cols[retailBase+4]!.width, lineBreak: false });
-        } else {
-          doc.text(palletStr, c3.x, y, { width: c3.width, lineBreak: false });
-          const retailBase = 4;
-          doc.text(retailCostStr, cols[retailBase]!.x, y, { width: cols[retailBase]!.width, lineBreak: false });
-          doc.text(row.retailerRrp != null ? row.retailerRrp.toFixed(2) : '—', cols[retailBase+1]!.x, y, { width: cols[retailBase+1]!.width, lineBreak: false });
-          doc.text(row.retailerProfit != null ? row.retailerProfit.toFixed(2) : '—', cols[retailBase+2]!.x, y, { width: cols[retailBase+2]!.width, lineBreak: false });
-          doc.text(row.retailerMargin != null ? `${row.retailerMargin.toFixed(1)}%` : '—', cols[retailBase+3]!.x, y, { width: cols[retailBase+3]!.width, lineBreak: false });
-          doc.text(row.bulkBuy != null ? row.bulkBuy.toFixed(2) : '—', cols[retailBase+4]!.x, y, { width: cols[retailBase+4]!.width, lineBreak: false });
-        }
+        // 8-column layout — fixed indices, no standalone RRP/Margin cols
+        const [c0, c1, c2, c3, c4, c5, c6, c7] = cols;
+        doc.text(row.name,      c0!.x, y, { width: c0!.width, lineBreak: false });
+        doc.text(row.packSize,  c1!.x, y, { width: c1!.width, lineBreak: false });
+        doc.text(priceStr,      c2!.x, y, { width: c2!.width, lineBreak: false });
+        doc.text(palletStr,     c3!.x, y, { width: c3!.width, lineBreak: false });
+        doc.text(retailCostStr, c4!.x, y, { width: c4!.width, lineBreak: false });
+        doc.text(row.retailerRrp    != null ? row.retailerRrp.toFixed(2)    : '—', c5!.x, y, { width: c5!.width, lineBreak: false });
+        doc.text(row.retailerProfit != null ? row.retailerProfit.toFixed(2) : '—', c6!.x, y, { width: c6!.width, lineBreak: false });
+        doc.text(row.retailerMargin != null ? `${row.retailerMargin.toFixed(1)}%` : '—', c7!.x, y, { width: c7!.width, lineBreak: false });
       } else {
-        // Portrait — original rendering
+        // Portrait — original rendering, completely unchanged
         doc.text(row.name,     cols[0]!.x, y, { width: cols[0]!.width, lineBreak: false });
         doc.text(row.packSize, cols[1]!.x, y, { width: cols[1]!.width, lineBreak: false });
         doc.text(priceStr,     cols[2]!.x, y, { width: cols[2]!.width, lineBreak: false });
@@ -466,7 +401,6 @@ export async function buildBrandedPdf({
       y += 18;
     });
 
-    // Footer
     doc
       .fillColor('#9ca3af')
       .font('Helvetica')

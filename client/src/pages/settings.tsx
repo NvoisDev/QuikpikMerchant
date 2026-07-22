@@ -716,10 +716,10 @@ interface CataloguePreviewRow {
   unitsPerPallet: number | null;
   rrp: string | null;
   rrpMargin: number | null;
+  retailerCostPerUnit: number | null;
   retailerRrp: number | null;
   retailerProfit: number | null;
   retailerMargin: number | null;
-  bulkBuy: number | null;
 }
 
 function PriceListPreviewTable({
@@ -768,25 +768,26 @@ function PriceListPreviewTable({
             <tr className="bg-gray-100 text-gray-600">
               <th className="px-3 py-2 text-left font-semibold whitespace-nowrap border-b border-gray-200">Product Name</th>
               <th className="px-3 py-2 text-left font-semibold whitespace-nowrap border-b border-gray-200">Pack Size</th>
-              <th className="px-3 py-2 text-right font-semibold whitespace-nowrap border-b border-gray-200">Unit Price</th>
-              {showRrp && <th className="px-3 py-2 text-right font-semibold whitespace-nowrap border-b border-gray-200">Unit RRP</th>}
-              {showRrpMargin && <th className="px-3 py-2 text-right font-semibold whitespace-nowrap border-b border-gray-200">RRP Margin %</th>}
+              <th className="px-3 py-2 text-right font-semibold whitespace-nowrap border-b border-gray-200">
+                {showRetailerEconomics ? 'Case Price' : 'Unit Price'}
+              </th>
+              {!showRetailerEconomics && showRrp && <th className="px-3 py-2 text-right font-semibold whitespace-nowrap border-b border-gray-200">Unit RRP</th>}
+              {!showRetailerEconomics && showRrpMargin && <th className="px-3 py-2 text-right font-semibold whitespace-nowrap border-b border-gray-200">RRP Margin %</th>}
               <th className="px-3 py-2 text-right font-semibold whitespace-nowrap border-b border-gray-200">Pallet Price</th>
-              <th className="px-3 py-2 text-right font-semibold whitespace-nowrap border-b border-gray-200">Units / Pallet</th>
+              {!showRetailerEconomics && <th className="px-3 py-2 text-right font-semibold whitespace-nowrap border-b border-gray-200">Units / Pallet</th>}
               {showRetailerEconomics && (
                 <>
                   <th className="px-3 py-2 text-right font-semibold whitespace-nowrap border-b border-b-green-300 bg-green-100 text-green-700">Cost / Unit</th>
                   <th className="px-3 py-2 text-right font-semibold whitespace-nowrap border-b border-b-green-300 bg-green-100 text-green-700">RRP</th>
                   <th className="px-3 py-2 text-right font-semibold whitespace-nowrap border-b border-b-green-300 bg-green-100 text-green-700">Profit / Unit</th>
                   <th className="px-3 py-2 text-right font-semibold whitespace-nowrap border-b border-b-green-300 bg-green-100 text-green-700">Retail Margin</th>
-                  <th className="px-3 py-2 text-right font-semibold whitespace-nowrap border-b border-b-green-300 bg-green-100 text-green-700">Bulk Buy</th>
                 </>
               )}
             </tr>
             {showRetailerEconomics && (
               <tr className="bg-green-50">
-                <td colSpan={3 + (showRrp ? 1 : 0) + (showRrpMargin ? 1 : 0) + 2} />
-                <td colSpan={5} className="px-3 py-0.5 text-center text-[10px] font-bold text-green-600 tracking-widest uppercase border-b border-green-200 bg-green-100">
+                <td colSpan={4} />
+                <td colSpan={4} className="px-3 py-0.5 text-center text-[10px] font-bold text-green-600 tracking-widest uppercase border-b border-green-200 bg-green-100">
                   Retail Economics
                 </td>
               </tr>
@@ -798,12 +799,12 @@ function PriceListPreviewTable({
                 <td className="px-3 py-2 font-medium text-gray-900 whitespace-nowrap max-w-[180px] truncate" title={row.name}>{row.name}</td>
                 <td className="px-3 py-2 text-gray-600 whitespace-nowrap">{row.packSize}</td>
                 <td className="px-3 py-2 text-right text-gray-900 whitespace-nowrap tabular-nums">{fmt(row.unitPrice)}</td>
-                {showRrp && (
+                {!showRetailerEconomics && showRrp && (
                   <td className="px-3 py-2 text-right whitespace-nowrap tabular-nums">
                     {row.rrp != null ? `£${row.rrp}` : <span className="text-gray-300">—</span>}
                   </td>
                 )}
-                {showRrpMargin && (
+                {!showRetailerEconomics && showRrpMargin && (
                   <td className="px-3 py-2 text-right whitespace-nowrap tabular-nums">
                     {row.rrpMargin != null ? fmtPct(row.rrpMargin) : <span className="text-gray-300">—</span>}
                   </td>
@@ -811,12 +812,16 @@ function PriceListPreviewTable({
                 <td className="px-3 py-2 text-right text-gray-600 whitespace-nowrap tabular-nums">
                   {row.palletPrice != null ? fmt(row.palletPrice) : <span className="text-gray-300">—</span>}
                 </td>
-                <td className="px-3 py-2 text-right text-gray-600 whitespace-nowrap tabular-nums">
-                  {row.unitsPerPallet != null ? row.unitsPerPallet : <span className="text-gray-300">—</span>}
-                </td>
+                {!showRetailerEconomics && (
+                  <td className="px-3 py-2 text-right text-gray-600 whitespace-nowrap tabular-nums">
+                    {row.unitsPerPallet != null ? row.unitsPerPallet : <span className="text-gray-300">—</span>}
+                  </td>
+                )}
                 {showRetailerEconomics && (
                   <>
-                    <td className="px-3 py-2 text-right whitespace-nowrap tabular-nums bg-green-50/50">{fmt(row.unitPrice)}</td>
+                    <td className="px-3 py-2 text-right whitespace-nowrap tabular-nums bg-green-50/50">
+                      {row.retailerCostPerUnit != null ? fmt(row.retailerCostPerUnit) : fmt(row.unitPrice)}
+                    </td>
                     <td className="px-3 py-2 text-right whitespace-nowrap tabular-nums bg-green-50/50">
                       {row.retailerRrp != null ? fmt(row.retailerRrp) : <span className="text-amber-400 font-medium">— add RRP</span>}
                     </td>
@@ -825,9 +830,6 @@ function PriceListPreviewTable({
                     </td>
                     <td className="px-3 py-2 text-right whitespace-nowrap tabular-nums bg-green-50/50">
                       {row.retailerMargin != null ? fmtPct(row.retailerMargin) : <span className="text-gray-300">—</span>}
-                    </td>
-                    <td className="px-3 py-2 text-right whitespace-nowrap tabular-nums bg-green-50/50">
-                      {row.bulkBuy != null ? fmt(row.bulkBuy) : <span className="text-gray-300">—</span>}
                     </td>
                   </>
                 )}
@@ -996,7 +998,7 @@ function PublicStoreSettings({ user }: { user: any }) {
           <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
             <div className="pr-3">
               <p className="text-sm font-medium text-gray-900">Show retailer economics in price list</p>
-              <p className="text-xs text-gray-500 mt-0.5">Adds 5 extra columns to your exported price list (XLSX &amp; PDF): Cost per Unit, RRP, Profit per Unit, Retail Margin, and Bulk Buy total. Useful for helping stockists understand their margin.</p>
+              <p className="text-xs text-gray-500 mt-0.5">Adds 4 extra columns to your exported price list (XLSX &amp; PDF): Cost per Unit, RRP, Profit per Unit, and Retail Margin. Standalone Unit RRP and RRP Margin % columns are also suppressed to avoid duplicates. Useful for helping stockists understand their margin.</p>
             </div>
             <Switch checked={showRetailerEconomics} onCheckedChange={setShowRetailerEconomics} />
           </div>

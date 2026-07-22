@@ -92,8 +92,6 @@ export function registerProductRoutes(app: Express): void {
             rrpMargin = ((rrpPack - unitPriceNum) / rrpPack) * 100;
           }
         }
-        const moq = Number(p.moq ?? 1);
-        const bulkBuy = unitPriceNum * moq;
         const costPerUnit = qty > 0 ? unitPriceNum / qty : unitPriceNum;
         let retailerRrp: number | null = null;
         let retailerProfit: number | null = null;
@@ -115,7 +113,6 @@ export function registerProductRoutes(app: Express): void {
           retailerRrp,
           retailerProfit,
           retailerMargin,
-          bulkBuy,
         };
       });
 
@@ -155,17 +152,14 @@ export function registerProductRoutes(app: Express): void {
         const rrpMargin: number | null = showRrpMargin
           ? computeRrpMargin({ packQuantity: p.packQuantity, quantityInPack: p.quantityInPack, unitPrice: unitPriceNum, rrp: rrpNum })
           : null;
-        // Retailer economics: cost per unit = pack price ÷ packQuantity, rrp per unit, profit, margin, bulk buy (moq × pack price)
+        // Retailer economics: cost per unit = pack price ÷ packQuantity, rrp per unit, profit, margin
         const qty = Number(p.packQuantity ?? p.quantityInPack ?? 1);
         const costPerUnit = qty > 0 ? unitPriceNum / qty : unitPriceNum;
         let retailerCostPerUnit: number | null = null;
         let retailerRrp: number | null = null;
         let retailerProfit: number | null = null;
         let retailerMargin: number | null = null;
-        let bulkBuy: number | null = null;
         if (showRetailerEconomics) {
-          const moq = Number(p.moq ?? 1);
-          bulkBuy = unitPriceNum * moq;
           retailerCostPerUnit = costPerUnit;
           if (rrpNum != null && rrpNum > 0) {
             retailerRrp = rrpNum;
@@ -185,7 +179,6 @@ export function registerProductRoutes(app: Express): void {
           retailerRrp,
           retailerProfit,
           retailerMargin,
-          bulkBuy,
         };
       });
       const businessName = wholesaler?.businessName || 'Standard Price List';
