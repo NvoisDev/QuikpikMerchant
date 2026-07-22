@@ -62,17 +62,17 @@ export async function buildBrandedWorkbook({
   const retailerCols = showRetailerEconomics ? 5 : 0;
   const colCount = 5 + extraCols + retailerCols;
 
-  // Column widths
+  // Column widths — preserved exactly from pre-feature state so toggle-off output is unchanged
   if (showRrp && showRrpMargin) {
-    ws.getColumn(1).width = 28; ws.getColumn(2).width = 16; ws.getColumn(3).width = 12;
-    ws.getColumn(4).width = 12; ws.getColumn(5).width = 14; ws.getColumn(6).width = 13;
-    ws.getColumn(7).width = 15;
+    ws.getColumn(1).width = 30; ws.getColumn(2).width = 18; ws.getColumn(3).width = 13;
+    ws.getColumn(4).width = 13; ws.getColumn(5).width = 15; ws.getColumn(6).width = 14;
+    ws.getColumn(7).width = 16;
   } else if (showRrp) {
-    ws.getColumn(1).width = 32; ws.getColumn(2).width = 17; ws.getColumn(3).width = 13;
-    ws.getColumn(4).width = 13; ws.getColumn(5).width = 17; ws.getColumn(6).width = 15;
+    ws.getColumn(1).width = 35; ws.getColumn(2).width = 18; ws.getColumn(3).width = 14;
+    ws.getColumn(4).width = 14; ws.getColumn(5).width = 18; ws.getColumn(6).width = 16;
   } else if (showRrpMargin) {
-    ws.getColumn(1).width = 32; ws.getColumn(2).width = 17; ws.getColumn(3).width = 13;
-    ws.getColumn(4).width = 14; ws.getColumn(5).width = 17; ws.getColumn(6).width = 15;
+    ws.getColumn(1).width = 35; ws.getColumn(2).width = 18; ws.getColumn(3).width = 14;
+    ws.getColumn(4).width = 15; ws.getColumn(5).width = 18; ws.getColumn(6).width = 16;
   } else {
     ws.getColumn(1).width = 35; ws.getColumn(2).width = 18; ws.getColumn(3).width = 14;
     ws.getColumn(4).width = 18; ws.getColumn(5).width = 16;
