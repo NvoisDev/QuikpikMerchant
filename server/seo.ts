@@ -15,6 +15,7 @@
 import { db } from "./db";
 import { users, products } from "@shared/schema";
 import { eq, and, or } from "drizzle-orm";
+import { sharedBlogPosts } from "@shared/blog-posts-data";
 
 const BASE_URL = "https://quikpik.app";
 const DEFAULT_IMAGE = `${BASE_URL}/og-image.png`;
@@ -85,71 +86,58 @@ function safeJsonLd(obj: unknown): string {
 }
 
 // ---------------------------------------------------------------------------
-// Static blog post metadata
+// Blog metadata derived from the shared single source of truth
 // ---------------------------------------------------------------------------
 
-/** Keeps the server free of browser-only asset imports from blog-posts.ts */
+/**
+ * Build the flat SEO view for each published blog post directly from the
+ * shared content dataset.  No manual copy is required — adding a post to
+ * shared/blog-posts-data.ts automatically gives it server-side SEO coverage.
+ */
 interface BlogMeta {
   title: string;
   excerpt: string;
   publishDate: string;
   author: string;
-  /** First few content paragraphs for crawler body injection */
+  category: string;
+  /** First few `p`-type content blocks for crawler body injection */
   openingParagraphs: string[];
-  /** H2 headings for crawler body injection */
+  /** All `h2`-type content blocks for crawler body injection */
   h2s: string[];
 }
 
-const BLOG_POST_META: Record<string, BlogMeta> = {
-  "inventory-management-batch-tracking": {
-    title:
-      "Inventory Management for Wholesalers: How Batch Tracking and Expiry Control Can Save Thousands",
-    excerpt:
-      "Stock discrepancies, expired products, and invisible waste can quietly erode profits before anyone notices. Here's how modern batch tracking and expiry date monitoring give wholesalers the visibility they need to stay in control.",
-    publishDate: "2026-01-15",
-    author: "Quikpik Team",
-    openingParagraphs: [
-      "For many wholesalers, inventory is their single biggest investment. Yet it's often one of the least understood areas of the business.",
-      "Products are purchased, stored, sold, returned, written off, and replenished every day. Without proper controls, stock discrepancies, expired products, and waste can quietly eat into profits without anyone noticing until it's too late.",
-      "If a business loses just £50 worth of stock each week through errors, damage, or expiry, that's over £2,600 per year gone straight from the bottom line.",
-    ],
-    h2s: [
-      "Why Batch Tracking Matters",
-      "Expiry Dates Should Never Be a Surprise",
-      "Understanding Stock Waste",
-      "Why Spreadsheets Eventually Fail",
-      "How Quikpik Helps Wholesalers Stay in Control",
-    ],
-  },
-  "understanding-margins-wholesale": {
-    title:
-      "Understanding Margins in Wholesale: How to Track, Protect, and Improve Your Profitability",
-    excerpt:
-      "Gross margin is one of the most important numbers in any wholesale business — yet many wholesalers don't track it product by product. Here's what margin really means, why it matters, and how Quikpik makes it easy to stay on top of it.",
-    publishDate: "2026-07-05",
-    author: "Quikpik Team",
-    openingParagraphs: [
-      "Revenue is vanity. Profit is sanity. It's an old saying, but it rings especially true in wholesale — where large order volumes can mask wafer-thin margins, and a single pricing mistake can quietly turn a profitable line into a loss-maker.",
-      "Understanding your margins — and tracking them consistently — is one of the most powerful habits you can build as a wholesaler. Yet many businesses still rely on gut feel, or only review margins at year-end when it's too late to act.",
-      "Knowing your margin on every product isn't just good accounting — it's the foundation of every smart pricing decision you'll ever make.",
-    ],
-    h2s: [
-      "What Is Gross Margin?",
-      "The Difference Between Margin and Markup",
-      "Why Margin Tracking Is Hard Without the Right Tools",
-      "How Batch Costing Works in Quikpik",
-      "Weighted-Average Costing: Smoothing Out Price Volatility",
-      "Seeing Margin in Real Time",
-      "Practical Tips for Improving Wholesale Margins",
-    ],
-  },
-};
+const BLOG_POST_META: Record<string, BlogMeta> = Object.fromEntries(
+  sharedBlogPosts.map((post) => {
+    const openingParagraphs: string[] = [];
+    const h2s: string[] = [];
+    for (const block of post.content) {
+      if (block.type === "p" && openingParagraphs.length < 3) {
+        openingParagraphs.push(block.text);
+      }
+      if (block.type === "h2") {
+        h2s.push(block.text);
+      }
+    }
+    return [
+      post.slug,
+      {
+        title: post.title,
+        excerpt: post.excerpt,
+        publishDate: post.publishDate,
+        author: post.author,
+        category: post.category,
+        openingParagraphs,
+        h2s,
+      },
+    ];
+  })
+);
 
-const ALL_BLOG_POSTS = Object.entries(BLOG_POST_META).map(([slug, m]) => ({
-  slug,
-  title: m.title,
-  excerpt: m.excerpt,
-  category: "Wholesale Operations",
+const ALL_BLOG_POSTS = sharedBlogPosts.map((p) => ({
+  slug: p.slug,
+  title: p.title,
+  excerpt: p.excerpt,
+  category: p.category,
 }));
 
 /**
