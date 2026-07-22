@@ -147,6 +147,7 @@ export function registerPublicStoreRoutes(app: Express) {
         totalPackageWeight: showPackSize ? p.totalPackageWeight : null,
         packQuantity: showPackSize ? p.packQuantity : null,
         rrp: showRrp ? p.rrp : null,
+        costPrice: undefined,
       }));
 
       res.set('Cache-Control', 'public, max-age=30, stale-while-revalidate=60');

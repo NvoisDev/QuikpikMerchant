@@ -208,3 +208,20 @@ describe('GET /api/public/wholesaler/:slug — stock output', () => {
     expect(res.status).toBe(404);
   });
 });
+
+describe('GET /api/public/wholesaler/:slug — costPrice not leaked', () => {
+  it('strips costPrice from the product payload even if the DB row exposes it', async () => {
+    queuedResults.push(
+      [makeWholesaler({ stockVisible: true, priceDisplayMode: 'shown' })],
+      [makeProduct({ costPrice: '5.00' })],
+    );
+
+    const res = await request(app).get('/api/public/wholesaler/acme');
+
+    expect(res.status).toBe(200);
+    expect(res.body.products).toHaveLength(1);
+    const product = res.body.products[0];
+    expect(product).not.toHaveProperty('costPrice');
+    expect(product).not.toHaveProperty('cost_price');
+  });
+});
