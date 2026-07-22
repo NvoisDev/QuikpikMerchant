@@ -69,6 +69,7 @@ interface ProductDetail {
   expiryDate: string | null;
   weightedAvgCost: string | null;
   percentSold?: number | null;
+  rrp?: string | null;
 }
 
 interface Batch {
@@ -468,6 +469,21 @@ export default function ProductDetail() {
     margin < 15 ? "bg-amber-50 text-amber-700 border-amber-200" :
     "bg-green-50 text-green-700 border-green-200";
 
+  const rrpMarginPct: number | null = (() => {
+    if (!user?.rrpMarginVisible) return null;
+    const rrpVal = parseFloat(String(product.rrp ?? ''));
+    const qty = product.packQuantity ?? product.quantityInPack ?? 1;
+    const wholesale = parseFloat(String(product.price));
+    if (!isFinite(rrpVal) || rrpVal <= 0 || !isFinite(wholesale) || qty <= 0) return null;
+    const rrpTotal = rrpVal * qty;
+    return ((rrpTotal - wholesale) / rrpTotal) * 100;
+  })();
+  const rrpMarginBadgeClass =
+    rrpMarginPct === null ? "" :
+    rrpMarginPct < 0 ? "bg-red-50 text-red-700 border-red-200" :
+    rrpMarginPct < 15 ? "bg-amber-50 text-amber-700 border-amber-200" :
+    "bg-green-50 text-green-700 border-green-200";
+
   return (
     <>
       <div className="max-w-2xl mx-auto pb-16">
@@ -543,6 +559,11 @@ export default function ProductDetail() {
                   Margin {margin.toFixed(1)}%
                 </span>
               )}
+              {rrpMarginPct !== null && (
+                <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${rrpMarginBadgeClass}`}>
+                  RRP margin {rrpMarginPct.toFixed(1)}%
+                </span>
+              )}
             </div>
             <h1 className="text-xl font-bold text-white drop-shadow">{product.name}</h1>
           </div>
@@ -598,6 +619,17 @@ export default function ProductDetail() {
                   {effectiveCost && (
                     <p className="text-xs mt-0.5 opacity-70">
                       {fmt(parseFloat(product.price) - parseFloat(effectiveCost), currency)} per unit
+                    </p>
+                  )}
+                </div>
+              )}
+              {rrpMarginPct !== null && (
+                <div className={`rounded-lg p-3 border ${rrpMarginBadgeClass}`}>
+                  <p className="text-xs font-medium opacity-70">Retailer margin (at RRP)</p>
+                  <p className="text-2xl font-bold">{rrpMarginPct.toFixed(1)}%</p>
+                  {product.rrp && (
+                    <p className="text-xs mt-0.5 opacity-70">
+                      RRP {fmt(product.rrp, currency)}{product.packQuantity ? ` × ${product.packQuantity} units` : ""}
                     </p>
                   )}
                 </div>
