@@ -105,7 +105,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const html = injectMeta(template, meta);
 
       res
-        .status(200)
+        .status(meta.notFound ? 404 : 200)
         .set({
           "Content-Type": "text/html",
           "Cache-Control": "no-cache, no-store, must-revalidate",

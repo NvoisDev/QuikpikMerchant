@@ -6,8 +6,89 @@ import {
 } from "./shared";
 
 import { isSafeStaticUrl } from '../utils/safeFetch.js';
+import { PUBLISHED_BLOG_SLUGS } from '../seo.js';
+
+const BASE_URL = "https://quikpik.app";
+
+function xmlEsc(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+function urlEntry(loc: string, opts: { lastmod?: string; changefreq?: string; priority?: string } = {}): string {
+  const parts = [`  <url>\n    <loc>${xmlEsc(loc)}</loc>`];
+  if (opts.lastmod) parts.push(`\n    <lastmod>${opts.lastmod}</lastmod>`);
+  if (opts.changefreq) parts.push(`\n    <changefreq>${opts.changefreq}</changefreq>`);
+  if (opts.priority) parts.push(`\n    <priority>${opts.priority}</priority>`);
+  parts.push(`\n  </url>`);
+  return parts.join("");
+}
 
 export function registerSystemRoutes(app: Express): void {
+  // GET /sitemap.xml — dynamically generated from live public data
+  app.get("/sitemap.xml", async (_req, res) => {
+    try {
+      const today = new Date().toISOString().slice(0, 10);
+
+      const staticUrls = [
+        urlEntry(`${BASE_URL}/`, { changefreq: "weekly", priority: "1.0" }),
+        urlEntry(`${BASE_URL}/blog`, { changefreq: "weekly", priority: "0.8" }),
+        ...PUBLISHED_BLOG_SLUGS.map((b) =>
+          urlEntry(`${BASE_URL}/blog/${b.slug}`, { lastmod: b.date, changefreq: "monthly", priority: "0.7" })
+        ),
+        urlEntry(`${BASE_URL}/terms`, { changefreq: "yearly", priority: "0.4" }),
+        urlEntry(`${BASE_URL}/privacy`, { changefreq: "yearly", priority: "0.4" }),
+      ];
+
+      // Public storefronts
+      const publicWholesalers = await db
+        .select({ id: users.id, storeSlug: users.storeSlug })
+        .from(users)
+        .where(and(eq(users.storeVisibility, "public"), eq(users.isInactive, false)));
+
+      const storeUrls = publicWholesalers.map((w) => {
+        const slug = (w.storeSlug && w.storeSlug.trim()) ? w.storeSlug : w.id;
+        return urlEntry(`${BASE_URL}/w/${slug}`, { lastmod: today, changefreq: "weekly", priority: "0.6" });
+      });
+
+      // Public products (active, from public stores)
+      const publicProducts = await db
+        .select({ id: products.id, name: products.name })
+        .from(products)
+        .innerJoin(users, and(eq(users.id, products.wholesalerId!), eq(users.storeVisibility, "public"), eq(users.isInactive, false)))
+        .where(eq(products.status, "active"));
+
+      const productUrls = publicProducts.map((p) => {
+        const namePart = p.name
+          ? p.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60)
+          : "";
+        const slug = namePart ? `${namePart}-${p.id}` : String(p.id);
+        return urlEntry(`${BASE_URL}/product/${slug}`, { lastmod: today, changefreq: "weekly", priority: "0.5" });
+      });
+
+      // Welcome / invite pages for active wholesalers (any store visibility)
+      // These are public landing pages that customers receive as invite links.
+      const allWholesalers = await db
+        .select({ id: users.id })
+        .from(users)
+        .where(eq(users.isInactive, false));
+
+      const welcomeUrls = allWholesalers.map((w) =>
+        urlEntry(`${BASE_URL}/welcome/${w.id}`, { lastmod: today, changefreq: "monthly", priority: "0.4" })
+      );
+
+      const allUrls = [...staticUrls, ...storeUrls, ...productUrls, ...welcomeUrls];
+      const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${allUrls.join("\n")}\n</urlset>`;
+
+      res
+        .status(200)
+        .set({ "Content-Type": "application/xml; charset=utf-8", "Cache-Control": "public, max-age=3600" })
+        .end(xml);
+    } catch (err) {
+      console.error("[sitemap] Failed to generate sitemap:", err);
+      res.status(500).end();
+    }
+  });
+
   // GET /api/health
   app.get('/api/health', healthCheck);
 

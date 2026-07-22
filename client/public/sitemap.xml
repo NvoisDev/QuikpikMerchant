@@ -1,4 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!--
+  This file is a static fallback only.
+  The canonical sitemap is generated dynamically by the server at /sitemap.xml
+  and includes live public storefront and product URLs from the database.
+-->
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://quikpik.app/</loc>
@@ -13,6 +18,12 @@
   <url>
     <loc>https://quikpik.app/blog/inventory-management-batch-tracking</loc>
     <lastmod>2026-01-15</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://quikpik.app/blog/understanding-margins-wholesale</loc>
+    <lastmod>2026-07-05</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>

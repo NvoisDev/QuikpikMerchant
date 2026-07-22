@@ -35,6 +35,11 @@ export interface SeoMeta {
   jsonLd?: string;
   /** Minimal semantic HTML injected into <div id="root"> for crawlers */
   bodyHtml?: string;
+  /**
+   * When true, the HTTP response should use status 404.
+   * Set by resolvers that confirmed the requested entity does not exist.
+   */
+  notFound?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -116,6 +121,28 @@ const BLOG_POST_META: Record<string, BlogMeta> = {
       "How Quikpik Helps Wholesalers Stay in Control",
     ],
   },
+  "understanding-margins-wholesale": {
+    title:
+      "Understanding Margins in Wholesale: How to Track, Protect, and Improve Your Profitability",
+    excerpt:
+      "Gross margin is one of the most important numbers in any wholesale business — yet many wholesalers don't track it product by product. Here's what margin really means, why it matters, and how Quikpik makes it easy to stay on top of it.",
+    publishDate: "2026-07-05",
+    author: "Quikpik Team",
+    openingParagraphs: [
+      "Revenue is vanity. Profit is sanity. It's an old saying, but it rings especially true in wholesale — where large order volumes can mask wafer-thin margins, and a single pricing mistake can quietly turn a profitable line into a loss-maker.",
+      "Understanding your margins — and tracking them consistently — is one of the most powerful habits you can build as a wholesaler. Yet many businesses still rely on gut feel, or only review margins at year-end when it's too late to act.",
+      "Knowing your margin on every product isn't just good accounting — it's the foundation of every smart pricing decision you'll ever make.",
+    ],
+    h2s: [
+      "What Is Gross Margin?",
+      "The Difference Between Margin and Markup",
+      "Why Margin Tracking Is Hard Without the Right Tools",
+      "How Batch Costing Works in Quikpik",
+      "Weighted-Average Costing: Smoothing Out Price Volatility",
+      "Seeing Margin in Real Time",
+      "Practical Tips for Improving Wholesale Margins",
+    ],
+  },
 };
 
 const ALL_BLOG_POSTS = Object.entries(BLOG_POST_META).map(([slug, m]) => ({
@@ -124,6 +151,15 @@ const ALL_BLOG_POSTS = Object.entries(BLOG_POST_META).map(([slug, m]) => ({
   excerpt: m.excerpt,
   category: "Wholesale Operations",
 }));
+
+/**
+ * Exported list of published blog slugs and their publish dates.
+ * Used by the dynamic sitemap generator so it stays in sync with the SEO layer
+ * without a separate hard-coded list.
+ */
+export const PUBLISHED_BLOG_SLUGS: { slug: string; date: string }[] = Object.entries(
+  BLOG_POST_META
+).map(([slug, m]) => ({ slug, date: m.publishDate }));
 
 // ---------------------------------------------------------------------------
 // Route-specific metadata + body content resolvers
@@ -283,19 +319,7 @@ function blogPostMeta(slug: string): SeoMeta {
   const url = `${BASE_URL}/blog/${slug}`;
 
   if (!post) {
-    return {
-      title: "Article | Quikpik Blog",
-      description: "Read expert wholesale business guides on the Quikpik blog.",
-      canonicalUrl: url,
-      ogTitle: "Article | Quikpik Blog",
-      ogDescription: "Read expert wholesale business guides on the Quikpik blog.",
-      ogImage: DEFAULT_IMAGE,
-      ogUrl: url,
-      ogType: "article",
-      twitterTitle: "Article | Quikpik Blog",
-      twitterDescription: "Read expert wholesale business guides on the Quikpik blog.",
-      twitterImage: DEFAULT_IMAGE,
-    };
+    return notFoundMeta(url);
   }
 
   const title = `${post.title} | Quikpik Blog`;
@@ -471,7 +495,7 @@ async function storeMeta(slug: string): Promise<SeoMeta> {
       .limit(1);
 
     if (!wholesaler) {
-      return defaultPublicMeta(url);
+      return notFoundMeta(url);
     }
 
     const name = wholesaler.businessName ?? "Wholesale Store";
@@ -542,7 +566,7 @@ async function productMeta(slug: string): Promise<SeoMeta> {
     // Slug format: "{name-slugified}-{productId}" or just "{productId}"
     const segments = slug.split("-");
     const productId = parseInt(segments[segments.length - 1]!, 10);
-    if (isNaN(productId)) return defaultPublicMeta(url);
+    if (isNaN(productId)) return notFoundMeta(url);
 
     // Enforce the same visibility policy as /api/public/products/:slug:
     //   - product must be active
@@ -564,7 +588,7 @@ async function productMeta(slug: string): Promise<SeoMeta> {
       .limit(1);
 
     if (!product) {
-      return defaultPublicMeta(url);
+      return notFoundMeta(url);
     }
 
     // Only expose metadata if the wholesaler's store is publicly visible
@@ -586,9 +610,9 @@ async function productMeta(slug: string): Promise<SeoMeta> {
       )
       .limit(1);
 
-    // If the selling wholesaler's store is not public, fall back to generic metadata
+    // If the selling wholesaler's store is not public, treat as not found
     if (!wholesaler) {
-      return defaultPublicMeta(url);
+      return notFoundMeta(url);
     }
 
     const productName = product.name ?? "Wholesale Product";
@@ -674,7 +698,7 @@ async function welcomeMeta(wholesalerId: string): Promise<SeoMeta> {
       .limit(1);
 
     if (!wholesaler) {
-      return defaultPublicMeta(url);
+      return notFoundMeta(url);
     }
 
     const name = wholesaler.businessName ?? "a wholesale store";
@@ -740,6 +764,26 @@ function defaultPublicMeta(url: string): SeoMeta {
     twitterTitle: title,
     twitterDescription: description,
     twitterImage: DEFAULT_IMAGE,
+  };
+}
+
+/** Returns a meta object that signals the route handler to send a 404 response. */
+function notFoundMeta(url: string): SeoMeta {
+  const title = "Page Not Found | Quikpik";
+  const description = "The page you were looking for could not be found.";
+  return {
+    title,
+    description,
+    canonicalUrl: url,
+    ogTitle: title,
+    ogDescription: description,
+    ogImage: DEFAULT_IMAGE,
+    ogUrl: url,
+    ogType: "website",
+    twitterTitle: title,
+    twitterDescription: description,
+    twitterImage: DEFAULT_IMAGE,
+    notFound: true,
   };
 }
 
