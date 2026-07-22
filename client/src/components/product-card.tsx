@@ -217,7 +217,7 @@ function ProductCard({
   const rrpMarginPct: number | null = (() => {
     if (!rrpMarginVisible) return null;
     const rrpVal = parseFloat(String(product.rrp ?? ''));
-    const qty = product.quantityInPack ?? 1;
+    const qty = product.packQuantity ?? product.quantityInPack ?? 1;
     const wholesale = parseFloat(String(product.price));
     if (!isFinite(rrpVal) || rrpVal <= 0 || !isFinite(wholesale) || qty <= 0) return null;
     const rrpTotal = rrpVal * qty;
