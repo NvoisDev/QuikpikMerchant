@@ -94,13 +94,14 @@ export function registerProductRoutes(app: Express): void {
         }
         const moq = Number(p.moq ?? 1);
         const bulkBuy = unitPriceNum * moq;
+        const costPerUnit = qty > 0 ? unitPriceNum / qty : unitPriceNum;
         let retailerRrp: number | null = null;
         let retailerProfit: number | null = null;
         let retailerMargin: number | null = null;
         if (rrpNum != null && rrpNum > 0) {
           retailerRrp = rrpNum;
-          retailerProfit = rrpNum - unitPriceNum;
-          retailerMargin = ((rrpNum - unitPriceNum) / rrpNum) * 100;
+          retailerProfit = rrpNum - costPerUnit;
+          retailerMargin = ((rrpNum - costPerUnit) / rrpNum) * 100;
         }
         return {
           name: p.name || '—',
@@ -110,6 +111,7 @@ export function registerProductRoutes(app: Express): void {
           unitsPerPallet,
           rrp: rrpNum != null ? parseFloat(String(rrpNum)).toFixed(2) : null,
           rrpMargin,
+          retailerCostPerUnit: costPerUnit,
           retailerRrp,
           retailerProfit,
           retailerMargin,
@@ -153,7 +155,10 @@ export function registerProductRoutes(app: Express): void {
         const rrpMargin: number | null = showRrpMargin
           ? computeRrpMargin({ packQuantity: p.packQuantity, quantityInPack: p.quantityInPack, unitPrice: unitPriceNum, rrp: rrpNum })
           : null;
-        // Retailer economics: cost = unitPrice, rrp per unit, profit, margin, bulk buy (moq × cost)
+        // Retailer economics: cost per unit = pack price ÷ packQuantity, rrp per unit, profit, margin, bulk buy (moq × pack price)
+        const qty = Number(p.packQuantity ?? p.quantityInPack ?? 1);
+        const costPerUnit = qty > 0 ? unitPriceNum / qty : unitPriceNum;
+        let retailerCostPerUnit: number | null = null;
         let retailerRrp: number | null = null;
         let retailerProfit: number | null = null;
         let retailerMargin: number | null = null;
@@ -161,10 +166,11 @@ export function registerProductRoutes(app: Express): void {
         if (showRetailerEconomics) {
           const moq = Number(p.moq ?? 1);
           bulkBuy = unitPriceNum * moq;
+          retailerCostPerUnit = costPerUnit;
           if (rrpNum != null && rrpNum > 0) {
             retailerRrp = rrpNum;
-            retailerProfit = rrpNum - unitPriceNum;
-            retailerMargin = ((rrpNum - unitPriceNum) / rrpNum) * 100;
+            retailerProfit = rrpNum - costPerUnit;
+            retailerMargin = ((rrpNum - costPerUnit) / rrpNum) * 100;
           }
         }
         return {
@@ -175,6 +181,7 @@ export function registerProductRoutes(app: Express): void {
           unitsPerPallet,
           rrp: (showRrp && p.rrp != null) ? parseFloat(String(p.rrp)).toFixed(2) : null,
           rrpMargin,
+          retailerCostPerUnit,
           retailerRrp,
           retailerProfit,
           retailerMargin,

@@ -7,6 +7,7 @@ export interface PriceRow {
   rrp?: string | null;
   rrpMargin?: number | null;
   // Retailer economics columns (when showRetailerEconomics is true)
+  retailerCostPerUnit?: number | null;
   retailerRrp?: number | null;
   retailerProfit?: number | null;
   retailerMargin?: number | null;
@@ -181,7 +182,7 @@ export async function buildBrandedWorkbook({
     }
 
     const retailValues = showRetailerEconomics ? [
-      row.unitPrice,
+      row.retailerCostPerUnit != null ? row.retailerCostPerUnit : row.unitPrice,
       row.retailerRrp != null ? row.retailerRrp : '—',
       row.retailerProfit != null ? row.retailerProfit : '—',
       row.retailerMargin != null ? parseFloat(row.retailerMargin.toFixed(1)) : '—',
@@ -401,6 +402,7 @@ export async function buildBrandedPdf({
       }
 
       const priceStr = row.unitPrice.toFixed(2);
+      const retailCostStr = row.retailerCostPerUnit != null ? row.retailerCostPerUnit.toFixed(2) : priceStr;
       const palletStr = row.palletPrice !== '' ? (row.palletPrice as number).toFixed(2) : '—';
       const marginStr = row.rrpMargin != null ? `${row.rrpMargin.toFixed(1)}%` : '—';
 
@@ -417,7 +419,7 @@ export async function buildBrandedPdf({
           doc.text(marginStr, c4.x, y, { width: c4.width, lineBreak: false });
           doc.text(palletStr, cols[5]!.x, y, { width: cols[5]!.width, lineBreak: false });
           const retailBase = 6;
-          doc.text(priceStr, cols[retailBase]!.x, y, { width: cols[retailBase]!.width, lineBreak: false });
+          doc.text(retailCostStr, cols[retailBase]!.x, y, { width: cols[retailBase]!.width, lineBreak: false });
           doc.text(row.retailerRrp != null ? row.retailerRrp.toFixed(2) : '—', cols[retailBase+1]!.x, y, { width: cols[retailBase+1]!.width, lineBreak: false });
           doc.text(row.retailerProfit != null ? row.retailerProfit.toFixed(2) : '—', cols[retailBase+2]!.x, y, { width: cols[retailBase+2]!.width, lineBreak: false });
           doc.text(row.retailerMargin != null ? `${row.retailerMargin.toFixed(1)}%` : '—', cols[retailBase+3]!.x, y, { width: cols[retailBase+3]!.width, lineBreak: false });
@@ -426,7 +428,7 @@ export async function buildBrandedPdf({
           doc.text(showRrp ? (row.rrp || '—') : marginStr, c3.x, y, { width: c3.width, lineBreak: false });
           doc.text(palletStr, c4.x, y, { width: c4.width, lineBreak: false });
           const retailBase = 5;
-          doc.text(priceStr, cols[retailBase]!.x, y, { width: cols[retailBase]!.width, lineBreak: false });
+          doc.text(retailCostStr, cols[retailBase]!.x, y, { width: cols[retailBase]!.width, lineBreak: false });
           doc.text(row.retailerRrp != null ? row.retailerRrp.toFixed(2) : '—', cols[retailBase+1]!.x, y, { width: cols[retailBase+1]!.width, lineBreak: false });
           doc.text(row.retailerProfit != null ? row.retailerProfit.toFixed(2) : '—', cols[retailBase+2]!.x, y, { width: cols[retailBase+2]!.width, lineBreak: false });
           doc.text(row.retailerMargin != null ? `${row.retailerMargin.toFixed(1)}%` : '—', cols[retailBase+3]!.x, y, { width: cols[retailBase+3]!.width, lineBreak: false });
@@ -434,7 +436,7 @@ export async function buildBrandedPdf({
         } else {
           doc.text(palletStr, c3.x, y, { width: c3.width, lineBreak: false });
           const retailBase = 4;
-          doc.text(priceStr, cols[retailBase]!.x, y, { width: cols[retailBase]!.width, lineBreak: false });
+          doc.text(retailCostStr, cols[retailBase]!.x, y, { width: cols[retailBase]!.width, lineBreak: false });
           doc.text(row.retailerRrp != null ? row.retailerRrp.toFixed(2) : '—', cols[retailBase+1]!.x, y, { width: cols[retailBase+1]!.width, lineBreak: false });
           doc.text(row.retailerProfit != null ? row.retailerProfit.toFixed(2) : '—', cols[retailBase+2]!.x, y, { width: cols[retailBase+2]!.width, lineBreak: false });
           doc.text(row.retailerMargin != null ? `${row.retailerMargin.toFixed(1)}%` : '—', cols[retailBase+3]!.x, y, { width: cols[retailBase+3]!.width, lineBreak: false });
