@@ -478,7 +478,7 @@ function ProductCard({
               )}
               {rrpMarginPct !== null && (
                 <Badge variant="outline" className={`text-xs ${rrpMarginBadgeClass}`}>
-                  RRP margin {rrpMarginPct.toFixed(1)}%
+                  RRP margin {rrpMarginPct.toFixed(1)}% per pack
                 </Badge>
               )}
               {activePromos.map((promo, i) => (

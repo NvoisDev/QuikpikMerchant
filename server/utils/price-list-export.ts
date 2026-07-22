@@ -145,7 +145,7 @@ export async function buildBrandedWorkbook({
     baseHeaders = ['Product Name', 'Pack Size / Unit', 'Unit Price', 'Pallet Price', 'Units per Pallet'];
   }
   const headers = showRetailerEconomics
-    ? [...baseHeaders, 'Total Cost per Unit (Retailer)', 'RRP (Retailer)', 'Profit (Retailer)', 'Retail Margin', 'Bulk Buy']
+    ? [...baseHeaders, 'Total Cost per Unit (Retailer)', 'RRP (Retailer)', 'Profit (Retailer)', 'Retail Margin (per unit)', 'Bulk Buy']
     : baseHeaders;
 
   const headerRow = ws.addRow(headers);
@@ -285,7 +285,7 @@ export async function buildBrandedPdf({
           { label: 'Cost per Unit',         x: 478, width: 58  },
           { label: 'RRP (Retailer)',        x: 541, width: 52  },
           { label: 'Profit per Unit',       x: 598, width: 52  },
-          { label: 'Retail Margin',         x: 655, width: 52  },
+          { label: 'Retail Margin (per unit)', x: 655, width: 52  },
           { label: 'Bulk Buy',              x: 712, width: 54  },
         ];
       } else if (showRrp) {
@@ -298,7 +298,7 @@ export async function buildBrandedPdf({
           { label: 'Cost per Unit',         x: 445, width: 62  },
           { label: 'RRP (Retailer)',        x: 512, width: 56  },
           { label: 'Profit per Unit',       x: 573, width: 56  },
-          { label: 'Retail Margin',         x: 634, width: 54  },
+          { label: 'Retail Margin (per unit)', x: 634, width: 54  },
           { label: 'Bulk Buy',              x: 693, width: 58  },
         ];
       } else if (showRrpMargin) {
@@ -311,7 +311,7 @@ export async function buildBrandedPdf({
           { label: 'Cost per Unit',         x: 445, width: 62  },
           { label: 'RRP (Retailer)',        x: 512, width: 56  },
           { label: 'Profit per Unit',       x: 573, width: 56  },
-          { label: 'Retail Margin',         x: 634, width: 54  },
+          { label: 'Retail Margin (per unit)', x: 634, width: 54  },
           { label: 'Bulk Buy',              x: 693, width: 58  },
         ];
       } else {
@@ -323,7 +323,7 @@ export async function buildBrandedPdf({
           { label: 'Cost per Unit',         x: 430, width: 65  },
           { label: 'RRP (Retailer)',        x: 500, width: 58  },
           { label: 'Profit per Unit',       x: 563, width: 58  },
-          { label: 'Retail Margin',         x: 626, width: 58  },
+          { label: 'Retail Margin (per unit)', x: 626, width: 58  },
           { label: 'Bulk Buy',              x: 689, width: 62  },
         ];
       }

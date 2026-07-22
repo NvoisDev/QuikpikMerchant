@@ -88,7 +88,7 @@ describe('ProductCard — RRP margin badge visibility', () => {
     const ProductCard = (await import('@/components/product-card')).default;
     render(React.createElement(ProductCard, { product: makeProduct(), rrpMarginVisible: true }));
     // rrpTotal = 5 × 4 = 20, wholesale = 10 → margin = 50 %
-    expect(screen.getByText(/RRP margin 50\.0%/i)).toBeTruthy();
+    expect(screen.getByText(/RRP margin 50\.0% per pack/i)).toBeTruthy();
   });
 
   it('does not render the RRP margin badge when rrpMarginVisible is true but rrp is missing', async () => {
