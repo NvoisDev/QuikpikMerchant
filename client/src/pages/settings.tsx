@@ -717,6 +717,7 @@ function PublicStoreSettings({ user }: { user: any }) {
   const [showPackSize, setShowPackSize] = useState(user?.packSizeVisible ?? true);
   const [showRrp, setShowRrp] = useState(user?.rrpVisible ?? false);
   const [showRrpMargin, setShowRrpMargin] = useState(user?.rrpMarginVisible ?? false);
+  const [showRetailerEconomics, setShowRetailerEconomics] = useState(user?.retailerEconomicsVisible ?? false);
   const [description, setDescription] = useState(user?.storeDescription || '');
   const [regions, setRegions] = useState(user?.deliveryRegions || '');
   const [showOnHomepage, setShowOnHomepage] = useState(user?.showOnHomepage ?? false);
@@ -736,6 +737,7 @@ function PublicStoreSettings({ user }: { user: any }) {
     setShowPackSize(user?.packSizeVisible ?? true);
     setShowRrp(user?.rrpVisible ?? false);
     setShowRrpMargin(user?.rrpMarginVisible ?? false);
+    setShowRetailerEconomics(user?.retailerEconomicsVisible ?? false);
     setDescription(user?.storeDescription || '');
     setRegions(user?.deliveryRegions || '');
     setShowOnHomepage(user?.showOnHomepage ?? false);
@@ -745,7 +747,7 @@ function PublicStoreSettings({ user }: { user: any }) {
     setPortalAllowPayLater(user?.allowPayLater ?? false);
     setPortalDeliveryNote(user?.deliveryNote || '');
     setPortalPickupInstructions(user?.pickupInstructions || '');
-  }, [user?.storeVisibility, user?.priceDisplayMode, user?.moqVisible, user?.stockVisible, user?.packSizeVisible, user?.rrpVisible, user?.rrpMarginVisible, user?.storeDescription, user?.deliveryRegions, user?.showOnHomepage, user?.minOrderAmount, user?.whatsappContactVisible, user?.showOwnerName, user?.allowPayLater, user?.deliveryNote, user?.pickupInstructions]);
+  }, [user?.storeVisibility, user?.priceDisplayMode, user?.moqVisible, user?.stockVisible, user?.packSizeVisible, user?.rrpVisible, user?.rrpMarginVisible, user?.retailerEconomicsVisible, user?.storeDescription, user?.deliveryRegions, user?.showOnHomepage, user?.minOrderAmount, user?.whatsappContactVisible, user?.showOwnerName, user?.allowPayLater, user?.deliveryNote, user?.pickupInstructions]);
 
   const storeSlug = user?.storeSlug || user?.id || '';
   const publicUrl = `${window.location.origin}/w/${storeSlug}`;
@@ -761,6 +763,7 @@ function PublicStoreSettings({ user }: { user: any }) {
         packSizeVisible: showPackSize,
         rrpVisible: showRrp,
         rrpMarginVisible: showRrpMargin,
+        retailerEconomicsVisible: showRetailerEconomics,
         storeDescription: description.trim() || null,
         deliveryRegions: regions.trim() || null,
         showOnHomepage,
@@ -849,6 +852,13 @@ function PublicStoreSettings({ user }: { user: any }) {
               <p className="text-xs text-gray-500 mt-0.5">Shows the retailer's margin on each product card — the profit a retailer would make buying at your wholesale price and selling at RRP. Useful for pitching to stockists.</p>
             </div>
             <Switch checked={showRrpMargin} onCheckedChange={setShowRrpMargin} />
+          </div>
+          <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
+            <div className="pr-3">
+              <p className="text-sm font-medium text-gray-900">Show retailer economics in price list</p>
+              <p className="text-xs text-gray-500 mt-0.5">Adds 5 extra columns to your exported price list (XLSX &amp; PDF): Cost per Unit, RRP, Profit per Unit, Retail Margin, and Bulk Buy total. Useful for helping stockists understand their margin.</p>
+            </div>
+            <Switch checked={showRetailerEconomics} onCheckedChange={setShowRetailerEconomics} />
           </div>
         </div>
       </div>
