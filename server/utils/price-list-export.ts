@@ -5,6 +5,7 @@ export interface PriceRow {
   palletPrice: number | '';
   unitsPerPallet: number | '';
   rrp?: string | null;
+  rrpMargin?: number | null;
 }
 
 export async function fetchLogoBuffer(
@@ -35,6 +36,7 @@ export async function buildBrandedWorkbook({
   logoExtension,
   businessName,
   showRrp = false,
+  showRrpMargin = false,
 }: {
   rows: PriceRow[];
   subtitle: string;
@@ -43,16 +45,35 @@ export async function buildBrandedWorkbook({
   logoExtension?: 'png' | 'jpeg' | 'gif';
   businessName: string;
   showRrp?: boolean;
+  showRrpMargin?: boolean;
 }): Promise<{ wb: any; filename: string }> {
   const ExcelJS = (await import('exceljs')).default;
   const wb = new ExcelJS.Workbook();
   const ws = wb.addWorksheet('Price List');
 
-  if (showRrp) {
+  const extraCols = (showRrp ? 1 : 0) + (showRrpMargin ? 1 : 0);
+  const colCount = 5 + extraCols;
+
+  if (showRrp && showRrpMargin) {
+    ws.getColumn(1).width = 30;
+    ws.getColumn(2).width = 18;
+    ws.getColumn(3).width = 13;
+    ws.getColumn(4).width = 13;
+    ws.getColumn(5).width = 15;
+    ws.getColumn(6).width = 14;
+    ws.getColumn(7).width = 16;
+  } else if (showRrp) {
     ws.getColumn(1).width = 35;
     ws.getColumn(2).width = 18;
     ws.getColumn(3).width = 14;
     ws.getColumn(4).width = 14;
+    ws.getColumn(5).width = 18;
+    ws.getColumn(6).width = 16;
+  } else if (showRrpMargin) {
+    ws.getColumn(1).width = 35;
+    ws.getColumn(2).width = 18;
+    ws.getColumn(3).width = 14;
+    ws.getColumn(4).width = 15;
     ws.getColumn(5).width = 18;
     ws.getColumn(6).width = 16;
   } else {
@@ -63,7 +84,6 @@ export async function buildBrandedWorkbook({
     ws.getColumn(5).width = 16;
   }
 
-  const colCount = showRrp ? 6 : 5;
   const emptyCells = Array(colCount).fill('');
 
   // Row 1: business name
@@ -85,16 +105,24 @@ export async function buildBrandedWorkbook({
   if (logoBuffer && logoExtension) {
     try {
       const imageId = wb.addImage({ buffer: logoBuffer, extension: logoExtension });
-      const logoTlCol = showRrp ? 4 : 3;
-      const logoBrCol = showRrp ? 5.99 : 4.99;
+      const logoTlCol = showRrp && showRrpMargin ? 5 : (showRrp || showRrpMargin) ? 4 : 3;
+      const logoBrCol = logoTlCol + 1.99;
       ws.addImage(imageId, { tl: { col: logoTlCol, row: 0 }, br: { col: logoBrCol, row: 2.99 } } as any);
     } catch {}
   }
 
   // Row 4: column headers
-  const headers = showRrp
-    ? ['Product Name', 'Pack Size / Unit', 'Unit Price', 'Unit RRP', 'Pallet Price', 'Units per Pallet']
-    : ['Product Name', 'Pack Size / Unit', 'Unit Price', 'Pallet Price', 'Units per Pallet'];
+  let headers: string[];
+  if (showRrp && showRrpMargin) {
+    headers = ['Product Name', 'Pack Size / Unit', 'Unit Price', 'Unit RRP', 'RRP Margin %', 'Pallet Price', 'Units per Pallet'];
+  } else if (showRrp) {
+    headers = ['Product Name', 'Pack Size / Unit', 'Unit Price', 'Unit RRP', 'Pallet Price', 'Units per Pallet'];
+  } else if (showRrpMargin) {
+    headers = ['Product Name', 'Pack Size / Unit', 'Unit Price', 'RRP Margin %', 'Pallet Price', 'Units per Pallet'];
+  } else {
+    headers = ['Product Name', 'Pack Size / Unit', 'Unit Price', 'Pallet Price', 'Units per Pallet'];
+  }
+
   const headerRow = ws.addRow(headers);
   headerRow.height = 20;
   headerRow.eachCell((cell: any) => {
@@ -107,7 +135,23 @@ export async function buildBrandedWorkbook({
   // Data rows
   rows.forEach(row => {
     let dr: any;
-    if (showRrp) {
+    const marginDisplay = row.rrpMargin != null ? parseFloat(row.rrpMargin.toFixed(1)) : '—';
+
+    if (showRrp && showRrpMargin) {
+      dr = ws.addRow([
+        row.name,
+        row.packSize,
+        row.unitPrice,
+        row.rrp || '—',
+        marginDisplay,
+        row.palletPrice,
+        row.unitsPerPallet,
+      ]);
+      dr.height = 18;
+      dr.getCell(3).numFmt = '#,##0.00';
+      if (row.palletPrice !== '') dr.getCell(6).numFmt = '#,##0.00';
+      if (row.rrpMargin != null) dr.getCell(5).numFmt = '0.0"%"';
+    } else if (showRrp) {
       dr = ws.addRow([
         row.name,
         row.packSize,
@@ -119,6 +163,19 @@ export async function buildBrandedWorkbook({
       dr.height = 18;
       dr.getCell(3).numFmt = '#,##0.00';
       if (row.palletPrice !== '') dr.getCell(5).numFmt = '#,##0.00';
+    } else if (showRrpMargin) {
+      dr = ws.addRow([
+        row.name,
+        row.packSize,
+        row.unitPrice,
+        marginDisplay,
+        row.palletPrice,
+        row.unitsPerPallet,
+      ]);
+      dr.height = 18;
+      dr.getCell(3).numFmt = '#,##0.00';
+      if (row.palletPrice !== '') dr.getCell(5).numFmt = '#,##0.00';
+      if (row.rrpMargin != null) dr.getCell(4).numFmt = '0.0"%"';
     } else {
       dr = ws.addRow([
         row.name,
@@ -142,12 +199,14 @@ export async function buildBrandedPdf({
   logoBuffer,
   businessName,
   showRrp = false,
+  showRrpMargin = false,
 }: {
   rows: PriceRow[];
   subtitle: string;
   logoBuffer?: Buffer;
   businessName: string;
   showRrp?: boolean;
+  showRrpMargin?: boolean;
 }): Promise<Buffer> {
   const PDFDocument = (await import('pdfkit')).default;
 
@@ -176,22 +235,42 @@ export async function buildBrandedPdf({
     const divY = 120;
     doc.strokeColor('#d1d5db').lineWidth(1).moveTo(50, divY).lineTo(doc.page.width - 50, divY).stroke();
 
-    // Column layout: 5 cols when showRrp, 4 cols otherwise
+    // Column layout
     // Page usable width: 50 to 545 = 495pt
-    const cols = showRrp
-      ? [
-          { label: 'Product Name',    x: 50,  width: 165 },
-          { label: 'Pack Size / Unit', x: 220, width: 88  },
-          { label: 'Unit Price',       x: 313, width: 68  },
-          { label: 'Unit RRP',         x: 386, width: 68  },
-          { label: 'Pallet Price',     x: 459, width: 86  },
-        ]
-      : [
-          { label: 'Product Name',    x: 50,  width: 195 },
-          { label: 'Pack Size / Unit', x: 255, width: 108 },
-          { label: 'Unit Price',       x: 373, width: 80  },
-          { label: 'Pallet Price',     x: 463, width: 82  },
-        ];
+    let cols: Array<{ label: string; x: number; width: number }>;
+    if (showRrp && showRrpMargin) {
+      cols = [
+        { label: 'Product Name',    x: 50,  width: 145 },
+        { label: 'Pack Size / Unit', x: 200, width: 80  },
+        { label: 'Unit Price',       x: 285, width: 58  },
+        { label: 'Unit RRP',         x: 348, width: 58  },
+        { label: 'RRP Margin %',     x: 411, width: 58  },
+        { label: 'Pallet Price',     x: 474, width: 71  },
+      ];
+    } else if (showRrp) {
+      cols = [
+        { label: 'Product Name',    x: 50,  width: 165 },
+        { label: 'Pack Size / Unit', x: 220, width: 88  },
+        { label: 'Unit Price',       x: 313, width: 68  },
+        { label: 'Unit RRP',         x: 386, width: 68  },
+        { label: 'Pallet Price',     x: 459, width: 86  },
+      ];
+    } else if (showRrpMargin) {
+      cols = [
+        { label: 'Product Name',    x: 50,  width: 165 },
+        { label: 'Pack Size / Unit', x: 220, width: 88  },
+        { label: 'Unit Price',       x: 313, width: 68  },
+        { label: 'RRP Margin %',     x: 386, width: 68  },
+        { label: 'Pallet Price',     x: 459, width: 86  },
+      ];
+    } else {
+      cols = [
+        { label: 'Product Name',    x: 50,  width: 195 },
+        { label: 'Pack Size / Unit', x: 255, width: 108 },
+        { label: 'Unit Price',       x: 373, width: 80  },
+        { label: 'Pallet Price',     x: 463, width: 82  },
+      ];
+    }
 
     let y = divY + 14;
 
@@ -216,16 +295,25 @@ export async function buildBrandedPdf({
 
       const priceStr = row.unitPrice.toFixed(2);
       const palletStr = row.palletPrice !== '' ? (row.palletPrice as number).toFixed(2) : '—';
+      const marginStr = row.rrpMargin != null ? `${row.rrpMargin.toFixed(1)}%` : '—';
 
       doc.fillColor('#111827');
-      doc.text(row.name,    cols[0]!.x, y, { width: cols[0]!.width, lineBreak: false });
+      doc.text(row.name,     cols[0]!.x, y, { width: cols[0]!.width, lineBreak: false });
       doc.text(row.packSize, cols[1]!.x, y, { width: cols[1]!.width, lineBreak: false });
-      doc.text(priceStr,    cols[2]!.x, y, { width: cols[2]!.width, lineBreak: false });
+      doc.text(priceStr,     cols[2]!.x, y, { width: cols[2]!.width, lineBreak: false });
 
-      if (showRrp) {
+      if (showRrp && showRrpMargin) {
+        const rrpStr = row.rrp || '—';
+        doc.text(rrpStr,     cols[3]!.x, y, { width: cols[3]!.width, lineBreak: false });
+        doc.text(marginStr,  cols[4]!.x, y, { width: cols[4]!.width, lineBreak: false });
+        doc.text(palletStr,  cols[5]!.x, y, { width: cols[5]!.width, lineBreak: false });
+      } else if (showRrp) {
         const rrpStr = row.rrp || '—';
         doc.text(rrpStr,    cols[3]!.x, y, { width: cols[3]!.width, lineBreak: false });
         doc.text(palletStr, cols[4]!.x, y, { width: cols[4]!.width, lineBreak: false });
+      } else if (showRrpMargin) {
+        doc.text(marginStr,  cols[3]!.x, y, { width: cols[3]!.width, lineBreak: false });
+        doc.text(palletStr,  cols[4]!.x, y, { width: cols[4]!.width, lineBreak: false });
       } else {
         doc.text(palletStr, cols[3]!.x, y, { width: cols[3]!.width, lineBreak: false });
       }

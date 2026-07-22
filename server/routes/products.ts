@@ -75,6 +75,7 @@ export function registerProductRoutes(app: Express): void {
 
       const wholesaler = await storage.getUser(wholesalerId);
       const showRrp = wholesaler?.rrpVisible === true;
+      const showRrpMargin = wholesaler?.rrpMarginVisible === true;
 
       const rows = allProducts.map((p: any) => {
         const hasPallets = p.palletPrice != null;
@@ -85,13 +86,24 @@ export function registerProductRoutes(app: Express): void {
         const packParts = [p.packQuantity, unitDisplay].filter(Boolean);
         const palletPrice: number | '' = hasPallets ? parseFloat(p.palletPrice) : '';
         const unitsPerPallet: number | '' = hasPallets && p.unitsPerPallet != null ? p.unitsPerPallet : '';
+        const unitPriceNum = parseFloat(p.price || '0');
+        const rrpNum = p.rrp != null ? parseFloat(String(p.rrp)) : null;
+        const qty = p.packQuantity != null ? Number(p.packQuantity) : null;
+        let rrpMargin: number | null = null;
+        if (showRrpMargin && rrpNum != null && qty != null && qty > 0) {
+          const rrpPack = rrpNum * qty;
+          if (rrpPack > 0) {
+            rrpMargin = ((rrpPack - unitPriceNum) / rrpPack) * 100;
+          }
+        }
         return {
           name: p.name || '—',
           packSize: packParts.length > 0 ? packParts.join(' x ') : '—',
-          unitPrice: parseFloat(p.price || '0'),
+          unitPrice: unitPriceNum,
           palletPrice,
           unitsPerPallet,
           rrp: (showRrp && p.rrp != null) ? parseFloat(String(p.rrp)).toFixed(2) : null,
+          rrpMargin,
         };
       });
       const businessName = wholesaler?.businessName || 'Standard Price List';
@@ -108,7 +120,7 @@ export function registerProductRoutes(app: Express): void {
       const safeName = businessName.replace(/[/\\?%*:|"<>]/g, '-');
 
       if (format === 'pdf') {
-        const pdfBuffer = await buildBrandedPdf({ rows, subtitle, logoBuffer, businessName, showRrp });
+        const pdfBuffer = await buildBrandedPdf({ rows, subtitle, logoBuffer, businessName, showRrp, showRrpMargin });
         res.setHeader('Content-Type', 'application/pdf');
         res.setHeader('Content-Disposition', `attachment; filename="${safeName} - Standard Price List.pdf"`);
         return res.send(pdfBuffer);
@@ -122,6 +134,7 @@ export function registerProductRoutes(app: Express): void {
         logoExtension,
         businessName,
         showRrp,
+        showRrpMargin,
       });
       const buf = Buffer.from(await wb.xlsx.writeBuffer());
       res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
