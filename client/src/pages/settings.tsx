@@ -105,12 +105,12 @@ function BusinessProfilesSection() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
           <h3 className="text-base sm:text-lg font-medium text-gray-900">Business Profiles</h3>
           <p className="text-sm text-gray-500 mt-0.5">Create multiple trading identities. Choose one when creating a quote or order. These are separate from your main business settings.</p>
         </div>
-        <Button size="sm" className="gap-1.5" onClick={openAdd}>
+        <Button size="sm" className="gap-1.5 flex-shrink-0" onClick={openAdd}>
           <Plus className="h-4 w-4" />Add Profile
         </Button>
       </div>
@@ -120,45 +120,47 @@ function BusinessProfilesSection() {
       ) : (
         <div className="space-y-3">
           {profiles.map(p => (
-            <div key={p.id} className="border border-gray-200 rounded-lg p-4 flex items-start gap-3">
-              {p.logoUrl ? (
-                <img src={p.logoUrl} alt={p.name} className="h-10 w-10 rounded object-cover flex-shrink-0" />
-              ) : (
-                <div className="h-10 w-10 rounded bg-blue-50 flex items-center justify-center flex-shrink-0">
-                  <Building2 className="h-5 w-5 text-blue-500" />
+            <div key={p.id} className="border border-gray-200 rounded-lg p-4">
+              <div className="flex items-start gap-3">
+                {p.logoUrl ? (
+                  <img src={p.logoUrl} alt={p.name} className="h-10 w-10 rounded object-cover flex-shrink-0" />
+                ) : (
+                  <div className="h-10 w-10 rounded bg-blue-50 flex items-center justify-center flex-shrink-0">
+                    <Building2 className="h-5 w-5 text-blue-500" />
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="text-sm font-semibold text-gray-900">{p.name}</p>
+                    {p.isDefault && (
+                      <span className="inline-flex items-center gap-1 text-xs px-1.5 py-0.5 bg-blue-50 border border-blue-200 text-blue-700 rounded">
+                        <Star className="h-2.5 w-2.5" />Default
+                      </span>
+                    )}
+                  </div>
+                  {p.address && <p className="text-xs text-gray-500 mt-0.5">{p.address}</p>}
                 </div>
-              )}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <p className="text-sm font-semibold text-gray-900 truncate">{p.name}</p>
-                  {p.isDefault && (
-                    <span className="inline-flex items-center gap-1 text-xs px-1.5 py-0.5 bg-blue-50 border border-blue-200 text-blue-700 rounded">
-                      <Star className="h-2.5 w-2.5" />Default
-                    </span>
-                  )}
-                </div>
-                {p.address && <p className="text-xs text-gray-500 mt-0.5 truncate">{p.address}</p>}
               </div>
-              <div className="flex items-center gap-1.5 flex-shrink-0">
+              <div className="flex items-center justify-end gap-1.5 mt-3 pt-3 border-t border-gray-100">
                 {!p.isDefault && (
                   <Button
                     size="sm"
                     variant="outline"
-                    className="h-7 text-xs"
+                    className="h-8 text-xs mr-auto"
                     onClick={() => setDefaultMutation.mutate(p.id)}
                     disabled={setDefaultMutation.isPending}
                   >
                     Set default
                   </Button>
                 )}
-                <Button size="sm" variant="outline" className="h-7 w-7 p-0" onClick={() => openEdit(p)}>
+                <Button size="sm" variant="outline" className="h-8 w-8 p-0" onClick={() => openEdit(p)}>
                   <Pencil className="h-3.5 w-3.5" />
                 </Button>
                 {!p.isDefault && (
                   <Button
                     size="sm"
                     variant="outline"
-                    className="h-7 w-7 p-0 text-red-500 hover:text-red-600 hover:border-red-200"
+                    className="h-8 w-8 p-0 text-red-500 hover:text-red-600 hover:border-red-200"
                     onClick={() => setProfileToDelete(p)}
                     disabled={deleteMutation.isPending}
                   >
@@ -548,13 +550,13 @@ function CollectionAddressesSection() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
           <h3 className="text-base sm:text-lg font-medium text-gray-900">Collection Addresses</h3>
           <p className="text-sm text-gray-500 mt-0.5">Add multiple pickup locations. Customers and quotes will show the selected address. Orders without a specific address fall back to your registered business address.</p>
         </div>
         {canManage && (
-          <Button size="sm" className="gap-1.5" onClick={openAdd}>
+          <Button size="sm" className="gap-1.5 flex-shrink-0" onClick={openAdd}>
             <Plus className="h-4 w-4" />Add Address
           </Button>
         )}
@@ -567,36 +569,40 @@ function CollectionAddressesSection() {
       ) : (
         <div className="space-y-3">
           {addresses.map(a => (
-            <div key={a.id} className="border border-gray-200 rounded-lg p-4 flex items-start gap-3">
-              <div className="h-9 w-9 rounded bg-green-50 flex items-center justify-center flex-shrink-0">
-                <MapPin className="h-4 w-4 text-green-600" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <p className="text-sm font-semibold text-gray-900">{a.name}</p>
-                  {a.isDefault && (
-                    <span className="inline-flex items-center gap-1 text-xs px-1.5 py-0.5 bg-green-50 border border-green-200 text-green-700 rounded">
-                      <Star className="h-2.5 w-2.5" />Default
-                    </span>
-                  )}
+            <div key={a.id} className="border border-gray-200 rounded-lg p-4">
+              <div className="flex items-start gap-3">
+                <div className="h-9 w-9 rounded bg-green-50 flex items-center justify-center flex-shrink-0">
+                  <MapPin className="h-4 w-4 text-green-600" />
                 </div>
-                <p className="text-xs text-gray-500 mt-0.5">
-                  {[a.addressLine1, a.addressLine2, a.city, a.postcode].filter(Boolean).join(', ')}
-                </p>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="text-sm font-semibold text-gray-900">{a.name}</p>
+                    {a.isDefault && (
+                      <span className="inline-flex items-center gap-1 text-xs px-1.5 py-0.5 bg-green-50 border border-green-200 text-green-700 rounded">
+                        <Star className="h-2.5 w-2.5" />Default
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    {[a.addressLine1, a.addressLine2, a.city, a.postcode].filter(Boolean).join(', ')}
+                  </p>
+                </div>
               </div>
               {canManage && (
-                <div className="flex items-center gap-1.5 flex-shrink-0">
+                <div className="flex items-center justify-end gap-1.5 mt-3 pt-3 border-t border-gray-100">
                   {!a.isDefault && (
-                    <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setDefaultMutation.mutate(a.id)} disabled={setDefaultMutation.isPending}>
+                    <Button size="sm" variant="outline" className="h-8 text-xs mr-auto" onClick={() => setDefaultMutation.mutate(a.id)} disabled={setDefaultMutation.isPending}>
                       Set default
                     </Button>
                   )}
-                  <Button size="sm" variant="outline" className="h-7 w-7 p-0" onClick={() => openEdit(a)}>
+                  <Button size="sm" variant="outline" className="h-8 w-8 p-0" onClick={() => openEdit(a)}>
                     <Pencil className="h-3.5 w-3.5" />
                   </Button>
-                  <Button size="sm" variant="outline" className="h-7 w-7 p-0 text-red-500 hover:text-red-600 hover:border-red-200" onClick={() => setToDelete(a)} disabled={deleteMutation.isPending}>
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
+                  {!a.isDefault && (
+                    <Button size="sm" variant="outline" className="h-8 w-8 p-0 text-red-500 hover:text-red-600 hover:border-red-200" onClick={() => setToDelete(a)} disabled={deleteMutation.isPending}>
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  )}
                 </div>
               )}
             </div>
