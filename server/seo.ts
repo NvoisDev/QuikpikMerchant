@@ -170,6 +170,41 @@ function homeMeta(): SeoMeta {
   </p>
 </main>`.trim();
 
+  const jsonLd = safeJsonLd({
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebSite",
+        "@id": `${BASE_URL}/#website`,
+        name: "Quikpik",
+        url: BASE_URL,
+        description:
+          "The all-in-one wholesale platform for managing orders, customers, products, and payments.",
+        potentialAction: {
+          "@type": "SearchAction",
+          target: {
+            "@type": "EntryPoint",
+            urlTemplate: `${BASE_URL}/marketplace?q={search_term_string}`,
+          },
+          "query-input": "required name=search_term_string",
+        },
+      },
+      {
+        "@type": "Organization",
+        "@id": `${BASE_URL}/#organization`,
+        name: "Quikpik",
+        url: BASE_URL,
+        logo: {
+          "@type": "ImageObject",
+          url: `${BASE_URL}/favicon.png`,
+        },
+        description:
+          "Quikpik is a B2B wholesale platform that helps wholesalers manage products, orders, customers, invoices, inventory, and payments from a single dashboard.",
+        sameAs: [],
+      },
+    ],
+  });
+
   return {
     title,
     description,
@@ -182,6 +217,7 @@ function homeMeta(): SeoMeta {
     twitterTitle: title,
     twitterDescription: description,
     twitterImage: DEFAULT_IMAGE,
+    jsonLd,
     bodyHtml,
   };
 }
@@ -753,6 +789,8 @@ export function injectMeta(html: string, meta: SeoMeta): string {
     `<title>${e(meta.title)}</title>`,
     `<meta name="description" content="${e(meta.description)}" />`,
     `<link rel="canonical" href="${e(meta.canonicalUrl)}" />`,
+    `<meta property="og:site_name" content="Quikpik" />`,
+    `<meta property="og:locale" content="en_GB" />`,
     `<meta property="og:title" content="${e(meta.ogTitle)}" />`,
     `<meta property="og:description" content="${e(meta.ogDescription)}" />`,
     `<meta property="og:image" content="${e(meta.ogImage)}" />`,
