@@ -1445,7 +1445,7 @@ export default function ProductManagement() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
             {filteredProducts.map((product) => (
               <div key={product.id} className="space-y-3">
-                <ProductCard product={product} onStatusChange={handleStatusChange} onDelete={handleDeleteLocked} isViewer={isViewer} />
+                <ProductCard product={product} onStatusChange={handleStatusChange} onDelete={handleDeleteLocked} isViewer={isViewer} rrpMarginVisible={user?.rrpMarginVisible === true} />
               </div>
             ))}
           </div>

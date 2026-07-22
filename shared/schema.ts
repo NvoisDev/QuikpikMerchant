@@ -311,6 +311,7 @@ export const users = pgTable("users", {
   stockVisible: boolean("stock_visible").default(false),
   packSizeVisible: boolean("pack_size_visible").default(true),
   rrpVisible: boolean("rrp_visible").default(false),
+  rrpMarginVisible: boolean("rrp_margin_visible").default(false),
   storeDescription: text("store_description"),
   deliveryRegions: varchar("delivery_regions", { length: 500 }),
 

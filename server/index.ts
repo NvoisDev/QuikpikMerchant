@@ -830,6 +830,7 @@ async function runStartupMigrations() {
     // RRP per product with store-level toggle
     `ALTER TABLE products ADD COLUMN IF NOT EXISTS rrp DECIMAL(10, 2)`,
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS rrp_visible BOOLEAN NOT NULL DEFAULT FALSE`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS rrp_margin_visible BOOLEAN NOT NULL DEFAULT FALSE`,
   ];
   let warned = 0;
   for (const stmt of migrations) {

@@ -59,6 +59,7 @@ interface Product {
   nearestExpiry?: string | null;
   totalBatchStock?: number | null;
   percentSold?: number | null;
+  rrp?: string | null;
 }
 
 function getActivePromos(offers: PromotionalOffer[]): PromotionalOffer[] {
@@ -97,6 +98,7 @@ const calcMarginPct = (price: string | number, costPrice: string | number): numb
 };
 
 interface ProductCardProps {
+  rrpMarginVisible?: boolean;
   product: Product;
   onStatusChange?: (id: number, status: "active" | "inactive" | "out_of_stock" | "locked") => void;
   onDelete?: (id: number) => void;
@@ -108,6 +110,7 @@ function ProductCard({
   onStatusChange,
   onDelete,
   isViewer = false,
+  rrpMarginVisible = false,
 }: ProductCardProps) {
   const { formatMoney } = useCurrency();
   const [, navigate] = useLocation();
@@ -208,6 +211,24 @@ function ProductCard({
       : margin < 0
         ? "border-red-300 text-red-700 bg-red-50"
         : margin < 15
+          ? "border-amber-300 text-amber-700 bg-amber-50"
+          : "border-green-300 text-green-700 bg-green-50";
+
+  const rrpMarginPct: number | null = (() => {
+    if (!rrpMarginVisible) return null;
+    const rrpVal = parseFloat(String(product.rrp ?? ''));
+    const qty = product.quantityInPack ?? 1;
+    const wholesale = parseFloat(String(product.price));
+    if (!isFinite(rrpVal) || rrpVal <= 0 || !isFinite(wholesale) || qty <= 0) return null;
+    const rrpTotal = rrpVal * qty;
+    return ((rrpTotal - wholesale) / rrpTotal) * 100;
+  })();
+  const rrpMarginBadgeClass =
+    rrpMarginPct === null
+      ? ""
+      : rrpMarginPct < 0
+        ? "border-red-300 text-red-700 bg-red-50"
+        : rrpMarginPct < 15
           ? "border-amber-300 text-amber-700 bg-amber-50"
           : "border-green-300 text-green-700 bg-green-50";
 
@@ -453,6 +474,11 @@ function ProductCard({
               {margin !== null && (
                 <Badge variant="outline" className={`text-xs ${marginBadgeClass}`}>
                   Margin {margin.toFixed(1)}%
+                </Badge>
+              )}
+              {rrpMarginPct !== null && (
+                <Badge variant="outline" className={`text-xs ${rrpMarginBadgeClass}`}>
+                  RRP margin {rrpMarginPct.toFixed(1)}%
                 </Badge>
               )}
               {activePromos.map((promo, i) => (

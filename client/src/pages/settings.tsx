@@ -716,6 +716,7 @@ function PublicStoreSettings({ user }: { user: any }) {
   const [showStock, setShowStock] = useState(user?.stockVisible ?? false);
   const [showPackSize, setShowPackSize] = useState(user?.packSizeVisible ?? true);
   const [showRrp, setShowRrp] = useState(user?.rrpVisible ?? false);
+  const [showRrpMargin, setShowRrpMargin] = useState(user?.rrpMarginVisible ?? false);
   const [description, setDescription] = useState(user?.storeDescription || '');
   const [regions, setRegions] = useState(user?.deliveryRegions || '');
   const [showOnHomepage, setShowOnHomepage] = useState(user?.showOnHomepage ?? false);
@@ -734,6 +735,7 @@ function PublicStoreSettings({ user }: { user: any }) {
     setShowStock(user?.stockVisible ?? false);
     setShowPackSize(user?.packSizeVisible ?? true);
     setShowRrp(user?.rrpVisible ?? false);
+    setShowRrpMargin(user?.rrpMarginVisible ?? false);
     setDescription(user?.storeDescription || '');
     setRegions(user?.deliveryRegions || '');
     setShowOnHomepage(user?.showOnHomepage ?? false);
@@ -743,7 +745,7 @@ function PublicStoreSettings({ user }: { user: any }) {
     setPortalAllowPayLater(user?.allowPayLater ?? false);
     setPortalDeliveryNote(user?.deliveryNote || '');
     setPortalPickupInstructions(user?.pickupInstructions || '');
-  }, [user?.storeVisibility, user?.priceDisplayMode, user?.moqVisible, user?.stockVisible, user?.packSizeVisible, user?.rrpVisible, user?.storeDescription, user?.deliveryRegions, user?.showOnHomepage, user?.minOrderAmount, user?.whatsappContactVisible, user?.showOwnerName, user?.allowPayLater, user?.deliveryNote, user?.pickupInstructions]);
+  }, [user?.storeVisibility, user?.priceDisplayMode, user?.moqVisible, user?.stockVisible, user?.packSizeVisible, user?.rrpVisible, user?.rrpMarginVisible, user?.storeDescription, user?.deliveryRegions, user?.showOnHomepage, user?.minOrderAmount, user?.whatsappContactVisible, user?.showOwnerName, user?.allowPayLater, user?.deliveryNote, user?.pickupInstructions]);
 
   const storeSlug = user?.storeSlug || user?.id || '';
   const publicUrl = `${window.location.origin}/w/${storeSlug}`;
@@ -758,6 +760,7 @@ function PublicStoreSettings({ user }: { user: any }) {
         stockVisible: showStock,
         packSizeVisible: showPackSize,
         rrpVisible: showRrp,
+        rrpMarginVisible: showRrpMargin,
         storeDescription: description.trim() || null,
         deliveryRegions: regions.trim() || null,
         showOnHomepage,
@@ -831,6 +834,21 @@ function PublicStoreSettings({ user }: { user: any }) {
               <p className="text-xs text-gray-500 mt-0.5">Customers will see the recommended retail price alongside your wholesale price to show their saving. Also unlocks the RRP field in product settings.</p>
             </div>
             <Switch checked={showRrp} onCheckedChange={setShowRrp} />
+          </div>
+        </div>
+      </div>
+
+      {/* Wholesaler product view */}
+      <div className="mb-4">
+        <Label className="text-xs font-medium text-gray-700 mb-1 block">Your product view</Label>
+        <p className="text-xs text-gray-500 mb-2">Controls extra information shown on product cards in your catalogue — only you and your team can see this.</p>
+        <div className="space-y-2">
+          <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
+            <div className="pr-3">
+              <p className="text-sm font-medium text-gray-900">Show RRP margin on product cards</p>
+              <p className="text-xs text-gray-500 mt-0.5">Shows the retailer's margin on each product card — the profit a retailer would make buying at your wholesale price and selling at RRP. Useful for pitching to stockists.</p>
+            </div>
+            <Switch checked={showRrpMargin} onCheckedChange={setShowRrpMargin} />
           </div>
         </div>
       </div>
