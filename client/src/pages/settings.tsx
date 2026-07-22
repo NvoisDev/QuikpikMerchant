@@ -105,7 +105,7 @@ function BusinessProfilesSection() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-2">
         <div className="min-w-0">
           <h3 className="text-base sm:text-lg font-medium text-gray-900">Business Profiles</h3>
           <p className="text-sm text-gray-500 mt-0.5">Create multiple trading identities. Choose one when creating a quote or order. These are separate from your main business settings.</p>
@@ -140,31 +140,36 @@ function BusinessProfilesSection() {
                   </div>
                   {p.address && <p className="text-xs text-gray-500 mt-0.5">{p.address}</p>}
                 </div>
+                {/* Desktop: inline actions */}
+                <div className="hidden sm:flex items-center gap-1.5 flex-shrink-0">
+                  {!p.isDefault && (
+                    <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setDefaultMutation.mutate(p.id)} disabled={setDefaultMutation.isPending}>
+                      Set default
+                    </Button>
+                  )}
+                  <Button size="sm" variant="outline" className="h-7 w-7 p-0" onClick={() => openEdit(p)}>
+                    <Pencil className="h-3.5 w-3.5" />
+                  </Button>
+                  {!p.isDefault && (
+                    <Button size="sm" variant="outline" className="h-7 w-7 p-0 text-red-500 hover:text-red-600 hover:border-red-200" onClick={() => setProfileToDelete(p)} disabled={deleteMutation.isPending}>
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  )}
+                </div>
               </div>
-              <div className="flex items-center justify-end gap-1.5 mt-3 pt-3 border-t border-gray-100">
+              {/* Mobile: action row below content */}
+              <div className="flex sm:hidden items-center justify-end gap-2 mt-3 pt-3 border-t border-gray-100">
                 {!p.isDefault && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="h-8 text-xs mr-auto"
-                    onClick={() => setDefaultMutation.mutate(p.id)}
-                    disabled={setDefaultMutation.isPending}
-                  >
+                  <Button size="sm" variant="outline" className="h-11 text-xs mr-auto px-3" onClick={() => setDefaultMutation.mutate(p.id)} disabled={setDefaultMutation.isPending}>
                     Set default
                   </Button>
                 )}
-                <Button size="sm" variant="outline" className="h-8 w-8 p-0" onClick={() => openEdit(p)}>
-                  <Pencil className="h-3.5 w-3.5" />
+                <Button size="sm" variant="outline" className="h-11 w-11 p-0" onClick={() => openEdit(p)}>
+                  <Pencil className="h-4 w-4" />
                 </Button>
                 {!p.isDefault && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="h-8 w-8 p-0 text-red-500 hover:text-red-600 hover:border-red-200"
-                    onClick={() => setProfileToDelete(p)}
-                    disabled={deleteMutation.isPending}
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
+                  <Button size="sm" variant="outline" className="h-11 w-11 p-0 text-red-500 hover:text-red-600 hover:border-red-200" onClick={() => setProfileToDelete(p)} disabled={deleteMutation.isPending}>
+                    <Trash2 className="h-4 w-4" />
                   </Button>
                 )}
               </div>
@@ -550,7 +555,7 @@ function CollectionAddressesSection() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-2">
         <div className="min-w-0">
           <h3 className="text-base sm:text-lg font-medium text-gray-900">Collection Addresses</h3>
           <p className="text-sm text-gray-500 mt-0.5">Add multiple pickup locations. Customers and quotes will show the selected address. Orders without a specific address fall back to your registered business address.</p>
@@ -587,22 +592,37 @@ function CollectionAddressesSection() {
                     {[a.addressLine1, a.addressLine2, a.city, a.postcode].filter(Boolean).join(', ')}
                   </p>
                 </div>
+                {/* Desktop: inline actions */}
+                {canManage && (
+                  <div className="hidden sm:flex items-center gap-1.5 flex-shrink-0">
+                    {!a.isDefault && (
+                      <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setDefaultMutation.mutate(a.id)} disabled={setDefaultMutation.isPending}>
+                        Set default
+                      </Button>
+                    )}
+                    <Button size="sm" variant="outline" className="h-7 w-7 p-0" onClick={() => openEdit(a)}>
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button size="sm" variant="outline" className="h-7 w-7 p-0 text-red-500 hover:text-red-600 hover:border-red-200" onClick={() => setToDelete(a)} disabled={deleteMutation.isPending}>
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                )}
               </div>
+              {/* Mobile: action row below content */}
               {canManage && (
-                <div className="flex items-center justify-end gap-1.5 mt-3 pt-3 border-t border-gray-100">
+                <div className="flex sm:hidden items-center justify-end gap-2 mt-3 pt-3 border-t border-gray-100">
                   {!a.isDefault && (
-                    <Button size="sm" variant="outline" className="h-8 text-xs mr-auto" onClick={() => setDefaultMutation.mutate(a.id)} disabled={setDefaultMutation.isPending}>
+                    <Button size="sm" variant="outline" className="h-11 text-xs mr-auto px-3" onClick={() => setDefaultMutation.mutate(a.id)} disabled={setDefaultMutation.isPending}>
                       Set default
                     </Button>
                   )}
-                  <Button size="sm" variant="outline" className="h-8 w-8 p-0" onClick={() => openEdit(a)}>
-                    <Pencil className="h-3.5 w-3.5" />
+                  <Button size="sm" variant="outline" className="h-11 w-11 p-0" onClick={() => openEdit(a)}>
+                    <Pencil className="h-4 w-4" />
                   </Button>
-                  {!a.isDefault && (
-                    <Button size="sm" variant="outline" className="h-8 w-8 p-0 text-red-500 hover:text-red-600 hover:border-red-200" onClick={() => setToDelete(a)} disabled={deleteMutation.isPending}>
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
-                  )}
+                  <Button size="sm" variant="outline" className="h-11 w-11 p-0 text-red-500 hover:text-red-600 hover:border-red-200" onClick={() => setToDelete(a)} disabled={deleteMutation.isPending}>
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 </div>
               )}
             </div>
