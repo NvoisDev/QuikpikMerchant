@@ -708,6 +708,146 @@ function CollectionAddressesSection() {
   );
 }
 
+interface CataloguePreviewRow {
+  name: string;
+  packSize: string;
+  unitPrice: number;
+  palletPrice: number | null;
+  unitsPerPallet: number | null;
+  rrp: string | null;
+  rrpMargin: number | null;
+  retailerRrp: number | null;
+  retailerProfit: number | null;
+  retailerMargin: number | null;
+  bulkBuy: number | null;
+}
+
+function PriceListPreviewTable({
+  showRrp,
+  showRrpMargin,
+  showRetailerEconomics,
+}: {
+  showRrp: boolean;
+  showRrpMargin: boolean;
+  showRetailerEconomics: boolean;
+}) {
+  const { data, isLoading } = useQuery<{ rows: CataloguePreviewRow[] }>({
+    queryKey: ['/api/products/catalogue-preview'],
+  });
+
+  const fmt = (n: number) => `£${n.toFixed(2)}`;
+  const fmtPct = (n: number) => `${n.toFixed(1)}%`;
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center gap-2 py-4 text-sm text-gray-400">
+        <Loader2 className="h-4 w-4 animate-spin" />
+        Loading preview…
+      </div>
+    );
+  }
+
+  const rows = data?.rows ?? [];
+
+  if (rows.length === 0) {
+    return (
+      <p className="text-sm text-gray-400 italic py-2">No active products to preview.</p>
+    );
+  }
+
+  return (
+    <div className="mt-3 rounded-lg border border-green-200 bg-green-50/40 overflow-hidden">
+      <div className="px-3 py-2 border-b border-green-200 bg-green-50 flex items-center gap-2">
+        <Eye className="h-3.5 w-3.5 text-green-600" />
+        <span className="text-xs font-semibold text-green-700 uppercase tracking-wide">Price list preview</span>
+        <span className="text-xs text-green-600 ml-auto">Showing {rows.length} product{rows.length !== 1 ? 's' : ''}</span>
+      </div>
+      <div className="overflow-x-auto max-h-72 overflow-y-auto">
+        <table className="w-full text-xs border-collapse min-w-max">
+          <thead className="sticky top-0 z-10">
+            <tr className="bg-gray-100 text-gray-600">
+              <th className="px-3 py-2 text-left font-semibold whitespace-nowrap border-b border-gray-200">Product Name</th>
+              <th className="px-3 py-2 text-left font-semibold whitespace-nowrap border-b border-gray-200">Pack Size</th>
+              <th className="px-3 py-2 text-right font-semibold whitespace-nowrap border-b border-gray-200">Unit Price</th>
+              {showRrp && <th className="px-3 py-2 text-right font-semibold whitespace-nowrap border-b border-gray-200">Unit RRP</th>}
+              {showRrpMargin && <th className="px-3 py-2 text-right font-semibold whitespace-nowrap border-b border-gray-200">RRP Margin %</th>}
+              <th className="px-3 py-2 text-right font-semibold whitespace-nowrap border-b border-gray-200">Pallet Price</th>
+              <th className="px-3 py-2 text-right font-semibold whitespace-nowrap border-b border-gray-200">Units / Pallet</th>
+              {showRetailerEconomics && (
+                <>
+                  <th className="px-3 py-2 text-right font-semibold whitespace-nowrap border-b border-b-green-300 bg-green-100 text-green-700">Cost / Unit</th>
+                  <th className="px-3 py-2 text-right font-semibold whitespace-nowrap border-b border-b-green-300 bg-green-100 text-green-700">RRP</th>
+                  <th className="px-3 py-2 text-right font-semibold whitespace-nowrap border-b border-b-green-300 bg-green-100 text-green-700">Profit / Unit</th>
+                  <th className="px-3 py-2 text-right font-semibold whitespace-nowrap border-b border-b-green-300 bg-green-100 text-green-700">Retail Margin</th>
+                  <th className="px-3 py-2 text-right font-semibold whitespace-nowrap border-b border-b-green-300 bg-green-100 text-green-700">Bulk Buy</th>
+                </>
+              )}
+            </tr>
+            {showRetailerEconomics && (
+              <tr className="bg-green-50">
+                <td colSpan={3 + (showRrp ? 1 : 0) + (showRrpMargin ? 1 : 0) + 2} />
+                <td colSpan={5} className="px-3 py-0.5 text-center text-[10px] font-bold text-green-600 tracking-widest uppercase border-b border-green-200 bg-green-100">
+                  Retail Economics
+                </td>
+              </tr>
+            )}
+          </thead>
+          <tbody>
+            {rows.map((row, i) => (
+              <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50/60'}>
+                <td className="px-3 py-2 font-medium text-gray-900 whitespace-nowrap max-w-[180px] truncate" title={row.name}>{row.name}</td>
+                <td className="px-3 py-2 text-gray-600 whitespace-nowrap">{row.packSize}</td>
+                <td className="px-3 py-2 text-right text-gray-900 whitespace-nowrap tabular-nums">{fmt(row.unitPrice)}</td>
+                {showRrp && (
+                  <td className="px-3 py-2 text-right whitespace-nowrap tabular-nums">
+                    {row.rrp != null ? `£${row.rrp}` : <span className="text-gray-300">—</span>}
+                  </td>
+                )}
+                {showRrpMargin && (
+                  <td className="px-3 py-2 text-right whitespace-nowrap tabular-nums">
+                    {row.rrpMargin != null ? fmtPct(row.rrpMargin) : <span className="text-gray-300">—</span>}
+                  </td>
+                )}
+                <td className="px-3 py-2 text-right text-gray-600 whitespace-nowrap tabular-nums">
+                  {row.palletPrice != null ? fmt(row.palletPrice) : <span className="text-gray-300">—</span>}
+                </td>
+                <td className="px-3 py-2 text-right text-gray-600 whitespace-nowrap tabular-nums">
+                  {row.unitsPerPallet != null ? row.unitsPerPallet : <span className="text-gray-300">—</span>}
+                </td>
+                {showRetailerEconomics && (
+                  <>
+                    <td className="px-3 py-2 text-right whitespace-nowrap tabular-nums bg-green-50/50">{fmt(row.unitPrice)}</td>
+                    <td className="px-3 py-2 text-right whitespace-nowrap tabular-nums bg-green-50/50">
+                      {row.retailerRrp != null ? fmt(row.retailerRrp) : <span className="text-amber-400 font-medium">— add RRP</span>}
+                    </td>
+                    <td className="px-3 py-2 text-right whitespace-nowrap tabular-nums bg-green-50/50">
+                      {row.retailerProfit != null ? fmt(row.retailerProfit) : <span className="text-gray-300">—</span>}
+                    </td>
+                    <td className="px-3 py-2 text-right whitespace-nowrap tabular-nums bg-green-50/50">
+                      {row.retailerMargin != null ? fmtPct(row.retailerMargin) : <span className="text-gray-300">—</span>}
+                    </td>
+                    <td className="px-3 py-2 text-right whitespace-nowrap tabular-nums bg-green-50/50">
+                      {row.bulkBuy != null ? fmt(row.bulkBuy) : <span className="text-gray-300">—</span>}
+                    </td>
+                  </>
+                )}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {showRetailerEconomics && rows.some(r => r.retailerRrp == null) && (
+        <div className="px-3 py-2 border-t border-amber-200 bg-amber-50 flex items-start gap-2">
+          <AlertTriangle className="h-3.5 w-3.5 text-amber-500 mt-0.5 flex-shrink-0" />
+          <p className="text-xs text-amber-700">
+            {rows.filter(r => r.retailerRrp == null).length} product{rows.filter(r => r.retailerRrp == null).length !== 1 ? 's' : ''} missing an RRP — the Retail Economics columns will show "—" for those rows in the export. Add RRPs in your product catalogue.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function PublicStoreSettings({ user }: { user: any }) {
   const { toast } = useToast();
   const [isPublic, setIsPublic] = useState(user?.storeVisibility === 'public');
@@ -862,6 +1002,17 @@ function PublicStoreSettings({ user }: { user: any }) {
           </div>
         </div>
       </div>
+
+      {/* Live price list preview — shown whenever any column flags are active */}
+      {(showRrp || showRrpMargin || showRetailerEconomics) && (
+        <div className="mb-4">
+          <PriceListPreviewTable
+            showRrp={showRrp}
+            showRrpMargin={showRrpMargin}
+            showRetailerEconomics={showRetailerEconomics}
+          />
+        </div>
+      )}
 
       {/* Public discoverability — separate concern */}
       <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-200 mb-4">

@@ -64,6 +64,66 @@ export function registerProductRoutes(app: Express): void {
     }
   });
 
+  // GET /api/products/catalogue-preview — JSON preview of price list rows (same logic as export)
+  app.get('/api/products/catalogue-preview', requireAuth, async (req: any, res) => {
+    try {
+      const wholesalerId = resolveWholesalerId(req);
+      const allProducts = (await storage.getProducts(wholesalerId))
+        .filter((p: any) => p.status === 'active')
+        .sort((a: any, b: any) => (a.name || '').localeCompare(b.name || ''));
+
+      const rows = allProducts.map((p: any) => {
+        const hasPallets = p.palletPrice != null;
+        const numericSize = p.unitSize != null ? String(parseFloat(String(p.unitSize))) : null;
+        const unitDisplay = numericSize && p.unitOfMeasure
+          ? `${numericSize}${p.unitOfMeasure}`
+          : numericSize || p.unitOfMeasure || null;
+        const packParts = [p.packQuantity, unitDisplay].filter(Boolean);
+        const palletPrice: number | null = hasPallets ? parseFloat(p.palletPrice) : null;
+        const unitsPerPallet: number | null = hasPallets && p.unitsPerPallet != null ? p.unitsPerPallet : null;
+        const unitPriceNum = parseFloat(p.price || '0');
+        const rrpNum = p.rrp != null ? parseFloat(String(p.rrp)) : null;
+        const qty = Number(p.packQuantity ?? p.quantityInPack ?? 1);
+        // Always compute all values so the client can toggle columns without re-fetching
+        let rrpMargin: number | null = null;
+        if (rrpNum != null && qty > 0) {
+          const rrpPack = rrpNum * qty;
+          if (rrpPack > 0) {
+            rrpMargin = ((rrpPack - unitPriceNum) / rrpPack) * 100;
+          }
+        }
+        const moq = Number(p.moq ?? 1);
+        const bulkBuy = unitPriceNum * moq;
+        let retailerRrp: number | null = null;
+        let retailerProfit: number | null = null;
+        let retailerMargin: number | null = null;
+        if (rrpNum != null && rrpNum > 0) {
+          retailerRrp = rrpNum;
+          retailerProfit = rrpNum - unitPriceNum;
+          retailerMargin = ((rrpNum - unitPriceNum) / rrpNum) * 100;
+        }
+        return {
+          name: p.name || '—',
+          packSize: packParts.length > 0 ? packParts.join(' x ') : '—',
+          unitPrice: unitPriceNum,
+          palletPrice,
+          unitsPerPallet,
+          rrp: rrpNum != null ? parseFloat(String(rrpNum)).toFixed(2) : null,
+          rrpMargin,
+          retailerRrp,
+          retailerProfit,
+          retailerMargin,
+          bulkBuy,
+        };
+      });
+
+      res.json({ rows });
+    } catch (err: any) {
+      console.error('Error building catalogue preview:', err);
+      res.status(500).json({ message: 'Failed to build catalogue preview' });
+    }
+  });
+
   // GET /api/products/catalogue-export — branded standard price list (xlsx or pdf)
   app.get('/api/products/catalogue-export', requireAuth, async (req: any, res) => {
     try {
