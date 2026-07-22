@@ -88,9 +88,9 @@ export function registerProductRoutes(app: Express): void {
         const unitsPerPallet: number | '' = hasPallets && p.unitsPerPallet != null ? p.unitsPerPallet : '';
         const unitPriceNum = parseFloat(p.price || '0');
         const rrpNum = p.rrp != null ? parseFloat(String(p.rrp)) : null;
-        const qty = p.packQuantity != null ? Number(p.packQuantity) : null;
+        const qty = Number(p.packQuantity ?? p.quantityInPack ?? 1);
         let rrpMargin: number | null = null;
-        if (showRrpMargin && rrpNum != null && qty != null && qty > 0) {
+        if (showRrpMargin && rrpNum != null && qty > 0) {
           const rrpPack = rrpNum * qty;
           if (rrpPack > 0) {
             rrpMargin = ((rrpPack - unitPriceNum) / rrpPack) * 100;
