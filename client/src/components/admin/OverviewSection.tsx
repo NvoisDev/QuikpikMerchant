@@ -111,30 +111,22 @@ export function OverviewSection({ stats, statsLoading, revenueData, revenueLoadi
             <Row label="Buyer fees"     value={revenueLoading ? "—" : fmt(revenueTotals.totalCustomerFees)}  color={BLUE} />
             <Row label="Merchant fees"  value={revenueLoading ? "—" : fmt(revenueTotals.totalPlatformFees)}  color={AMBER} />
             <Row label="Subscription revenue" value={revenueLoading ? "—" : fmt(revenueTotals.totalSubscriptionRevenue ?? 0)} color={PURPLE} />
-            {!revenueLoading && ((revenueTotals.totalDiscountGiven ?? 0) > 0 || (revenueTotals.totalPromoLoss ?? 0) > 0 || (revenueTotals.totalSubscriptionDiscount ?? 0) > 0) && (
+            {!revenueLoading && (revenueTotals.totalSubscriptionDiscount ?? 0) > 0 && (
               <div className="flex items-center justify-between">
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <span className="text-sm text-amber-600 flex items-center gap-1 cursor-default">
-                        Discounts given
+                        Subscription discounts
                         <Info className="h-3.5 w-3.5 opacity-50" />
                       </span>
                     </TooltipTrigger>
-                    <TooltipContent side="top" className="max-w-[240px] text-xs space-y-1">
-                      {(revenueTotals.totalDiscountGiven ?? 0) > 0 && (
-                        <p>Manual invoice discounts: -{fmt(revenueTotals.totalDiscountGiven)}</p>
-                      )}
-                      {(revenueTotals.totalPromoLoss ?? 0) > 0 && (
-                        <p>Promotional offer losses: -{fmt(revenueTotals.totalPromoLoss)}</p>
-                      )}
-                      {(revenueTotals.totalSubscriptionDiscount ?? 0) > 0 && (
-                        <p>Subscription discounts (paid less than list price): -{fmt(revenueTotals.totalSubscriptionDiscount)}</p>
-                      )}
+                    <TooltipContent side="top" className="max-w-[240px] text-xs">
+                      Subscribers who paid less than the plan list price (e.g. a Stripe coupon was applied).
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
-                <span className="text-sm text-amber-600">-{fmt((revenueTotals.totalDiscountGiven ?? 0) + (revenueTotals.totalPromoLoss ?? 0) + (revenueTotals.totalSubscriptionDiscount ?? 0))}</span>
+                <span className="text-sm text-amber-600">-{fmt(revenueTotals.totalSubscriptionDiscount)}</span>
               </div>
             )}
             <div className="pt-1.5 border-t border-gray-100 space-y-1.5">
