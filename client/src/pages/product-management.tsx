@@ -385,7 +385,15 @@ export default function ProductManagement() {
   const [priceListFilterCustomer, setPriceListFilterCustomer] = useState<{ id: string; name: string } | null>(null);
   const priceListIdFromUrl = Number(new URLSearchParams(location.includes('?') ? location.split('?')[1] : '').get('priceListId')) || null;
 
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState(() => sessionStorage.getItem("productSearch") ?? "");
+  const handleSetSearchQuery = (value: string) => {
+    if (value) {
+      sessionStorage.setItem("productSearch", value);
+    } else {
+      sessionStorage.removeItem("productSearch");
+    }
+    setSearchQuery(value);
+  };
   const [statusFilter, setStatusFilter] = useState("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [viewMode, setViewMode] = useState<"grid" | "list">(() => {
@@ -1349,7 +1357,7 @@ export default function ProductManagement() {
               <Input
                 placeholder="Search products..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => handleSetSearchQuery(e.target.value)}
                 className="pl-10 h-8 border-slate-200 rounded-lg focus:ring-emerald-500/30 focus:border-emerald-400"
               />
             </div>
