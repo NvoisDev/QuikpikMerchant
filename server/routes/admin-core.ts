@@ -453,13 +453,35 @@ export function registerAdminCoreRoutes(app: Express): void {
         ...(filterWholesalerId ? [eq(subscriptionAuditLogs.userId, filterWholesalerId)] : []),
       ];
       const subPayments = await db
-        .select({ amount: subscriptionAuditLogs.amount, userId: subscriptionAuditLogs.userId })
+        .select({
+          amount: subscriptionAuditLogs.amount,
+          userId: subscriptionAuditLogs.userId,
+          listPrice: subscriptionPlans.monthlyPrice,
+          billingInterval: subscriptionPlans.billingInterval,
+        })
         .from(subscriptionAuditLogs)
+        .leftJoin(subscriptionPlans, eq(subscriptionAuditLogs.toTier, subscriptionPlans.planId))
         .where(and(...subPaymentConditions));
       const totalSubscriptionRevenue = parseFloat(
         subPayments.reduce((s, p) => s + parseFloat(p.amount ?? '0'), 0).toFixed(2)
       );
       const subscriptionPaymentCount = subPayments.length;
+
+      // Subscription discount = gap between list price and what was actually paid,
+      // for monthly-billed payments only (annual payments have a different price point
+      // so comparing to monthlyPrice would give a false positive).
+      let totalSubscriptionDiscount = 0;
+      for (const p of subPayments) {
+        const paid = parseFloat(p.amount ?? '0');
+        const interval = p.billingInterval ?? 'monthly';
+        if (interval === 'monthly') {
+          const listPrice = parseFloat(p.listPrice as string ?? '0');
+          if (listPrice > 0 && paid < listPrice - 0.001) {
+            totalSubscriptionDiscount += listPrice - paid;
+          }
+        }
+      }
+      totalSubscriptionDiscount = parseFloat(totalSubscriptionDiscount.toFixed(2));
 
       const subRevenueByWholesaler: Record<string, number> = {};
       for (const p of subPayments) {
@@ -508,6 +530,7 @@ export function registerAdminCoreRoutes(app: Express): void {
           totalGrossProfit, grossMarginPct,
           totalSubscriptionRevenue, subscriptionPaymentCount,
           totalDiscountGiven: parseFloat(totalDiscountGiven.toFixed(2)),
+          totalSubscriptionDiscount,
           totalPromoLoss,
         },
         subRevenueByWholesaler,

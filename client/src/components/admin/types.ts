@@ -62,7 +62,7 @@ export interface RevenueTotals {
   totalCustomerFees: number; totalPlatformFees: number; totalGrossRevenue: number; totalGMV: number;
   totalStripeProcessingFees: number; totalGrossProfit: number; grossMarginPct: number;
   totalSubscriptionRevenue: number; subscriptionPaymentCount: number;
-  totalDiscountGiven: number; totalPromoLoss: number;
+  totalDiscountGiven: number; totalSubscriptionDiscount: number; totalPromoLoss: number;
 }
 
 export interface RevenueOrder {

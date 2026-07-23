@@ -84,7 +84,7 @@ export function FinancialsSection({ wholesalers, isAdmin }: { wholesalers: Whole
   });
 
   const revenueOrders: RevenueOrder[] = revenueData?.orders ?? [];
-  const revenueTotals: RevenueTotals = revenueData?.totals ?? { totalCustomerFees: 0, totalPlatformFees: 0, totalGrossRevenue: 0, totalGMV: 0, totalStripeProcessingFees: 0, totalGrossProfit: 0, grossMarginPct: 0, totalSubscriptionRevenue: 0, subscriptionPaymentCount: 0, totalDiscountGiven: 0, totalPromoLoss: 0 };
+  const revenueTotals: RevenueTotals = revenueData?.totals ?? { totalCustomerFees: 0, totalPlatformFees: 0, totalGrossRevenue: 0, totalGMV: 0, totalStripeProcessingFees: 0, totalGrossProfit: 0, grossMarginPct: 0, totalSubscriptionRevenue: 0, subscriptionPaymentCount: 0, totalDiscountGiven: 0, totalSubscriptionDiscount: 0, totalPromoLoss: 0 };
 
   const orderCount = revenueOrders.length;
   const avgBuyerFee = orderCount > 0 ? revenueTotals.totalCustomerFees / orderCount : null;
