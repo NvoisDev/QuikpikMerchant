@@ -90,6 +90,13 @@ interface DeliveryAddress {
   isDefault: boolean;
 }
 
+interface OrderItem {
+  productName: string;
+  quantity: number;
+  sellingType: string;
+  total: string;
+}
+
 interface Order {
   id: number;
   orderNumber?: string;
@@ -102,6 +109,7 @@ interface Order {
   paymentStatus?: string;
   depositPercentage?: number;
   amountPaid?: string;
+  items?: OrderItem[];
 }
 
 export default function CustomerDetail() {
@@ -113,6 +121,15 @@ export default function CustomerDetail() {
   const isViewer = (user as AuthUser)?.teamMemberRole === 'viewer';
   const { formatMoney } = useCurrency();
   const { data: alertsData } = useQuery<{ count: number }>({ queryKey: ["/api/stock-alerts/count"] });
+  const [expandedOrders, setExpandedOrders] = useState<Set<number>>(new Set());
+  const toggleOrderExpanded = (orderId: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setExpandedOrders(prev => {
+      const next = new Set(prev);
+      if (next.has(orderId)) { next.delete(orderId); } else { next.add(orderId); }
+      return next;
+    });
+  };
 
   const handleShareStore = async () => {
     const effectiveUserId = user?.role === 'team_member' && user?.wholesalerId ? user.wholesalerId : user?.id;
@@ -1179,25 +1196,52 @@ export default function CustomerDetail() {
                 order.status === "draft" ? "Draft" :
                 order.paymentStatus === "paid" ? "Paid" :
                 order.paymentStatus === "part_paid" ? "Part Paid" : "Unpaid";
+              const hasItems = (order.items ?? []).length > 0;
+              const isExpanded = expandedOrders.has(order.id);
               return (
-                <div key={order.id} className="flex items-center justify-between p-3 bg-white rounded-lg border hover:bg-gray-50 transition-colors cursor-pointer" onClick={() => navigate(`/orders?id=${order.id}`)}>
-                  <div className="flex items-center space-x-3">
-                    <div className={`p-1.5 rounded-full ${statusColor}`}>
-                      <StatusIcon className="h-3.5 w-3.5" />
+                <div key={order.id} className="bg-white rounded-lg border overflow-hidden">
+                  <div className="flex items-center justify-between p-3 hover:bg-gray-50 transition-colors cursor-pointer" onClick={() => navigate(`/orders?id=${order.id}`)}>
+                    <div className="flex items-center space-x-3">
+                      <div className={`p-1.5 rounded-full ${statusColor}`}>
+                        <StatusIcon className="h-3.5 w-3.5" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium">{order.orderNumber || `#${order.id}`}</p>
+                        <p className="text-xs text-muted-foreground">{formatDateShort(order.createdAt)}</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-sm font-medium">{order.orderNumber || `#${order.id}`}</p>
-                      <p className="text-xs text-muted-foreground">{formatDateShort(order.createdAt)}</p>
+                    <div className="flex items-center gap-2">
+                      <div className="text-right flex flex-col items-end gap-1">
+                        <p className={`text-sm font-semibold ${isCancelled ? 'line-through text-gray-400' : ''}`}>{formatMoney(parseFloat(order.total))}</p>
+                        {!isCancelled && (
+                          <Badge className={`text-[10px] px-1.5 py-0 border-0 ${paymentColor}`}>
+                            {paymentLabel}
+                          </Badge>
+                        )}
+                      </div>
+                      {hasItems && (
+                        <button
+                          onClick={(e) => toggleOrderExpanded(order.id, e)}
+                          className="p-1 rounded text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors shrink-0"
+                          aria-label={isExpanded ? "Collapse items" : "Expand items"}
+                        >
+                          <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
+                        </button>
+                      )}
                     </div>
                   </div>
-                  <div className="text-right flex flex-col items-end gap-1">
-                    <p className={`text-sm font-semibold ${isCancelled ? 'line-through text-gray-400' : ''}`}>{formatMoney(parseFloat(order.total))}</p>
-                    {!isCancelled && (
-                      <Badge className={`text-[10px] px-1.5 py-0 border-0 ${paymentColor}`}>
-                        {paymentLabel}
-                      </Badge>
-                    )}
-                  </div>
+                  {hasItems && isExpanded && (
+                    <div className="border-t border-gray-100 bg-gray-50 px-3 py-2 space-y-1.5">
+                      {(order.items ?? []).map((item, idx) => (
+                        <div key={idx} className="flex items-center justify-between text-xs">
+                          <span className="text-gray-700 truncate mr-2 flex-1">
+                            {item.quantity} {item.sellingType !== 'units' ? item.sellingType : 'x'} {item.productName}
+                          </span>
+                          <span className="text-gray-600 font-medium shrink-0">{formatMoney(parseFloat(item.total))}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               );
             })}

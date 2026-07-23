@@ -4,7 +4,7 @@ import { resolveWholesalerId } from "../utils/resolveWholesalerId";
 import {
   ReliableSMSService, and, customerGroups, customerRegistrationRequests, db, desc, emailCard,
   emailHeading, escapeHtml, eq, formatPhoneToInternational, getCustomerGroupLimit, getEmailLogoUrl,
-  insertCustomerGroupSchema, multiWholesalerService, or, orders, parseCustomerName, products,
+  inArray, insertCustomerGroupSchema, multiWholesalerService, or, orderItems, orders, parseCustomerName, products,
   requireAuth, requireMemberPermission, requireNotViewer, requireBooleanFeature, sendEmail, sendWelcomeMessages, storage, twilio,
   users, validatePhoneNumber, whatsAppBusinessService, wholesalerCustomerRelationships,
   wrapCustomerEmail, z
@@ -967,7 +967,7 @@ export function registerCustomerRoutes(app: Express): void {
     }
   });
 
-  // GET /api/customers/:id/orders — slim list for the customer detail page (no items/user objects)
+  // GET /api/customers/:id/orders — slim list for the customer detail page with item summaries
   app.get('/api/customers/:id/orders', requireAuth, async (req: any, res) => {
     try {
       const targetUserId = resolveWholesalerId(req);
@@ -994,7 +994,40 @@ export function registerCustomerRoutes(app: Express): void {
         .orderBy(desc(orders.createdAt))
         .limit(5);
 
-      res.json(rows);
+      if (rows.length === 0) return res.json([]);
+
+      const orderIds = rows.map(r => r.id);
+      const itemRows = await db
+        .select({
+          orderId: orderItems.orderId,
+          productName: products.name,
+          customLabel: orderItems.customLabel,
+          quantity: orderItems.quantity,
+          sellingType: orderItems.sellingType,
+          total: orderItems.total,
+        })
+        .from(orderItems)
+        .leftJoin(products, eq(orderItems.productId, products.id))
+        .where(inArray(orderItems.orderId, orderIds));
+
+      const itemsByOrder = new Map<number, typeof itemRows>();
+      for (const item of itemRows) {
+        const list = itemsByOrder.get(item.orderId) ?? [];
+        list.push(item);
+        itemsByOrder.set(item.orderId, list);
+      }
+
+      const result = rows.map(order => ({
+        ...order,
+        items: (itemsByOrder.get(order.id) ?? []).map(item => ({
+          productName: item.productName ?? item.customLabel ?? 'Item',
+          quantity: item.quantity,
+          sellingType: item.sellingType ?? 'units',
+          total: item.total,
+        })),
+      }));
+
+      res.json(result);
     } catch (error) {
       console.error('Error fetching customer orders:', error);
       res.status(500).json({ error: 'Failed to fetch customer orders' });
