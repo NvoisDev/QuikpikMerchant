@@ -1964,9 +1964,9 @@ export default function WholesalerDashboard() {
                         <div key={product.id} className="flex items-center justify-between p-3 border border-gray-100 rounded-lg">
                           <div className="flex items-center space-x-3">
                             <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden flex-shrink-0">
-                              {product.imageUrl ? (
+                              {(product.images?.[0] || product.imageUrl) ? (
                                 <img
-                                  src={product.imageUrl}
+                                  src={product.images?.[0] || product.imageUrl}
                                   alt={product.name}
                                   className="w-full h-full object-cover"
                                 />
