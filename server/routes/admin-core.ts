@@ -71,17 +71,18 @@ async function fetchStripeInvoiceRows(
     const chunk = customerIds.slice(i, i + CHUNK);
     await Promise.all(chunk.map(async (custId) => {
       try {
-        const invoices = await stripe.invoices.list({ customer: custId, status: 'paid', limit: 100 });
-        for (const inv of invoices.data) {
-          if ((inv.amount_paid ?? 0) <= 0) continue;
-          const priceId = inv.lines?.data?.[0]?.pricing?.price_details?.price ?? null;
-          const tier = (priceId && priceToTier[priceId]) ? priceToTier[priceId] : null;
-          if (!tier) continue;
-          // Use UTC month of invoice creation (consistent with legacy audit-log YYYY-MM)
-          const d = new Date(inv.created * 1000);
-          const month = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
-          rows.push({ month, tier, amount: inv.amount_paid / 100 });
-        }
+        await stripe.invoices.list({ customer: custId, status: 'paid', limit: 100 }).autoPagingEach(
+          (inv) => {
+            if ((inv.amount_paid ?? 0) <= 0) return;
+            const priceId = inv.lines?.data?.[0]?.pricing?.price_details?.price ?? null;
+            const tier = (priceId && priceToTier[priceId]) ? priceToTier[priceId] : null;
+            if (!tier) return;
+            // Use UTC month of invoice creation (consistent with legacy audit-log YYYY-MM)
+            const d = new Date(inv.created * 1000);
+            const month = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
+            rows.push({ month, tier, amount: inv.amount_paid / 100 });
+          }
+        );
       } catch {
         // Silently skip customers that can't be queried (test-mode IDs in live, etc.)
       }
