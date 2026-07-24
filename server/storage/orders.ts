@@ -141,6 +141,25 @@ export class OrderStorage extends ProductStorage {
       acc[user.id] = user;
       return acc;
     }, {} as Record<string, any>);
+
+    // Fetch per-wholesaler displayName overrides so order lists respect each
+    // wholesaler's own name for a shared customer (multi-wholesaler isolation).
+    let displayNameMap: Record<string, string> = {};
+    if (wholesalerId && retailerIds.length > 0) {
+      const dnRows = await db
+        .select({
+          customerId: wholesalerCustomerRelationships.customerId,
+          displayName: wholesalerCustomerRelationships.displayName,
+        })
+        .from(wholesalerCustomerRelationships)
+        .where(and(
+          eq(wholesalerCustomerRelationships.wholesalerId, wholesalerId),
+          inArray(wholesalerCustomerRelationships.customerId, retailerIds)
+        ));
+      for (const row of dnRows) {
+        if (row.displayName) displayNameMap[row.customerId] = row.displayName;
+      }
+    }
     
     // If searching by wholesaler/retailer names, filter results after fetching user data
     let filteredOrderResults = orderResults;
@@ -249,14 +268,24 @@ export class OrderStorage extends ProductStorage {
       
       return {
         ...order,
-        retailer: retailer ? {
-          id: retailer.id,
-          email: retailer.email,
-          firstName: retailer.firstName,
-          lastName: retailer.lastName,
-          phoneNumber: retailer.phoneNumber,
-          businessName: retailer.businessName,
-        } : null,
+        retailer: retailer ? (() => {
+          const dn = displayNameMap[retailer.id];
+          let firstName = retailer.firstName;
+          let lastName = retailer.lastName;
+          if (dn) {
+            const parts = dn.trim().split(/\s+/);
+            firstName = parts[0] || firstName;
+            lastName = parts.slice(1).join(' ') || null;
+          }
+          return {
+            id: retailer.id,
+            email: retailer.email,
+            firstName,
+            lastName,
+            phoneNumber: retailer.phoneNumber,
+            businessName: retailer.businessName,
+          };
+        })() : null,
         wholesaler: wholesaler ? {
           id: wholesaler.id,
           email: wholesaler.email,
@@ -288,7 +317,27 @@ export class OrderStorage extends ProductStorage {
       .select()
       .from(users)
       .where(eq(users.id, order.retailerId));
-    
+
+    // Apply per-wholesaler displayName override (same logic as getAllCustomers)
+    let retailerDisplay = retailer as User | undefined;
+    if (retailer && order.wholesalerId) {
+      const [rel] = await db
+        .select({ displayName: wholesalerCustomerRelationships.displayName })
+        .from(wholesalerCustomerRelationships)
+        .where(and(
+          eq(wholesalerCustomerRelationships.wholesalerId, order.wholesalerId),
+          eq(wholesalerCustomerRelationships.customerId, order.retailerId)
+        ));
+      if (rel?.displayName) {
+        const parts = rel.displayName.trim().split(/\s+/);
+        retailerDisplay = {
+          ...retailer,
+          firstName: parts[0] || retailer.firstName,
+          lastName: parts.slice(1).join(' ') || null,
+        };
+      }
+    }
+
     // Get wholesaler info
     const [wholesaler] = await db
       .select()
@@ -311,7 +360,7 @@ export class OrderStorage extends ProductStorage {
     
     return {
       ...order,
-      retailer: retailer!,
+      retailer: (retailerDisplay ?? retailer)!,
       wholesaler: wholesaler!,
       businessProfileName,
       collectionAddress,
