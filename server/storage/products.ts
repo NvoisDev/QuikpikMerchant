@@ -467,6 +467,15 @@ export class ProductStorage extends UserStorageBase {
   async deleteProduct(id: number): Promise<void> {
     // Clear order_items references (nulled so historical orders are preserved)
     await db.update(orderItems).set({ productId: null }).where(eq(orderItems.productId, id));
+    // Null out batchId on any order lines that referenced a batch from this product.
+    // order_items.batch_id → product_batches.id has no ON DELETE action, so Postgres blocks
+    // the cascade (products → product_batches) unless we clear these references first.
+    await db.execute(sql`
+      UPDATE order_items SET batch_id = NULL
+      WHERE batch_id IN (
+        SELECT id FROM product_batches WHERE product_id = ${id}
+      )
+    `);
     // Delete rows that exist purely for this product
     await db.delete(stockMovements).where(eq(stockMovements.productId, id));
     await db.delete(templateProducts).where(eq(templateProducts.productId, id));
