@@ -46,7 +46,8 @@ import { sendWholesalerSuspendedEmail, sendWholesalerReinstatedEmail } from "../
 // Caches processed invoice rows for 5 minutes so the admin stats page doesn't
 // hammer the Stripe API on every load.
 type InvoiceRow = { month: string; tier: string; amount: number };
-let _stripeInvoiceCache: { rows: InvoiceRow[]; expires: number } | null = null;
+type InvoiceCacheResult = { rows: InvoiceRow[]; unmatchedCount: number; unmatchedTotal: number };
+let _stripeInvoiceCache: (InvoiceCacheResult & { expires: number }) | null = null;
 
 function tierBucket(planId: string | null | undefined): 'listing' | 'starter' | 'standard' | 'premium' | null {
   if (!planId || planId === 'free') return 'listing';
@@ -60,12 +61,15 @@ function tierBucket(planId: string | null | undefined): 'listing' | 'starter' | 
 async function fetchStripeInvoiceRows(
   customerIds: string[],
   priceToTier: Record<string, string>,
-): Promise<InvoiceRow[]> {
+): Promise<InvoiceCacheResult> {
   if (_stripeInvoiceCache && Date.now() < _stripeInvoiceCache.expires) {
-    return _stripeInvoiceCache.rows;
+    const { expires: _e, ...rest } = _stripeInvoiceCache;
+    return rest;
   }
   const stripe = getStripeClient(false); // live Stripe only — revenue reporting
   const rows: InvoiceRow[] = [];
+  let unmatchedCount = 0;
+  let unmatchedTotal = 0;
   const CHUNK = 8; // stay well inside Stripe rate limits
   for (let i = 0; i < customerIds.length; i += CHUNK) {
     const chunk = customerIds.slice(i, i + CHUNK);
@@ -76,7 +80,12 @@ async function fetchStripeInvoiceRows(
             if ((inv.amount_paid ?? 0) <= 0) return;
             const priceId = inv.lines?.data?.[0]?.pricing?.price_details?.price ?? null;
             const tier = (priceId && priceToTier[priceId]) ? priceToTier[priceId] : null;
-            if (!tier) return;
+            if (!tier) {
+              // Invoice paid but price ID doesn't match any known plan tier
+              unmatchedCount++;
+              unmatchedTotal += (inv.amount_paid ?? 0) / 100;
+              return;
+            }
             // Use UTC month of invoice creation (consistent with legacy audit-log YYYY-MM)
             const d = new Date(inv.created * 1000);
             const month = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
@@ -88,8 +97,8 @@ async function fetchStripeInvoiceRows(
       }
     }));
   }
-  _stripeInvoiceCache = { rows, expires: Date.now() + 5 * 60 * 1000 };
-  return rows;
+  _stripeInvoiceCache = { rows, unmatchedCount, unmatchedTotal, expires: Date.now() + 5 * 60 * 1000 };
+  return { rows, unmatchedCount, unmatchedTotal };
 }
 
 export function registerAdminCoreRoutes(app: Express): void {
@@ -175,8 +184,11 @@ export function registerAdminCoreRoutes(app: Express): void {
       // Fetch paid invoices from Stripe (cached 5 min) for all non-test wholesalers
       const customerIds = allWholesalers.map(w => w.stripeCustomerId).filter((id): id is string => Boolean(id));
       let invoiceRows: InvoiceRow[] = [];
+      let unmatchedInvoices = { count: 0, total: 0 };
       try {
-        invoiceRows = await fetchStripeInvoiceRows(customerIds, priceToTier);
+        const result = await fetchStripeInvoiceRows(customerIds, priceToTier);
+        invoiceRows = result.rows;
+        unmatchedInvoices = { count: result.unmatchedCount, total: result.unmatchedTotal };
       } catch (stripeErr) {
         console.error('Stripe invoice fetch failed; monthly collected will be empty:', stripeErr);
       }
@@ -263,6 +275,7 @@ export function registerAdminCoreRoutes(app: Express): void {
         subscriptionRevenueMRR: subscriptionMRR,
         subscriptionBreakdown,
         subscriptionMonthlyBreakdown,
+        unmatchedInvoices,
       });
     } catch (error) {
       console.error('Admin platform-stats error:', error);

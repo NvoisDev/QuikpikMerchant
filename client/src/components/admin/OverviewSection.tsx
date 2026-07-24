@@ -155,6 +155,21 @@ export function OverviewSection({ stats, statsLoading, revenueData, revenueLoadi
         </Card>
       </div>
 
+      {/* Unmatched invoices warning */}
+      {!statsLoading && stats?.unmatchedInvoices && stats.unmatchedInvoices.count > 0 && (
+        <div className="rounded-xl border border-orange-200 bg-orange-50 p-4 flex items-start gap-3">
+          <AlertTriangle className="h-4 w-4 text-orange-500 mt-0.5 shrink-0" />
+          <div>
+            <p className="text-xs font-semibold text-orange-700">Unmatched subscription payments</p>
+            <p className="text-xs text-orange-600 mt-0.5">
+              {stats.unmatchedInvoices.count} paid invoice{stats.unmatchedInvoices.count !== 1 ? "s" : ""} totalling{" "}
+              <span className="font-semibold">{fmt(stats.unmatchedInvoices.total)}</span> could not be attributed to a plan tier.
+              The price ID on these invoices doesn't match any entry in the subscription plans table — they may be custom charges or invoices for a deleted plan.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Subscription breakdown */}
       <Card className="border-gray-200 shadow-none rounded-xl">
         <CardHeader className="pb-2 pt-4 px-4"><CardTitle className="text-sm font-semibold text-gray-700">Subscription Revenue</CardTitle></CardHeader>
