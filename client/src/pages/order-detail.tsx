@@ -156,6 +156,11 @@ interface Order {
   };
 }
 
+const buildMapsUrl = (parts: (string | undefined | null)[]): string => {
+  const query = parts.filter(Boolean).join(', ');
+  return `https://maps.apple.com/?q=${encodeURIComponent(query)}`;
+};
+
 const WholesalerDeliveryAddressDisplay = ({ addressId }: { addressId: number }) => {
   const { data: address, isLoading, error } = useQuery<{
     addressLine1: string;
@@ -192,30 +197,34 @@ const WholesalerDeliveryAddressDisplay = ({ addressId }: { addressId: number }) 
     }
   };
 
+  const mapsUrl = buildMapsUrl([address.addressLine1, address.addressLine2, address.city, address.postalCode, address.country]);
+
   return (
-    <div className="bg-white p-3 rounded border border-blue-200 mt-3">
-      <h6 className="font-medium text-blue-900 mb-2 text-sm flex items-center gap-2">
-        {getAddressIcon(address.label || 'other')}
-        Delivery Address:
-      </h6>
-      <div className="text-sm text-gray-700 space-y-1">
-        {address.addressLine1 && <div>{address.addressLine1}</div>}
-        {address.addressLine2 && <div>{address.addressLine2}</div>}
-        {address.city && <div>{address.city}</div>}
-        {address.postalCode && <div>{address.postalCode}</div>}
-        {address.country && <div>{address.country}</div>}
+    <a href={mapsUrl} target="_blank" rel="noopener noreferrer" className="block">
+      <div className="bg-white p-3 rounded border border-blue-200 mt-3">
+        <h6 className="font-medium text-blue-900 mb-2 text-sm flex items-center gap-2">
+          {getAddressIcon(address.label || 'other')}
+          Delivery Address:
+        </h6>
+        <div className="text-sm text-gray-700 space-y-1">
+          {address.addressLine1 && <div>{address.addressLine1}</div>}
+          {address.addressLine2 && <div>{address.addressLine2}</div>}
+          {address.city && <div>{address.city}</div>}
+          {address.postalCode && <div>{address.postalCode}</div>}
+          {address.country && <div>{address.country}</div>}
+        </div>
+        {address.label && (
+          <div className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded w-fit mt-2">
+            {address.label.charAt(0).toUpperCase() + address.label.slice(1)}
+          </div>
+        )}
+        {address.instructions && (
+          <div className="text-xs text-gray-600 bg-amber-50 px-2 py-1 rounded border border-amber-200 mt-2">
+            <span className="font-medium">Instructions:</span> {address.instructions}
+          </div>
+        )}
       </div>
-      {address.label && (
-        <div className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded w-fit mt-2">
-          {address.label.charAt(0).toUpperCase() + address.label.slice(1)}
-        </div>
-      )}
-      {address.instructions && (
-        <div className="text-xs text-gray-600 bg-amber-50 px-2 py-1 rounded border border-amber-200 mt-2">
-          <span className="font-medium">Instructions:</span> {address.instructions}
-        </div>
-      )}
-    </div>
+    </a>
   );
 };
 
@@ -1604,7 +1613,9 @@ export default function OrderDetail() {
               })()}
               {order.customerEmail && <div>{order.customerEmail}</div>}
               {(order.customerPhone || order.retailer?.phoneNumber) && (
-                <div>{order.customerPhone || order.retailer?.phoneNumber}</div>
+                <a href={`tel:${order.customerPhone || order.retailer?.phoneNumber}`} className="text-blue-600 underline">
+                  {order.customerPhone || order.retailer?.phoneNumber}
+                </a>
               )}
             </div>
 
@@ -1623,20 +1634,23 @@ export default function OrderDetail() {
                         try {
                           const parsed = JSON.parse(order.deliveryAddress);
                           if (parsed && typeof parsed === 'object') {
+                            const mapsUrl = buildMapsUrl([parsed.addressLine1, parsed.addressLine2, parsed.city, parsed.postalCode, parsed.country]);
                             return (
-                              <div className="space-y-0.5">
-                                <div className="font-medium text-gray-900">{parsed.addressLine1}</div>
-                                {parsed.addressLine2 && <div>{parsed.addressLine2}</div>}
-                                <div>{parsed.city}</div>
-                                <div>{parsed.postalCode}</div>
-                                {parsed.country && <div>{parsed.country}</div>}
-                              </div>
+                              <a href={mapsUrl} target="_blank" rel="noopener noreferrer" className="block">
+                                <div className="space-y-0.5">
+                                  <div className="font-medium text-gray-900">{parsed.addressLine1}</div>
+                                  {parsed.addressLine2 && <div>{parsed.addressLine2}</div>}
+                                  <div>{parsed.city}</div>
+                                  <div>{parsed.postalCode}</div>
+                                  {parsed.country && <div>{parsed.country}</div>}
+                                </div>
+                              </a>
                             );
                           }
                         } catch {
-                          return <div>{order.deliveryAddress}</div>;
+                          return <a href={buildMapsUrl([order.deliveryAddress])} target="_blank" rel="noopener noreferrer">{order.deliveryAddress}</a>;
                         }
-                        return <div>{order.deliveryAddress}</div>;
+                        return <a href={buildMapsUrl([order.deliveryAddress])} target="_blank" rel="noopener noreferrer">{order.deliveryAddress}</a>;
                       })()
                     ) : (
                       <span className="text-gray-400 italic">No delivery address</span>
