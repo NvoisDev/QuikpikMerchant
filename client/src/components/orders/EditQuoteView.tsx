@@ -330,7 +330,7 @@ export function EditQuoteView({
   };
 
   return (
-    <div className="bg-white min-h-screen">
+    <div className="bg-white min-h-screen pb-36">
       <div className="max-w-lg mx-auto px-4 py-6">
         <div className="flex items-center gap-3 mb-6">
           <Button variant="ghost" size="sm" onClick={onCancel}>
@@ -346,11 +346,11 @@ export function EditQuoteView({
           {availablePriceLists.length > 0 && (
             <div className="bg-blue-50 border border-blue-100 rounded-lg p-3">
               <label className="block text-xs font-semibold text-blue-800 mb-1.5">Apply Price List</label>
-              <div className="flex gap-2">
+              <div className="flex flex-col gap-2">
                 <select
                   value={applyPriceListId}
                   onChange={(e) => setApplyPriceListId(e.target.value)}
-                  className="flex-1 border border-blue-200 rounded-md px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-400"
+                  className="w-full border border-blue-200 rounded-md px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-400"
                 >
                   <option value="">Select a price list…</option>
                   {availablePriceLists.map(pl => (
@@ -364,7 +364,7 @@ export function EditQuoteView({
                   size="sm"
                   onClick={handleApplyPriceList}
                   disabled={!applyPriceListId || isApplyingPriceList}
-                  className="shrink-0 border-blue-300 text-blue-700 hover:bg-blue-100"
+                  className="w-full border-blue-300 text-blue-700 hover:bg-blue-100"
                 >
                   {isApplyingPriceList ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Apply'}
                 </Button>
@@ -542,34 +542,35 @@ export function EditQuoteView({
                             {isCharge ? 'Charge price must be greater than £0' : 'Price must be greater than £0'}
                           </p>
                         )}
-                        {isPriceChanged(item) && (
-                          <select
-                            value={priceScopes[getItemKey(item)] || 'all'}
-                            onChange={(e) => {
-                              const k = getItemKey(item);
-                              setPriceScopes(prev => ({ ...prev, [k]: e.target.value as 'invoice' | 'customer' | 'all' }));
-                            }}
-                            className="mt-0.5 text-xs border rounded p-0.5 bg-white max-w-[10rem]"
-                            title="Where should this new price apply?"
-                          >
-                            <option value="all">Update for all customers</option>
-                            <option value="customer">This customer only</option>
-                            <option value="invoice">This invoice only</option>
-                          </select>
-                        )}
-                        {isPriceChanged(item) &&
-                          (priceScopes[getItemKey(item)] || 'all') === 'all' &&
-                          item.sellingType !== 'pallets' &&
-                          !!item.palletPrice && (
-                            <p className="text-xs text-amber-600 max-w-[10rem]">
-                              Pallet price will scale to match.
-                            </p>
-                          )}
                       </div>
                       <span className="text-sm font-medium text-green-700 ml-auto">
                         {formatMoney(item.customPrice * item.quantity)}
                       </span>
                     </div>
+                    {isPriceChanged(item) && (
+                      <div className="mt-2">
+                        <select
+                          value={priceScopes[getItemKey(item)] || 'all'}
+                          onChange={(e) => {
+                            const k = getItemKey(item);
+                            setPriceScopes(prev => ({ ...prev, [k]: e.target.value as 'invoice' | 'customer' | 'all' }));
+                          }}
+                          className="w-full text-xs border rounded p-1.5 bg-white"
+                          title="Where should this new price apply?"
+                        >
+                          <option value="all">Update for all customers</option>
+                          <option value="customer">This customer only</option>
+                          <option value="invoice">This invoice only</option>
+                        </select>
+                        {(priceScopes[getItemKey(item)] || 'all') === 'all' &&
+                          item.sellingType !== 'pallets' &&
+                          !!item.palletPrice && (
+                            <p className="text-xs text-amber-600 mt-1">
+                              Pallet price will scale to match.
+                            </p>
+                          )}
+                      </div>
+                    )}
                     {isCharge && (
                       <div className="mt-2">
                         <input
@@ -597,7 +598,7 @@ export function EditQuoteView({
               <Plus className="h-4 w-4 mr-2" />
               Add Product
             </Button>
-            <Button variant="outline" className="flex-1 border-dashed" onClick={() => setAddChargeOpen(true)}>
+            <Button variant="outline" className="flex-1 border-dashed focus-visible:bg-transparent active:bg-transparent" onClick={() => setAddChargeOpen(true)}>
               <Tag className="h-4 w-4 mr-2" />
               Add Charge
             </Button>
@@ -640,29 +641,16 @@ export function EditQuoteView({
             </select>
           </div>
 
-          <div className="border-t pt-3 space-y-1">
-            <div className="flex justify-between text-gray-600">
-              <span>Subtotal</span>
-              <span>{formatMoney(editSubtotal)}</span>
-            </div>
-            {deliveryCostVal > 0 && (
-              <div className="flex justify-between text-gray-600">
-                <span>Delivery</span>
-                <span>{formatMoney(deliveryCostVal)}</span>
-              </div>
-            )}
-            <div className="flex justify-between font-semibold text-base">
-              <span>Total</span>
-              <span>{formatMoney(editSubtotal + deliveryCostVal)}</span>
-            </div>
-          </div>
+        </div>
+      </div>
 
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t shadow-xl z-10">
+        <div className="max-w-lg mx-auto px-4 pt-3 pb-4 space-y-1 text-sm">
           {editSaveError && (
             <div className="rounded-md bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-700">
               {editSaveError}
             </div>
           )}
-
           {hasInvalidCharges && (
             <p className="text-xs text-red-600 text-center">
               Each charge line needs a label and a price greater than £0 before saving.
@@ -673,8 +661,21 @@ export function EditQuoteView({
               Each product line must have a price greater than £0 and a quantity of at least 1 before saving.
             </p>
           )}
-
-          <div className="flex gap-3 pt-2">
+          <div className="flex justify-between text-gray-600">
+            <span>Subtotal</span>
+            <span>{formatMoney(editSubtotal)}</span>
+          </div>
+          {deliveryCostVal > 0 && (
+            <div className="flex justify-between text-gray-600">
+              <span>Delivery</span>
+              <span>{formatMoney(deliveryCostVal)}</span>
+            </div>
+          )}
+          <div className="flex justify-between font-semibold text-base">
+            <span>Total</span>
+            <span>{formatMoney(editSubtotal + deliveryCostVal)}</span>
+          </div>
+          <div className="flex gap-3 pt-1">
             <Button variant="outline" className="flex-1" onClick={onCancel} disabled={isSavingQuote}>
               Cancel
             </Button>
