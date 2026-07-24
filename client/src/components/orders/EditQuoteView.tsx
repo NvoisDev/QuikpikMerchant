@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Loader2, ChevronLeft, X, Plus, Minus, Search, Tag } from "lucide-react";
@@ -84,6 +85,50 @@ export function EditQuoteView({
   const [editDeliveryCost, setEditDeliveryCost] = useState(
     parseFloat(order.deliveryCost || '0').toFixed(2)
   );
+
+  const [applyPriceListId, setApplyPriceListId] = useState('');
+  const [isApplyingPriceList, setIsApplyingPriceList] = useState(false);
+
+  const { data: availablePriceLists = [] } = useQuery<Array<{ id: number; name: string; itemCount: number }>>({
+    queryKey: ['/api/price-lists'],
+  });
+
+  const handleApplyPriceList = async () => {
+    if (!applyPriceListId) return;
+    setIsApplyingPriceList(true);
+    try {
+      const res = await fetch(`/api/price-lists/${applyPriceListId}`, { credentials: 'include' });
+      if (!res.ok) throw new Error('Failed to fetch price list');
+      const data = await res.json();
+      const priceMap: Record<number, { unit: number | null; pallet: number | null }> = {};
+      for (const item of data.items ?? []) {
+        priceMap[item.productId] = {
+          unit: item.customPrice ? parseFloat(item.customPrice) : null,
+          pallet: item.customPalletPrice ? parseFloat(item.customPalletPrice) : null,
+        };
+      }
+      let count = 0;
+      const updated = editItems.map(item => {
+        if (!item.productId) return item;
+        const override = priceMap[item.productId];
+        if (!override) return item;
+        const newPrice = item.sellingType === 'pallets' ? override.pallet : override.unit;
+        if (newPrice === null || newPrice <= 0) return item;
+        count++;
+        return { ...item, customPrice: newPrice };
+      });
+      setEditItems(updated as EditItem[]);
+      if (count > 0) {
+        toast({ title: 'Prices applied', description: `Updated ${count} item${count !== 1 ? 's' : ''} from the selected price list.` });
+      } else {
+        toast({ title: 'No matches', description: 'None of the items on this invoice are covered by that price list.' });
+      }
+    } catch {
+      toast({ title: 'Error', description: 'Could not load price list.', variant: 'destructive' });
+    } finally {
+      setIsApplyingPriceList(false);
+    }
+  };
 
   // Add-charge dialog state
   const [addChargeOpen, setAddChargeOpen] = useState(false);
@@ -298,6 +343,36 @@ export function EditQuoteView({
         </div>
 
         <div className="space-y-4 text-sm">
+          {availablePriceLists.length > 0 && (
+            <div className="bg-blue-50 border border-blue-100 rounded-lg p-3">
+              <label className="block text-xs font-semibold text-blue-800 mb-1.5">Apply Price List</label>
+              <div className="flex gap-2">
+                <select
+                  value={applyPriceListId}
+                  onChange={(e) => setApplyPriceListId(e.target.value)}
+                  className="flex-1 border border-blue-200 rounded-md px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-400"
+                >
+                  <option value="">Select a price list…</option>
+                  {availablePriceLists.map(pl => (
+                    <option key={pl.id} value={String(pl.id)}>
+                      {pl.name} ({pl.itemCount} items)
+                    </option>
+                  ))}
+                </select>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleApplyPriceList}
+                  disabled={!applyPriceListId || isApplyingPriceList}
+                  className="shrink-0 border-blue-300 text-blue-700 hover:bg-blue-100"
+                >
+                  {isApplyingPriceList ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Apply'}
+                </Button>
+              </div>
+              <p className="text-xs text-blue-600 mt-1">Reprices matching items — you can still adjust individually.</p>
+            </div>
+          )}
+
           <div>
             <h3 className="font-medium mb-2">Items</h3>
             {editItems.length === 0 ? (
