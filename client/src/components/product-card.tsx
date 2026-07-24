@@ -15,6 +15,10 @@ import { useNearDepletionThreshold } from "@/lib/near-depletion";
 import {
   AlertTriangle,
   Lock,
+  MoreVertical,
+  Package,
+  PackagePlus,
+  Pencil,
   Trash2,
 } from "lucide-react";
 import {
@@ -103,6 +107,9 @@ interface ProductCardProps {
   product: Product;
   onStatusChange?: (id: number, status: "active" | "inactive" | "out_of_stock" | "locked") => void;
   onDelete?: (id: number) => void;
+  onEdit?: (product: Product) => void;
+  onManageStock?: (product: Product) => void;
+  onViewBatches?: (product: Product) => void;
   isViewer?: boolean;
 }
 
@@ -110,6 +117,9 @@ function ProductCard({
   product,
   onStatusChange,
   onDelete,
+  onEdit,
+  onManageStock,
+  onViewBatches,
   isViewer = false,
   rrpMarginVisible = false,
 }: ProductCardProps) {
@@ -329,9 +339,43 @@ function ProductCard({
           {/* Content — pointer-events blocked for locked products */}
           <div className={isLocked ? 'pointer-events-none' : ''}>
 
-            {/* Product name + size */}
+            {/* Product name + quick-action menu */}
             <div className="mb-2">
-              <h3 className="font-semibold text-gray-900 text-base line-clamp-1">{product.name}</h3>
+              <div className="flex items-start justify-between gap-1 -mr-2 -mt-1">
+                <h3 className="font-semibold text-gray-900 text-base line-clamp-1 flex-1 min-w-0 pt-1">{product.name}</h3>
+                {!isViewer && !isLocked && (onEdit || onManageStock || onViewBatches) && (
+                  <div onClick={(e) => e.stopPropagation()} className="shrink-0">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-11 w-11 text-gray-500 hover:text-gray-700"
+                        >
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-40" onClick={(e) => e.stopPropagation()}>
+                        {onEdit && (
+                          <DropdownMenuItem onClick={() => onEdit(product)} className="cursor-pointer">
+                            <Pencil className="h-4 w-4 mr-2" /> Edit
+                          </DropdownMenuItem>
+                        )}
+                        {onManageStock && (
+                          <DropdownMenuItem onClick={() => onManageStock(product)} className="cursor-pointer">
+                            <PackagePlus className="h-4 w-4 mr-2" /> Manage Stock
+                          </DropdownMenuItem>
+                        )}
+                        {onViewBatches && (product.batchCount ?? 0) > 0 && (
+                          <DropdownMenuItem onClick={() => onViewBatches(product)} className="cursor-pointer">
+                            <Package className="h-4 w-4 mr-2" /> View Batches
+                          </DropdownMenuItem>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                )}
+              </div>
               {weightLabel && (
                 <span className="text-xs text-gray-400">{weightLabel}</span>
               )}

@@ -1513,7 +1513,32 @@ export default function ProductManagement() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
             {filteredProducts.map((product) => (
               <div key={product.id} className="space-y-3">
-                <ProductCard product={product} onStatusChange={handleStatusChange} onDelete={handleDeleteLocked} isViewer={isViewer} rrpMarginVisible={user?.rrpMarginVisible === true} />
+                <ProductCard
+                  product={product}
+                  onStatusChange={handleStatusChange}
+                  onDelete={handleDeleteLocked}
+                  onEdit={!isViewer ? (p) => handleEdit(p as any) : undefined}
+                  onManageStock={!isViewer ? (p) => handleManageStock(p as any) : undefined}
+                  onViewBatches={!isViewer ? (p) => setExpandedBatchProductId(prev => prev === p.id ? null : p.id) : undefined}
+                  isViewer={isViewer}
+                  rrpMarginVisible={user?.rrpMarginVisible === true}
+                />
+                {expandedBatchProductId === product.id && (
+                  <BatchBreakdownPanel
+                    product={product}
+                    productBatches={productBatches as ProductBatch[]}
+                    isLoadingBatches={isLoadingBatches}
+                    editingExpiryBatchId={editingExpiryBatchId}
+                    setEditingExpiryBatchId={setEditingExpiryBatchId}
+                    editingExpiryValue={editingExpiryValue}
+                    setEditingExpiryValue={setEditingExpiryValue}
+                    expiryEditCancelledRef={expiryEditCancelledRef}
+                    isViewer={isViewer}
+                    onAdjustBatch={(args) => adjustBatchMutation.mutate(args)}
+                    onDepleteBatch={(args) => depleteBatchMutation.mutate(args)}
+                    onUpdateExpiry={(args) => updateExpiryMutation.mutate(args)}
+                  />
+                )}
               </div>
             ))}
           </div>
