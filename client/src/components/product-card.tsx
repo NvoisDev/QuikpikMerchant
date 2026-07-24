@@ -59,6 +59,7 @@ interface Product {
   nearestExpiry?: string | null;
   totalBatchStock?: number | null;
   percentSold?: number | null;
+  unitsSold?: number | null;
   rrp?: string | null;
 }
 
@@ -386,22 +387,11 @@ function ProductCard({
                   <span className="text-gray-700">{productSize}</span>
                 </div>
               )}
-              <div className="flex justify-between items-start">
+              <div className="flex justify-between items-center">
                 <span className="text-gray-500">Remaining</span>
-                <div className={`font-medium text-right ${stockStatus.color}`}>
-                  <div>
-                    {formatNumber(product.stock ?? 0)} {product.sellingFormat === 'pallets' ? 'pallets' : 'units'}
-                  </div>
-                  {(() => {
-                    const breakdown = InventoryCalculator.formatStockBreakdown(
-                      product.stock ?? 0,
-                      product.quantityInPack,
-                      product.unitsPerPallet
-                    );
-                    if (!breakdown) return null;
-                    return <div className="text-xs font-normal text-gray-500 mt-0.5">{breakdown.label}</div>;
-                  })()}
-                </div>
+                <span className={`font-medium ${stockStatus.color}`}>
+                  {formatNumber(product.stock ?? 0)} {product.sellingFormat === 'pallets' ? 'pallets' : 'units'}
+                </span>
               </div>
               {expiryInfo && (
                 <div className="flex justify-between items-center">
@@ -411,18 +401,12 @@ function ProductCard({
                   </span>
                 </div>
               )}
-              {(product.batchCount ?? 0) > 0 && (
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-500">Batches</span>
-                  <span className="text-gray-600">{product.batchCount} {product.batchCount === 1 ? 'batch' : 'batches'}</span>
-                </div>
-              )}
               {product.percentSold != null && (
                 <div>
                   <div className="flex justify-between items-center mb-0.5">
                     <span className="text-gray-500">Sold</span>
                     <span className={`font-medium ${product.percentSold >= 70 ? 'text-green-600' : product.percentSold >= 30 ? 'text-amber-600' : 'text-gray-600'}`}>
-                      {product.percentSold}%
+                      {product.unitsSold != null ? `${formatNumber(product.unitsSold)} units` : ''}{product.unitsSold != null ? <span className="text-xs font-normal text-gray-400 ml-1">({product.percentSold}%)</span> : `${product.percentSold}%`}
                     </span>
                   </div>
                   <div className="h-1 bg-gray-100 rounded-full overflow-hidden">

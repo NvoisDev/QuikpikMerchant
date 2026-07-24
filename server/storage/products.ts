@@ -234,13 +234,15 @@ export class ProductStorage extends UserStorageBase {
       ]);
       return mapped.map(p => {
         const bs = batchSummaries.get(p.id);
+        const sold = percentSoldMap.get(p.id);
         return {
           ...p,
           totalBatchStock: bs?.totalBatchStock ?? null,
           nearestExpiry: bs?.nearestExpiry ?? null,
           batchCount: bs?.batchCount ?? 0,
           weightedAvgCost: bs?.weightedAvgCost ?? null,
-          percentSold: percentSoldMap.get(p.id) ?? null,
+          percentSold: sold?.pct ?? null,
+          unitsSold: sold?.unitsSold ?? null,
         };
       }) as unknown as Product[];
     }
@@ -439,13 +441,15 @@ export class ProductStorage extends UserStorageBase {
       this._getPercentSold([id], stockByProductId, product.wholesalerId ?? undefined),
     ]);
     const bs = batchSummaries.get(id);
+    const sold = percentSoldMap.get(id);
     return {
       ...product,
       totalBatchStock: bs?.totalBatchStock ?? null,
       nearestExpiry: bs?.nearestExpiry ?? null,
       batchCount: bs?.batchCount ?? 0,
       weightedAvgCost: bs?.weightedAvgCost ?? null,
-      percentSold: percentSoldMap.get(id) ?? null,
+      percentSold: sold?.pct ?? null,
+      unitsSold: sold?.unitsSold ?? null,
     } as Product;
   }
 
@@ -568,7 +572,7 @@ export class ProductStorage extends UserStorageBase {
     productIds: number[],
     stockByProductId: Map<number, number>,
     wholesalerId?: string
-  ): Promise<Map<number, number | null>> {
+  ): Promise<Map<number, { pct: number | null; unitsSold: number | null }>> {
     if (productIds.length === 0) return new Map();
     const rows = await db
       .select({
@@ -586,16 +590,16 @@ export class ProductStorage extends UserStorageBase {
       )
       .groupBy(stockMovements.productId);
 
-    const map = new Map<number, number | null>();
+    const map = new Map<number, { pct: number | null; unitsSold: number | null }>();
     for (const row of rows) {
       const unitsSold = Number(row.unitsSold ?? 0);
       if (unitsSold <= 0) {
-        map.set(row.productId, null);
+        map.set(row.productId, { pct: null, unitsSold: null });
         continue;
       }
       const currentStock = stockByProductId.get(row.productId) ?? 0;
       const pct = Math.round((unitsSold / (unitsSold + currentStock)) * 100);
-      map.set(row.productId, Math.min(100, Math.max(0, pct)));
+      map.set(row.productId, { pct: Math.min(100, Math.max(0, pct)), unitsSold });
     }
     return map;
   }

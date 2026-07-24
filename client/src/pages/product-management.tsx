@@ -365,6 +365,7 @@ type ProductWithBatches = Product & {
   batchCount?: number;
   nearestExpiry?: string | null;
   percentSold?: number | null;
+  unitsSold?: number | null;
 };
 
 export default function ProductManagement() {
