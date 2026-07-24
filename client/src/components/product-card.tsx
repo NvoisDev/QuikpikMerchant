@@ -441,19 +441,13 @@ function ProductCard({
             <div className="flex flex-wrap gap-1.5">
               <Badge
                 variant="outline"
-                className={`text-xs ${
-                  product.sellingFormat === 'pallets'
-                    ? 'border-purple-300 text-purple-700 bg-purple-50'
-                    : product.sellingFormat === 'both'
-                      ? 'border-blue-300 text-blue-700 bg-blue-50'
-                      : 'border-gray-300 text-gray-600 bg-gray-50'
-                }`}
+                className="text-xs border-gray-300 text-gray-600"
               >
                 {product.sellingFormat === 'pallets' ? 'Pallets Only' :
                  product.sellingFormat === 'both' ? 'Units & Pallets' : 'Units Only'}
               </Badge>
               {!product.priceVisible && (
-                <Badge variant="outline" className="text-xs">Price Hidden</Badge>
+                <Badge variant="outline" className="text-xs border-gray-300 text-gray-600">Price Hidden</Badge>
               )}
               {margin !== null && (
                 <Badge variant="outline" className={`text-xs ${marginBadgeClass}`}>

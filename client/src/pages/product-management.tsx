@@ -15,7 +15,13 @@ import { useAuth, type AuthUser } from "@/hooks/useAuth";
 import ProductCard from "@/components/product-card";
 import { ContextualHelpBubble } from "@/components/ContextualHelpBubble";
 import { helpContent } from "@/data/whatsapp-help-content";
-import { Plus, Search, Download, Grid, List, Package, Upload, AlertTriangle, Lock, LockOpen, Tag, PackagePlus, Pencil, Copy, Trash2, TrendingUp, X, Settings2 } from "lucide-react";
+import { Plus, Search, Download, Grid, List, Package, Upload, AlertTriangle, Lock, LockOpen, Tag, PackagePlus, Pencil, Copy, Trash2, TrendingUp, X, Settings2, MoreVertical } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import type { Product, PromotionalOffer } from "@shared/schema";
 import { formatNumber } from "@/lib/currencies";
 import { useCurrency } from "@/hooks/useCurrency";
@@ -1362,31 +1368,84 @@ export default function ProductManagement() {
                 className="pl-10 h-8 border-slate-200 rounded-lg focus:ring-emerald-500/30 focus:border-emerald-400"
               />
             </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[130px] h-8 border-slate-200 rounded-lg">
-                <SelectValue placeholder="All Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="inactive">Inactive</SelectItem>
-                <SelectItem value="out_of_stock">Out of Stock</SelectItem>
-                <SelectItem value="expiring">Expiring Products</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-              <SelectTrigger className="w-[150px] h-8 border-slate-200 rounded-lg">
-                <SelectValue placeholder="All Categories" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
-                {categoryList.map((cat) => (
-                  <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {/* Mobile: collapsed Filters button */}
+            <div className="flex md:hidden">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-8 gap-1.5 border-slate-200">
+                    Filters
+                    {(statusFilter !== 'all' || categoryFilter !== 'all') && (
+                      <span className="ml-0.5 h-4 w-4 rounded-full bg-green-600 text-white text-[10px] flex items-center justify-center font-medium">
+                        {[statusFilter !== 'all', categoryFilter !== 'all'].filter(Boolean).length}
+                      </span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-64 p-4" align="start">
+                  <div className="space-y-3">
+                    <div>
+                      <p className="text-xs font-medium text-gray-700 mb-1">Status</p>
+                      <Select value={statusFilter} onValueChange={setStatusFilter}>
+                        <SelectTrigger className="h-8 text-sm border-slate-200">
+                          <SelectValue placeholder="All Status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Status</SelectItem>
+                          <SelectItem value="active">Active</SelectItem>
+                          <SelectItem value="inactive">Inactive</SelectItem>
+                          <SelectItem value="out_of_stock">Out of Stock</SelectItem>
+                          <SelectItem value="expiring">Expiring Products</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium text-gray-700 mb-1">Category</p>
+                      <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                        <SelectTrigger className="h-8 text-sm border-slate-200">
+                          <SelectValue placeholder="All Categories" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Categories</SelectItem>
+                          {categoryList.map((cat) => (
+                            <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
+            </div>
+            {/* Desktop: inline Status + Category filters */}
+            <div className="hidden md:block">
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-[130px] h-8 border-slate-200 rounded-lg">
+                  <SelectValue placeholder="All Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="inactive">Inactive</SelectItem>
+                  <SelectItem value="out_of_stock">Out of Stock</SelectItem>
+                  <SelectItem value="expiring">Expiring Products</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="hidden md:block">
+              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                <SelectTrigger className="w-[150px] h-8 border-slate-200 rounded-lg">
+                  <SelectValue placeholder="All Categories" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Categories</SelectItem>
+                  {categoryList.map((cat) => (
+                    <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <Select value={marginSort} onValueChange={(v) => handleSetMarginSort(v as "asc" | "desc" | "name_asc" | "name_desc" | "sold_asc" | "sold_desc")}>
-              <SelectTrigger className="w-[160px] h-8 border-slate-200 rounded-lg">
+              <SelectTrigger className="w-[140px] h-8 border-slate-200 rounded-lg">
                 <SelectValue placeholder="Sort by" />
               </SelectTrigger>
               <SelectContent>
@@ -1471,16 +1530,51 @@ export default function ProductManagement() {
                       <img
                         src={(product.images && product.images.length > 0) ? product.images[0] : (product.imageUrl || "https://images.unsplash.com/photo-1586201375761-83865001e31c?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&h=100")}
                         alt={product.name}
-                        className="w-12 h-12 sm:w-16 sm:h-16 object-cover rounded-lg flex-shrink-0"
+                        className="w-12 h-12 sm:w-16 sm:h-16 object-cover rounded-lg flex-shrink-0 mt-0.5"
                       />
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1.5">
-                          {product.status === 'locked'
-                            ? <Lock className="h-3.5 w-3.5 text-gray-500 flex-shrink-0" />
-                            : <LockOpen className="h-3.5 w-3.5 text-green-600 flex-shrink-0" />
-                          }
-                          <h3 className="text-sm sm:text-lg font-semibold text-gray-900 truncate">{product.name}</h3>
+                        {/* Title row + ⋮ action menu */}
+                        <div className="flex items-start justify-between gap-1">
+                          <h3 className="text-sm sm:text-base font-semibold text-gray-900 truncate flex-1 min-w-0 leading-snug pt-0.5">{product.name}</h3>
+                          {!isViewer && (
+                            <div onClick={(e) => e.stopPropagation()} className="shrink-0 -mt-1.5 -mr-2">
+                              {product.status === 'locked' ? (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-11 w-11 text-red-500 hover:text-red-700 hover:bg-red-50"
+                                  title="Delete locked product to free up a slot"
+                                  onClick={() => handleDeleteLocked(product.id)}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              ) : (
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="h-11 w-11 text-gray-500 hover:text-gray-700">
+                                      <MoreVertical className="h-4 w-4" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    <DropdownMenuItem onClick={() => handleEdit(product)}>
+                                      <Pencil className="h-4 w-4 mr-2" /> Edit
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => { setStockProduct(product); setStockAdjustmentType("increase"); setStockQuantity(""); setStockReason(""); setBatchExpiry(""); setBatchRef(""); setBatchCostPrice(product.costPrice ? String(product.costPrice) : ""); }}>
+                                      <PackagePlus className="h-4 w-4 mr-2" /> Manage Stock
+                                    </DropdownMenuItem>
+                                    {(product.batchCount ?? 0) > 0 && (
+                                      <DropdownMenuItem onClick={() => setExpandedBatchProductId(prev => prev === product.id ? null : product.id)}>
+                                        <Package className="h-4 w-4 mr-2" />
+                                        {expandedBatchProductId === product.id ? 'Hide batches' : 'View batches'}
+                                      </DropdownMenuItem>
+                                    )}
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              )}
+                            </div>
+                          )}
                         </div>
+                        {/* Status + alert badges */}
                         <div className="flex flex-wrap items-center gap-1.5 mt-1">
                           {product.status === 'locked' ? (
                             <Badge className="text-xs bg-orange-100 text-orange-800 border border-orange-200 hover:bg-orange-100">
@@ -1502,11 +1596,8 @@ export default function ProductManagement() {
                             <Badge className="text-xs bg-purple-100 text-purple-800 border border-purple-300">Near Depletion</Badge>
                           )}
                           {product.hiddenFromPublic && (
-                            <Badge variant="outline" className="text-xs text-gray-500 border-gray-400">Hidden from public</Badge>
+                            <Badge variant="outline" className="text-xs text-gray-500 border-gray-400">Hidden</Badge>
                           )}
-                        </div>
-                        <div className="flex flex-wrap items-center gap-1.5 mt-1">
-                          <Badge variant="secondary" className="text-xs">{product.category}</Badge>
                           {(() => {
                             const effectiveExpiry = (product.batchCount ?? 0) > 0 ? (product.nearestExpiry || product.expiryDate) : product.expiryDate;
                             if (!effectiveExpiry) return null;
@@ -1515,15 +1606,22 @@ export default function ProductManagement() {
                             const diffDays = Math.ceil((expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
                             const formatted = expiry.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' });
                             if (diffDays < 0) return <Badge variant="outline" className="text-xs bg-red-100 text-red-700 border-red-200">Expired · {formatted}</Badge>;
-                            if (diffDays <= 30) return <Badge variant="outline" className="text-xs bg-amber-100 text-amber-700 border-amber-200">Expiring soon · {formatted}</Badge>;
-                            return <Badge variant="outline" className="text-xs bg-gray-100 text-gray-600 border-gray-200">Exp: {formatted}</Badge>;
+                            if (diffDays <= 30) return <Badge variant="outline" className="text-xs bg-amber-100 text-amber-700 border-amber-200">Expiring · {formatted}</Badge>;
+                            return null;
                           })()}
-                          {product.packQuantity && product.unitSize && product.unitOfMeasure && (
-                            <Badge variant="outline" className="text-blue-600 border-blue-600 text-xs">
-                              {product.packQuantity} x {Math.round(parseFloat(product.unitSize))}{product.unitOfMeasure}
-                            </Badge>
-                          )}
                         </div>
+                        {/* Plain text meta: category · pack config */}
+                        {(product.category || (product.packQuantity && product.unitSize && product.unitOfMeasure)) && (
+                          <p className="text-xs text-gray-400 mt-1 leading-snug">
+                            {[
+                              product.category || null,
+                              (product.packQuantity && product.unitSize && product.unitOfMeasure)
+                                ? `${product.packQuantity} × ${Math.round(parseFloat(product.unitSize))}${product.unitOfMeasure}`
+                                : null,
+                            ].filter(Boolean).join(' · ')}
+                          </p>
+                        )}
+                        {/* Active promo badges */}
                         {(() => {
                           const now = new Date();
                           const activePromos: PromotionalOffer[] = Array.isArray(product.promotionalOffers)
@@ -1557,8 +1655,9 @@ export default function ProductManagement() {
                           );
                         })()}
                         {product.description && (
-                          <p className="text-gray-600 text-xs sm:text-sm mt-2 line-clamp-2">{product.description}</p>
+                          <p className="text-gray-500 text-xs mt-1.5 line-clamp-2">{product.description}</p>
                         )}
+                        {/* Stats grid */}
                         <div className={`grid gap-2 sm:gap-4 mt-3 text-xs sm:text-sm ${hasCostPrice ? 'grid-cols-4' : 'grid-cols-3'}`}>
                           <div>
                             <span className="text-gray-500">Price:</span>
@@ -1581,44 +1680,27 @@ export default function ProductManagement() {
                           </div>
                           <div>
                             <span className="text-gray-500">Stock:</span>
-                            <div className={`font-semibold ${product.stock > 10 ? 'text-green-600' : product.stock > 0 ? 'text-yellow-600' : 'text-red-600'}`}>
-                              {formatNumber(product.stock)} units
+                            <div className={`font-medium ${product.stock > 10 ? 'text-green-600' : product.stock > 0 ? 'text-yellow-600' : 'text-red-600'}`}>
+                              {(() => {
+                                const parts: string[] = [`${formatNumber(product.stock)} units`];
+                                const breakdown = InventoryCalculator.formatStockBreakdown(product.stock ?? 0, product.quantityInPack, product.unitsPerPallet);
+                                if (breakdown) parts.push(breakdown.label);
+                                if ((product.batchCount ?? 0) > 0) parts.push(`${product.batchCount} batch${(product.batchCount ?? 0) !== 1 ? 'es' : ''}`);
+                                return parts.join(' · ');
+                              })()}
                             </div>
-                            {(() => {
-                              const breakdown = InventoryCalculator.formatStockBreakdown(
-                                product.stock ?? 0,
-                                product.quantityInPack,
-                                product.unitsPerPallet
-                              );
-                              if (!breakdown) return null;
-                              return <div className="text-xs text-gray-400 mt-0.5">{breakdown.label}</div>;
-                            })()}
-                            {(product.batchCount ?? 0) > 0 && (
-                              <div className="text-xs text-gray-400 mt-0.5">
-                                {product.batchCount} batch{(product.batchCount ?? 0) !== 1 ? 'es' : ''}
-                                {product.nearestExpiry && (() => {
-                                  const exp = new Date(product.nearestExpiry);
-                                  const now = new Date(); now.setHours(0, 0, 0, 0);
-                                  const diff = Math.ceil((exp.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-                                  const fmt = exp.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' });
-                                  if (diff < 0) return <span className="text-red-600 font-medium"> · Exp: {fmt}</span>;
-                                  if (diff <= 30) return <span className="text-amber-600 font-medium"> · Exp: {fmt}</span>;
-                                  return <span> · Exp: {fmt}</span>;
-                                })()}
-                              </div>
-                            )}
                             {product.percentSold != null && (
                               <div className="mt-1.5">
-                                <div className="flex items-center gap-1.5">
-                                  <div className="flex-1 h-1 bg-gray-100 rounded-full overflow-hidden">
-                                    <div
-                                      className={`h-full rounded-full ${product.percentSold >= 70 ? 'bg-green-500' : product.percentSold >= 30 ? 'bg-amber-500' : 'bg-gray-300'}`}
-                                      style={{ width: `${product.percentSold}%` }}
-                                    />
-                                  </div>
-                                  <span className={`text-xs font-medium ${product.percentSold >= 70 ? 'text-green-600' : product.percentSold >= 30 ? 'text-amber-600' : 'text-gray-500'}`}>
-                                    {product.percentSold}% sold
-                                  </span>
+                                <div className="text-xs text-gray-400 mb-0.5">
+                                  {(product as any).unitsSold != null
+                                    ? `${formatNumber((product as any).unitsSold)} sold (${product.percentSold}%)`
+                                    : `${product.percentSold}% sold`}
+                                </div>
+                                <div className="h-1 bg-gray-100 rounded-full overflow-hidden">
+                                  <div
+                                    className={`h-full rounded-full ${product.percentSold >= 70 ? 'bg-green-500' : product.percentSold >= 30 ? 'bg-amber-500' : 'bg-gray-300'}`}
+                                    style={{ width: `${product.percentSold}%` }}
+                                  />
                                 </div>
                               </div>
                             )}
@@ -1643,55 +1725,14 @@ export default function ProductManagement() {
                             );
                           })()}
                         </div>
-                        {!isViewer && (
-                          <div className="flex items-center gap-0.5 mt-2 -ml-1.5">
-                            {product.status === 'locked' ? (
-                              <div className="flex items-center gap-2 ml-1.5">
-                                <a
-                                  href="/subscription-pricing"
-                                  onClick={(e) => e.stopPropagation()}
-                                  className="text-xs font-semibold text-orange-700 underline hover:text-orange-900 flex items-center gap-1"
-                                >
-                                  <Lock className="h-3 w-3" />
-                                  Upgrade to reactivate
-                                </a>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-7 w-7 text-red-500 hover:text-red-700 hover:bg-red-50"
-                                  title="Delete locked product to free up a slot"
-                                  onClick={(e) => { e.stopPropagation(); handleDeleteLocked(product.id); }}
-                                >
-                                  <Trash2 className="h-3.5 w-3.5" />
-                                </Button>
-                              </div>
-                            ) : (
-                              <>
-                            <Button
-                              variant="ghost" size="icon" className="h-8 w-8"
-                              onClick={(e) => { e.stopPropagation(); handleEdit(product); }}
-                              title="Edit"
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost" size="icon" className="h-8 w-8"
-                              onClick={(e) => { e.stopPropagation(); setStockProduct(product); setStockAdjustmentType("increase"); setStockQuantity(""); setStockReason(""); setBatchExpiry(""); setBatchRef(""); setBatchCostPrice(product.costPrice ? String(product.costPrice) : ""); }}
-                              title="Manage Stock"
-                            >
-                              <PackagePlus className="h-4 w-4" />
-                            </Button>
-                            {(product.batchCount ?? 0) > 0 && (
-                              <Button
-                                variant="ghost" size="sm" className="h-8 px-2 text-xs text-blue-600 hover:text-blue-700"
-                                onClick={(e) => { e.stopPropagation(); setExpandedBatchProductId(prev => prev === product.id ? null : product.id); }}
-                              >
-                                {expandedBatchProductId === product.id ? 'Hide batches' : `${product.batchCount} batch${(product.batchCount ?? 0) !== 1 ? 'es' : ''}`}
-                              </Button>
-                            )}
-                              </>
-                            )}
-                          </div>
+                        {product.status === 'locked' && (
+                          <a
+                            href="/subscription-pricing"
+                            onClick={(e) => e.stopPropagation()}
+                            className="text-xs font-semibold text-orange-700 underline hover:text-orange-900 flex items-center gap-1 mt-2"
+                          >
+                            <Lock className="h-3 w-3" /> Upgrade to reactivate
+                          </a>
                         )}
                       </div>
                     </div>
