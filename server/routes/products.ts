@@ -492,7 +492,7 @@ export function registerProductRoutes(app: Express): void {
             await tx.insert(productPriceHistory).values({
               wholesalerId: targetUserId,
               productId: id,
-              productName: updatedProduct.name,
+              productName: updatedProduct?.name ?? existingProduct.name,
               sellingType: 'units',
               oldPrice: oldPrice.toFixed(2),
               newPrice: newPrice.toFixed(2),
@@ -506,7 +506,7 @@ export function registerProductRoutes(app: Express): void {
             await tx.insert(productPriceHistory).values({
               wholesalerId: targetUserId,
               productId: id,
-              productName: updatedProduct.name,
+              productName: updatedProduct?.name ?? existingProduct.name,
               sellingType: 'pallets',
               oldPrice: oldPallet.toFixed(2),
               newPrice: newPallet.toFixed(2),
