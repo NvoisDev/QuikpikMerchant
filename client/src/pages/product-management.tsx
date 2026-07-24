@@ -1706,13 +1706,7 @@ export default function ProductManagement() {
                           <div>
                             <span className="text-gray-500">Stock:</span>
                             <div className={`font-medium ${product.stock > 10 ? 'text-green-600' : product.stock > 0 ? 'text-yellow-600' : 'text-red-600'}`}>
-                              {(() => {
-                                const parts: string[] = [`${formatNumber(product.stock)} units`];
-                                const breakdown = InventoryCalculator.formatStockBreakdown(product.stock ?? 0, product.quantityInPack, product.unitsPerPallet);
-                                if (breakdown) parts.push(breakdown.label);
-                                if ((product.batchCount ?? 0) > 0) parts.push(`${product.batchCount} batch${(product.batchCount ?? 0) !== 1 ? 'es' : ''}`);
-                                return parts.join(' · ');
-                              })()}
+                              {formatNumber(product.stock)} units
                             </div>
                             {product.percentSold != null && (
                               <div className="mt-1.5">
