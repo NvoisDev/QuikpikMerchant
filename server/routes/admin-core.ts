@@ -43,11 +43,12 @@ import { getProductLimit } from "../utils/plan-tier";
 import { sendWholesalerSuspendedEmail, sendWholesalerReinstatedEmail } from "../sendgrid-service";
 
 // ── Stripe invoice cache ─────────────────────────────────────────────────────
-// Caches processed invoice rows for 5 minutes so the admin stats page doesn't
-// hammer the Stripe API on every load.
+// Caches RAW Stripe invoice data for 5 minutes. Tier matching and audit-log
+// deduplication happen at request time against fresh audit-log data, so the
+// merged result is always accurate even as audit logs grow.
 type InvoiceRow = { month: string; tier: string; amount: number };
-type InvoiceCacheResult = { rows: InvoiceRow[]; unmatchedCount: number; unmatchedTotal: number };
-let _stripeInvoiceCache: (InvoiceCacheResult & { expires: number }) | null = null;
+type RawStripeInvoice = { custId: string; invoiceId: string; month: string; amount: number; priceId: string | null };
+let _stripeRawCache: { rawInvoices: RawStripeInvoice[]; expires: number } | null = null;
 
 function tierBucket(planId: string | null | undefined): 'listing' | 'starter' | 'standard' | 'premium' | null {
   if (!planId || planId === 'free') return 'listing';
@@ -58,18 +59,12 @@ function tierBucket(planId: string | null | undefined): 'listing' | 'starter' | 
   return null;
 }
 
-async function fetchStripeInvoiceRows(
-  customerIds: string[],
-  priceToTier: Record<string, string>,
-): Promise<InvoiceCacheResult> {
-  if (_stripeInvoiceCache && Date.now() < _stripeInvoiceCache.expires) {
-    const { expires: _e, ...rest } = _stripeInvoiceCache;
-    return rest;
+async function fetchRawStripeInvoices(customerIds: string[]): Promise<RawStripeInvoice[]> {
+  if (_stripeRawCache && Date.now() < _stripeRawCache.expires) {
+    return _stripeRawCache.rawInvoices;
   }
   const stripe = getStripeClient(false); // live Stripe only — revenue reporting
-  const rows: InvoiceRow[] = [];
-  let unmatchedCount = 0;
-  let unmatchedTotal = 0;
+  const rawInvoices: RawStripeInvoice[] = [];
   const CHUNK = 8; // stay well inside Stripe rate limits
   for (let i = 0; i < customerIds.length; i += CHUNK) {
     const chunk = customerIds.slice(i, i + CHUNK);
@@ -78,18 +73,12 @@ async function fetchStripeInvoiceRows(
         await stripe.invoices.list({ customer: custId, status: 'paid', limit: 100 }).autoPagingEach(
           (inv) => {
             if ((inv.amount_paid ?? 0) <= 0) return;
+            // pricing.price_details.price is only populated on newer Stripe subscriptions;
+            // older invoices return null here — tier matching falls back to audit log / current tier.
             const priceId = inv.lines?.data?.[0]?.pricing?.price_details?.price ?? null;
-            const tier = (priceId && priceToTier[priceId]) ? priceToTier[priceId] : null;
-            if (!tier) {
-              // Invoice paid but price ID doesn't match any known plan tier
-              unmatchedCount++;
-              unmatchedTotal += (inv.amount_paid ?? 0) / 100;
-              return;
-            }
-            // Use UTC month of invoice creation (consistent with legacy audit-log YYYY-MM)
             const d = new Date(inv.created * 1000);
             const month = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
-            rows.push({ month, tier, amount: inv.amount_paid / 100 });
+            rawInvoices.push({ custId, invoiceId: inv.id, month, amount: inv.amount_paid / 100, priceId });
           }
         );
       } catch {
@@ -97,8 +86,8 @@ async function fetchStripeInvoiceRows(
       }
     }));
   }
-  _stripeInvoiceCache = { rows, unmatchedCount, unmatchedTotal, expires: Date.now() + 5 * 60 * 1000 };
-  return { rows, unmatchedCount, unmatchedTotal };
+  _stripeRawCache = { rawInvoices, expires: Date.now() + 5 * 60 * 1000 };
+  return rawInvoices;
 }
 
 export function registerAdminCoreRoutes(app: Express): void {
@@ -181,24 +170,94 @@ export function registerAdminCoreRoutes(app: Express): void {
         }
       }
 
-      // Fetch paid invoices from Stripe (cached 5 min) for all non-test wholesalers
-      const customerIds = allWholesalers.map(w => w.stripeCustomerId).filter((id): id is string => Boolean(id));
-      let invoiceRows: InvoiceRow[] = [];
-      let unmatchedInvoices = { count: 0, total: 0 };
-      try {
-        const result = await fetchStripeInvoiceRows(customerIds, priceToTier);
-        invoiceRows = result.rows;
-        unmatchedInvoices = { count: result.unmatchedCount, total: result.unmatchedTotal };
-      } catch (stripeErr) {
-        console.error('Stripe invoice fetch failed; monthly collected will be empty:', stripeErr);
+      // ── Step 1: Audit log — source of truth for historical payments ───────────
+      // Fetch all payment_success entries; these have correctly attributed tier
+      // (the tier at the time of payment, not the current tier).
+      const auditLogResult = await db.select({
+        userId:          subscriptionAuditLogs.userId,
+        toTier:          subscriptionAuditLogs.toTier,
+        amount:          subscriptionAuditLogs.amount,
+        timestamp:       subscriptionAuditLogs.timestamp,
+        stripeInvoiceId: subscriptionAuditLogs.stripeInvoiceId,
+      }).from(subscriptionAuditLogs)
+        .where(eq(subscriptionAuditLogs.eventType, 'payment_success'));
+
+      // Set of Stripe invoice IDs already captured in the audit log
+      const auditInvoiceIds = new Set<string>();
+      // Fallback: "userId_YYYY-MM" for entries recorded before invoice ID tracking
+      const auditMonthKeys  = new Set<string>();
+      const auditLogRows: InvoiceRow[] = [];
+
+      for (const entry of auditLogResult) {
+        const d = new Date(entry.timestamp as Date);
+        const month = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
+        const tier = tierBucket(entry.toTier as string | null);
+        if (tier && entry.amount) {
+          auditLogRows.push({ month, tier, amount: parseFloat(entry.amount as string) });
+        }
+        if (entry.stripeInvoiceId) {
+          auditInvoiceIds.add(entry.stripeInvoiceId);
+        } else {
+          // Old entry without invoice ID — use userId+month as dedup key
+          auditMonthKeys.add(`${entry.userId}_${month}`);
+        }
       }
 
-      // Build all-time collected totals and monthly breakdown from Stripe invoice rows
+      // ── Step 2: Stripe — gap-filler for missed webhooks ───────────────────────
+      // Build lookup maps: Stripe customer ID → our user ID / current tier
+      const custIdToUserId: Record<string, string> = {};
+      const custIdToTier:   Record<string, string> = {};
+      for (const w of allWholesalers) {
+        if (w.stripeCustomerId) {
+          custIdToUserId[w.stripeCustomerId] = w.id;
+          custIdToTier[w.stripeCustomerId]   = tierBucket(w.subscriptionTier) ?? 'listing';
+        }
+      }
+
+      const customerIds = allWholesalers
+        .map(w => w.stripeCustomerId)
+        .filter((id): id is string => Boolean(id));
+
+      const missedRows: InvoiceRow[] = [];
+      let unmatchedInvoices = { count: 0, total: 0 };
+
+      try {
+        const rawInvoices = await fetchRawStripeInvoices(customerIds);
+
+        for (const inv of rawInvoices) {
+          // Already captured by audit log (by invoice ID)
+          if (auditInvoiceIds.has(inv.invoiceId)) continue;
+
+          // Already captured by audit log (by userId+month fallback for old entries)
+          const userId = custIdToUserId[inv.custId];
+          if (!userId) continue;
+          if (auditMonthKeys.has(`${userId}_${inv.month}`)) continue;
+
+          // Missed payment — try price ID → tier first, fall back to current tier
+          const tier = (inv.priceId && priceToTier[inv.priceId])
+            ? priceToTier[inv.priceId]
+            : custIdToTier[inv.custId] ?? null;
+
+          if (tier) {
+            missedRows.push({ month: inv.month, tier, amount: inv.amount });
+          } else {
+            unmatchedInvoices.count++;
+            unmatchedInvoices.total += inv.amount;
+          }
+        }
+      } catch (stripeErr) {
+        console.error('Stripe invoice fetch failed; missed-payment detection disabled:', stripeErr);
+      }
+
+      // Final invoice rows = audit log (correct historical data) + Stripe missed payments
+      const invoiceRows: InvoiceRow[] = [...auditLogRows, ...missedRows];
+
+      // Build all-time collected totals and monthly breakdown
       let starterCollected = 0, listingCollected = 0, standardCollected = 0, premiumCollected = 0;
       const monthlyMap: Record<string, { listing: number; starter: number; standard: number; premium: number; total: number }> = {};
       for (const row of invoiceRows) {
         const { month, tier, amount } = row;
-        if (tier === 'listing')  listingCollected  += amount;
+        if (tier === 'listing')       listingCollected  += amount;
         else if (tier === 'starter')  starterCollected  += amount;
         else if (tier === 'standard') standardCollected += amount;
         else if (tier === 'premium')  premiumCollected  += amount;
