@@ -58,6 +58,7 @@ export interface AddressPlaceResult {
   city: string;
   postalCode: string;
   country: string;
+  name?: string; // business/location name when an establishment is selected
 }
 
 interface AddressSearchInputProps {
@@ -110,7 +111,7 @@ export function AddressSearchInput({
     setLoading(true);
     debounceRef.current = setTimeout(() => {
       autocompleteRef.current?.getPlacePredictions(
-        { input: query, types: ['geocode'], ...(global ? {} : { componentRestrictions: { country: 'gb' } }) },
+        { input: query, types: ['geocode', 'establishment'], ...(global ? {} : { componentRestrictions: { country: 'gb' } }) },
         (results: any[], status: string) => {
           setLoading(false);
           if (status === 'OK' && results?.length) {
@@ -148,7 +149,7 @@ export function AddressSearchInput({
     setSuggestions([]);
 
     placesRef.current?.getDetails(
-      { placeId: suggestion.placeId, fields: ['address_components'] },
+      { placeId: suggestion.placeId, fields: ['address_components', 'name', 'types'] },
       (place: any, status: string) => {
         if (status !== 'OK' || !place) return;
         const comps: any[] = place.address_components || [];
@@ -159,11 +160,17 @@ export function AddressSearchInput({
           getComponent(comps, 'locality') ||
           getComponent(comps, 'postal_town') ||
           getComponent(comps, 'administrative_area_level_2');
+        // Include business name when an establishment is selected
+        const placeTypes: string[] = place.types || [];
+        const isEstablishment = placeTypes.some((t: string) =>
+          t === 'establishment' || t === 'store' || t === 'food' || t === 'point_of_interest'
+        );
         onSelect({
           addressLine1,
           city,
           postalCode: getComponent(comps, 'postal_code'),
           country: getComponent(comps, 'country'),
+          name: isEstablishment && place.name ? place.name : undefined,
         });
       }
     );

@@ -418,9 +418,11 @@ export function DeliveryAddressManager({
                     city: result.city,
                     postalCode: result.postalCode,
                     country: result.country,
+                    // Auto-fill label with business name when an establishment is selected
+                    ...(result.name && !prev.label ? { label: result.name } : {}),
                   }))
                 }
-                placeholder="Type to find your address..."
+                placeholder="Search by address or business name..."
               />
               <p className="text-xs text-muted-foreground mt-1">
                 Select an address above to auto-fill the fields below, or fill them in manually.

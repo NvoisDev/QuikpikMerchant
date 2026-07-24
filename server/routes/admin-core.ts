@@ -78,7 +78,7 @@ async function fetchRawStripeInvoices(customerIds: string[]): Promise<RawStripeI
             const priceId = inv.lines?.data?.[0]?.pricing?.price_details?.price ?? null;
             const d = new Date(inv.created * 1000);
             const month = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
-            rawInvoices.push({ custId, invoiceId: inv.id, month, amount: inv.amount_paid / 100, priceId });
+            if (inv.id) rawInvoices.push({ custId, invoiceId: inv.id, month, amount: inv.amount_paid / 100, priceId });
           }
         );
       } catch {
