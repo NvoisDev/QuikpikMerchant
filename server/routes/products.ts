@@ -484,6 +484,36 @@ export function registerProductRoutes(app: Express): void {
           .where(eq(products.id, id))
           .returning();
 
+        // Record price history when price is changed directly in the product editor
+        if (req.body.price !== undefined) {
+          const oldPrice = parseFloat(existingProduct.price || '0');
+          const newPrice = parseFloat(String(productData.price || '0'));
+          if (Math.abs(oldPrice - newPrice) > 0.001) {
+            await tx.insert(productPriceHistory).values({
+              wholesalerId: targetUserId,
+              productId: id,
+              productName: updatedProduct.name,
+              sellingType: 'units',
+              oldPrice: oldPrice.toFixed(2),
+              newPrice: newPrice.toFixed(2),
+            });
+          }
+        }
+        if (req.body.palletPrice !== undefined) {
+          const oldPallet = parseFloat(existingProduct.palletPrice || '0');
+          const newPallet = parseFloat(String(productData.palletPrice || '0'));
+          if (oldPallet > 0 && Math.abs(oldPallet - newPallet) > 0.001) {
+            await tx.insert(productPriceHistory).values({
+              wholesalerId: targetUserId,
+              productId: id,
+              productName: updatedProduct.name,
+              sellingType: 'pallets',
+              oldPrice: oldPallet.toFixed(2),
+              newPrice: newPallet.toFixed(2),
+            });
+          }
+        }
+
         // Sync: when cost_price is updated on the product, mirror it to the
         // "Initial Stock" batch so batch-level cost stays consistent.
         if (req.body.costPrice !== undefined) {

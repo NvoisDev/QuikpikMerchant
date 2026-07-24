@@ -88,7 +88,7 @@ export function QuoteItemCard({
     item.sellingType === 'pallets' && item.palletMoq && item.palletMoq > 1 && liveDisplayQty < item.palletMoq;
 
   const priceChanged = Math.abs(item.customPrice - item.originalPrice) > 0.001;
-  const priceScope = item.priceScope || 'all';
+  const priceScope = item.priceScope || 'invoice';
 
   const hasDiscount = item.customPrice < item.originalPrice;
   const discountPct = hasDiscount
@@ -401,16 +401,21 @@ export function QuoteItemCard({
             <select
               value={priceScope}
               onChange={(e) => updateItemPriceScope(index, e.target.value as 'invoice' | 'customer' | 'all')}
-              className="text-[11px] border rounded px-1 py-0.5 bg-white text-gray-600"
+              className={`text-[11px] border rounded px-1 py-0.5 bg-white ${priceScope === 'all' ? 'border-red-400 text-red-700 font-medium' : 'text-gray-600'}`}
               title="Where should this new price apply?"
             >
-              <option value="all">Update for all customers</option>
-              <option value="customer">This customer only</option>
               <option value="invoice">This invoice only</option>
+              <option value="customer">This customer only</option>
+              <option value="all">⚠ Update ALL customers</option>
             </select>
           )}
+          {priceChanged && priceScope === 'all' && (
+            <span className="text-[11px] text-red-600 font-medium">
+              ⚠ Permanently changes the catalog price for every customer
+            </span>
+          )}
           {priceChanged && priceScope === 'all' && item.sellingType !== 'pallets' && !!item.palletPrice && (
-            <span className="text-[11px] text-amber-600">Pallet price will scale to match.</span>
+            <span className="text-[11px] text-amber-600">Pallet price will also scale to match.</span>
           )}
           {activePromos.map((offer: any, oi: number) => (
             <Badge key={oi} variant="secondary" className={`text-[10px] px-1 py-0 h-4 leading-tight
