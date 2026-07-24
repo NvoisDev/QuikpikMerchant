@@ -42,6 +42,55 @@ import { promotionAnalytics } from "@shared/schema";
 import { getProductLimit } from "../utils/plan-tier";
 import { sendWholesalerSuspendedEmail, sendWholesalerReinstatedEmail } from "../sendgrid-service";
 
+// ── Stripe invoice cache ─────────────────────────────────────────────────────
+// Caches processed invoice rows for 5 minutes so the admin stats page doesn't
+// hammer the Stripe API on every load.
+type InvoiceRow = { month: string; tier: string; amount: number };
+let _stripeInvoiceCache: { rows: InvoiceRow[]; expires: number } | null = null;
+
+function tierBucket(planId: string | null | undefined): 'listing' | 'starter' | 'standard' | 'premium' | null {
+  if (!planId || planId === 'free') return 'listing';
+  if (planId === 'listing' || planId.startsWith('listing_')) return 'listing';
+  if (planId === 'starter'  || planId.startsWith('starter_'))  return 'starter';
+  if (planId === 'standard' || planId.startsWith('standard_')) return 'standard';
+  if (planId === 'premium'  || planId.startsWith('premium_'))  return 'premium';
+  return null;
+}
+
+async function fetchStripeInvoiceRows(
+  customerIds: string[],
+  priceToTier: Record<string, string>,
+): Promise<InvoiceRow[]> {
+  if (_stripeInvoiceCache && Date.now() < _stripeInvoiceCache.expires) {
+    return _stripeInvoiceCache.rows;
+  }
+  const stripe = getStripeClient(false); // live Stripe only — revenue reporting
+  const rows: InvoiceRow[] = [];
+  const CHUNK = 8; // stay well inside Stripe rate limits
+  for (let i = 0; i < customerIds.length; i += CHUNK) {
+    const chunk = customerIds.slice(i, i + CHUNK);
+    await Promise.all(chunk.map(async (custId) => {
+      try {
+        const invoices = await stripe.invoices.list({ customer: custId, status: 'paid', limit: 100 });
+        for (const inv of invoices.data) {
+          if ((inv.amount_paid ?? 0) <= 0) continue;
+          const priceId = inv.lines?.data?.[0]?.pricing?.price_details?.price ?? null;
+          const tier = (priceId && priceToTier[priceId]) ? priceToTier[priceId] : null;
+          if (!tier) continue;
+          // Use UTC month of invoice creation (consistent with legacy audit-log YYYY-MM)
+          const d = new Date(inv.created * 1000);
+          const month = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
+          rows.push({ month, tier, amount: inv.amount_paid / 100 });
+        }
+      } catch {
+        // Silently skip customers that can't be queried (test-mode IDs in live, etc.)
+      }
+    }));
+  }
+  _stripeInvoiceCache = { rows, expires: Date.now() + 5 * 60 * 1000 };
+  return rows;
+}
+
 export function registerAdminCoreRoutes(app: Express): void {
   // GET /api/admin/platform-stats
   app.get('/api/admin/platform-stats', requireAuth, async (req: any, res) => {
@@ -58,8 +107,15 @@ export function registerAdminCoreRoutes(app: Express): void {
         return new Date(refUTC.getTime() - ukH * 3_600_000);
       })();
 
-      const [allWholesalers, allOrdersData, newWholesalers, planRows, subPlanRows, collectedRows, monthlyCollectedRows] = await Promise.all([
-        db.select({ id: users.id, subscriptionTier: users.subscriptionTier, archived: users.archived, subscriptionStatus: users.subscriptionStatus, showOnHomepage: users.showOnHomepage })
+      const [allWholesalers, allOrdersData, newWholesalers, planRows, subPlanRows] = await Promise.all([
+        db.select({
+          id: users.id,
+          subscriptionTier: users.subscriptionTier,
+          archived: users.archived,
+          subscriptionStatus: users.subscriptionStatus,
+          showOnHomepage: users.showOnHomepage,
+          stripeCustomerId: users.stripeCustomerId,
+        })
           .from(users).where(and(eq(users.role, 'wholesaler'), eq(users.isTestAccount, false), eq(users.isInactive, false))),
         db.select({
           subtotal: orders.subtotal,
@@ -72,39 +128,16 @@ export function registerAdminCoreRoutes(app: Express): void {
           .where(and(eq(users.isTestAccount, false), eq(users.isInactive, false), isNotNull(orders.orderNumber))),
         db.select({ count: count() }).from(users)
           .where(and(eq(users.role, 'wholesaler'), gte(users.createdAt, monthStart), eq(users.isTestAccount, false), eq(users.isInactive, false))),
-        db.select({ planId: subscriptionPlans.planId, monthlyPrice: subscriptionPlans.monthlyPrice, billingInterval: subscriptionPlans.billingInterval })
+        db.select({
+          planId: subscriptionPlans.planId,
+          monthlyPrice: subscriptionPlans.monthlyPrice,
+          billingInterval: subscriptionPlans.billingInterval,
+          stripePriceId: subscriptionPlans.stripePriceId,
+        })
           .from(subscriptionPlans),
         db.select({ userId: userSubscriptions.userId, planId: userSubscriptions.planId })
           .from(userSubscriptions)
           .where(sql`${userSubscriptions.status} IN ('active','trialing','past_due')`),
-        db.select({
-          toTier: subscriptionAuditLogs.toTier,
-          totalCollected: sql<string>`COALESCE(SUM(${subscriptionAuditLogs.amount}), 0)`,
-        })
-          .from(subscriptionAuditLogs)
-          .innerJoin(users, eq(subscriptionAuditLogs.userId, users.id))
-          .where(and(
-            eq(subscriptionAuditLogs.eventType, 'payment_success'),
-            eq(users.role, 'wholesaler'),
-            eq(users.isTestAccount, false),
-            eq(users.isInactive, false),
-          ))
-          .groupBy(subscriptionAuditLogs.toTier),
-        db.select({
-          month: sql<string>`TO_CHAR(${subscriptionAuditLogs.timestamp}, 'YYYY-MM')`,
-          toTier: subscriptionAuditLogs.toTier,
-          totalCollected: sql<string>`COALESCE(SUM(${subscriptionAuditLogs.amount}), 0)`,
-        })
-          .from(subscriptionAuditLogs)
-          .innerJoin(users, eq(subscriptionAuditLogs.userId, users.id))
-          .where(and(
-            eq(subscriptionAuditLogs.eventType, 'payment_success'),
-            eq(users.role, 'wholesaler'),
-            eq(users.isTestAccount, false),
-            eq(users.isInactive, false),
-          ))
-          .groupBy(sql`TO_CHAR(${subscriptionAuditLogs.timestamp}, 'YYYY-MM')`, subscriptionAuditLogs.toTier)
-          .orderBy(sql`TO_CHAR(${subscriptionAuditLogs.timestamp}, 'YYYY-MM') DESC`),
       ]);
 
       // Map userId → exact planId from active subscription record
@@ -129,22 +162,43 @@ export function registerAdminCoreRoutes(app: Express): void {
         premium:  allWholesalers.filter(w => w.subscriptionTier === 'premium'  || w.subscriptionTier?.startsWith('premium_')).length,
       };
 
-      // Build collected-per-tier map from audit log payment_success events
-      // toTier may be an exact planId (e.g. 'starter_annual') — bucket using same prefix logic
-      let starterCollected = 0, listingCollected = 0, standardCollected = 0, premiumCollected = 0;
-      for (const row of collectedRows) {
-        const tier = row.toTier || 'free';
-        const amt = parseFloat(row.totalCollected || '0');
-        if (!tier || tier === 'free' || tier === 'listing' || tier.startsWith('listing_')) {
-          listingCollected += amt;
-        } else if (tier === 'starter' || tier.startsWith('starter_')) {
-          starterCollected += amt;
-        } else if (tier === 'standard' || tier.startsWith('standard_')) {
-          standardCollected += amt;
-        } else if (tier === 'premium' || tier.startsWith('premium_')) {
-          premiumCollected += amt;
+      // Build price-ID → tier bucket map from subscription plans
+      const priceToTier: Record<string, string> = {};
+      for (const p of planRows) {
+        if (p.stripePriceId) {
+          const bucket = tierBucket(p.planId);
+          if (bucket) priceToTier[p.stripePriceId] = bucket;
         }
       }
+
+      // Fetch paid invoices from Stripe (cached 5 min) for all non-test wholesalers
+      const customerIds = allWholesalers.map(w => w.stripeCustomerId).filter((id): id is string => Boolean(id));
+      let invoiceRows: InvoiceRow[] = [];
+      try {
+        invoiceRows = await fetchStripeInvoiceRows(customerIds, priceToTier);
+      } catch (stripeErr) {
+        console.error('Stripe invoice fetch failed; monthly collected will be empty:', stripeErr);
+      }
+
+      // Build all-time collected totals and monthly breakdown from Stripe invoice rows
+      let starterCollected = 0, listingCollected = 0, standardCollected = 0, premiumCollected = 0;
+      const monthlyMap: Record<string, { listing: number; starter: number; standard: number; premium: number; total: number }> = {};
+      for (const row of invoiceRows) {
+        const { month, tier, amount } = row;
+        if (tier === 'listing')  listingCollected  += amount;
+        else if (tier === 'starter')  starterCollected  += amount;
+        else if (tier === 'standard') standardCollected += amount;
+        else if (tier === 'premium')  premiumCollected  += amount;
+        if (!monthlyMap[month]) monthlyMap[month] = { listing: 0, starter: 0, standard: 0, premium: 0, total: 0 };
+        if (tier === 'listing')       monthlyMap[month].listing  += amount;
+        else if (tier === 'starter')  monthlyMap[month].starter  += amount;
+        else if (tier === 'standard') monthlyMap[month].standard += amount;
+        else if (tier === 'premium')  monthlyMap[month].premium  += amount;
+        monthlyMap[month].total += amount;
+      }
+      const subscriptionMonthlyBreakdown = Object.entries(monthlyMap)
+        .map(([month, v]) => ({ month, ...v }))
+        .sort((a, b) => b.month.localeCompare(a.month));
 
       // Sum MRR using each wholesaler's exact planId from userSubscriptions (captures custom pricing)
       // Fall back to subscriptionTier if no subscription record exists
@@ -166,29 +220,6 @@ export function registerAdminCoreRoutes(app: Express): void {
         }
       }
       const subscriptionMRR = starterMRR + listingMRR + standardMRR + premiumMRR;
-
-      // Build monthly breakdown map: month → { listing, starter, standard, premium, total }
-      const monthlyMap: Record<string, { listing: number; starter: number; standard: number; premium: number; total: number }> = {};
-      for (const row of monthlyCollectedRows) {
-        const month = row.month;
-        if (!month) continue;
-        if (!monthlyMap[month]) monthlyMap[month] = { listing: 0, starter: 0, standard: 0, premium: 0, total: 0 };
-        const amt = parseFloat(row.totalCollected || '0');
-        const tier = row.toTier || 'free';
-        if (!tier || tier === 'free' || tier === 'listing' || tier.startsWith('listing_')) {
-          monthlyMap[month].listing += amt;
-        } else if (tier === 'starter' || tier.startsWith('starter_')) {
-          monthlyMap[month].starter += amt;
-        } else if (tier === 'standard' || tier.startsWith('standard_')) {
-          monthlyMap[month].standard += amt;
-        } else if (tier === 'premium' || tier.startsWith('premium_')) {
-          monthlyMap[month].premium += amt;
-        }
-        monthlyMap[month].total += amt;
-      }
-      const subscriptionMonthlyBreakdown = Object.entries(monthlyMap)
-        .map(([month, v]) => ({ month, ...v }))
-        .sort((a, b) => b.month.localeCompare(a.month));
 
       const subscriptionBreakdown = {
         starter:  { count: starterCount,  mrr: starterMRR,  collected: starterCollected  },
