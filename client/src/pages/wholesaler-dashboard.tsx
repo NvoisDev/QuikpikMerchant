@@ -1963,8 +1963,16 @@ export default function WholesalerDashboard() {
                       ((topProducts as any) || []).slice(0, 5).map((product: any) => (
                         <div key={product.id} className="flex items-center justify-between p-3 border border-gray-100 rounded-lg">
                           <div className="flex items-center space-x-3">
-                            <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
-                              <Package className="h-5 w-5 text-gray-600" />
+                            <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden flex-shrink-0">
+                              {product.imageUrl ? (
+                                <img
+                                  src={product.imageUrl}
+                                  alt={product.name}
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <Package className="h-5 w-5 text-gray-600" />
+                              )}
                             </div>
                             <div>
                               <p className="font-medium text-gray-900">{product.name}</p>
