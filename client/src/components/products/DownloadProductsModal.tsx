@@ -59,7 +59,8 @@ export default function DownloadProductsModal({ open, onClose, products, isViewe
       // Fall back to cached products if the fetch fails
     }
 
-    const filtered = (includeOutOfStock ? liveProducts : liveProducts.filter((p) => p.status === "active")) as Product[];
+    const filtered = (includeOutOfStock ? liveProducts : liveProducts.filter((p) => p.status === "active"))
+      .sort((a, b) => (a.name ?? "").localeCompare(b.name ?? "")) as Product[];
 
     if (exportType === "summary") {
       setIsLoading(false);
