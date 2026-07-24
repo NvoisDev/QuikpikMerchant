@@ -692,7 +692,7 @@ export default function ProductFormDialog({
                   <FormItem>
                     <FormLabel>Selling Price (£)</FormLabel>
                     <FormControl>
-                      <Input type="number" step="0.01" placeholder="0.00" {...field} />
+                      <Input type="number" inputMode="decimal" step="0.01" placeholder="0.00" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -705,7 +705,7 @@ export default function ProductFormDialog({
                   <FormItem>
                     <FormLabel>Cost Price (£) <span className="text-gray-400 font-normal text-xs">optional</span></FormLabel>
                     <FormControl>
-                      <Input type="number" step="0.01" placeholder="0.00" {...field} />
+                      <Input type="number" inputMode="decimal" step="0.01" placeholder="0.00" {...field} />
                     </FormControl>
                     <FormDescription className="text-xs text-muted-foreground">
                       Used as the default for margin calculations. Each stock batch can set its own cost, which takes priority.
@@ -733,6 +733,7 @@ export default function ProductFormDialog({
                         <FormControl>
                           <Input
                             type="number"
+                            inputMode="decimal"
                             step="0.01"
                             placeholder={suggested ? `Suggested: ${suggested}` : "0.00"}
                             {...field}
