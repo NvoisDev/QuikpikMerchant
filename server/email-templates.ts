@@ -802,3 +802,100 @@ export function generateListingLapseReEngagementEmail(data: ListingLapseReEngage
 
   return { subject, html, text };
 }
+
+// ── Plan limits shown in upgrade confirmation email ───────────────────────────
+
+/**
+ * Maps any plan ID (including annual variants like `standard_annual_intro`,
+ * `premium_annual_intro`) to its canonical base tier so label/limits lookups
+ * are always correct regardless of billing interval.
+ */
+function upgradeEmailBaseTier(planId: string): 'starter' | 'standard' | 'premium' | 'listing' {
+  if (planId.startsWith('premium'))  return 'premium';
+  if (planId.startsWith('standard')) return 'standard';
+  if (planId.startsWith('starter'))  return 'starter';
+  if (planId.startsWith('listing'))  return 'listing';
+  return 'starter'; // safe fallback — unexpected IDs treated as entry tier
+}
+
+const TIER_LABELS: Record<string, string> = {
+  starter: 'Starter',
+  standard: 'Standard',
+  premium: 'Premium',
+  listing: 'Listing',
+};
+
+const TIER_FEATURES: Record<string, { products: string; teamMembers: string; priceLists: string; groups: string }> = {
+  starter:  { products: 'Up to 40',    teamMembers: '1 (you only)',  priceLists: 'Up to 5',   groups: 'Up to 5'   },
+  standard: { products: 'Up to 60',    teamMembers: 'Up to 3',       priceLists: 'Up to 10',  groups: 'Up to 10'  },
+  premium:  { products: 'Unlimited',   teamMembers: 'Unlimited',      priceLists: 'Unlimited', groups: 'Unlimited' },
+  listing:  { products: 'Up to 10',    teamMembers: '1 (you only)',  priceLists: 'Up to 2',   groups: 'Up to 2'   },
+};
+
+const TIER_COLOR: Record<string, string> = {
+  starter:  '#1d4ed8',
+  standard: '#059669',
+  premium:  '#7c3aed',
+  listing:  '#374151',
+};
+
+export interface UpgradeConfirmationEmailData {
+  firstName: string;
+  newPlanId: string;
+  nextBillingDate: Date;
+}
+
+export function generateUpgradeConfirmationEmail(data: UpgradeConfirmationEmailData): { subject: string; html: string; text: string } {
+  const baseTier  = upgradeEmailBaseTier(data.newPlanId);
+  const planLabel = TIER_LABELS[baseTier];
+  const features  = TIER_FEATURES[baseTier]!;
+  const color     = TIER_COLOR[baseTier]!;
+  const dateStr   = data.nextBillingDate.toLocaleDateString('en-GB', {
+    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+  });
+
+  const featuresTable = emailTable(
+    ['What you now have', planLabel + ' Plan'],
+    [
+      ['Products',        features.products],
+      ['Team members',    features.teamMembers],
+      ['Price lists',     features.priceLists],
+      ['Customer groups', features.groups],
+    ],
+  );
+
+  const subject = 'You\'re now on the ' + planLabel + ' plan — welcome!';
+
+  const body =
+    emailHeading('You\'ve upgraded to ' + planLabel + ' 🎉', { size: '22px', color }) +
+    '<p style="margin:0 0 16px">Hi ' + escapeHtml(data.firstName || 'there') + ',</p>' +
+    '<p style="margin:0 0 20px">Your subscription has been upgraded to the <b>' + escapeHtml(planLabel) + '</b> plan. ' +
+    'Everything listed below is available to you right now — no further action needed.</p>' +
+    featuresTable +
+    emailCard(
+      '<p style="margin:0;font-size:14px;color:#374151"><b>Next billing date:</b> ' + escapeHtml(dateStr) + '</p>',
+      { borderColor: '#d1fae5', bgColor: '#f0fdf4' },
+    ) +
+    emailDivider() +
+    '<p style="margin:0 0 12px;color:#6b7280;font-size:14px">If you have any questions about your plan, head to your account settings or reply to this email.</p>' +
+    emailButton('Go to my dashboard', 'https://quikpik.app/dashboard', color);
+
+  const html = wrapCustomerEmail(body, QUIKPIK_BRANDING, {
+    preheader: 'Your account is now on the ' + planLabel + ' plan',
+  });
+
+  const text =
+    'You\'ve upgraded to ' + planLabel + '\n\n' +
+    'Hi ' + (data.firstName || 'there') + ',\n\n' +
+    'Your subscription has been upgraded to the ' + planLabel + ' plan.\n\n' +
+    'What you now have:\n' +
+    '• Products: '        + features.products    + '\n' +
+    '• Team members: '    + features.teamMembers  + '\n' +
+    '• Price lists: '     + features.priceLists   + '\n' +
+    '• Customer groups: ' + features.groups       + '\n\n' +
+    'Next billing date: ' + dateStr + '\n\n' +
+    'Go to your dashboard: https://quikpik.app/dashboard\n\n' +
+    'Powered by Quikpik Merchant';
+
+  return { subject, html, text };
+}

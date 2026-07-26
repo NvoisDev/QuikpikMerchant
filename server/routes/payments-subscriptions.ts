@@ -2,6 +2,7 @@ import type { Express } from "express";
 import {
   SubscriptionService, db, eq, enforceNewPlanLimits, getUserPlanLimits, getPlanLimits,
   generateDowngradeScheduledEmail, generateDowngradeEffectiveEmail,
+  generateUpgradeConfirmationEmail,
   getProjectedDowngradeImpact, requireAuth, requireOwner, sendEmail,
   storage, subscriptionPlans, unlockForUpgrade, userSubscriptions, users, z,
 } from "./shared";
@@ -231,7 +232,30 @@ export function registerSubscriptionRoutes(app: Express): void {
           }).where(eq(userSubscriptions.userId, userId));
 
           await unlockForUpgrade(userId);
-          
+
+          // Send upgrade confirmation email (non-blocking — never delay the response for email)
+          ;(async () => {
+            try {
+              const [upgradedUser] = await db.select().from(users).where(eq(users.id, userId));
+              if (upgradedUser?.email) {
+                const { subject, html, text } = generateUpgradeConfirmationEmail({
+                  firstName:       upgradedUser.firstName || '',
+                  newPlanId:       targetPlan.planId,
+                  nextBillingDate: new Date(updatedSubscription.current_period_end * 1000),
+                });
+                await sendEmail({
+                  to:      upgradedUser.email,
+                  from:    'hello@quikpik.co',
+                  subject,
+                  html,
+                  text,
+                });
+              }
+            } catch (emailErr) {
+              console.error('⚠️ Failed to send upgrade confirmation email for user', userId, ':', emailErr);
+            }
+          })();
+
           return res.json({ 
             success: true, 
             type: 'upgrade',

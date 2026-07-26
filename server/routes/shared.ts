@@ -65,6 +65,7 @@ import {
   wrapCustomerEmail, emailCard, emailButton, emailHeading, emailBadge, emailDivider, escapeHtml,
   getEmailLogoUrl, buildItemisedRefundEmail, generateDowngradeScheduledEmail,
   generateDowngradeEffectiveEmail, generateListingLapseReEngagementEmail, formatPackDescriptor,
+  generateUpgradeConfirmationEmail,
   type OrderEmailData, type ReadyForCollectionEmailData, type RefundLineItem,
 } from "../email-templates";
 import { sendWelcomeMessages } from "../services/welcomeMessageService.js";
@@ -122,6 +123,7 @@ export {
   wrapCustomerEmail, emailCard, emailButton, emailHeading, emailBadge, emailDivider, escapeHtml,
   getEmailLogoUrl, buildItemisedRefundEmail, generateDowngradeScheduledEmail,
   generateDowngradeEffectiveEmail, generateListingLapseReEngagementEmail, formatPackDescriptor,
+  generateUpgradeConfirmationEmail,
   sendWelcomeMessages,
   orderNotificationService,
   sendOrderStatusNotification,
