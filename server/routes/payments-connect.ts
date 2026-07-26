@@ -99,6 +99,43 @@ async function settleOrderPayment(params: {
   return { cumulativePaid, newAmountOutstanding, paymentStatus };
 }
 
+/**
+ * Writes a subscription audit log row with up to 3 attempts and exponential
+ * backoff (100 ms → 300 ms between retries). Call without `await` so the
+ * webhook response is never delayed by transient DB pressure.
+ *
+ * On permanent failure the error is written to `systemErrorLogs` so the
+ * admin unmatched-invoice warning can surface the gap instead of it being
+ * silently lost.
+ */
+async function writeAuditLogWithRetry(
+  values: typeof subscriptionAuditLogs.$inferInsert,
+  context: { label: string },
+): Promise<void> {
+  const MAX_ATTEMPTS = 3;
+  let lastErr: unknown;
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    try {
+      await db.insert(subscriptionAuditLogs).values(values);
+      return; // success
+    } catch (err) {
+      lastErr = err;
+      if (attempt < MAX_ATTEMPTS) {
+        await new Promise(resolve => setTimeout(resolve, 100 * attempt)); // 100 ms, 200 ms
+      }
+    }
+  }
+  // All attempts failed — log structured warning so admin panel can surface the gap
+  const msg = `subscription_audit_log write failed after ${MAX_ATTEMPTS} attempts (${context.label})`;
+  console.error(`❌ ${msg}`, lastErr);
+  db.insert(systemErrorLogs).values({
+    errorType: 'audit_log_write_failed',
+    message: msg,
+    context: { label: context.label, values: JSON.stringify(values) },
+    severity: 'warning',
+  }).catch(() => {}); // best-effort — do not recurse
+}
+
 export function registerPaymentConnectRoutes(app: Express): void {
   // POST /api/stripe/connect
   app.post('/api/stripe/connect', async (req: any, res) => {
@@ -1052,7 +1089,8 @@ export function registerPaymentConnectRoutes(app: Express): void {
         const invAmountPaid = (invoice.amount_paid ?? 0) / 100;
         const invCurrency = (invoice.currency ?? 'gbp').toUpperCase();
         if (invAmountPaid > 0) {
-          db.insert(subscriptionAuditLogs).values({
+          // Fire-and-forget with retry — never delay the 200 OK to Stripe.
+          writeAuditLogWithRetry({
             userId: invUser.id,
             eventType: 'payment_success',
             toTier: invPlanId,
@@ -1061,7 +1099,7 @@ export function registerPaymentConnectRoutes(app: Express): void {
             stripeSubscriptionId: invSubId,
             stripeInvoiceId: invoice.id,
             reason: `Stripe invoice ${invoice.id} — ${billingReason}`,
-          }).catch(err => console.error('Failed to log payment_success:', err));
+          }, { label: `invoice ${invoice.id} / user ${invUser.id}` });
         }
 
         // Calculate period dates FIRST so the early-exit guard can check them.
