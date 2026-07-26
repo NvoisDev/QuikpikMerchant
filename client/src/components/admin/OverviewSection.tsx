@@ -1,10 +1,12 @@
-import { useState } from "react";
+import React, { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
 import {
   Building2, ShoppingCart, Package, TrendingUp, DollarSign, AlertTriangle, Star, Info,
-  TrendingDown, Minus,
+  TrendingDown, Minus, ChevronDown, ChevronRight, Pencil, Check, X, Loader2,
 } from "lucide-react";
 import { formatNumber } from "@/lib/currencies";
 import {
@@ -185,8 +187,173 @@ export function OverviewSection({ stats, statsLoading, revenueData, revenueLoadi
 
 type RangeOption = "3" | "6" | "12" | "all";
 
+const TIER_OPTIONS = ["listing", "starter", "standard", "premium"] as const;
+type TierOption = typeof TIER_OPTIONS[number];
+
+const TIER_COLOURS: Record<TierOption, string> = {
+  listing:  "text-gray-500",
+  starter:  "text-blue-600",
+  standard: "text-emerald-600",
+  premium:  "text-purple-600",
+};
+
+interface AuditLogRow {
+  id: number;
+  userId: string | null;
+  businessName: string | null;
+  toTier: string | null;
+  amount: string | null;
+  currency: string | null;
+  stripeInvoiceId: string | null;
+  reason: string | null;
+  timestamp: string | null;
+}
+
+function MonthDrillDown({ month, onCorrected }: { month: string; onCorrected: () => void }) {
+  const qc = useQueryClient();
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editTier, setEditTier] = useState<TierOption>("starter");
+
+  const { data: rows = [], isLoading } = useQuery<AuditLogRow[]>({
+    queryKey: [`/api/admin/subscriptions/audit-logs`, month],
+    queryFn: () =>
+      fetch(`/api/admin/subscriptions/audit-logs?month=${month}`, { credentials: "include" })
+        .then(r => r.json()),
+  });
+
+  const { mutate: saveCorrection, isPending } = useMutation({
+    mutationFn: ({ id, toTier }: { id: number; toTier: TierOption }) =>
+      fetch(`/api/admin/subscriptions/audit-logs/${id}`, {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ toTier }),
+      }).then(r => r.json()),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: [`/api/admin/subscriptions/audit-logs`, month] });
+      qc.invalidateQueries({ queryKey: ["/api/admin/platform-stats"] });
+      setEditingId(null);
+      onCorrected();
+    },
+  });
+
+  if (isLoading) {
+    return (
+      <tr>
+        <td colSpan={8} className="px-4 py-3 bg-gray-50">
+          <div className="flex items-center gap-2 text-xs text-gray-400">
+            <Loader2 className="h-3 w-3 animate-spin" /> Loading entries…
+          </div>
+        </td>
+      </tr>
+    );
+  }
+
+  if (rows.length === 0) {
+    return (
+      <tr>
+        <td colSpan={8} className="px-4 py-3 bg-gray-50 text-xs text-gray-400 italic">
+          No audit log entries for this month (totals may include Stripe gap-fill data).
+        </td>
+      </tr>
+    );
+  }
+
+  return (
+    <>
+      {rows.map(row => {
+        const isEditing = editingId === row.id;
+        const tier = (row.toTier ?? "listing") as TierOption;
+        const tierColour = TIER_COLOURS[tier] ?? "text-gray-500";
+        const corrected = row.reason?.includes("[corrected");
+
+        return (
+          <tr key={row.id} className="bg-gray-50/80 border-b border-gray-100 last:border-0">
+            {/* indent spacer */}
+            <td className="pl-6 pr-2 py-2 w-4">
+              <div className="w-px h-4 bg-gray-200 mx-auto" />
+            </td>
+            {/* business name / user */}
+            <td colSpan={4} className="py-2 pr-2 text-xs text-gray-600">
+              <span className="font-medium">{row.businessName ?? row.userId ?? "—"}</span>
+              {corrected && (
+                <span className="ml-1.5 text-amber-500 text-[10px] font-medium">corrected</span>
+              )}
+              {row.stripeInvoiceId && (
+                <span className="block text-gray-400 text-[10px] mt-0.5 font-mono">{row.stripeInvoiceId}</span>
+              )}
+            </td>
+            {/* amount */}
+            <td className="py-2 px-2 text-right text-xs font-medium text-gray-700 whitespace-nowrap">
+              £{parseFloat(row.amount ?? "0").toFixed(2)}
+            </td>
+            {/* tier — editable */}
+            <td className="py-2 pl-2 text-right whitespace-nowrap">
+              {isEditing ? (
+                <div className="inline-flex items-center gap-1">
+                  <Select value={editTier} onValueChange={v => setEditTier(v as TierOption)}>
+                    <SelectTrigger className="h-6 text-xs w-28 border-gray-300 rounded">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {TIER_OPTIONS.map(t => (
+                        <SelectItem key={t} value={t} className="text-xs capitalize">{t}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <button
+                    onClick={() => saveCorrection({ id: row.id, toTier: editTier })}
+                    disabled={isPending}
+                    className="p-1 rounded text-emerald-600 hover:bg-emerald-50 disabled:opacity-50"
+                    title="Save"
+                  >
+                    {isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
+                  </button>
+                  <button
+                    onClick={() => setEditingId(null)}
+                    disabled={isPending}
+                    className="p-1 rounded text-gray-400 hover:bg-gray-100"
+                    title="Cancel"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              ) : (
+                <span className={`inline-flex items-center gap-1 text-xs font-medium capitalize ${tierColour}`}>
+                  {tier}
+                  <button
+                    onClick={() => { setEditingId(row.id); setEditTier(tier); }}
+                    className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600 ml-0.5"
+                    title="Correct tier"
+                  >
+                    <Pencil className="h-2.5 w-2.5" />
+                  </button>
+                </span>
+              )}
+            </td>
+            {/* edit button (always visible) */}
+            <td className="py-2 pl-2 pr-1 text-right">
+              {!isEditing && (
+                <button
+                  onClick={() => { setEditingId(row.id); setEditTier(tier); }}
+                  className="p-1 rounded text-gray-300 hover:text-gray-500 hover:bg-gray-100 transition-colors"
+                  title="Correct tier attribution"
+                >
+                  <Pencil className="h-3 w-3" />
+                </button>
+              )}
+            </td>
+          </tr>
+        );
+      })}
+    </>
+  );
+}
+
 function SubscriptionMonthlyTable({ rows, loading }: { rows: Array<{ month: string; listing: number; starter: number; standard: number; premium: number; total: number }>; loading: boolean }) {
   const [range, setRange] = useState<RangeOption>("all");
+  const [expandedMonth, setExpandedMonth] = useState<string | null>(null);
+  const qc = useQueryClient();
 
   const fmtMonth = (ym: string) => {
     const [y, m] = ym.split("-");
@@ -248,6 +415,7 @@ function SubscriptionMonthlyTable({ rows, loading }: { rows: Array<{ month: stri
         <table className="w-full text-xs">
           <thead>
             <tr className="border-b border-gray-100">
+              <th className="text-left pb-1.5 font-medium text-gray-400 pr-1 w-5"></th>
               <th className="text-left pb-1.5 font-medium text-gray-400 pr-3 w-20">Month</th>
               <th className="text-right pb-1.5 font-medium text-gray-400 px-2">Listing</th>
               <th className="text-right pb-1.5 font-medium text-blue-400 px-2">Starter</th>
@@ -260,44 +428,61 @@ function SubscriptionMonthlyTable({ rows, loading }: { rows: Array<{ month: stri
           <tbody className="divide-y divide-gray-50">
             {filteredRows.map(r => {
               const trend = getTrend(r.month, r.total);
+              const isExpanded = expandedMonth === r.month;
               return (
-                <tr key={r.month} className="hover:bg-gray-50/60 transition-colors">
-                  <td className="py-1.5 pr-3 font-medium text-gray-600 whitespace-nowrap">{fmtMonth(r.month)}</td>
-                  <td className="py-1.5 px-2 text-right text-gray-400">{r.listing > 0 ? fmt(r.listing) : <span className="text-gray-200">—</span>}</td>
-                  <td className="py-1.5 px-2 text-right text-blue-600">{r.starter > 0 ? fmt(r.starter) : <span className="text-gray-200">—</span>}</td>
-                  <td className="py-1.5 px-2 text-right text-emerald-600">{r.standard > 0 ? fmt(r.standard) : <span className="text-gray-200">—</span>}</td>
-                  <td className="py-1.5 px-2 text-right text-purple-600">{r.premium > 0 ? fmt(r.premium) : <span className="text-gray-200">—</span>}</td>
-                  <td className="py-1.5 pl-2 text-right font-semibold text-gray-800 whitespace-nowrap">
-                    <span className="inline-flex items-center gap-1 justify-end">
-                      {fmt(r.total)}
-                      {trend.dir === "up" && (
-                        <span className="inline-flex items-center gap-0.5 text-emerald-600 font-medium">
-                          <TrendingUp className="h-3 w-3" />
-                          <span>{trend.pct!.toFixed(1)}%</span>
-                        </span>
-                      )}
-                      {trend.dir === "down" && (
-                        <span className="inline-flex items-center gap-0.5 text-red-500 font-medium">
-                          <TrendingDown className="h-3 w-3" />
-                          <span>{Math.abs(trend.pct!).toFixed(1)}%</span>
-                        </span>
-                      )}
-                      {trend.dir === "flat" && trend.pct !== null && (
-                        <span className="inline-flex items-center text-gray-400">
-                          <Minus className="h-3 w-3" />
-                        </span>
-                      )}
-                    </span>
-                  </td>
-                  <td className="py-1.5 pl-3 hidden sm:table-cell">
-                    <div className="flex items-center">
-                      <div
-                        className="h-1.5 rounded-full bg-emerald-400"
-                        style={{ width: `${Math.round((r.total / maxTotal) * 96)}px`, minWidth: r.total > 0 ? "3px" : "0" }}
-                      />
-                    </div>
-                  </td>
-                </tr>
+                <React.Fragment key={r.month}>
+                  <tr
+                    className="hover:bg-gray-50/60 transition-colors cursor-pointer group"
+                    onClick={() => setExpandedMonth(isExpanded ? null : r.month)}
+                  >
+                    <td className="py-1.5 pr-1 text-gray-300 group-hover:text-gray-400 transition-colors">
+                      {isExpanded
+                        ? <ChevronDown className="h-3 w-3" />
+                        : <ChevronRight className="h-3 w-3" />}
+                    </td>
+                    <td className="py-1.5 pr-3 font-medium text-gray-600 whitespace-nowrap">{fmtMonth(r.month)}</td>
+                    <td className="py-1.5 px-2 text-right text-gray-400">{r.listing > 0 ? fmt(r.listing) : <span className="text-gray-200">—</span>}</td>
+                    <td className="py-1.5 px-2 text-right text-blue-600">{r.starter > 0 ? fmt(r.starter) : <span className="text-gray-200">—</span>}</td>
+                    <td className="py-1.5 px-2 text-right text-emerald-600">{r.standard > 0 ? fmt(r.standard) : <span className="text-gray-200">—</span>}</td>
+                    <td className="py-1.5 px-2 text-right text-purple-600">{r.premium > 0 ? fmt(r.premium) : <span className="text-gray-200">—</span>}</td>
+                    <td className="py-1.5 pl-2 text-right font-semibold text-gray-800 whitespace-nowrap">
+                      <span className="inline-flex items-center gap-1 justify-end">
+                        {fmt(r.total)}
+                        {trend.dir === "up" && (
+                          <span className="inline-flex items-center gap-0.5 text-emerald-600 font-medium">
+                            <TrendingUp className="h-3 w-3" />
+                            <span>{trend.pct!.toFixed(1)}%</span>
+                          </span>
+                        )}
+                        {trend.dir === "down" && (
+                          <span className="inline-flex items-center gap-0.5 text-red-500 font-medium">
+                            <TrendingDown className="h-3 w-3" />
+                            <span>{Math.abs(trend.pct!).toFixed(1)}%</span>
+                          </span>
+                        )}
+                        {trend.dir === "flat" && trend.pct !== null && (
+                          <span className="inline-flex items-center text-gray-400">
+                            <Minus className="h-3 w-3" />
+                          </span>
+                        )}
+                      </span>
+                    </td>
+                    <td className="py-1.5 pl-3 hidden sm:table-cell">
+                      <div className="flex items-center">
+                        <div
+                          className="h-1.5 rounded-full bg-emerald-400"
+                          style={{ width: `${Math.round((r.total / maxTotal) * 96)}px`, minWidth: r.total > 0 ? "3px" : "0" }}
+                        />
+                      </div>
+                    </td>
+                  </tr>
+                  {isExpanded && (
+                    <MonthDrillDown
+                      month={r.month}
+                      onCorrected={() => qc.invalidateQueries({ queryKey: ["/api/admin/platform-stats"] })}
+                    />
+                  )}
+                </React.Fragment>
               );
             })}
           </tbody>

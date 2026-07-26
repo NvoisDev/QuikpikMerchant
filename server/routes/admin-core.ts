@@ -29,6 +29,8 @@
  * POST /api/admin/subscriptions/sync-by-customer             ✅ admin-only; validates user before mutating
  * GET  /api/admin/stock-reconcile                            ✅ admin-only; cross-tenant read, intentional
  * POST /api/admin/subscriptions/backfill-stripe              ✅ admin-only; bulk backfill
+ * GET  /api/admin/subscriptions/audit-logs                   ✅ admin-only; read-only; optional ?month=YYYY-MM
+ * PATCH /api/admin/subscriptions/audit-logs/:id              ✅ admin-only; corrects toTier on one row
  */
 import type { Express } from "express";
 import Stripe from "stripe";
@@ -1525,6 +1527,101 @@ export function registerAdminCoreRoutes(app: Express): void {
     } catch (error) {
       console.error('❌ Admin stock-reconcile error:', error);
       res.status(500).json({ error: 'Failed to run stock reconciliation report' });
+    }
+  });
+
+  // GET /api/admin/subscriptions/audit-logs
+  // Returns all payment_success audit log rows, optionally filtered by ?month=YYYY-MM.
+  // Joins with users so the caller gets businessName alongside each entry.
+  app.get('/api/admin/subscriptions/audit-logs', requireAuth, async (req: any, res) => {
+    try {
+      if (!ADMIN_EMAILS.includes(getAdminEmail(req) || "")) return res.status(403).json({ error: 'Forbidden' });
+
+      const { month } = req.query as { month?: string };
+
+      const conditions: ReturnType<typeof eq>[] = [
+        eq(subscriptionAuditLogs.eventType, 'payment_success'),
+      ];
+
+      if (month && /^\d{4}-\d{2}$/.test(month)) {
+        const parts = month.split('-');
+        const y = Number(parts[0]!);
+        const m = Number(parts[1]!);
+        const start = new Date(Date.UTC(y, m - 1, 1));
+        const end   = new Date(Date.UTC(y, m,     1));
+        conditions.push(gte(subscriptionAuditLogs.timestamp, start) as any);
+        conditions.push(lte(subscriptionAuditLogs.timestamp, end) as any);
+      }
+
+      const rows = await db
+        .select({
+          id:               subscriptionAuditLogs.id,
+          userId:           subscriptionAuditLogs.userId,
+          businessName:     users.businessName,
+          toTier:           subscriptionAuditLogs.toTier,
+          amount:           subscriptionAuditLogs.amount,
+          currency:         subscriptionAuditLogs.currency,
+          stripeInvoiceId:  subscriptionAuditLogs.stripeInvoiceId,
+          reason:           subscriptionAuditLogs.reason,
+          timestamp:        subscriptionAuditLogs.timestamp,
+        })
+        .from(subscriptionAuditLogs)
+        .leftJoin(users, eq(subscriptionAuditLogs.userId, users.id))
+        .where(and(...conditions))
+        .orderBy(desc(subscriptionAuditLogs.timestamp));
+
+      return res.json(rows);
+    } catch (err) {
+      console.error('❌ GET /api/admin/subscriptions/audit-logs error:', err);
+      return res.status(500).json({ error: 'Failed to fetch audit logs' });
+    }
+  });
+
+  // PATCH /api/admin/subscriptions/audit-logs/:id
+  // Corrects the toTier on a single mis-attributed audit log row.
+  // Body: { toTier: "listing" | "starter" | "standard" | "premium" }
+  app.patch('/api/admin/subscriptions/audit-logs/:id', requireAuth, async (req: any, res) => {
+    try {
+      if (!ADMIN_EMAILS.includes(getAdminEmail(req) || "")) return res.status(403).json({ error: 'Forbidden' });
+
+      const rowId = parseInt(req.params.id, 10);
+      if (!rowId || isNaN(rowId)) return res.status(400).json({ error: 'Invalid id' });
+
+      const VALID_TIERS = ['listing', 'starter', 'standard', 'premium'] as const;
+      const { toTier } = req.body as { toTier?: string };
+      if (!toTier || !VALID_TIERS.includes(toTier as any)) {
+        return res.status(400).json({ error: `toTier must be one of: ${VALID_TIERS.join(', ')}` });
+      }
+
+      const [existing] = await db
+        .select({ id: subscriptionAuditLogs.id, toTier: subscriptionAuditLogs.toTier, reason: subscriptionAuditLogs.reason })
+        .from(subscriptionAuditLogs)
+        .where(eq(subscriptionAuditLogs.id, rowId))
+        .limit(1);
+
+      if (!existing) return res.status(404).json({ error: 'Audit log row not found' });
+
+      const adminEmail = getAdminEmail(req) || 'admin';
+      const correctionNote = ` [corrected ${existing.toTier} → ${toTier} by ${adminEmail}]`;
+      const updatedReason = (existing.reason ?? '') + correctionNote;
+
+      const [updated] = await db
+        .update(subscriptionAuditLogs)
+        .set({ toTier, reason: updatedReason })
+        .where(eq(subscriptionAuditLogs.id, rowId))
+        .returning({
+          id:              subscriptionAuditLogs.id,
+          toTier:          subscriptionAuditLogs.toTier,
+          reason:          subscriptionAuditLogs.reason,
+          amount:          subscriptionAuditLogs.amount,
+          stripeInvoiceId: subscriptionAuditLogs.stripeInvoiceId,
+          timestamp:       subscriptionAuditLogs.timestamp,
+        });
+
+      return res.json(updated);
+    } catch (err) {
+      console.error('❌ PATCH /api/admin/subscriptions/audit-logs/:id error:', err);
+      return res.status(500).json({ error: 'Failed to update audit log row' });
     }
   });
 
