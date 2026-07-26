@@ -14,14 +14,6 @@ export interface PlatformStats {
   unmatchedInvoices?: { count: number; total: number };
 }
 
-export interface AlertsData {
-  stuckOrders: Array<{ id: number; orderNumber: string; wholesalerName: string | null; createdAt: string }>;
-  stuckOrdersCount: number;
-  expiringBatches: Array<{ id: number; productId: number; expiryDate: string; batchCode: string | null; quantity: number | null }>;
-  expiringBatchesCount: number;
-  failedPayments: Array<{ id: number; userId: string; createdAt: string }>;
-  failedPaymentsCount: number;
-}
 
 export interface WholesalerRow {
   id: string; email: string; firstName: string | null; lastName: string | null;

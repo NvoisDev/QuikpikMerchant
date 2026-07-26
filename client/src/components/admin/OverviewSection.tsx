@@ -1,17 +1,16 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
-  Building2, ShoppingCart, Package, TrendingUp, DollarSign, AlertTriangle, AlertCircle, Star, Info,
+  Building2, ShoppingCart, Package, TrendingUp, DollarSign, AlertTriangle, Star, Info,
   TrendingDown, Minus,
 } from "lucide-react";
 import { formatNumber } from "@/lib/currencies";
 import {
-  GREEN, BLUE, AMBER, PURPLE, RED, fmt, StatCard, Row,
+  GREEN, BLUE, AMBER, PURPLE, fmt, StatCard, Row,
 } from "./shared";
-import type { PlatformStats, AlertsData, RevenueData, RevenueTotals, SectionId } from "./types";
+import type { PlatformStats, RevenueData, RevenueTotals, SectionId } from "./types";
 
 export function OverviewSection({ stats, statsLoading, revenueData, revenueLoading, isAdmin, onNavigate }: {
   stats: PlatformStats | undefined; statsLoading: boolean;
@@ -22,42 +21,12 @@ export function OverviewSection({ stats, statsLoading, revenueData, revenueLoadi
   const subBreakdown = stats?.subscriptionBreakdown ?? { listing: { count: 0, mrr: 0, collected: 0 }, starter: { count: 0, mrr: 0, collected: 0 }, standard: { count: 0, mrr: 0, collected: 0 }, premium: { count: 0, mrr: 0, collected: 0 } };
   const revenueTotals = revenueData?.totals ?? ({} as RevenueTotals);
 
-  const { data: alerts } = useQuery<AlertsData>({
-    queryKey: ["/api/admin/alerts"],
-    enabled: isAdmin,
-    refetchInterval: 60_000,
-  });
-
   return (
     <div className="space-y-6">
       <div>
         <h2 className="text-lg font-bold text-gray-900">Overview</h2>
         <p className="text-xs text-gray-400 mt-0.5">Platform-wide health at a glance</p>
       </div>
-
-      {/* Alerts strip */}
-      {alerts && (alerts.stuckOrdersCount > 0 || alerts.expiringBatchesCount > 0 || alerts.failedPaymentsCount > 0) && (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 space-y-2">
-          <p className="text-xs font-semibold text-amber-700 flex items-center gap-1.5"><AlertTriangle className="h-3.5 w-3.5" />Needs attention</p>
-          <div className="flex items-center gap-2 flex-wrap">
-            {alerts.stuckOrdersCount > 0 && (
-              <button onClick={() => onNavigate("orders")} className="text-xs bg-amber-100 border border-amber-200 text-amber-800 px-2 py-0.5 rounded-full font-medium hover:bg-amber-200 transition-colors cursor-pointer">
-                {alerts.stuckOrdersCount} stuck order{alerts.stuckOrdersCount !== 1 ? "s" : ""} &gt;24h → view Orders
-              </button>
-            )}
-            {alerts.expiringBatchesCount > 0 && (
-              <button onClick={() => onNavigate("products")} className="text-xs bg-orange-100 border border-orange-200 text-orange-800 px-2 py-0.5 rounded-full font-medium hover:bg-orange-200 transition-colors cursor-pointer">
-                {alerts.expiringBatchesCount} batch{alerts.expiringBatchesCount !== 1 ? "es" : ""} expiring within 7 days → view Products
-              </button>
-            )}
-            {alerts.failedPaymentsCount > 0 && (
-              <button onClick={() => onNavigate("settings")} className="text-xs bg-red-100 border border-red-200 text-red-800 px-2 py-0.5 rounded-full font-medium hover:bg-red-200 transition-colors cursor-pointer">
-                {alerts.failedPaymentsCount} subscription payment failure{alerts.failedPaymentsCount !== 1 ? "s" : ""} → view Settings
-              </button>
-            )}
-          </div>
-        </div>
-      )}
 
       {/* KPI cards */}
       {statsLoading ? (
@@ -73,7 +42,6 @@ export function OverviewSection({ stats, statsLoading, revenueData, revenueLoadi
           <StatCard label="Total Orders (All-time)" value={formatNumber(stats?.totalOrders ?? 0)} sub={`${stats?.completedOrders ?? 0} completed · ${stats?.cancelledOrders ?? 0} cancelled`} icon={<ShoppingCart className="h-4 w-4" />} color={BLUE} />
           <StatCard label="All-time GMV"         value={fmt(stats?.totalGMV ?? 0)}      sub="Gross Merchandise Value"                                           icon={<TrendingUp className="h-4 w-4" />}    color={PURPLE} />
           <StatCard label="Sub. MRR"             value={fmt(subMRR)}                    sub="Monthly recurring"                                                 icon={<DollarSign className="h-4 w-4" />}    color={GREEN}  />
-          <StatCard label="Failed Payments (30d)" value={alerts?.failedPaymentsCount ?? 0} sub={alerts?.failedPaymentsCount ? "Needs follow-up" : "No failures"} icon={<AlertCircle className="h-4 w-4" />} color={alerts?.failedPaymentsCount ? RED : GREEN} />
         </div>
       )}
 

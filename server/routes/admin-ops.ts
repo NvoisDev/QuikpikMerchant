@@ -87,46 +87,6 @@ export function registerAdminOpsRoutes(app: Express): void {
     }
   });
 
-  // GET /api/admin/alerts
-  app.get('/api/admin/alerts', requireAuth, async (req: any, res) => {
-    try {
-      if (!ADMIN_EMAILS.includes(getAdminEmail(req) || "")) return res.status(403).json({ error: 'Forbidden' });
-
-      const now = new Date();
-      const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-      const sevenDaysOut = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-      const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-      const todayStr = now.toISOString().slice(0, 10);
-      const sevenDaysOutStr = sevenDaysOut.toISOString().slice(0, 10);
-
-      const [stuckOrders, expiringBatches, failedPayments] = await Promise.all([
-        db.select({ id: orders.id, orderNumber: orders.orderNumber, wholesalerName: users.businessName, createdAt: orders.createdAt })
-          .from(orders).leftJoin(users, eq(orders.wholesalerId, users.id))
-          .where(and(eq(orders.status, 'processing'), lte(orders.createdAt, oneDayAgo)))
-          .orderBy(asc(orders.createdAt)).limit(20),
-        db.select({ id: productBatches.id, productId: productBatches.productId, expiryDate: productBatches.expiryDate, batchCode: productBatches.batchNumber, quantity: productBatches.quantity })
-          .from(productBatches)
-          .where(and(sql`${productBatches.expiryDate} IS NOT NULL`, sql`${productBatches.expiryDate} >= ${todayStr}`, sql`${productBatches.expiryDate} <= ${sevenDaysOutStr}`))
-          .orderBy(asc(productBatches.expiryDate)).limit(20),
-        db.select({ id: subscriptionAuditLogs.id, userId: subscriptionAuditLogs.userId, createdAt: subscriptionAuditLogs.timestamp })
-          .from(subscriptionAuditLogs)
-          .where(and(eq(subscriptionAuditLogs.eventType, 'payment_failed'), gte(subscriptionAuditLogs.timestamp, thirtyDaysAgo)))
-          .orderBy(desc(subscriptionAuditLogs.timestamp)).limit(20),
-      ]);
-
-      res.json({
-        stuckOrders: stuckOrders.map(o => ({ id: o.id, orderNumber: o.orderNumber, wholesalerName: o.wholesalerName, createdAt: o.createdAt })),
-        stuckOrdersCount: stuckOrders.length,
-        expiringBatches: expiringBatches.map(b => ({ id: b.id, productId: b.productId, expiryDate: b.expiryDate, batchCode: b.batchCode, quantity: b.quantity })),
-        expiringBatchesCount: expiringBatches.length,
-        failedPayments: failedPayments.map(p => ({ id: p.id, userId: p.userId, createdAt: p.createdAt })),
-        failedPaymentsCount: failedPayments.length,
-      });
-    } catch (error) {
-      console.error('Admin alerts error:', error);
-      res.status(500).json({ error: 'Failed to fetch alerts' });
-    }
-  });
 
   // GET /api/admin/wholesalers/:id/orders
   app.get('/api/admin/wholesalers/:id/orders', requireAuth, async (req: any, res) => {
