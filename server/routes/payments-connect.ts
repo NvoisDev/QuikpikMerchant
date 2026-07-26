@@ -1083,10 +1083,16 @@ export function registerPaymentConnectRoutes(app: Express): void {
 
         const invProductLimit = invPlanId === 'premium' ? -1 : (invPlanId === 'standard' ? 5 : 2);
 
+        // Use the actual Stripe subscription status rather than hardcoding 'active'.
+        // If the sub is still trialing (e.g. a proration invoice fired mid-trial),
+        // preserve 'trialing' so the DB stays in sync with Stripe. The authoritative
+        // trial → active transition is handled by customer.subscription.updated.
+        const invSubStatus = invSub.status === 'trialing' ? 'trialing' : 'active';
+
         await storage.updateUser(invUser.id, {
           currentPlan: invPlanId,
           subscriptionTier: invPlanId,
-          subscriptionStatus: 'active',
+          subscriptionStatus: invSubStatus,
           productLimit: invProductLimit,
           stripeSubscriptionId: invSub.id,
           subscriptionEndsAt: invPeriodEnd,
@@ -1103,7 +1109,7 @@ export function registerPaymentConnectRoutes(app: Express): void {
           await db.update(userSubscriptions).set({
             planId: invPlanId,
             stripeSubscriptionId: invSub.id,
-            status: 'active',
+            status: invSubStatus,
             currentPeriodStart: invPeriodStart,
             currentPeriodEnd: invPeriodEnd,
             cancelAtPeriodEnd: false,
@@ -1114,7 +1120,7 @@ export function registerPaymentConnectRoutes(app: Express): void {
             userId: invUser.id,
             planId: invPlanId,
             stripeSubscriptionId: invSub.id,
-            status: 'active',
+            status: invSubStatus,
             currentPeriodStart: invPeriodStart,
             currentPeriodEnd: invPeriodEnd,
             cancelAtPeriodEnd: false,

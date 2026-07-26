@@ -211,10 +211,16 @@ export function registerSubscriptionRoutes(app: Express): void {
             isTestAccount,
           );
           
+          // Use the status Stripe reports — do not hardcode 'active'. A wholesaler
+          // who upgrades while their listing-plan trial is still running remains
+          // 'trialing' in Stripe; writing 'active' here would desync the DB and
+          // cause incorrect enforcement when the trial legitimately ends.
+          const upgradedStatus = updatedSubscription.status === 'trialing' ? 'trialing' : 'active';
+
           // Update user's plan immediately for upgrades (instant access).
           await storage.updateUser(userId, {
             currentPlan: targetPlan.planId,
-            subscriptionStatus: 'active',
+            subscriptionStatus: upgradedStatus,
             productLimit: getProductLimit(targetPlan.planId),
             subscriptionEndsAt: new Date(updatedSubscription.current_period_end * 1000)
           });
@@ -225,9 +231,10 @@ export function registerSubscriptionRoutes(app: Express): void {
 
           // Clear the scheduled cancellation flag on userSubscriptions so that the
           // "Cancellation Scheduled" badge disappears immediately after upgrade.
+          // Preserve the trialing status if Stripe still reports the sub as trialing.
           await db.update(userSubscriptions).set({
             cancelAtPeriodEnd: false,
-            status: 'active',
+            status: upgradedStatus,
             updatedAt: new Date()
           }).where(eq(userSubscriptions.userId, userId));
 
