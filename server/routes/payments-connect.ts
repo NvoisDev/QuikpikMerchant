@@ -1032,25 +1032,17 @@ export function registerPaymentConnectRoutes(app: Express): void {
           .where(eq(subscriptionPlans.stripePriceId, invPriceId));
         let invPlanId: string | undefined = invPlanRow?.planId;
 
-        // Fallback: derive plan from monthly unit amount when price isn't in our DB
+        // If the priceId isn't in subscription_plans, log a warning and let the guard
+        // below return cleanly. Do NOT attempt to derive the tier from unit_amount —
+        // hardcoded thresholds are unreliable and will misclassify plans if prices change.
         if (!invPlanId || invPlanId === 'free') {
-          const invUnitAmount = invSub.items?.data?.[0]?.price?.unit_amount ?? 0;
-          if (invUnitAmount >= 4999) invPlanId = 'premium';
-          else if (invUnitAmount >= 1999) invPlanId = 'standard';
-          if (invPlanId && invPlanId !== 'free') {
-            console.warn(`⚠️ invoice price ${invPriceId} not in subscription_plans — derived "${invPlanId}" from ${invUnitAmount}p`);
-            await db.insert(systemErrorLogs).values({
-              errorType: 'webhook_price_fallback',
-              message: `invoice.payment_succeeded: price ${invPriceId} not in subscription_plans; derived "${invPlanId}" from unit_amount ${invUnitAmount}`,
-              context: { priceId: invPriceId, unitAmount: invUnitAmount, customerId: invCustId, userId: invUser.id },
-              severity: 'warning',
-            }).catch(() => {});
-            // Persist the price ID so future webhooks resolve without guessing
-            await db.update(subscriptionPlans)
-              .set({ stripePriceId: invPriceId })
-              .where(and(eq(subscriptionPlans.planId, invPlanId), isNull(subscriptionPlans.stripePriceId)))
-              .catch(() => {});
-          }
+          console.warn(`⚠️ invoice price ${invPriceId} not in subscription_plans — cannot determine tier; skipping audit log`);
+          await db.insert(systemErrorLogs).values({
+            errorType: 'webhook_price_unmatched',
+            message: `invoice.payment_succeeded: price ${invPriceId} not in subscription_plans; audit log skipped`,
+            context: { priceId: invPriceId, customerId: invCustId, userId: invUser.id },
+            severity: 'warning',
+          }).catch(() => {});
         }
 
         if (!invPlanId || invPlanId === 'free') {
