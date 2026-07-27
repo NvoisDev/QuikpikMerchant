@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -53,6 +53,7 @@ interface OrderForEdit {
 
 interface EditQuoteViewProps {
   order: OrderForEdit;
+  customerId?: string | number | null;
   editItems: EditItem[];
   setEditItems: React.Dispatch<React.SetStateAction<EditItem[]>>;
   editPaymentMethod: string;
@@ -69,6 +70,7 @@ interface EditQuoteViewProps {
 
 export function EditQuoteView({
   order,
+  customerId,
   editItems,
   setEditItems,
   editPaymentMethod,
@@ -109,6 +111,24 @@ export function EditQuoteView({
   const { data: availablePriceLists = [] } = useQuery<Array<{ id: number; name: string; itemCount: number }>>({
     queryKey: ['/api/price-lists'],
   });
+
+  // Last prices charged to this customer — fetched lazily when the product picker opens
+  const { data: customerLastPrices = [] } = useQuery<{ productId: number; unitPrice: string; sellingType: string }[]>({
+    queryKey: [`/api/wholesaler/customers/${customerId}/last-prices`],
+    enabled: !!customerId && editProductDialogOpen,
+    staleTime: 2 * 60 * 1000,
+  });
+  const lastPriceMap = useMemo(() => {
+    const map: Record<number, { unit?: number; pallet?: number }> = {};
+    for (const row of customerLastPrices) {
+      const entry = map[row.productId] ?? {};
+      const price = parseFloat(row.unitPrice);
+      if (row.sellingType === 'pallets') entry.pallet = price;
+      else entry.unit = price;
+      map[row.productId] = entry;
+    }
+    return map;
+  }, [customerLastPrices]);
 
   const handleApplyPriceList = async () => {
     if (!applyPriceListId) return;
@@ -882,76 +902,158 @@ export function EditQuoteView({
                     <div className="font-medium text-sm mb-2">{product.name}</div>
                     <div className="flex flex-wrap gap-2">
                       {hasUnits && parseFloat(product.price) > 0 && (
-                        <button
-                          onClick={() => {
-                            const existing = editItems.findIndex(i => i.productId === product.id && i.sellingType === 'units');
-                            if (existing >= 0) {
-                              const updated = [...editItems];
-                              const existingItem = updated[existing]!;
-                              // If item is in pack display mode, add a full pack worth of base units
-                              const itemKey = getItemKey(existingItem);
-                              const increment = packMode[itemKey] ? (existingItem.quantityInPack ?? 1) : 1;
-                              updated[existing] = { ...existingItem, quantity: existingItem.quantity + increment } as EditItem;
-                              setEditItems(updated);
-                            } else {
-                              setEditItems(prev => [...prev, {
-                                productId: product.id,
-                                productName: product.name,
-                                quantity: 1,
-                                customPrice: parseFloat(product.price),
-                                sellingType: 'units',
-                                imageUrl: product.imageUrl,
-                                stock: product.stock,
-                                quantityInPack: (product.quantityInPack ?? 1) > 1 ? product.quantityInPack : undefined,
-                                unitsPerPallet: product.unitsPerPallet,
-                                sellingFormat: product.sellingFormat,
-                                palletPrice: product.palletPrice ? parseFloat(product.palletPrice) : undefined,
-                                unitPrice: parseFloat(product.price),
-                                palletMoq: product.palletMoq,
-                              }]);
-                              setBaseline(product.id, 'units', parseFloat(product.price));
-                            }
-                            setEditProductDialogOpen(false);
-                            setEditProductSearch('');
-                          }}
-                          className="text-xs bg-green-50 border border-green-200 text-green-700 px-2 py-1 rounded hover:bg-green-100"
-                        >
-                          + Units — £{parseFloat(product.price).toFixed(2)} ({product.stock} in stock)
-                        </button>
+                        <div className="flex flex-col gap-1">
+                          <button
+                            onClick={() => {
+                              const existing = editItems.findIndex(i => i.productId === product.id && i.sellingType === 'units');
+                              if (existing >= 0) {
+                                const updated = [...editItems];
+                                const existingItem = updated[existing]!;
+                                // If item is in pack display mode, add a full pack worth of base units
+                                const itemKey = getItemKey(existingItem);
+                                const increment = packMode[itemKey] ? (existingItem.quantityInPack ?? 1) : 1;
+                                updated[existing] = { ...existingItem, quantity: existingItem.quantity + increment } as EditItem;
+                                setEditItems(updated);
+                              } else {
+                                setEditItems(prev => [...prev, {
+                                  productId: product.id,
+                                  productName: product.name,
+                                  quantity: 1,
+                                  customPrice: parseFloat(product.price),
+                                  sellingType: 'units',
+                                  imageUrl: product.imageUrl,
+                                  stock: product.stock,
+                                  quantityInPack: (product.quantityInPack ?? 1) > 1 ? product.quantityInPack : undefined,
+                                  unitsPerPallet: product.unitsPerPallet,
+                                  sellingFormat: product.sellingFormat,
+                                  palletPrice: product.palletPrice ? parseFloat(product.palletPrice) : undefined,
+                                  unitPrice: parseFloat(product.price),
+                                  palletMoq: product.palletMoq,
+                                }]);
+                                setBaseline(product.id, 'units', parseFloat(product.price));
+                              }
+                              setEditProductDialogOpen(false);
+                              setEditProductSearch('');
+                            }}
+                            className="text-xs bg-green-50 border border-green-200 text-green-700 px-2 py-1 rounded hover:bg-green-100"
+                          >
+                            + Units — £{parseFloat(product.price).toFixed(2)} ({product.stock} in stock)
+                          </button>
+                          {(() => {
+                            const lpu = lastPriceMap[product.id]?.unit;
+                            if (lpu === undefined) return null;
+                            return (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  const existing = editItems.findIndex(i => i.productId === product.id && i.sellingType === 'units');
+                                  if (existing >= 0) {
+                                    const updated = [...editItems];
+                                    updated[existing] = { ...updated[existing]!, customPrice: lpu } as EditItem;
+                                    setEditItems(updated);
+                                  } else {
+                                    setEditItems(prev => [...prev, {
+                                      productId: product.id,
+                                      productName: product.name,
+                                      quantity: 1,
+                                      customPrice: lpu,
+                                      sellingType: 'units',
+                                      imageUrl: product.imageUrl,
+                                      stock: product.stock,
+                                      quantityInPack: (product.quantityInPack ?? 1) > 1 ? product.quantityInPack : undefined,
+                                      unitsPerPallet: product.unitsPerPallet,
+                                      sellingFormat: product.sellingFormat,
+                                      palletPrice: product.palletPrice ? parseFloat(product.palletPrice) : undefined,
+                                      unitPrice: parseFloat(product.price),
+                                      palletMoq: product.palletMoq,
+                                    }]);
+                                    setBaseline(product.id, 'units', lpu);
+                                  }
+                                  setEditProductDialogOpen(false);
+                                  setEditProductSearch('');
+                                }}
+                                className="text-[11px] text-amber-600 font-medium underline text-left"
+                              >
+                                Last: {formatMoney(lpu)} ↵
+                              </button>
+                            );
+                          })()}
+                        </div>
                       )}
                       {hasPallets && product.palletPrice && (
-                        <button
-                          onClick={() => {
-                            const existing = editItems.findIndex(i => i.productId === product.id && i.sellingType === 'pallets');
-                            if (existing >= 0) {
-                              const updated = [...editItems];
-                              updated[existing] = { ...updated[existing]!, quantity: updated[existing]!.quantity + 1 } as EditItem;
-                              setEditItems(updated);
-                            } else {
-                              const initPalletQty = Math.max(1, product.palletMoq ?? 1);
-                              setEditItems(prev => [...prev, {
-                                productId: product.id,
-                                productName: `${product.name} (Pallet)`,
-                                quantity: initPalletQty,
-                                customPrice: parseFloat(product.palletPrice!),
-                                sellingType: 'pallets',
-                                imageUrl: product.imageUrl,
-                                palletStock: product.palletStock,
-                                unitsPerPallet: product.unitsPerPallet,
-                                sellingFormat: product.sellingFormat,
-                                palletPrice: parseFloat(product.palletPrice!),
-                                unitPrice: parseFloat(product.price),
-                                palletMoq: product.palletMoq,
-                              }]);
-                              setBaseline(product.id, 'pallets', parseFloat(product.palletPrice!));
-                            }
-                            setEditProductDialogOpen(false);
-                            setEditProductSearch('');
-                          }}
-                          className="text-xs bg-blue-50 border border-blue-200 text-blue-700 px-2 py-1 rounded hover:bg-blue-100"
-                        >
-                          + Pallet — £{parseFloat(product.palletPrice).toFixed(2)} ({product.palletStock || 0} in stock)
-                        </button>
+                        <div className="flex flex-col gap-1">
+                          <button
+                            onClick={() => {
+                              const existing = editItems.findIndex(i => i.productId === product.id && i.sellingType === 'pallets');
+                              if (existing >= 0) {
+                                const updated = [...editItems];
+                                updated[existing] = { ...updated[existing]!, quantity: updated[existing]!.quantity + 1 } as EditItem;
+                                setEditItems(updated);
+                              } else {
+                                const initPalletQty = Math.max(1, product.palletMoq ?? 1);
+                                setEditItems(prev => [...prev, {
+                                  productId: product.id,
+                                  productName: `${product.name} (Pallet)`,
+                                  quantity: initPalletQty,
+                                  customPrice: parseFloat(product.palletPrice!),
+                                  sellingType: 'pallets',
+                                  imageUrl: product.imageUrl,
+                                  palletStock: product.palletStock,
+                                  unitsPerPallet: product.unitsPerPallet,
+                                  sellingFormat: product.sellingFormat,
+                                  palletPrice: parseFloat(product.palletPrice!),
+                                  unitPrice: parseFloat(product.price),
+                                  palletMoq: product.palletMoq,
+                                }]);
+                                setBaseline(product.id, 'pallets', parseFloat(product.palletPrice!));
+                              }
+                              setEditProductDialogOpen(false);
+                              setEditProductSearch('');
+                            }}
+                            className="text-xs bg-blue-50 border border-blue-200 text-blue-700 px-2 py-1 rounded hover:bg-blue-100"
+                          >
+                            + Pallet — £{parseFloat(product.palletPrice).toFixed(2)} ({product.palletStock || 0} in stock)
+                          </button>
+                          {(() => {
+                            const lpp = lastPriceMap[product.id]?.pallet;
+                            if (lpp === undefined) return null;
+                            return (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  const existing = editItems.findIndex(i => i.productId === product.id && i.sellingType === 'pallets');
+                                  if (existing >= 0) {
+                                    const updated = [...editItems];
+                                    updated[existing] = { ...updated[existing]!, customPrice: lpp } as EditItem;
+                                    setEditItems(updated);
+                                  } else {
+                                    const initPalletQty = Math.max(1, product.palletMoq ?? 1);
+                                    setEditItems(prev => [...prev, {
+                                      productId: product.id,
+                                      productName: `${product.name} (Pallet)`,
+                                      quantity: initPalletQty,
+                                      customPrice: lpp,
+                                      sellingType: 'pallets',
+                                      imageUrl: product.imageUrl,
+                                      palletStock: product.palletStock,
+                                      unitsPerPallet: product.unitsPerPallet,
+                                      sellingFormat: product.sellingFormat,
+                                      palletPrice: parseFloat(product.palletPrice!),
+                                      unitPrice: parseFloat(product.price),
+                                      palletMoq: product.palletMoq,
+                                    }]);
+                                    setBaseline(product.id, 'pallets', lpp);
+                                  }
+                                  setEditProductDialogOpen(false);
+                                  setEditProductSearch('');
+                                }}
+                                className="text-[11px] text-amber-600 font-medium underline text-left"
+                              >
+                                Last: {formatMoney(lpp)} ↵
+                              </button>
+                            );
+                          })()}
+                        </div>
                       )}
                     </div>
                   </div>

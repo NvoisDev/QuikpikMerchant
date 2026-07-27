@@ -1199,6 +1199,7 @@ export default function OrderDetail() {
     return (
       <EditQuoteView
         order={order}
+        customerId={order.retailerId}
         editItems={editItems}
         setEditItems={setEditItems}
         editPaymentMethod={editPaymentMethod}
