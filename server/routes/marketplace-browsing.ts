@@ -17,6 +17,7 @@
 import type { Express } from "express";
 import {
   db, getUserPlanLimits, inArray, sql, storage, priceListItems, requireAuth,
+  users, eq, or,
 } from "./shared";
 import { stripGuestPricingDataFromProducts } from "../utils/guest-products";
 import { getFeeConfigForWholesaler } from "../utils/fee-config";
@@ -464,6 +465,48 @@ export function registerBrowsingRoutes(app: Express): void {
       res.json({ available: result.rows.length === 0 });
     } catch (error) {
       res.status(500).json({ available: false, reason: 'error' });
+    }
+  });
+
+  // GET /api/marketplace/welcome-branding/:slug
+  // Returns only the branding fields needed by the WelcomePage (business name,
+  // logo, country code). No visibility gate — having the invite URL is already
+  // proof the caller knows the store exists.
+  app.get('/api/marketplace/welcome-branding/:slug', async (req, res) => {
+    try {
+      const { slug } = req.params;
+      const [row] = await db
+        .select({
+          id:                 users.id,
+          businessName:       users.businessName,
+          logoUrl:            users.logoUrl,
+          logoType:           users.logoType,
+          defaultCountryCode: users.defaultCountryCode,
+          storeSlug:          users.storeSlug,
+        })
+        .from(users)
+        .where(or(eq(users.storeSlug, slug), eq(users.id, slug)))
+        .limit(1);
+
+      if (!row) return res.status(404).json({ message: 'Wholesaler not found' });
+
+      // Resolve logo: serve base64 via the proxy endpoint so the response
+      // stays small; pass through http/https URLs directly.
+      const resolvedLogoUrl = row.logoType === 'custom'
+        ? `/api/logo/${row.id}`
+        : (row.logoUrl && String(row.logoUrl).startsWith('http') ? row.logoUrl : null);
+
+      return res.json({
+        id:                 row.id,
+        businessName:       row.businessName,
+        logoUrl:            resolvedLogoUrl,
+        logoType:           row.logoType,
+        defaultCountryCode: row.defaultCountryCode,
+        storeSlug:          row.storeSlug,
+      });
+    } catch (err) {
+      console.error('❌ GET /api/marketplace/welcome-branding error:', err);
+      return res.status(500).json({ message: 'Failed to load branding' });
     }
   });
 

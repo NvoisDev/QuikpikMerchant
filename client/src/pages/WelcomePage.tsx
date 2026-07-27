@@ -114,7 +114,7 @@ export default function WelcomePage() {
   // Fetch wholesaler branding
   useEffect(() => {
     if (!wholesalerId) return;
-    fetch(`/api/marketplace/wholesaler/${wholesalerId}`)
+    fetch(`/api/marketplace/welcome-branding/${wholesalerId}`)
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         if (data) {
