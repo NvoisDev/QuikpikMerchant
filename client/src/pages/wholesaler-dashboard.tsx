@@ -16,7 +16,7 @@ import { StripeSetupAlert, StripeStatusIndicator } from "@/components/StripeSetu
 import { AreaChart, Area, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import InteractiveActionCard from "@/components/interactive-action-card";
 import { DateRangePicker, type DateRange } from "@/components/DateRangePicker";
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useToast } from "@/hooks/use-toast";
 import { AlertTriangle, Clock } from "lucide-react";
 import { subDays, startOfToday, endOfDay, format, eachDayOfInterval, differenceInDays } from "date-fns";
@@ -143,6 +143,8 @@ function MarginOverview() {
   const [showProductBreakdown, setShowProductBreakdown] = useState(false);
   const [selectedMarginProduct, setSelectedMarginProduct] = useState<MarginProduct | null>(null);
   const [marginTrendChartType, setMarginTrendChartType] = useState<"line" | "bar">("line");
+  const [expandedProductId, setExpandedProductId] = useState<number | null>(null);
+  const [expandedDrillId, setExpandedDrillId] = useState<number | null>(null);
 
   interface ProductOrderLine {
     orderId: number;
@@ -428,16 +430,28 @@ function MarginOverview() {
                           {marginData.products.map((p, idx) => {
                             const isLowMargin = p.marginPercent !== null && p.marginPercent < 15;
                             const isNegMargin = p.marginPercent !== null && p.marginPercent < 0;
+                            const isExpanded = expandedProductId === p.productId;
+                            const marginColor = isNegMargin ? "text-red-500" : isLowMargin ? "text-amber-600" : "text-emerald-600";
                             return (
+                              <React.Fragment key={p.productId}>
                               <tr
-                                key={p.productId}
-                                onClick={() => setSelectedMarginProduct(p)}
+                                onClick={() => setExpandedProductId(isExpanded ? null : p.productId)}
                                 className={`border-b border-slate-100 last:border-0 cursor-pointer transition-colors hover:bg-blue-50/60 active:bg-blue-100/60 ${idx % 2 === 0 ? "bg-white" : "bg-slate-50/40"}`}
                               >
                                 <td className="px-2 py-2 sm:px-4 sm:py-2.5 font-medium text-slate-800 max-w-[140px] sm:max-w-[180px] truncate">
                                   <span className="flex items-center gap-1.5">
                                     {p.name}
-                                    <ChevronDown className="w-3 h-3 text-slate-400 shrink-0 rotate-[-90deg]" />
+                                    {/* On mobile: chevron rotates to indicate expand/collapse; on desktop: acts as drill-down trigger */}
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); setSelectedMarginProduct(p); }}
+                                      className="hidden sm:inline-flex items-center shrink-0"
+                                      aria-label="View detail"
+                                    >
+                                      <ChevronDown className="w-3 h-3 text-slate-400 rotate-[-90deg]" />
+                                    </button>
+                                    <ChevronDown
+                                      className={`w-3 h-3 text-slate-400 shrink-0 sm:hidden transition-transform duration-200 ${isExpanded ? "rotate-0" : "rotate-[-90deg]"}`}
+                                    />
                                   </span>
                                 </td>
                                 <td className="px-2 py-2 sm:px-4 sm:py-2.5 text-right text-slate-600 hidden sm:table-cell">
@@ -447,20 +461,58 @@ function MarginOverview() {
                                   {p.avgSellingPrice != null ? fmt(p.avgSellingPrice) : <span className="text-slate-400 italic">—</span>}
                                 </td>
                                 <td className="px-2 py-2 sm:px-4 sm:py-2.5 text-right text-slate-700">{fmt(p.revenue)}</td>
-                                <td className={`px-2 py-2 sm:px-4 sm:py-2.5 text-right font-semibold ${isNegMargin ? "text-red-500" : isLowMargin ? "text-amber-600" : "text-emerald-600"}`}>
+                                <td className={`px-2 py-2 sm:px-4 sm:py-2.5 text-right font-semibold ${marginColor}`}>
                                   {p.hasCost ? fmt(p.margin) : <span className="text-slate-400 italic">—</span>}
                                 </td>
-                                <td className={`px-2 py-2 sm:px-4 sm:py-2.5 text-right font-semibold hidden sm:table-cell ${isNegMargin ? "text-red-500" : isLowMargin ? "text-amber-600" : "text-emerald-600"}`}>
+                                <td className={`px-2 py-2 sm:px-4 sm:py-2.5 text-right font-semibold hidden sm:table-cell ${marginColor}`}>
                                   {p.marginPercent != null ? pct(p.marginPercent) : <span className="text-slate-400 italic font-normal">No cost</span>}
                                 </td>
                                 <td className="px-2 py-2 sm:px-4 sm:py-2.5 text-right text-slate-500 hidden sm:table-cell">{p.revenueShare.toFixed(1)}%</td>
                               </tr>
+                              {/* Mobile-only expansion row */}
+                              {isExpanded && (
+                                <tr key={`${p.productId}-expand`} className={`sm:hidden border-b border-slate-200 ${idx % 2 === 0 ? "bg-blue-50/40" : "bg-blue-50/30"}`}>
+                                  <td colSpan={3} className="px-3 py-2.5">
+                                    <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
+                                      <div>
+                                        <span className="text-slate-400 uppercase tracking-wide text-[10px] font-semibold">Unit Cost</span>
+                                        <p className="font-medium text-slate-700 mt-0.5">
+                                          {p.wac != null ? fmt(p.wac) : <span className="text-slate-400 italic">—</span>}
+                                        </p>
+                                      </div>
+                                      <div>
+                                        <span className="text-slate-400 uppercase tracking-wide text-[10px] font-semibold">Selling Price</span>
+                                        <p className="font-medium text-slate-700 mt-0.5">
+                                          {p.avgSellingPrice != null ? fmt(p.avgSellingPrice) : <span className="text-slate-400 italic">—</span>}
+                                        </p>
+                                      </div>
+                                      <div>
+                                        <span className="text-slate-400 uppercase tracking-wide text-[10px] font-semibold">Margin %</span>
+                                        <p className={`font-semibold mt-0.5 ${marginColor}`}>
+                                          {p.marginPercent != null ? pct(p.marginPercent) : <span className="text-slate-400 italic font-normal">No cost</span>}
+                                        </p>
+                                      </div>
+                                      <div>
+                                        <span className="text-slate-400 uppercase tracking-wide text-[10px] font-semibold">Rev. Share</span>
+                                        <p className="font-medium text-slate-500 mt-0.5">{p.revenueShare.toFixed(1)}%</p>
+                                      </div>
+                                    </div>
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); setSelectedMarginProduct(p); setExpandedProductId(null); }}
+                                      className="mt-2 text-xs font-medium text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                                    >
+                                      View invoice breakdown <ChevronDown className="w-3 h-3 rotate-[-90deg]" />
+                                    </button>
+                                  </td>
+                                </tr>
+                              )}
+                              </React.Fragment>
                             );
                           })}
                         </tbody>
                       </table>
                       <p className="px-4 py-2 text-xs text-slate-400 border-t border-slate-100">
-                        Sorted by margin % ascending · Unit Cost = batch WAC where available, otherwise product cost price · Low margin (&lt;15%) shown in amber
+                        Tap a row to reveal Unit Cost, Selling Price, Margin % and Share · Sorted by margin % ascending · Low margin (&lt;15%) shown in amber
                       </p>
                     </div>
                   )}
@@ -634,10 +686,16 @@ function MarginOverview() {
                       const isNeg = line.marginPercent !== null && line.marginPercent < 0;
                       const isLow = line.marginPercent !== null && line.marginPercent >= 0 && line.marginPercent < 15;
                       const rowBg = isNeg ? "bg-red-50" : idx % 2 === 0 ? "bg-white" : "bg-slate-50/40";
+                      const marginColor = isNeg ? "text-red-600" : isLow ? "text-amber-600" : "text-emerald-600";
+                      const isDrillExpanded = expandedDrillId === line.orderId;
                       return (
-                        <tr key={line.orderId} className={`border-b border-slate-100 last:border-0 ${rowBg}`}>
+                        <React.Fragment key={line.orderId}>
+                        <tr
+                          onClick={() => setExpandedDrillId(isDrillExpanded ? null : line.orderId)}
+                          className={`border-b border-slate-100 last:border-0 cursor-pointer transition-colors hover:bg-blue-50/30 active:bg-blue-50/60 sm:cursor-default sm:hover:bg-transparent sm:active:bg-transparent ${rowBg}`}
+                        >
                           <td className="px-2 py-2 sm:px-4 sm:py-2.5">
-                            <Link href={`/orders/${line.orderId}`} onClick={() => setSelectedMarginProduct(null)}>
+                            <Link href={`/orders/${line.orderId}`} onClick={(e) => { e.stopPropagation(); setSelectedMarginProduct(null); }}>
                               <span className="font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer">
                                 {line.orderNumber ?? `#${line.orderId}`}
                               </span>
@@ -646,24 +704,55 @@ function MarginOverview() {
                             <p className="text-slate-400 mt-0.5">{new Date(line.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}</p>
                           </td>
                           <td className="px-2 py-2 sm:px-4 sm:py-2.5 text-slate-600 hidden sm:table-cell max-w-[140px] truncate">{line.customerName ?? "—"}</td>
-                          <td className="px-2 py-2 sm:px-4 sm:py-2.5 text-right text-slate-600">{line.quantity}</td>
+                          <td className="px-2 py-2 sm:px-4 sm:py-2.5 text-right text-slate-600">
+                            <span className="flex items-center justify-end gap-1">
+                              {line.quantity}
+                              <ChevronDown className={`w-3 h-3 text-slate-300 shrink-0 sm:hidden transition-transform duration-200 ${isDrillExpanded ? "rotate-0" : "rotate-[-90deg]"}`} />
+                            </span>
+                          </td>
                           <td className="px-2 py-2 sm:px-4 sm:py-2.5 text-right text-slate-600 hidden sm:table-cell">
                             {line.unitCost !== null ? fmt(line.unitCost) : <span className="text-slate-400 italic">—</span>}
                           </td>
                           <td className="px-2 py-2 sm:px-4 sm:py-2.5 text-right text-slate-700">{fmt(line.revenue)}</td>
-                          <td className={`px-2 py-2 sm:px-4 sm:py-2.5 text-right font-semibold ${isNeg ? "text-red-600" : isLow ? "text-amber-600" : "text-emerald-600"}`}>
+                          <td className={`px-2 py-2 sm:px-4 sm:py-2.5 text-right font-semibold ${marginColor}`}>
                             {line.margin !== null ? fmt(line.margin) : <span className="text-slate-400 italic font-normal">—</span>}
                           </td>
-                          <td className={`px-2 py-2 sm:px-4 sm:py-2.5 text-right font-semibold hidden sm:table-cell ${isNeg ? "text-red-600" : isLow ? "text-amber-600" : "text-emerald-600"}`}>
+                          <td className={`px-2 py-2 sm:px-4 sm:py-2.5 text-right font-semibold hidden sm:table-cell ${marginColor}`}>
                             {line.marginPercent !== null ? pct(line.marginPercent) : <span className="text-slate-400 italic font-normal">No cost</span>}
                           </td>
                         </tr>
+                        {/* Mobile-only expansion row for drill-down table */}
+                        {isDrillExpanded && (
+                          <tr key={`${line.orderId}-expand`} className={`sm:hidden border-b border-slate-200 ${isNeg ? "bg-red-50" : "bg-blue-50/30"}`}>
+                            <td colSpan={3} className="px-3 py-2.5">
+                              <div className="grid grid-cols-3 gap-x-3 gap-y-1.5 text-xs">
+                                <div>
+                                  <span className="text-slate-400 uppercase tracking-wide text-[10px] font-semibold">Customer</span>
+                                  <p className="font-medium text-slate-700 mt-0.5 truncate">{line.customerName ?? "—"}</p>
+                                </div>
+                                <div>
+                                  <span className="text-slate-400 uppercase tracking-wide text-[10px] font-semibold">Unit Cost</span>
+                                  <p className="font-medium text-slate-700 mt-0.5">
+                                    {line.unitCost !== null ? fmt(line.unitCost) : <span className="text-slate-400 italic">—</span>}
+                                  </p>
+                                </div>
+                                <div>
+                                  <span className="text-slate-400 uppercase tracking-wide text-[10px] font-semibold">Margin %</span>
+                                  <p className={`font-semibold mt-0.5 ${marginColor}`}>
+                                    {line.marginPercent !== null ? pct(line.marginPercent) : <span className="text-slate-400 italic font-normal">No cost</span>}
+                                  </p>
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                        </React.Fragment>
                       );
                     })}
                   </tbody>
                 </table>
                 <p className="px-4 py-2 text-xs text-slate-400 border-t border-slate-100">
-                  Tap an invoice number to view the full order · Negative margin highlighted in red · Low margin (&lt;15%) in amber
+                  Tap a row to reveal Customer, Unit Cost and Margin % · Tap invoice number to view full order · Negative margin in red · Low margin (&lt;15%) in amber
                 </p>
               </div>
               </>
