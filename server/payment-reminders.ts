@@ -286,6 +286,8 @@ export async function sendPaymentChasers(): Promise<number> {
       const chaserIntervalDays: number = typeof prefs.chaserIntervalDays === 'number' ? prefs.chaserIntervalDays : 7;
       const chaserChannel: string = prefs.chaserChannel || 'email';
       const chaserMaxDays: number | null = typeof prefs.chaserMaxDays === 'number' ? prefs.chaserMaxDays : null;
+      // Grace window: if a partial payment was recorded within this many days, suppress chasers
+      const chaserGraceDays: number = typeof prefs.chaserGraceDays === 'number' ? prefs.chaserGraceDays : 7;
 
       const currency = wholesaler.preferredCurrency || wholesaler.defaultCurrency || 'GBP';
       const sym = getCurrencySymbol(currency);
@@ -320,8 +322,10 @@ export async function sendPaymentChasers(): Promise<number> {
           customerEmail: orders.customerEmail,
           customerPhone: orders.customerPhone,
           amountOutstanding: orders.amountOutstanding,
+          amountPaid: orders.amountPaid,
           balanceDueDays: orders.balanceDueDays,
           createdAt: orders.createdAt,
+          updatedAt: orders.updatedAt,
           stripePaymentLinkUrl: orders.stripePaymentLinkUrl,
           chaserPaused: orders.chaserPaused,
         })
@@ -346,6 +350,22 @@ export async function sendPaymentChasers(): Promise<number> {
 
         const daysOverdue = Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
         if (daysOverdue < 1) continue; // Not overdue yet
+
+        // Grace window: if any payment has been made AND the order was updated within the
+        // grace period, assume a payment plan or manual arrangement is in place and skip.
+        // This prevents chasers from firing mid-instalment while the customer is actively paying.
+        const paidSoFar = parseFloat(order.amountPaid || '0');
+        if (paidSoFar > 0 && order.updatedAt) {
+          const daysSinceUpdate = Math.floor(
+            (today.getTime() - new Date(order.updatedAt).getTime()) / (1000 * 60 * 60 * 24)
+          );
+          if (daysSinceUpdate <= chaserGraceDays) {
+            console.log(
+              `⏸ Chaser suppressed for order ${order.orderNumber}: partial payment (${paidSoFar}) recorded ${daysSinceUpdate}d ago — within ${chaserGraceDays}d grace window`
+            );
+            continue;
+          }
+        }
 
         // Apply max days cutoff
         if (chaserMaxDays !== null && daysOverdue > chaserMaxDays) continue;
