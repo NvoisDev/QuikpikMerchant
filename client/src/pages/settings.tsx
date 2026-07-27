@@ -1247,6 +1247,10 @@ export default function Settings() {
     weeklyOrderDigestEnabled: true,
     weeklyOrderDigestDay: 1,
     lastWeeklyOrderDigestSentAt: null as string | null,
+    chaserEnabled: false,
+    chaserIntervalDays: 7,
+    chaserChannel: 'email',
+    chaserMaxDays: null as number | null,
   });
 
   useEffect(() => {
@@ -1263,6 +1267,10 @@ export default function Settings() {
         weeklyOrderDigestEnabled: notifPrefs.weeklyOrderDigestEnabled !== false,
         weeklyOrderDigestDay: (notifPrefs as any).weeklyOrderDigestDay ?? 1,
         lastWeeklyOrderDigestSentAt: (notifPrefs as any).lastWeeklyOrderDigestSentAt ?? null,
+        chaserEnabled: (notifPrefs as any).chaserEnabled === true,
+        chaserIntervalDays: (notifPrefs as any).chaserIntervalDays ?? 7,
+        chaserChannel: (notifPrefs as any).chaserChannel || 'email',
+        chaserMaxDays: (notifPrefs as any).chaserMaxDays ?? null,
       });
     }
   }, [notifPrefs]);
@@ -3093,6 +3101,79 @@ export default function Settings() {
                               <SelectItem value="off">Off — no promotion alerts</SelectItem>
                             </SelectContent>
                           </Select>
+                        )}
+                      </div>
+                      <div className="p-4 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium text-gray-800">Payment chasers</p>
+                            <p className="text-xs text-gray-500 mt-0.5">Chase customers with overdue balances on a repeating schedule. Tone escalates over time (friendly → firm → urgent).</p>
+                          </div>
+                          <Switch
+                            checked={notifForm.chaserEnabled}
+                            onCheckedChange={(v) => setNotifForm(f => ({ ...f, chaserEnabled: v }))}
+                            disabled={notifPrefsLoading}
+                          />
+                        </div>
+                        {notifForm.chaserEnabled && (
+                          <div className="space-y-3 pt-1">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                              <div>
+                                <p className="text-xs font-medium text-gray-700 mb-1">Channel</p>
+                                <Select
+                                  value={notifForm.chaserChannel}
+                                  onValueChange={(v) => setNotifForm(f => ({ ...f, chaserChannel: v }))}
+                                  disabled={notifPrefsLoading}
+                                >
+                                  <SelectTrigger className="w-full">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="email">Email only</SelectItem>
+                                    <SelectItem value="sms">SMS / WhatsApp only</SelectItem>
+                                    <SelectItem value="both">Both email and SMS</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div>
+                                <p className="text-xs font-medium text-gray-700 mb-1">Chase every</p>
+                                <div className="flex items-center gap-2">
+                                  <Input
+                                    type="number"
+                                    min="1"
+                                    max="90"
+                                    value={notifForm.chaserIntervalDays}
+                                    onChange={(e) => setNotifForm(f => ({ ...f, chaserIntervalDays: Math.max(1, parseInt(e.target.value) || 7) }))}
+                                    className="w-20"
+                                    disabled={notifPrefsLoading}
+                                  />
+                                  <span className="text-sm text-gray-500">days</span>
+                                </div>
+                              </div>
+                            </div>
+                            <div>
+                              <p className="text-xs font-medium text-gray-700 mb-1">Stop chasing after <span className="font-normal text-gray-400">(optional)</span></p>
+                              <div className="flex items-center gap-2">
+                                <Input
+                                  type="number"
+                                  min="1"
+                                  placeholder="No limit"
+                                  value={notifForm.chaserMaxDays ?? ''}
+                                  onChange={(e) => setNotifForm(f => ({
+                                    ...f,
+                                    chaserMaxDays: e.target.value ? Math.max(1, parseInt(e.target.value) || 1) : null
+                                  }))}
+                                  className="w-28"
+                                  disabled={notifPrefsLoading}
+                                />
+                                <span className="text-sm text-gray-500">days overdue</span>
+                              </div>
+                              <p className="text-xs text-gray-400 mt-1">Leave blank to chase indefinitely until paid</p>
+                            </div>
+                            <div className="bg-amber-50 border border-amber-100 rounded-md p-3 text-xs text-amber-700">
+                              <strong>Tone:</strong> Days 1–7 friendly · 8–21 firm · 22+ urgent. Bank details are always included. You can pause chasers per-invoice from the invoice editor.
+                            </div>
+                          </div>
                         )}
                       </div>
                     </div>

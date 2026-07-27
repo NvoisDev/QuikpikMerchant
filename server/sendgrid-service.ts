@@ -517,4 +517,100 @@ export async function sendWholesalerReinstatedEmail(data: {
   });
 }
 
-export default { sendEmail, sendOrderConfirmationEmail, sendOrderPhotoNotificationEmail, sendWholesalerOrderNotification, sendPaymentReminderEmail, sendStripeVerifiedEmail, sendWeeklyOrderDigestEmail, sendWholesalerSuspendedEmail, sendWholesalerReinstatedEmail };
+export interface ChaserBankDetails {
+  bankName?: string | null;
+  accountName?: string | null;
+  accountNumber?: string | null;
+  sortCode?: string | null;
+  iban?: string | null;
+  swift?: string | null;
+}
+
+export async function sendChaserEmail(data: {
+  to: string;
+  customerName: string;
+  orderNumber: string;
+  amountOutstanding: number;
+  businessName: string;
+  businessLogoUrl?: string | null;
+  paymentLink?: string;
+  bankDetails?: ChaserBankDetails;
+  daysOverdue: number;
+  currency?: string;
+}): Promise<boolean> {
+  const { wrapCustomerEmail, emailCard, emailButton, emailHeading } = await import('./email-templates');
+  const sym = getCurrencySymbol(data.currency || 'GBP');
+  const { to, customerName, orderNumber, amountOutstanding, businessName, paymentLink, bankDetails, daysOverdue } = data;
+
+  // Escalating tone based on days overdue
+  let tone: 'friendly' | 'firm' | 'urgent';
+  if (daysOverdue <= 7) {
+    tone = 'friendly';
+  } else if (daysOverdue <= 21) {
+    tone = 'firm';
+  } else {
+    tone = 'urgent';
+  }
+
+  let accentColor: string;
+  let subject: string;
+  let headingText: string;
+  let openingLine: string;
+
+  const firstName = customerName.split(' ')[0] || 'there';
+  const amtStr = `${sym}${amountOutstanding.toFixed(2)}`;
+
+  if (tone === 'friendly') {
+    accentColor = '#F59E0B';
+    subject = `Friendly reminder: ${amtStr} outstanding — Order ${orderNumber}`;
+    headingText = 'Friendly Payment Reminder';
+    openingLine = `Just a friendly reminder that <strong>${amtStr}</strong> remains outstanding on order <strong>${orderNumber}</strong>. We'd appreciate payment at your earliest convenience.`;
+  } else if (tone === 'firm') {
+    accentColor = '#DC2626';
+    subject = `Payment overdue: ${amtStr} — Order ${orderNumber} (${daysOverdue} days)`;
+    headingText = 'Payment Overdue';
+    openingLine = `Your payment of <strong>${amtStr}</strong> on order <strong>${orderNumber}</strong> is now <strong>${daysOverdue} days overdue</strong>. Please arrange payment as soon as possible to avoid further delays.`;
+  } else {
+    accentColor = '#7F1D1D';
+    subject = `Urgent: ${amtStr} significantly overdue — Order ${orderNumber} (${daysOverdue} days)`;
+    headingText = 'Urgent Payment Notice';
+    openingLine = `We urgently require payment of <strong>${amtStr}</strong> on order <strong>${orderNumber}</strong>, which is now <strong>${daysOverdue} days overdue</strong>. Please contact us immediately to resolve this.`;
+  }
+
+  const hasBankDetails = bankDetails && (bankDetails.bankName || bankDetails.accountName || bankDetails.accountNumber || bankDetails.sortCode || bankDetails.iban || bankDetails.swift);
+  const bankRowsHtml = hasBankDetails ? [
+    bankDetails?.bankName ? `<tr><td style="padding:6px 0;font-size:13px;color:#6b7280;width:130px">Bank</td><td style="padding:6px 0;font-size:13px;color:#374151;font-weight:600">${escapeHtml(bankDetails.bankName!)}</td></tr>` : '',
+    bankDetails?.accountName ? `<tr><td style="padding:6px 0;font-size:13px;color:#6b7280">Account Name</td><td style="padding:6px 0;font-size:13px;color:#374151;font-weight:600">${escapeHtml(bankDetails.accountName!)}</td></tr>` : '',
+    bankDetails?.accountNumber ? `<tr><td style="padding:6px 0;font-size:13px;color:#6b7280">Account Number</td><td style="padding:6px 0;font-size:13px;color:#374151;font-weight:600">${escapeHtml(bankDetails.accountNumber!)}</td></tr>` : '',
+    bankDetails?.sortCode ? `<tr><td style="padding:6px 0;font-size:13px;color:#6b7280">Sort Code</td><td style="padding:6px 0;font-size:13px;color:#374151;font-weight:600">${escapeHtml(bankDetails.sortCode!)}</td></tr>` : '',
+    bankDetails?.iban ? `<tr><td style="padding:6px 0;font-size:13px;color:#6b7280">IBAN</td><td style="padding:6px 0;font-size:13px;color:#374151;font-weight:600">${escapeHtml(bankDetails.iban!)}</td></tr>` : '',
+    bankDetails?.swift ? `<tr><td style="padding:6px 0;font-size:13px;color:#6b7280">SWIFT / BIC</td><td style="padding:6px 0;font-size:13px;color:#374151;font-weight:600">${escapeHtml(bankDetails.swift!)}</td></tr>` : '',
+  ].filter(Boolean).join('') : '';
+
+  const bankSection = hasBankDetails && bankRowsHtml
+    ? emailCard(
+        `${emailHeading('Bank Transfer Details', { size: '15px', color: '#374151' })}<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse">${bankRowsHtml}</table>`,
+        { borderColor: '#d1d5db', bgColor: '#f9fafb' }
+      )
+    : '';
+
+  const paySection = paymentLink
+    ? emailButton('Pay Now', paymentLink, '#10b981')
+    : `<p style="text-align:center;color:#6b7280;margin:16px 0">Please contact <strong>${escapeHtml(businessName)}</strong> to arrange payment.</p>`;
+
+  const body = `${emailHeading(headingText, { color: accentColor, size: '22px' })}<p style="font-size:16px;margin:0 0 8px">Dear ${escapeHtml(firstName)},</p><p style="margin:0 0 20px">${openingLine}</p>${emailCard(`<div style="text-align:center"><p style="margin:0 0 4px;font-size:13px;color:#6b7280;text-transform:uppercase;letter-spacing:0.5px;font-weight:600">Outstanding Balance</p><p style="margin:0 0 8px;font-size:32px;font-weight:800;color:${accentColor};letter-spacing:-0.5px">${amtStr}</p><p style="margin:0;font-size:14px;color:#6b7280">Order: ${escapeHtml(orderNumber)}</p></div>`, { borderColor: accentColor })}${paySection}${bankSection}<p style="margin:20px 0 4px;color:#374151">Thank you for your prompt attention to this matter.</p><p style="margin:0;font-weight:600">${escapeHtml(businessName)}</p>`;
+
+  const html = wrapCustomerEmail(body, {
+    businessName,
+    logoUrl: data.businessLogoUrl,
+  }, { preheader: `${amtStr} outstanding on order ${orderNumber} — ${daysOverdue} day${daysOverdue !== 1 ? 's' : ''} overdue` });
+
+  return await sendEmail({
+    to,
+    from: 'hello@quikpik.co',
+    subject,
+    html,
+  });
+}
+
+export default { sendEmail, sendOrderConfirmationEmail, sendOrderPhotoNotificationEmail, sendWholesalerOrderNotification, sendPaymentReminderEmail, sendChaserEmail, sendStripeVerifiedEmail, sendWeeklyOrderDigestEmail, sendWholesalerSuspendedEmail, sendWholesalerReinstatedEmail };

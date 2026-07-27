@@ -610,6 +610,10 @@ export function registerAuthCoreRoutes(app: Express): void {
         promotionReminderChannel: prefs.promotionReminderChannel ?? 'email',
         weeklyOrderDigestEnabled: prefs.weeklyOrderDigestEnabled !== false,
         weeklyOrderDigestDay: prefs.weeklyOrderDigestDay ?? 1,
+        chaserEnabled: prefs.chaserEnabled === true,
+        chaserIntervalDays: typeof prefs.chaserIntervalDays === 'number' ? prefs.chaserIntervalDays : 7,
+        chaserChannel: prefs.chaserChannel ?? 'email',
+        chaserMaxDays: typeof prefs.chaserMaxDays === 'number' ? prefs.chaserMaxDays : null,
       });
     } catch (error) {
       console.error('Error fetching notification preferences:', error);
@@ -623,7 +627,7 @@ export function registerAuthCoreRoutes(app: Express): void {
       const user = await storage.getUser(req.user.id);
       if (!user) return res.status(404).json({ message: 'User not found' });
 
-      const { stockAlertFrequency, stockAlertChannel, stockAlertDay, paymentReminderEnabled, paymentReminderChannel, promotionReminderEnabled, promotionReminderChannel, weeklyOrderDigestEnabled, weeklyOrderDigestDay } = req.body;
+      const { stockAlertFrequency, stockAlertChannel, stockAlertDay, paymentReminderEnabled, paymentReminderChannel, promotionReminderEnabled, promotionReminderChannel, weeklyOrderDigestEnabled, weeklyOrderDigestDay, chaserEnabled, chaserIntervalDays, chaserChannel, chaserMaxDays } = req.body;
 
       const validFrequencies = ['daily', 'weekly', 'critical_only'];
       const validChannels = ['email', 'sms', 'both', 'off'];
@@ -646,6 +650,15 @@ export function registerAuthCoreRoutes(app: Express): void {
       if (promotionReminderChannel !== undefined && !validChannels.includes(promotionReminderChannel)) {
         return res.status(400).json({ message: 'Invalid promotionReminderChannel' });
       }
+      if (chaserChannel !== undefined && !validChannels.includes(chaserChannel)) {
+        return res.status(400).json({ message: 'Invalid chaserChannel' });
+      }
+      if (chaserIntervalDays !== undefined && (typeof chaserIntervalDays !== 'number' || !Number.isInteger(chaserIntervalDays) || chaserIntervalDays < 1)) {
+        return res.status(400).json({ message: 'chaserIntervalDays must be a positive integer' });
+      }
+      if (chaserMaxDays !== undefined && chaserMaxDays !== null && (typeof chaserMaxDays !== 'number' || !Number.isInteger(chaserMaxDays) || chaserMaxDays < 1)) {
+        return res.status(400).json({ message: 'chaserMaxDays must be a positive integer or null' });
+      }
 
       const existing = (user.notificationPreferences as Record<string, unknown>) || {};
       const updated = {
@@ -659,6 +672,11 @@ export function registerAuthCoreRoutes(app: Express): void {
         ...(promotionReminderChannel !== undefined && { promotionReminderChannel }),
         ...(weeklyOrderDigestEnabled !== undefined && { weeklyOrderDigestEnabled: Boolean(weeklyOrderDigestEnabled) }),
         ...(weeklyOrderDigestDay !== undefined && { weeklyOrderDigestDay }),
+        ...(chaserEnabled !== undefined && { chaserEnabled: Boolean(chaserEnabled) }),
+        ...(chaserIntervalDays !== undefined && { chaserIntervalDays }),
+        ...(chaserChannel !== undefined && { chaserChannel }),
+        // chaserMaxDays: null means "no limit" — store explicitly so we can distinguish from "never set"
+        ...(chaserMaxDays !== undefined && { chaserMaxDays: chaserMaxDays === null ? null : Number(chaserMaxDays) }),
       };
 
       await storage.updateUserSettings(req.user.id, { notificationPreferences: updated });

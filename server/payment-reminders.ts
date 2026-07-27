@@ -1,9 +1,10 @@
 import { db } from './db';
-import { orders, users, orderItems, products } from '@shared/schema';
-import { and, gt, isNotNull, sql, eq } from 'drizzle-orm';
-import { sendPaymentReminderEmail } from './sendgrid-service';
+import { orders, users, orderItems, products, businessProfiles } from '@shared/schema';
+import { and, gt, isNotNull, sql, eq, ne, isNull, or } from 'drizzle-orm';
+import { sendPaymentReminderEmail, sendChaserEmail } from './sendgrid-service';
 import { getCurrencySymbol } from '../shared/utils/currency';
 import { sendWhatsAppMessage } from './services/whatsappService';
+import { ReliableSMSService } from './sms-service';
 import { getStripeClient } from './stripeConfig';
 import { isConnectAccountReady } from './utils/stripe-connect-ready';
 import { createShortPaymentLink } from './shortPaymentLink';
@@ -242,5 +243,177 @@ async function sendPaymentReminder(
     } catch (error) {
       console.error(`❌ Failed to send WhatsApp reminder for order ${orderRef}:`, error);
     }
+  }
+}
+
+// ── Payment Chasers ───────────────────────────────────────────────────────────
+// Wholesaler-configured automated chasers for overdue invoices. Unlike the
+// system payment reminders (fixed 3-day / 0-day / -1-day schedule), chasers
+// fire on a repeating user-defined interval (default 7 days) starting from
+// day 1 overdue, using an escalating tone (friendly → firm → urgent).
+
+export async function sendPaymentChasers(): Promise<number> {
+  try {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // 1. Find all wholesalers with chaserEnabled = true
+    const wholesalers = await db
+      .select({
+        id: users.id,
+        businessName: users.businessName,
+        email: users.email,
+        logoUrl: users.logoUrl,
+        notificationPreferences: users.notificationPreferences,
+        preferredCurrency: users.preferredCurrency,
+        defaultCurrency: users.defaultCurrency,
+        stripeAccountId: users.stripeAccountId,
+        isTestAccount: users.isTestAccount,
+      })
+      .from(users)
+      .where(
+        and(
+          sql`${users.notificationPreferences}->>'chaserEnabled' = 'true'`,
+          sql`${users.role} = 'wholesaler'`,
+          sql`(${users.isInactive} IS NULL OR ${users.isInactive} = false)`
+        )
+      );
+
+    let totalSent = 0;
+
+    for (const wholesaler of wholesalers) {
+      const prefs = (wholesaler.notificationPreferences as Record<string, any>) || {};
+      const chaserIntervalDays: number = typeof prefs.chaserIntervalDays === 'number' ? prefs.chaserIntervalDays : 7;
+      const chaserChannel: string = prefs.chaserChannel || 'email';
+      const chaserMaxDays: number | null = typeof prefs.chaserMaxDays === 'number' ? prefs.chaserMaxDays : null;
+
+      const currency = wholesaler.preferredCurrency || wholesaler.defaultCurrency || 'GBP';
+      const sym = getCurrencySymbol(currency);
+
+      // 2. Fetch the wholesaler's default business profile for bank details
+      const [defaultProfile] = await db
+        .select({
+          bankName: businessProfiles.bankName,
+          accountName: businessProfiles.accountName,
+          accountNumber: businessProfiles.accountNumber,
+          sortCode: businessProfiles.sortCode,
+          iban: businessProfiles.iban,
+          swift: businessProfiles.swift,
+        })
+        .from(businessProfiles)
+        .where(
+          and(
+            eq(businessProfiles.wholesalerId, wholesaler.id),
+            eq(businessProfiles.isDefault, true)
+          )
+        )
+        .limit(1);
+
+      const bankDetails = defaultProfile || undefined;
+
+      // 3. Find all overdue, unpaid, non-paused invoices for this wholesaler
+      const overdueOrders = await db
+        .select({
+          id: orders.id,
+          orderNumber: orders.orderNumber,
+          customerName: orders.customerName,
+          customerEmail: orders.customerEmail,
+          customerPhone: orders.customerPhone,
+          amountOutstanding: orders.amountOutstanding,
+          balanceDueDays: orders.balanceDueDays,
+          createdAt: orders.createdAt,
+          stripePaymentLinkUrl: orders.stripePaymentLinkUrl,
+          chaserPaused: orders.chaserPaused,
+        })
+        .from(orders)
+        .where(
+          and(
+            eq(orders.wholesalerId, wholesaler.id),
+            gt(orders.amountOutstanding, '0'),
+            ne(orders.paymentStatus, 'paid'),
+            sql`${orders.status} NOT IN ('draft', 'cancelled')`,
+            eq(orders.chaserPaused, false),
+            gt(orders.balanceDueDays, 0)
+          )
+        );
+
+      for (const order of overdueOrders) {
+        if (!order.createdAt || !order.balanceDueDays) continue;
+
+        const dueDate = new Date(order.createdAt);
+        dueDate.setDate(dueDate.getDate() + order.balanceDueDays);
+        dueDate.setHours(0, 0, 0, 0);
+
+        const daysOverdue = Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
+        if (daysOverdue < 1) continue; // Not overdue yet
+
+        // Apply max days cutoff
+        if (chaserMaxDays !== null && daysOverdue > chaserMaxDays) continue;
+
+        // Fire on day 1, then every N days: (daysOverdue - 1) % interval === 0
+        if ((daysOverdue - 1) % chaserIntervalDays !== 0) continue;
+
+        const outstandingAmount = parseFloat(order.amountOutstanding || '0');
+        if (outstandingAmount <= 0) continue;
+
+        const sendEmail = chaserChannel === 'email' || chaserChannel === 'both';
+        const sendSms = chaserChannel === 'sms' || chaserChannel === 'both';
+
+        // Refresh payment link
+        let paymentLink = order.stripePaymentLinkUrl || '';
+        try {
+          if (wholesaler.stripeAccountId) {
+            paymentLink = await getFreshPaymentLink(order as any, wholesaler.businessName || 'Your supplier');
+          }
+        } catch { /* use existing link */ }
+
+        if (sendEmail && order.customerEmail) {
+          try {
+            await sendChaserEmail({
+              to: order.customerEmail,
+              customerName: order.customerName || 'Valued Customer',
+              orderNumber: order.orderNumber || `#${order.id}`,
+              amountOutstanding: outstandingAmount,
+              businessName: wholesaler.businessName || 'Your supplier',
+              businessLogoUrl: wholesaler.logoUrl,
+              paymentLink: paymentLink || undefined,
+              bankDetails,
+              daysOverdue,
+              currency,
+            });
+            totalSent++;
+            console.log(`📧 Chaser email sent: order ${order.orderNumber}, ${daysOverdue} days overdue`);
+          } catch (err) {
+            console.error(`❌ Chaser email failed for order ${order.orderNumber}:`, err);
+          }
+        }
+
+        if (sendSms && order.customerPhone) {
+          try {
+            const shortLink = paymentLink ? await createShortPaymentLink(paymentLink, wholesaler.id, 24) : '';
+            const firstName = order.customerName?.split(' ')[0] || 'there';
+            const orderRef = order.orderNumber || `#${order.id}`;
+            const payPart = shortLink ? ` Pay here: ${shortLink}` : ' Please contact us to arrange payment.';
+            let msg: string;
+            if (daysOverdue <= 7) {
+              msg = `Hi ${firstName}, friendly reminder: ${sym}${outstandingAmount.toFixed(2)} is outstanding on order ${orderRef} with ${wholesaler.businessName || 'us'}.${payPart}`;
+            } else if (daysOverdue <= 21) {
+              msg = `Hi ${firstName}, your payment of ${sym}${outstandingAmount.toFixed(2)} on order ${orderRef} with ${wholesaler.businessName || 'us'} is now ${daysOverdue} days overdue. Please pay as soon as possible.${payPart}`;
+            } else {
+              msg = `Urgent: ${sym}${outstandingAmount.toFixed(2)} on order ${orderRef} with ${wholesaler.businessName || 'us'} is ${daysOverdue} days overdue. Please contact us immediately.${payPart}`;
+            }
+            const smsResult = await ReliableSMSService.sendMarketingSMS(order.customerPhone, msg);
+            if (smsResult.success) totalSent++;
+          } catch (err) {
+            console.error(`❌ Chaser SMS failed for order ${order.orderNumber}:`, err);
+          }
+        }
+      }
+    }
+
+    return totalSent;
+  } catch (error) {
+    console.error('❌ Error in sendPaymentChasers:', error);
+    return 0;
   }
 }

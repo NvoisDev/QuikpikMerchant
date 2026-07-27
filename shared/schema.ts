@@ -817,6 +817,9 @@ export const orders = pgTable("orders", {
   invoiceDiscount: decimal("invoice_discount", { precision: 10, scale: 2 }).default("0.00"),
   invoiceDiscountNote: text("invoice_discount_note"),
 
+  // Payment chaser opt-out — set to true to suppress automated chaser messages for this specific order
+  chaserPaused: boolean("chaser_paused").default(false),
+
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => [

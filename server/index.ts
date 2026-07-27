@@ -16,7 +16,7 @@ process.on('unhandledRejection', (reason) => {
 });
 import { validateDatabaseConnection } from "./health";
 import { startDatabaseMaintenance } from "./database-maintenance";
-import { checkAndSendPaymentReminders } from "./payment-reminders";
+import { checkAndSendPaymentReminders, sendPaymentChasers } from "./payment-reminders";
 import { checkAndSendWeeklyOrderDigests } from "./services/weeklyOrderDigestService";
 import { checkAndSendTrialReminders } from "./services/trialReminderService";
 import { pruneExpiredShortLinks } from "./shortPaymentLink";
@@ -832,6 +832,8 @@ async function runStartupMigrations() {
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS rrp_visible BOOLEAN NOT NULL DEFAULT FALSE`,
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS rrp_margin_visible BOOLEAN NOT NULL DEFAULT FALSE`,
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS retailer_economics_visible BOOLEAN NOT NULL DEFAULT FALSE`,
+    // Payment chaser opt-out per invoice — wholesaler can pause chasers for individual invoices
+    `ALTER TABLE orders ADD COLUMN IF NOT EXISTS chaser_paused BOOLEAN NOT NULL DEFAULT FALSE`,
   ];
   let warned = 0;
   for (const stmt of migrations) {
@@ -1210,8 +1212,15 @@ httpServer.listen({ port, host: '0.0.0.0', reusePort: true }, () => {
       } catch (error) {
         console.error('❌ Payment reminder check failed:', error);
       }
+      console.log('📬 Running payment chaser check...');
+      try {
+        const chasersSent = await sendPaymentChasers();
+        if (chasersSent > 0) console.log(`📬 Payment chasers: ${chasersSent} message(s) sent`);
+      } catch (error) {
+        console.error('❌ Payment chaser check failed:', error);
+      }
     });
-    console.log(`📧 Payment reminder system enabled (daily at 9 AM)`);
+    console.log(`📧 Payment reminder + chaser system enabled (daily at 9 AM)`);
 
     cron.schedule('0 9 * * *', async () => {
       console.log('⏳ Running trial expiry reminder check...');

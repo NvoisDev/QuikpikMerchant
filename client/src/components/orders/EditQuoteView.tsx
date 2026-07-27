@@ -44,6 +44,9 @@ interface OrderForEdit {
   id: number;
   orderNumber?: string;
   deliveryCost?: string;
+  balanceDueDays?: number;
+  createdAt?: string | Date;
+  chaserPaused?: boolean;
 }
 
 interface EditQuoteViewProps {
@@ -85,6 +88,8 @@ export function EditQuoteView({
   const [editDeliveryCost, setEditDeliveryCost] = useState(
     parseFloat(order.deliveryCost || '0').toFixed(2)
   );
+  const [editBalanceDueDays, setEditBalanceDueDays] = useState(order.balanceDueDays ?? 0);
+  const [editChaserPaused, setEditChaserPaused] = useState(order.chaserPaused ?? false);
 
   const [applyPriceListId, setApplyPriceListId] = useState('');
   const [isApplyingPriceList, setIsApplyingPriceList] = useState(false);
@@ -282,6 +287,8 @@ export function EditQuoteView({
           })),
           paymentMethod: editPaymentMethod,
           deliveryCost: deliveryCostVal,
+          balanceDueDays: editBalanceDueDays,
+          chaserPaused: editChaserPaused,
         }),
       });
       const data = await response.json();
@@ -639,6 +646,81 @@ export function EditQuoteView({
               <option value="pay_later">Pay Later</option>
               <option value="other">Other</option>
             </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Balance Due Date</label>
+            {(() => {
+              // Normalise createdAt to a UTC-midnight timestamp so all day-diff
+              // arithmetic is integer-exact regardless of the original time-of-day
+              // or the user's local timezone. We take only the YYYY-MM-DD portion
+              // from the ISO string (or today if createdAt is missing) and parse
+              // those components as UTC. `Date.UTC(y, m-1, d)` is always midnight.
+              const rawDate = order.createdAt
+                ? (typeof order.createdAt === 'string'
+                    ? order.createdAt
+                    : (order.createdAt as Date).toISOString())
+                : new Date().toISOString();
+              const datePart = rawDate.split('T')[0]!; // "YYYY-MM-DD"
+              const [cy, cm, cd] = datePart.split('-').map(Number);
+              const baseUtcMs = Date.UTC(cy!, cm! - 1, cd!); // UTC midnight
+
+              const minDate = datePart; // date input min = order creation date
+
+              // Due date display: base UTC midnight + N whole days → exact UTC date
+              const dueDateValue = editBalanceDueDays > 0
+                ? new Date(baseUtcMs + editBalanceDueDays * 86400000).toISOString().split('T')[0]!
+                : '';
+
+              return (
+                <div className="flex items-center gap-2">
+                  <input
+                    type="date"
+                    value={dueDateValue}
+                    min={minDate}
+                    onChange={(e) => {
+                      if (!e.target.value) { setEditBalanceDueDays(0); return; }
+                      // Picker value is always "YYYY-MM-DD" — parse as UTC midnight
+                      const [py, pm, pd] = e.target.value.split('-').map(Number);
+                      const pickedUtcMs = Date.UTC(py!, pm! - 1, pd!);
+                      // Integer division: both sides are UTC midnight so remainder is 0
+                      const diff = Math.max(0, Math.round((pickedUtcMs - baseUtcMs) / 86400000));
+                      setEditBalanceDueDays(diff);
+                    }}
+                    className="flex-1 border border-gray-300 rounded-md px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  {editBalanceDueDays > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setEditBalanceDueDays(0)}
+                      className="text-xs text-gray-400 hover:text-gray-600 whitespace-nowrap"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+              );
+            })()}
+            {editBalanceDueDays === 0
+              ? <p className="text-xs text-gray-400 mt-1">No due date — payment expected immediately</p>
+              : <p className="text-xs text-gray-400 mt-1">{editBalanceDueDays} day{editBalanceDueDays !== 1 ? 's' : ''} from order date</p>
+            }
+          </div>
+
+          <div className="flex items-center justify-between rounded-lg border border-gray-200 p-3">
+            <div>
+              <p className="text-sm font-medium text-gray-700">Pause Payment Chasers</p>
+              <p className="text-xs text-gray-400 mt-0.5">Stop automated chaser messages for this invoice only</p>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={editChaserPaused}
+                onChange={(e) => setEditChaserPaused(e.target.checked)}
+                className="sr-only peer"
+              />
+              <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-orange-500"></div>
+            </label>
           </div>
 
         </div>

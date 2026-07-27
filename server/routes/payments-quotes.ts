@@ -1234,6 +1234,16 @@ export function registerQuoteRoutes(app: Express): void {
         return res.status(400).json({ error: 'deliveryCost must be a non-negative number', errorType: 'VALIDATION_ERROR' });
       }
 
+      const newBalanceDueDays: number | undefined = req.body.balanceDueDays !== undefined
+        ? parseInt(String(req.body.balanceDueDays), 10)
+        : undefined;
+      if (newBalanceDueDays !== undefined && (isNaN(newBalanceDueDays) || newBalanceDueDays < 0)) {
+        return res.status(400).json({ error: 'balanceDueDays must be a non-negative integer', errorType: 'VALIDATION_ERROR' });
+      }
+      const newChaserPaused: boolean | undefined = req.body.chaserPaused !== undefined
+        ? Boolean(req.body.chaserPaused)
+        : undefined;
+
       // Server-side input validation for each item
       for (const item of items) {
         if (!Number.isInteger(item.quantity) || item.quantity <= 0) {
@@ -1794,6 +1804,8 @@ export function registerQuoteRoutes(app: Express): void {
           lastEditedAt: new Date(),
           updatedAt: new Date(),
           ...(newPaymentMethod !== undefined ? { paymentMethod: newPaymentMethod } : {}),
+          ...(newBalanceDueDays !== undefined ? { balanceDueDays: newBalanceDueDays } : {}),
+          ...(newChaserPaused !== undefined ? { chaserPaused: newChaserPaused } : {}),
         }).where(eq(orders.id, quoteId));
       });
 
