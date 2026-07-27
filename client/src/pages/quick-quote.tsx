@@ -310,7 +310,11 @@ export default function QuickQuote() {
     country: '',
   });
   const [depositPercentage, setDepositPercentage] = useState<0 | 25 | 50 | 75 | 100>(100);
-  const [balanceDueDays, setBalanceDueDays] = useState<0 | 7 | 14 | 30 | 60>(0);
+  const [balanceDueDays, setBalanceDueDays] = useState<0 | 7 | 14 | 30 | 60>(
+    ([0, 7, 14, 30, 60].includes(user?.balanceDueDays ?? 0)
+      ? (user?.balanceDueDays ?? 0)
+      : 0) as 0 | 7 | 14 | 30 | 60
+  );
   // Default to 'payment_link'; the async effect (paymentMethodInitialized) will correct to
   // 'bank_transfer' if Stripe Connect is not ready — this prevents a race-condition where
   // saving a draft before the effect fires stores the wrong 'bank_transfer' default.

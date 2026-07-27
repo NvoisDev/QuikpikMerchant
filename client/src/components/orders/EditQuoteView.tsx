@@ -732,6 +732,26 @@ export function EditQuoteView({
                       </button>
                     ))}
                   </div>
+                  {/* Default payment terms hint */}
+                  {(() => {
+                    const def = user?.balanceDueDays;
+                    if (!def) return null;
+                    const label = def === 0 ? 'due immediately' : `${def} days`;
+                    return (
+                      <p className="text-xs text-gray-400">
+                        Your default: <span className="font-medium text-gray-500">{label}</span>
+                        {activePreset !== def && (
+                          <button
+                            type="button"
+                            onClick={() => setEditBalanceDueDays(def as typeof editBalanceDueDays)}
+                            className="ml-1.5 text-blue-500 hover:text-blue-700 underline"
+                          >
+                            reset
+                          </button>
+                        )}
+                      </p>
+                    );
+                  })()}
                   {/* Custom date picker */}
                   <div className="flex items-center gap-2">
                     <input
