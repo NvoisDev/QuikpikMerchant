@@ -502,6 +502,20 @@ export default function QuickQuote() {
     }
   }, [draftForEdit?.id, customers.length, products.length]);
 
+  // Pre-fill balance-due-days from the wholesaler's saved default once on load.
+  // The draftForEdit effect (further below) will override this when editing a
+  // server-side draft, so the correct saved value always wins.
+  const balanceDueDaysInitialized = useRef(false);
+  useEffect(() => {
+    if (!user || balanceDueDaysInitialized.current) return;
+    balanceDueDaysInitialized.current = true;
+    const validValues = [0, 7, 14, 30, 60];
+    const defaultDays = validValues.includes(user.balanceDueDays ?? 0)
+      ? (user.balanceDueDays ?? 0) as 0 | 7 | 14 | 30 | 60
+      : 0;
+    setBalanceDueDays(defaultDays);
+  }, [user]);
+
   const paymentMethodInitialized = useRef(false);
   const createQuoteGuard = useRef(createInFlightGuard());
   const saveAsDraftGuard = useRef(createInFlightGuard());
