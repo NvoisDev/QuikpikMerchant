@@ -415,13 +415,13 @@ function MarginOverview() {
                       <table className="w-full text-xs">
                         <thead>
                           <tr className="border-b border-slate-200 bg-slate-50/50">
-                            <th className="text-left px-4 py-2 font-semibold text-slate-500 uppercase tracking-wide">Product</th>
-                            <th className="text-right px-4 py-2 font-semibold text-slate-500 uppercase tracking-wide">Unit Cost</th>
-                            <th className="text-right px-4 py-2 font-semibold text-slate-500 uppercase tracking-wide">Selling Price</th>
-                            <th className="text-right px-4 py-2 font-semibold text-slate-500 uppercase tracking-wide">Revenue</th>
-                            <th className="text-right px-4 py-2 font-semibold text-slate-500 uppercase tracking-wide">Margin £</th>
-                            <th className="text-right px-4 py-2 font-semibold text-slate-500 uppercase tracking-wide">Margin %</th>
-                            <th className="text-right px-4 py-2 font-semibold text-slate-500 uppercase tracking-wide">Share</th>
+                            <th className="text-left px-2 py-2 sm:px-4 font-semibold text-slate-500 uppercase tracking-wide">Product</th>
+                            <th className="text-right px-2 py-2 sm:px-4 font-semibold text-slate-500 uppercase tracking-wide hidden sm:table-cell">Unit Cost</th>
+                            <th className="text-right px-2 py-2 sm:px-4 font-semibold text-slate-500 uppercase tracking-wide hidden sm:table-cell">Selling Price</th>
+                            <th className="text-right px-2 py-2 sm:px-4 font-semibold text-slate-500 uppercase tracking-wide">Revenue</th>
+                            <th className="text-right px-2 py-2 sm:px-4 font-semibold text-slate-500 uppercase tracking-wide">Margin £</th>
+                            <th className="text-right px-2 py-2 sm:px-4 font-semibold text-slate-500 uppercase tracking-wide hidden sm:table-cell">Margin %</th>
+                            <th className="text-right px-2 py-2 sm:px-4 font-semibold text-slate-500 uppercase tracking-wide hidden sm:table-cell">Share</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -434,26 +434,26 @@ function MarginOverview() {
                                 onClick={() => setSelectedMarginProduct(p)}
                                 className={`border-b border-slate-100 last:border-0 cursor-pointer transition-colors hover:bg-blue-50/60 active:bg-blue-100/60 ${idx % 2 === 0 ? "bg-white" : "bg-slate-50/40"}`}
                               >
-                                <td className="px-4 py-2.5 font-medium text-slate-800 max-w-[180px] truncate">
+                                <td className="px-2 py-2 sm:px-4 sm:py-2.5 font-medium text-slate-800 max-w-[140px] sm:max-w-[180px] truncate">
                                   <span className="flex items-center gap-1.5">
                                     {p.name}
                                     <ChevronDown className="w-3 h-3 text-slate-400 shrink-0 rotate-[-90deg]" />
                                   </span>
                                 </td>
-                                <td className="px-4 py-2.5 text-right text-slate-600">
+                                <td className="px-2 py-2 sm:px-4 sm:py-2.5 text-right text-slate-600 hidden sm:table-cell">
                                   {p.wac != null ? fmt(p.wac) : <span className="text-slate-400 italic">—</span>}
                                 </td>
-                                <td className="px-4 py-2.5 text-right text-slate-600">
+                                <td className="px-2 py-2 sm:px-4 sm:py-2.5 text-right text-slate-600 hidden sm:table-cell">
                                   {p.avgSellingPrice != null ? fmt(p.avgSellingPrice) : <span className="text-slate-400 italic">—</span>}
                                 </td>
-                                <td className="px-4 py-2.5 text-right text-slate-700">{fmt(p.revenue)}</td>
-                                <td className={`px-4 py-2.5 text-right font-semibold ${isNegMargin ? "text-red-500" : isLowMargin ? "text-amber-600" : "text-emerald-600"}`}>
+                                <td className="px-2 py-2 sm:px-4 sm:py-2.5 text-right text-slate-700">{fmt(p.revenue)}</td>
+                                <td className={`px-2 py-2 sm:px-4 sm:py-2.5 text-right font-semibold ${isNegMargin ? "text-red-500" : isLowMargin ? "text-amber-600" : "text-emerald-600"}`}>
                                   {p.hasCost ? fmt(p.margin) : <span className="text-slate-400 italic">—</span>}
                                 </td>
-                                <td className={`px-4 py-2.5 text-right font-semibold ${isNegMargin ? "text-red-500" : isLowMargin ? "text-amber-600" : "text-emerald-600"}`}>
+                                <td className={`px-2 py-2 sm:px-4 sm:py-2.5 text-right font-semibold hidden sm:table-cell ${isNegMargin ? "text-red-500" : isLowMargin ? "text-amber-600" : "text-emerald-600"}`}>
                                   {p.marginPercent != null ? pct(p.marginPercent) : <span className="text-slate-400 italic font-normal">No cost</span>}
                                 </td>
-                                <td className="px-4 py-2.5 text-right text-slate-500">{p.revenueShare.toFixed(1)}%</td>
+                                <td className="px-2 py-2 sm:px-4 sm:py-2.5 text-right text-slate-500 hidden sm:table-cell">{p.revenueShare.toFixed(1)}%</td>
                               </tr>
                             );
                           })}
@@ -620,13 +620,13 @@ function MarginOverview() {
                 <table className="w-full text-xs">
                   <thead>
                     <tr className="border-b border-slate-200 bg-slate-50 sticky top-0">
-                      <th className="text-left px-4 py-2.5 font-semibold text-slate-500 uppercase tracking-wide">Invoice</th>
-                      <th className="text-left px-4 py-2.5 font-semibold text-slate-500 uppercase tracking-wide hidden sm:table-cell">Customer</th>
-                      <th className="text-right px-4 py-2.5 font-semibold text-slate-500 uppercase tracking-wide">Qty</th>
-                      <th className="text-right px-4 py-2.5 font-semibold text-slate-500 uppercase tracking-wide hidden sm:table-cell">Unit Cost</th>
-                      <th className="text-right px-4 py-2.5 font-semibold text-slate-500 uppercase tracking-wide">Revenue</th>
-                      <th className="text-right px-4 py-2.5 font-semibold text-slate-500 uppercase tracking-wide">Margin £</th>
-                      <th className="text-right px-4 py-2.5 font-semibold text-slate-500 uppercase tracking-wide">Margin %</th>
+                      <th className="text-left px-2 py-2 sm:px-4 sm:py-2.5 font-semibold text-slate-500 uppercase tracking-wide">Invoice</th>
+                      <th className="text-left px-2 py-2 sm:px-4 sm:py-2.5 font-semibold text-slate-500 uppercase tracking-wide hidden sm:table-cell">Customer</th>
+                      <th className="text-right px-2 py-2 sm:px-4 sm:py-2.5 font-semibold text-slate-500 uppercase tracking-wide">Qty</th>
+                      <th className="text-right px-2 py-2 sm:px-4 sm:py-2.5 font-semibold text-slate-500 uppercase tracking-wide hidden sm:table-cell">Unit Cost</th>
+                      <th className="text-right px-2 py-2 sm:px-4 sm:py-2.5 font-semibold text-slate-500 uppercase tracking-wide">Revenue</th>
+                      <th className="text-right px-2 py-2 sm:px-4 sm:py-2.5 font-semibold text-slate-500 uppercase tracking-wide">Margin £</th>
+                      <th className="text-right px-2 py-2 sm:px-4 sm:py-2.5 font-semibold text-slate-500 uppercase tracking-wide hidden sm:table-cell">Margin %</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -636,25 +636,25 @@ function MarginOverview() {
                       const rowBg = isNeg ? "bg-red-50" : idx % 2 === 0 ? "bg-white" : "bg-slate-50/40";
                       return (
                         <tr key={line.orderId} className={`border-b border-slate-100 last:border-0 ${rowBg}`}>
-                          <td className="px-4 py-2.5">
+                          <td className="px-2 py-2 sm:px-4 sm:py-2.5">
                             <Link href={`/orders/${line.orderId}`} onClick={() => setSelectedMarginProduct(null)}>
                               <span className="font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer">
                                 {line.orderNumber ?? `#${line.orderId}`}
                               </span>
                             </Link>
-                            <p className="text-slate-400 mt-0.5 sm:hidden truncate max-w-[120px]">{line.customerName ?? "—"}</p>
+                            <p className="text-slate-400 mt-0.5 sm:hidden truncate max-w-[45vw]">{line.customerName ?? "—"}</p>
                             <p className="text-slate-400 mt-0.5">{new Date(line.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}</p>
                           </td>
-                          <td className="px-4 py-2.5 text-slate-600 hidden sm:table-cell max-w-[140px] truncate">{line.customerName ?? "—"}</td>
-                          <td className="px-4 py-2.5 text-right text-slate-600">{line.quantity}</td>
-                          <td className="px-4 py-2.5 text-right text-slate-600 hidden sm:table-cell">
+                          <td className="px-2 py-2 sm:px-4 sm:py-2.5 text-slate-600 hidden sm:table-cell max-w-[140px] truncate">{line.customerName ?? "—"}</td>
+                          <td className="px-2 py-2 sm:px-4 sm:py-2.5 text-right text-slate-600">{line.quantity}</td>
+                          <td className="px-2 py-2 sm:px-4 sm:py-2.5 text-right text-slate-600 hidden sm:table-cell">
                             {line.unitCost !== null ? fmt(line.unitCost) : <span className="text-slate-400 italic">—</span>}
                           </td>
-                          <td className="px-4 py-2.5 text-right text-slate-700">{fmt(line.revenue)}</td>
-                          <td className={`px-4 py-2.5 text-right font-semibold ${isNeg ? "text-red-600" : isLow ? "text-amber-600" : "text-emerald-600"}`}>
+                          <td className="px-2 py-2 sm:px-4 sm:py-2.5 text-right text-slate-700">{fmt(line.revenue)}</td>
+                          <td className={`px-2 py-2 sm:px-4 sm:py-2.5 text-right font-semibold ${isNeg ? "text-red-600" : isLow ? "text-amber-600" : "text-emerald-600"}`}>
                             {line.margin !== null ? fmt(line.margin) : <span className="text-slate-400 italic font-normal">—</span>}
                           </td>
-                          <td className={`px-4 py-2.5 text-right font-semibold ${isNeg ? "text-red-600" : isLow ? "text-amber-600" : "text-emerald-600"}`}>
+                          <td className={`px-2 py-2 sm:px-4 sm:py-2.5 text-right font-semibold hidden sm:table-cell ${isNeg ? "text-red-600" : isLow ? "text-amber-600" : "text-emerald-600"}`}>
                             {line.marginPercent !== null ? pct(line.marginPercent) : <span className="text-slate-400 italic font-normal">No cost</span>}
                           </td>
                         </tr>
