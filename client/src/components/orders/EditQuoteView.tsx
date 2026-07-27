@@ -672,32 +672,55 @@ export function EditQuoteView({
                 ? new Date(baseUtcMs + editBalanceDueDays * 86400000).toISOString().split('T')[0]!
                 : '';
 
+              const PRESETS = [7, 14, 30, 60];
+              const activePreset = PRESETS.includes(editBalanceDueDays) ? editBalanceDueDays : null;
+
               return (
-                <div className="flex items-center gap-2">
-                  <input
-                    type="date"
-                    value={dueDateValue}
-                    min={minDate}
-                    onChange={(e) => {
-                      if (!e.target.value) { setEditBalanceDueDays(0); return; }
-                      // Picker value is always "YYYY-MM-DD" — parse as UTC midnight
-                      const [py, pm, pd] = e.target.value.split('-').map(Number);
-                      const pickedUtcMs = Date.UTC(py!, pm! - 1, pd!);
-                      // Integer division: both sides are UTC midnight so remainder is 0
-                      const diff = Math.max(0, Math.round((pickedUtcMs - baseUtcMs) / 86400000));
-                      setEditBalanceDueDays(diff);
-                    }}
-                    className="flex-1 border border-gray-300 rounded-md px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                  {editBalanceDueDays > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => setEditBalanceDueDays(0)}
-                      className="text-xs text-gray-400 hover:text-gray-600 whitespace-nowrap"
-                    >
-                      Clear
-                    </button>
-                  )}
+                <div className="space-y-2">
+                  {/* Quick-select day presets */}
+                  <div className="flex gap-2">
+                    {PRESETS.map((days) => (
+                      <button
+                        key={days}
+                        type="button"
+                        onClick={() => setEditBalanceDueDays(days)}
+                        className={`flex-1 py-1.5 text-xs font-medium rounded-md border transition-colors ${
+                          activePreset === days
+                            ? 'bg-blue-600 border-blue-600 text-white'
+                            : 'bg-white border-gray-300 text-gray-600 hover:border-blue-400 hover:text-blue-600'
+                        }`}
+                      >
+                        {days}d
+                      </button>
+                    ))}
+                  </div>
+                  {/* Custom date picker */}
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="date"
+                      value={dueDateValue}
+                      min={minDate}
+                      onChange={(e) => {
+                        if (!e.target.value) { setEditBalanceDueDays(0); return; }
+                        // Picker value is always "YYYY-MM-DD" — parse as UTC midnight
+                        const [py, pm, pd] = e.target.value.split('-').map(Number);
+                        const pickedUtcMs = Date.UTC(py!, pm! - 1, pd!);
+                        // Integer division: both sides are UTC midnight so remainder is 0
+                        const diff = Math.max(0, Math.round((pickedUtcMs - baseUtcMs) / 86400000));
+                        setEditBalanceDueDays(diff);
+                      }}
+                      className="flex-1 border border-gray-300 rounded-md px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    {editBalanceDueDays > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setEditBalanceDueDays(0)}
+                        className="text-xs text-gray-400 hover:text-gray-600 whitespace-nowrap"
+                      >
+                        Clear
+                      </button>
+                    )}
+                  </div>
                 </div>
               );
             })()}
