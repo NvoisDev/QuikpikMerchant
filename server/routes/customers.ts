@@ -1034,6 +1034,68 @@ export function registerCustomerRoutes(app: Express): void {
     }
   });
 
+  // GET /api/wholesaler/customers/:customerId/last-prices
+  // Returns the most recently charged price per product for a given customer
+  app.get('/api/wholesaler/customers/:customerId/last-prices', requireAuth, async (req: any, res) => {
+    try {
+      const wholesalerId = resolveWholesalerId(req);
+      const { customerId } = req.params;
+
+      // Fetch the 50 most recent orders for this customer + wholesaler (sorted newest first)
+      const recentOrders = await db
+        .select({ id: orders.id })
+        .from(orders)
+        .where(and(
+          eq(orders.retailerId, customerId),
+          eq(orders.wholesalerId, wholesalerId)
+        ))
+        .orderBy(desc(orders.createdAt))
+        .limit(50);
+
+      if (recentOrders.length === 0) return res.json([]);
+
+      const orderIds = recentOrders.map(o => o.id);
+      // Map orderId → position so we can sort items by recency in JS
+      const positionByOrderId = new Map(orderIds.map((id, idx) => [id, idx]));
+
+      const itemRows = await db
+        .select({
+          productId: orderItems.productId,
+          unitPrice: orderItems.unitPrice,
+          sellingType: orderItems.sellingType,
+          orderId: orderItems.orderId,
+        })
+        .from(orderItems)
+        .where(inArray(orderItems.orderId, orderIds));
+
+      // Sort by order recency and deduplicate: keep most recent entry per (productId, sellingType)
+      const sorted = itemRows
+        .filter(r => r.productId !== null && r.unitPrice !== null)
+        .sort((a, b) => (positionByOrderId.get(a.orderId) ?? 999) - (positionByOrderId.get(b.orderId) ?? 999));
+
+      const seen = new Set<string>();
+      const result: { productId: number; unitPrice: string; sellingType: string }[] = [];
+
+      for (const row of sorted) {
+        if (!row.productId || row.unitPrice === null) continue;
+        const key = `${row.productId}:${row.sellingType}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          result.push({
+            productId: row.productId,
+            unitPrice: row.unitPrice,
+            sellingType: row.sellingType || 'units',
+          });
+        }
+      }
+
+      return res.json(result);
+    } catch (err) {
+      console.error('Failed to fetch customer last prices:', err);
+      return res.status(500).json({ error: 'Failed to fetch last prices' });
+    }
+  });
+
   // GET /api/customers/:id
   app.get('/api/customers/:id', requireAuth, async (req: any, res) => {
     try {

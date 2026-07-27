@@ -415,6 +415,25 @@ export default function QuickQuote() {
     enabled: !!pickerPriceListId,
     staleTime: 5 * 60 * 1000,
   });
+
+  // Last prices charged to the selected customer — fetched lazily when the product picker opens
+  const { data: customerLastPrices = [] } = useQuery<{ productId: number; unitPrice: string; sellingType: string }[]>({
+    queryKey: [`/api/wholesaler/customers/${selectedCustomer?.id}/last-prices`],
+    enabled: !!selectedCustomer && productDialogOpen,
+    staleTime: 2 * 60 * 1000,
+  });
+  // Map: productId → { unit?: number, pallet?: number }
+  const lastPriceMap = useMemo(() => {
+    const map: Record<number, { unit?: number; pallet?: number }> = {};
+    for (const row of customerLastPrices) {
+      const entry = map[row.productId] ?? {};
+      const price = parseFloat(row.unitPrice);
+      if (row.sellingType === 'pallets') entry.pallet = price;
+      else entry.unit = price;
+      map[row.productId] = entry;
+    }
+    return map;
+  }, [customerLastPrices]);
   const draftForEdit = useMemo(
     () => (editingDraftId ? allDrafts.find((d: any) => d.id === editingDraftId) ?? null : null),
     [editingDraftId, allDrafts]
@@ -2263,6 +2282,7 @@ export default function QuickQuote() {
                                       })()}
                                     </div>
                                   )}
+                                  {(() => { const lpu = lastPriceMap[product.id]?.unit; return lpu !== undefined ? <div className="text-[11px] mt-1 text-amber-600 font-medium">Last: {formatMoney(lpu)}</div> : null; })()}
                                 </div>
                               </>);
                               })()}
@@ -2320,6 +2340,7 @@ export default function QuickQuote() {
                                       })()}
                                     </div>
                                   )}
+                                  {(() => { const lpp = lastPriceMap[product.id]?.pallet; return lpp !== undefined ? <div className="text-[11px] mt-1 text-amber-600 font-medium">Last: {formatMoney(lpp)}</div> : null; })()}
                                 </div>
                               </div>
                               );
