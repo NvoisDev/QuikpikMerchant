@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Loader2, ChevronLeft, X, Plus, Minus, Search, Tag } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { computeBaseUnits } from "@shared/quote-units";
+import { useAuth } from "@/hooks/useAuth";
 
 interface EditItem {
   productId: number | null;
@@ -82,6 +83,7 @@ export function EditQuoteView({
   onSaved,
 }: EditQuoteViewProps) {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [isSavingQuote, setIsSavingQuote] = useState(false);
   const [editSaveError, setEditSaveError] = useState<string | null>(null);
   const [packMode, setPackMode] = useState<Record<string, boolean>>({});
@@ -89,7 +91,11 @@ export function EditQuoteView({
   const [editDeliveryCost, setEditDeliveryCost] = useState(
     parseFloat(order.deliveryCost || '0').toFixed(2)
   );
-  const [editBalanceDueDays, setEditBalanceDueDays] = useState(order.balanceDueDays ?? 0);
+  // Initialise from the order's own value if set; otherwise fall back to the
+  // wholesaler's default payment terms so the correct preset is pre-highlighted.
+  const [editBalanceDueDays, setEditBalanceDueDays] = useState(
+    order.balanceDueDays != null ? order.balanceDueDays : (user?.balanceDueDays ?? 0)
+  );
   const [editChaserPaused, setEditChaserPaused] = useState(order.chaserPaused ?? false);
   const [editDepositPercentage, setEditDepositPercentage] = useState<0 | 25 | 50 | 75 | 100>(
     ([0, 25, 50, 75, 100].includes(order.depositPercentage ?? 100)

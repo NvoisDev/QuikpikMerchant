@@ -1471,8 +1471,31 @@ export default function Settings() {
     },
   });
 
-  const { data: userSettings } = useQuery<{ defaultLowStockThreshold: number }>({
+  const { data: userSettings } = useQuery<{ defaultLowStockThreshold: number; balanceDueDays?: number }>({
     queryKey: ["/api/auth/user"],
+  });
+
+  // Default payment terms state
+  const [defaultBalanceDueDays, setDefaultBalanceDueDays] = useState<number>(
+    user?.balanceDueDays ?? 0
+  );
+
+  useEffect(() => {
+    const val = userSettings?.balanceDueDays ?? user?.balanceDueDays ?? 0;
+    setDefaultBalanceDueDays(val);
+  }, [userSettings?.balanceDueDays, user?.balanceDueDays]);
+
+  const saveDefaultPaymentTermsMutation = useMutation({
+    mutationFn: async (balanceDueDays: number) => {
+      const r = await apiRequest("PATCH", "/api/user/payment-terms", { balanceDueDays });
+      if (!r.ok) { const e = await r.json(); throw new Error(e.message || "Failed to save"); }
+      return r.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      toast({ title: "Default payment terms saved" });
+    },
+    onError: (e: Error) => toast({ title: e.message, variant: "destructive" }),
   });
 
   const updateThresholdMutation = useMutation({
@@ -2959,6 +2982,50 @@ export default function Settings() {
                             Stock Alerts page <ExternalLink className="h-3 w-3" />
                           </Link>
                         </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Default Payment Terms (owner/wholesaler only) */}
+                  {!isTeamMember && (
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2">
+                        <Receipt className="h-4 w-4 text-blue-500" />
+                        <h4 className="font-semibold text-gray-800 text-sm sm:text-base">Default Payment Terms</h4>
+                      </div>
+                      <div className="border border-gray-200 rounded-lg p-4 space-y-3">
+                        <div>
+                          <p className="text-sm font-medium text-gray-800">Balance due after</p>
+                          <p className="text-xs text-gray-500 mt-0.5">
+                            New invoices will pre-select this payment term. You can always override it per invoice.
+                          </p>
+                        </div>
+                        <Select
+                          value={String(defaultBalanceDueDays)}
+                          onValueChange={(v) => setDefaultBalanceDueDays(parseInt(v))}
+                        >
+                          <SelectTrigger className="w-full sm:w-56">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="0">Immediate — due on receipt</SelectItem>
+                            <SelectItem value="7">7 days</SelectItem>
+                            <SelectItem value="14">14 days</SelectItem>
+                            <SelectItem value="30">30 days (net 30)</SelectItem>
+                            <SelectItem value="60">60 days (net 60)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <div className="flex justify-end">
+                          <Button
+                            size="sm"
+                            onClick={() => saveDefaultPaymentTermsMutation.mutate(defaultBalanceDueDays)}
+                            disabled={saveDefaultPaymentTermsMutation.isPending}
+                            className="flex items-center gap-1.5"
+                          >
+                            <Save className="h-3.5 w-3.5" />
+                            {saveDefaultPaymentTermsMutation.isPending ? "Saving…" : "Save"}
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   )}
