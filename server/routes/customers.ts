@@ -4,7 +4,7 @@ import { resolveWholesalerId } from "../utils/resolveWholesalerId";
 import {
   ReliableSMSService, and, customerGroups, customerRegistrationRequests, db, desc, emailCard,
   emailHeading, escapeHtml, eq, formatPhoneToInternational, getCustomerGroupLimit, getEmailLogoUrl,
-  inArray, insertCustomerGroupSchema, multiWholesalerService, or, orderItems, orders, parseCustomerName, products,
+  inArray, insertCustomerGroupSchema, multiWholesalerService, ne, or, orderItems, orders, parseCustomerName, products,
   requireAuth, requireMemberPermission, requireNotViewer, requireBooleanFeature, sendEmail, sendWelcomeMessages, storage, twilio,
   users, validatePhoneNumber, whatsAppBusinessService, wholesalerCustomerRelationships,
   wrapCustomerEmail, z
@@ -1031,6 +1031,105 @@ export function registerCustomerRoutes(app: Express): void {
     } catch (error) {
       console.error('Error fetching customer orders:', error);
       res.status(500).json({ error: 'Failed to fetch customer orders' });
+    }
+  });
+
+  // GET /api/customers/:id/price-history — per-product pricing history for a customer
+  app.get('/api/customers/:id/price-history', requireAuth, async (req: any, res) => {
+    try {
+      const targetUserId = resolveWholesalerId(req);
+      const customerId = req.params.id;
+
+      // Fetch all non-cancelled, non-draft orders for this customer (newest first)
+      const orderRows = await db
+        .select({
+          id: orders.id,
+          orderNumber: orders.orderNumber,
+          createdAt: orders.createdAt,
+          status: orders.status,
+        })
+        .from(orders)
+        .where(and(
+          eq(orders.retailerId, customerId),
+          eq(orders.wholesalerId, targetUserId),
+          ne(orders.status, 'draft'),
+          ne(orders.status, 'cancelled')
+        ))
+        .orderBy(desc(orders.createdAt))
+        .limit(200);
+
+      if (orderRows.length === 0) return res.json([]);
+
+      const orderIds = orderRows.map(o => o.id);
+      // Normalise createdAt to a numeric timestamp immediately so comparisons are safe
+      // regardless of whether Drizzle returns a Date object or an ISO string.
+      const orderMeta = new Map(orderRows.map(o => [
+        o.id,
+        {
+          orderNumber: o.orderNumber,
+          // Always store as ISO string so JSON serialisation is predictable
+          date: (o.createdAt instanceof Date ? o.createdAt : new Date(o.createdAt as unknown as string)).toISOString(),
+        },
+      ]));
+
+      const itemRows = await db
+        .select({
+          orderId: orderItems.orderId,
+          productId: orderItems.productId,
+          productName: products.name,
+          customLabel: orderItems.customLabel,
+          unitPrice: orderItems.unitPrice,
+          quantity: orderItems.quantity,
+          sellingType: orderItems.sellingType,
+        })
+        .from(orderItems)
+        .leftJoin(products, eq(orderItems.productId, products.id))
+        .where(inArray(orderItems.orderId, orderIds));
+
+      // Group by product, collect history entries
+      const byProduct = new Map<string, {
+        productId: number | null;
+        productName: string;
+        entries: { orderNumber: string | null; date: string; unitPrice: string; quantity: number; sellingType: string }[];
+      }>();
+
+      for (const item of itemRows) {
+        // Skip misc charges (no productId and no usable name)
+        const name = item.productName ?? item.customLabel;
+        if (!name) continue;
+        const key = item.productId != null ? `p:${item.productId}` : `c:${name}`;
+        const meta = orderMeta.get(item.orderId);
+        if (!meta) continue;
+
+        if (!byProduct.has(key)) {
+          byProduct.set(key, { productId: item.productId ?? null, productName: name, entries: [] });
+        }
+        byProduct.get(key)!.entries.push({
+          orderNumber: meta.orderNumber,
+          date: meta.date,
+          unitPrice: item.unitPrice ?? '0',
+          quantity: item.quantity,
+          sellingType: item.sellingType ?? 'units',
+        });
+      }
+
+      // Sort each product's entries newest first using numeric timestamp comparison
+      const result = Array.from(byProduct.values())
+        .map(p => ({
+          ...p,
+          entries: p.entries.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
+        }))
+        .sort((a, b) => {
+          // Sort products by most recent invoice date (numeric, not string)
+          const aTs = a.entries[0] ? new Date(a.entries[0].date).getTime() : 0;
+          const bTs = b.entries[0] ? new Date(b.entries[0].date).getTime() : 0;
+          return bTs - aTs;
+        });
+
+      return res.json(result);
+    } catch (error) {
+      console.error('Error fetching customer price history:', error);
+      res.status(500).json({ error: 'Failed to fetch price history' });
     }
   });
 

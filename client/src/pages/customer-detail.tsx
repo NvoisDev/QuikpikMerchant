@@ -50,6 +50,7 @@ import {
   Tag,
   ChevronDown,
   ChevronUp,
+  TrendingUp,
 } from "lucide-react";
 import { useAuth, type AuthUser } from "@/hooks/useAuth";
 import { formatDateShort } from "@shared/utils/date";
@@ -122,6 +123,8 @@ export default function CustomerDetail() {
   const { formatMoney } = useCurrency();
   const { data: alertsData } = useQuery<{ count: number }>({ queryKey: ["/api/stock-alerts/count"] });
   const [expandedOrders, setExpandedOrders] = useState<Set<number>>(new Set());
+  const [priceHistoryExpanded, setPriceHistoryExpanded] = useState(false);
+  const [expandedPriceProducts, setExpandedPriceProducts] = useState<Set<string>>(new Set());
   const toggleOrderExpanded = (orderId: number, e: React.MouseEvent) => {
     e.stopPropagation();
     setExpandedOrders(prev => {
@@ -200,6 +203,24 @@ export default function CustomerDetail() {
     queryKey: [`/api/customers/${customerId}/orders`],
     enabled: !!customerId,
     staleTime: 2 * 60 * 1000,
+  });
+
+  interface PriceHistoryEntry {
+    orderNumber: string | null;
+    date: string;
+    unitPrice: string;
+    quantity: number;
+    sellingType: string;
+  }
+  interface ProductPriceHistory {
+    productId: number | null;
+    productName: string;
+    entries: PriceHistoryEntry[];
+  }
+  const { data: priceHistory = [], isLoading: priceHistoryLoading } = useQuery<ProductPriceHistory[]>({
+    queryKey: [`/api/customers/${customerId}/price-history`],
+    enabled: !!customerId && priceHistoryExpanded,
+    staleTime: 5 * 60 * 1000,
   });
 
   const updateCustomerMutation = useMutation({
@@ -1250,6 +1271,116 @@ export default function CustomerDetail() {
           <div className="text-center py-6 bg-gray-50 rounded-lg border border-dashed">
             <ShoppingBag className="h-6 w-6 mx-auto text-muted-foreground mb-2" />
             <p className="text-sm text-muted-foreground">No orders yet</p>
+          </div>
+        )}
+      </div>
+
+      <Separator />
+
+      <div>
+        <button
+          className="flex items-center justify-between w-full group"
+          onClick={() => setPriceHistoryExpanded(v => !v)}
+          aria-expanded={priceHistoryExpanded}
+        >
+          <div className="flex items-center gap-2">
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            <h2 className="text-sm font-semibold text-muted-foreground">Pricing history</h2>
+          </div>
+          <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${priceHistoryExpanded ? 'rotate-180' : ''}`} />
+        </button>
+
+        {priceHistoryExpanded && (
+          <div className="mt-3">
+            {priceHistoryLoading ? (
+              <p className="text-sm text-muted-foreground">Loading…</p>
+            ) : priceHistory.length === 0 ? (
+              <div className="text-center py-6 bg-gray-50 rounded-lg border border-dashed">
+                <TrendingUp className="h-6 w-6 mx-auto text-muted-foreground mb-2" />
+                <p className="text-sm text-muted-foreground">No invoiced products yet</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {priceHistory.map((product, idx) => {
+                  const key = product.productId != null ? `p:${product.productId}` : `c:${product.productName}`;
+                  const isOpen = expandedPriceProducts.has(key);
+                  const latest = product.entries[0];
+                  const hasMultiple = product.entries.length > 1;
+                  const prices = product.entries.map(e => parseFloat(e.unitPrice));
+                  const minPrice = Math.min(...prices);
+                  const maxPrice = Math.max(...prices);
+                  const hasTrend = hasMultiple && maxPrice > minPrice;
+                  return (
+                    <div key={key} className="rounded-md border bg-white overflow-hidden">
+                      <button
+                        className="w-full flex items-center justify-between px-3 py-2.5 hover:bg-gray-50 transition-colors text-left"
+                        onClick={() => setExpandedPriceProducts(prev => {
+                          const next = new Set(prev);
+                          if (next.has(key)) next.delete(key); else next.add(key);
+                          return next;
+                        })}
+                      >
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{product.productName}</p>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            {product.entries.length} {product.entries.length === 1 ? 'invoice' : 'invoices'}
+                            {hasTrend && (
+                              <span className="ml-1.5">
+                                · {formatMoney(minPrice)}–{formatMoney(maxPrice)}
+                              </span>
+                            )}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2 ml-3 shrink-0">
+                          <span className="text-sm font-semibold text-green-700">
+                            {latest ? formatMoney(parseFloat(latest.unitPrice)) : '—'}
+                          </span>
+                          {hasMultiple && (
+                            <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+                          )}
+                        </div>
+                      </button>
+
+                      {(isOpen || !hasMultiple) && (
+                        <div className="border-t border-gray-100">
+                          <table className="w-full text-xs">
+                            <thead>
+                              <tr className="bg-muted/40">
+                                <th className="text-left font-medium text-muted-foreground px-3 py-1.5">Invoice</th>
+                                <th className="text-left font-medium text-muted-foreground px-3 py-1.5">Date</th>
+                                <th className="text-right font-medium text-muted-foreground px-3 py-1.5">Qty</th>
+                                <th className="text-right font-medium text-muted-foreground px-3 py-1.5">Unit price</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {product.entries.map((entry, ei) => (
+                                <tr key={ei} className={ei % 2 === 0 ? '' : 'bg-muted/10'}>
+                                  <td className="px-3 py-1.5 text-gray-700">
+                                    {entry.orderNumber ?? '—'}
+                                  </td>
+                                  <td className="px-3 py-1.5 text-gray-500">
+                                    {formatDateShort(entry.date)}
+                                  </td>
+                                  <td className="px-3 py-1.5 text-right text-gray-700">
+                                    {entry.quantity}
+                                    {entry.sellingType !== 'units' && (
+                                      <span className="ml-0.5 text-muted-foreground">{entry.sellingType}</span>
+                                    )}
+                                  </td>
+                                  <td className="px-3 py-1.5 text-right font-semibold">
+                                    {formatMoney(parseFloat(entry.unitPrice))}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
       </div>
