@@ -394,6 +394,12 @@ export default function QuickQuote() {
     return id ? parseInt(id) : null;
   }, []);
 
+  // Pre-selected customer from ?customerId= (set by "Raise Invoice" on customer page)
+  const preselectedCustomerId = useMemo(() => {
+    if (typeof window === 'undefined') return null;
+    return new URLSearchParams(window.location.search).get('customerId');
+  }, []);
+
   const { data: allDrafts = [] } = useQuery<any[]>({
     queryKey: ['/api/orders/drafts'],
     enabled: !!editingDraftId,
@@ -427,6 +433,13 @@ export default function QuickQuote() {
       highlightedCustomerRef.current.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     }
   }, [highlightedCustomerIndex, customerDropdownOpen]);
+
+  // Auto-select customer when arriving from the customer page via ?customerId=
+  useEffect(() => {
+    if (!preselectedCustomerId || !customers.length || selectedCustomer) return;
+    const customer = customers.find((c: any) => c.id === preselectedCustomerId);
+    if (customer) setSelectedCustomer(customer as any);
+  }, [preselectedCustomerId, customers]);
 
   // Pre-fill form from draft when data is available
   useEffect(() => {
