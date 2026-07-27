@@ -1000,4 +1000,60 @@ export function registerAuthCoreRoutes(app: Express): void {
       res.status(500).json({ error: "Failed to reset password" });
     }
   });
+
+  // POST /api/settings/test-chaser-email
+  // Sends a sample chaser email to the wholesaler's own email address so they can preview the wording.
+  app.post('/api/settings/test-chaser-email', requireAuth, async (req: any, res) => {
+    try {
+      const user = req.user;
+      if (user.role !== 'wholesaler' && user.role !== 'team_member') {
+        return res.status(403).json({ error: 'Only wholesaler accounts can send test chaser emails.' });
+      }
+
+      const wholesalerId = user.role === 'team_member' && user.wholesalerId ? user.wholesalerId : user.id;
+      const wholesaler = await storage.getUser(wholesalerId);
+      if (!wholesaler) return res.status(404).json({ error: 'Wholesaler not found' });
+      if (!wholesaler.email) return res.status(400).json({ error: 'Wholesaler has no email address configured.' });
+
+      // tone param lets the caller choose friendly / firm / urgent; default to friendly
+      const toneParam = req.body?.tone as string | undefined;
+      const daysOverdueByTone: Record<string, number> = { friendly: 3, firm: 14, urgent: 30 };
+      const daysOverdue = daysOverdueByTone[toneParam ?? ''] ?? 3;
+
+      // Fetch bank details from the default business profile
+      const profile = await storage.getDefaultBusinessProfile(wholesalerId).catch(() => null);
+      const bankDetails = profile ? {
+        bankName: profile.bankName ?? undefined,
+        accountName: profile.accountName ?? undefined,
+        accountNumber: profile.accountNumber ?? undefined,
+        sortCode: profile.sortCode ?? undefined,
+        iban: profile.iban ?? undefined,
+        swift: profile.swift ?? undefined,
+      } : undefined;
+
+      const { sendChaserEmail } = await import('../sendgrid-service');
+
+      const sent = await sendChaserEmail({
+        to: wholesaler.email,
+        customerName: wholesaler.businessName || 'Sample Customer',
+        orderNumber: 'ORD-PREVIEW-001',
+        amountOutstanding: 250.00,
+        businessName: wholesaler.businessName || 'Your Business',
+        businessLogoUrl: wholesaler.logoUrl ?? null,
+        paymentLink: '',
+        bankDetails,
+        daysOverdue,
+        currency: wholesaler.defaultCurrency || 'GBP',
+      });
+
+      if (!sent) {
+        return res.status(500).json({ error: 'Failed to send test email. Please check your email configuration.' });
+      }
+
+      res.json({ success: true, sentTo: wholesaler.email });
+    } catch (error) {
+      console.error('Error sending test chaser email:', error);
+      res.status(500).json({ error: 'Failed to send test chaser email' });
+    }
+  });
 }

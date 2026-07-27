@@ -4,7 +4,7 @@ import PageHeader from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/hooks/useAuth";
 import { useLocation, Link } from "wouter";
-import { User, Settings2, Building2, Bell, Upload, Image, AlertTriangle, Info, ExternalLink, Save, Download, Printer, QrCode, Lock, Eye, EyeOff, Truck, Plus, Pencil, Trash2, Star, X, MapPin, Receipt, CheckCircle2, XCircle, Link2, Loader2, Store } from "lucide-react";
+import { User, Settings2, Building2, Bell, Upload, Image, AlertTriangle, Info, ExternalLink, Save, Download, Printer, QrCode, Lock, Eye, EyeOff, Truck, Plus, Pencil, Trash2, Star, X, MapPin, Receipt, CheckCircle2, XCircle, Link2, Loader2, Store, Mail } from "lucide-react";
 import Logo from '@/components/ui/logo';
 import { LogoUploader } from '@/components/LogoUploader';
 import { useToast } from "@/hooks/use-toast";
@@ -1208,6 +1208,45 @@ function PublicStoreSettings({ user }: { user: any }) {
         {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
         {saving ? 'Saving…' : 'Save portal settings'}
       </button>
+    </div>
+  );
+}
+
+function ChaserTestEmailButton() {
+  const { toast } = useToast();
+  const [sending, setSending] = useState(false);
+  const [tone, setTone] = useState<'friendly' | 'firm' | 'urgent'>('friendly');
+
+  const handleSend = async () => {
+    setSending(true);
+    try {
+      const r = await apiRequest('POST', '/api/settings/test-chaser-email', { tone });
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.error || 'Failed to send');
+      toast({ title: 'Test chaser sent', description: `A sample ${tone} chaser was sent to ${data.sentTo}.` });
+    } catch (e: any) {
+      toast({ title: e.message || 'Failed to send test email', variant: 'destructive' });
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return (
+    <div className="flex flex-wrap items-center gap-2 pt-1">
+      <Select value={tone} onValueChange={(v) => setTone(v as typeof tone)}>
+        <SelectTrigger className="w-36 h-8 text-xs">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="friendly">Friendly (days 1–7)</SelectItem>
+          <SelectItem value="firm">Firm (days 8–21)</SelectItem>
+          <SelectItem value="urgent">Urgent (days 22+)</SelectItem>
+        </SelectContent>
+      </Select>
+      <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5" onClick={handleSend} disabled={sending}>
+        {sending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Mail className="h-3.5 w-3.5" />}
+        {sending ? 'Sending…' : 'Send me a test chaser'}
+      </Button>
     </div>
   );
 }
@@ -3173,6 +3212,7 @@ export default function Settings() {
                             <div className="bg-amber-50 border border-amber-100 rounded-md p-3 text-xs text-amber-700">
                               <strong>Tone:</strong> Days 1–7 friendly · 8–21 firm · 22+ urgent. Bank details are always included. You can pause chasers per-invoice from the invoice editor.
                             </div>
+                            <ChaserTestEmailButton />
                           </div>
                         )}
                       </div>
