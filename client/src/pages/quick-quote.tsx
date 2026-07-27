@@ -962,7 +962,7 @@ export default function QuickQuote() {
     return { price: standard, fromList: false };
   };
 
-  const addProduct = (product: Product, sellingType: 'units' | 'pallets' = 'units') => {
+  const addProduct = (product: Product, sellingType: 'units' | 'pallets' = 'units', overridePrice?: number) => {
     const availableStock = sellingType === 'pallets' ? (product.palletStock || 0) : ((product.totalBatchStock ?? product.stock) || 0);
     if (availableStock <= 0) {
       toast({
@@ -976,7 +976,8 @@ export default function QuickQuote() {
 
     const unitPriceNum = parseFloat(product.price);
     const palletPriceNum = product.palletPrice ? parseFloat(product.palletPrice) : undefined;
-    const { price } = resolvePickerPrice(product, sellingType);
+    const { price: resolvedPrice } = resolvePickerPrice(product, sellingType);
+    const price = overridePrice !== undefined ? overridePrice : resolvedPrice;
 
     const unitCost = product.costPrice ? parseFloat(product.costPrice) : 0;
     // For pallet lines, cost must be per-pallet (unit cost × units-per-pallet) so it matches the per-pallet selling price
@@ -2282,7 +2283,7 @@ export default function QuickQuote() {
                                       })()}
                                     </div>
                                   )}
-                                  {(() => { const lpu = lastPriceMap[product.id]?.unit; return lpu !== undefined ? <div className="text-[11px] mt-1 text-amber-600 font-medium">Last: {formatMoney(lpu)}</div> : null; })()}
+                                  {(() => { const lpu = lastPriceMap[product.id]?.unit; return lpu !== undefined ? <div className="text-[11px] mt-1 text-amber-600 font-medium underline cursor-pointer" onClick={(e) => { e.stopPropagation(); addProduct(product, 'units', lpu); }}>Last: {formatMoney(lpu)} ↵</div> : null; })()}
                                 </div>
                               </>);
                               })()}
@@ -2340,7 +2341,7 @@ export default function QuickQuote() {
                                       })()}
                                     </div>
                                   )}
-                                  {(() => { const lpp = lastPriceMap[product.id]?.pallet; return lpp !== undefined ? <div className="text-[11px] mt-1 text-amber-600 font-medium">Last: {formatMoney(lpp)}</div> : null; })()}
+                                  {(() => { const lpp = lastPriceMap[product.id]?.pallet; return lpp !== undefined ? <div className="text-[11px] mt-1 text-amber-600 font-medium underline cursor-pointer" onClick={(e) => { e.stopPropagation(); addProduct(product, 'pallets', lpp); }}>Last: {formatMoney(lpp)} ↵</div> : null; })()}
                                 </div>
                               </div>
                               );
