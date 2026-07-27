@@ -241,6 +241,60 @@ export function registerOrderReadRoutes(app: Express): void {
         .orderBy(desc(orderCancellationRequests.requestedAt))
         .limit(1);
 
+      // Build chaser info for the wholesaler view so the invoice detail page can
+      // show "Next chaser due on [date]" without a separate API call.
+      let chaserInfo: {
+        enabled: boolean;
+        intervalDays: number;
+        maxDays: number | null;
+        nextChaserDate: string | null;
+        daysOverdue: number | null;
+      } | null = null;
+
+      if (order.wholesalerId === userId) {
+        const prefs = (order.wholesaler?.notificationPreferences as Record<string, any>) || {};
+        const chaserEnabled = prefs.chaserEnabled === true || prefs.chaserEnabled === 'true';
+        const intervalDays: number = typeof prefs.chaserIntervalDays === 'number' ? prefs.chaserIntervalDays : 7;
+        const maxDays: number | null = typeof prefs.chaserMaxDays === 'number' ? prefs.chaserMaxDays : null;
+
+        let nextChaserDate: string | null = null;
+        let daysOverdue: number | null = null;
+
+        if (chaserEnabled && order.createdAt && order.balanceDueDays && order.balanceDueDays > 0) {
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          const dueDate = new Date(order.createdAt);
+          dueDate.setDate(dueDate.getDate() + order.balanceDueDays);
+          dueDate.setHours(0, 0, 0, 0);
+          const daysOv = Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
+          daysOverdue = daysOv;
+
+          const paused = (order as any).chaserPaused === true;
+          const outstanding = parseFloat((order as any).amountOutstanding || '0');
+          const paymentStatus = (order as any).paymentStatus;
+          const orderStatus = (order as any).status;
+
+          if (!paused && outstanding > 0 && paymentStatus !== 'paid' && !['draft', 'cancelled'].includes(orderStatus || '')) {
+            if (daysOv >= 1 && (maxDays === null || daysOv <= maxDays)) {
+              // Next chaser fires at 1, 1+N, 1+2N, ...
+              const nextDaysOverdue = 1 + Math.ceil(daysOv / intervalDays) * intervalDays;
+              if (maxDays === null || nextDaysOverdue <= maxDays) {
+                const next = new Date(dueDate);
+                next.setDate(next.getDate() + nextDaysOverdue);
+                nextChaserDate = next.toISOString().split('T')[0] ?? null;
+              }
+            } else if (daysOv < 1) {
+              // Not yet overdue; first chaser fires on day 1
+              const next = new Date(dueDate);
+              next.setDate(next.getDate() + 1);
+              nextChaserDate = next.toISOString().split('T')[0] ?? null;
+            }
+          }
+        }
+
+        chaserInfo = { enabled: chaserEnabled, intervalDays, maxDays, nextChaserDate, daysOverdue };
+      }
+
       res.json({
         ...order,
         vatEnabled: order.wholesaler?.vatEnabled ?? false,
@@ -254,7 +308,8 @@ export function registerOrderReadRoutes(app: Express): void {
           respondedAt: cancellationRequest.respondedAt,
           responseMessage: cancellationRequest.responseMessage,
           refundType: cancellationRequest.refundType
-        } : null
+        } : null,
+        chaserInfo,
       });
     } catch (error) {
       console.error(`❌ Error fetching order ${req.params.id}:`, error);

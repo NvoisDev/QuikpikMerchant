@@ -8,6 +8,13 @@ import { ReliableSMSService } from './sms-service';
 import { getStripeClient } from './stripeConfig';
 import { isConnectAccountReady } from './utils/stripe-connect-ready';
 import { createShortPaymentLink } from './shortPaymentLink';
+import { logQuoteActivity } from './utils/quote-activity';
+
+function getChaserTone(daysOverdue: number): string {
+  if (daysOverdue <= 7) return 'friendly';
+  if (daysOverdue <= 21) return 'firm';
+  return 'urgent';
+}
 
 interface OrderWithPaymentTerms {
   id: number;
@@ -387,12 +394,15 @@ export async function sendPaymentChasers(): Promise<number> {
           }
         } catch { /* use existing link */ }
 
+        const tone = getChaserTone(daysOverdue);
+        const orderRef = order.orderNumber || `#${order.id}`;
+
         if (sendEmail && order.customerEmail) {
           try {
             await sendChaserEmail({
               to: order.customerEmail,
               customerName: order.customerName || 'Valued Customer',
-              orderNumber: order.orderNumber || `#${order.id}`,
+              orderNumber: orderRef,
               amountOutstanding: outstandingAmount,
               businessName: wholesaler.businessName || 'Your supplier',
               businessLogoUrl: wholesaler.logoUrl,
@@ -403,6 +413,15 @@ export async function sendPaymentChasers(): Promise<number> {
             });
             totalSent++;
             console.log(`📧 Chaser email sent: order ${order.orderNumber}, ${daysOverdue} days overdue`);
+            await logQuoteActivity({
+              quoteId: order.id,
+              actionType: 'chaser_sent',
+              entityType: 'chaser',
+              entityId: 'email',
+              description: `Payment chaser sent via email · ${daysOverdue} day${daysOverdue === 1 ? '' : 's'} overdue (${tone} tone)`,
+              newValue: { daysOverdue, channel: 'email', tone },
+              performedBy: 'system',
+            });
           } catch (err) {
             console.error(`❌ Chaser email failed for order ${order.orderNumber}:`, err);
           }
@@ -412,7 +431,6 @@ export async function sendPaymentChasers(): Promise<number> {
           try {
             const shortLink = paymentLink ? await createShortPaymentLink(paymentLink, wholesaler.id, 24) : '';
             const firstName = order.customerName?.split(' ')[0] || 'there';
-            const orderRef = order.orderNumber || `#${order.id}`;
             const payPart = shortLink ? ` Pay here: ${shortLink}` : ' Please contact us to arrange payment.';
             let msg: string;
             if (daysOverdue <= 7) {
@@ -423,7 +441,18 @@ export async function sendPaymentChasers(): Promise<number> {
               msg = `Urgent: ${sym}${outstandingAmount.toFixed(2)} on order ${orderRef} with ${wholesaler.businessName || 'us'} is ${daysOverdue} days overdue. Please contact us immediately.${payPart}`;
             }
             const smsResult = await ReliableSMSService.sendMarketingSMS(order.customerPhone, msg);
-            if (smsResult.success) totalSent++;
+            if (smsResult.success) {
+              totalSent++;
+              await logQuoteActivity({
+                quoteId: order.id,
+                actionType: 'chaser_sent',
+                entityType: 'chaser',
+                entityId: 'sms',
+                description: `Payment chaser sent via SMS · ${daysOverdue} day${daysOverdue === 1 ? '' : 's'} overdue (${tone} tone)`,
+                newValue: { daysOverdue, channel: 'sms', tone },
+                performedBy: 'system',
+              });
+            }
           } catch (err) {
             console.error(`❌ Chaser SMS failed for order ${order.orderNumber}:`, err);
           }

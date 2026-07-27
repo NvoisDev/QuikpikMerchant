@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { ChevronDown, ChevronUp, FileText, Plus, Minus, RefreshCw, Tag, Calculator, Truck, CreditCard, AlertCircle, RotateCcw, X, Banknote, Clock } from "lucide-react";
+import { ChevronDown, ChevronUp, FileText, Plus, Minus, RefreshCw, Tag, Calculator, Truck, CreditCard, AlertCircle, RotateCcw, X, Banknote, Clock, Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -43,6 +43,7 @@ function getActionIcon(actionType: string) {
     case 'stock_restored': return <RotateCcw className="h-3.5 w-3.5" />;
     case 'quote_cancelled': return <X className="h-3.5 w-3.5" />;
     case 'offline_payment_recorded': return <Banknote className="h-3.5 w-3.5" />;
+    case 'chaser_sent': return <Bell className="h-3.5 w-3.5" />;
     default: return <Clock className="h-3.5 w-3.5" />;
   }
 }
@@ -63,6 +64,8 @@ function getActionColors(actionType: string): { bg: string; icon: string } {
     case 'quantity_changed':
     case 'price_changed':
       return { bg: 'bg-amber-50', icon: 'text-amber-600' };
+    case 'chaser_sent':
+      return { bg: 'bg-orange-50', icon: 'text-orange-500' };
     default:
       return { bg: 'bg-gray-50', icon: 'text-gray-500' };
   }

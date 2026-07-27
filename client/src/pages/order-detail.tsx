@@ -154,6 +154,14 @@ interface Order {
     responseMessage?: string;
     refundType?: string;
   };
+  chaserPaused?: boolean;
+  chaserInfo?: {
+    enabled: boolean;
+    intervalDays: number;
+    maxDays: number | null;
+    nextChaserDate: string | null;
+    daysOverdue: number | null;
+  } | null;
 }
 
 const buildMapsUrl = (parts: (string | undefined | null)[]): string => {
@@ -2386,6 +2394,29 @@ export default function OrderDetail() {
         {order.isQuote && (
           <Card className="border shadow-sm">
             <CardContent className="px-4 py-3">
+              {/* Chaser status — only shown to the wholesaler when chasers are configured */}
+              {order.chaserInfo?.enabled && order.paymentStatus !== 'paid' && order.status !== 'cancelled' && (
+                <div className="mb-3 flex items-start gap-2 rounded-md border border-orange-100 bg-orange-50 px-3 py-2 text-xs text-orange-700">
+                  <span className="mt-0.5 flex-shrink-0">🔔</span>
+                  <span>
+                    {order.chaserPaused ? (
+                      <span className="font-medium">Chasers paused</span>
+                    ) : order.chaserInfo.nextChaserDate ? (
+                      <>
+                        <span className="font-medium">Next chaser due </span>
+                        {new Date(order.chaserInfo.nextChaserDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        {order.chaserInfo.daysOverdue !== null && order.chaserInfo.daysOverdue >= 1 && (
+                          <span className="ml-1 text-orange-500">· {order.chaserInfo.daysOverdue} day{order.chaserInfo.daysOverdue === 1 ? '' : 's'} overdue</span>
+                        )}
+                      </>
+                    ) : order.chaserInfo.maxDays !== null && order.chaserInfo.daysOverdue !== null && order.chaserInfo.daysOverdue > order.chaserInfo.maxDays ? (
+                      <span>Chaser sequence ended (max {order.chaserInfo.maxDays} days reached)</span>
+                    ) : (
+                      <span>Automated chasers active · every {order.chaserInfo.intervalDays} day{order.chaserInfo.intervalDays === 1 ? '' : 's'} overdue</span>
+                    )}
+                  </span>
+                </div>
+              )}
               <QuoteActivityLog orderId={order.id} />
             </CardContent>
           </Card>
