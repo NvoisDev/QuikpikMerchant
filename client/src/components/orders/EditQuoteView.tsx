@@ -732,11 +732,11 @@ export function EditQuoteView({
                       </button>
                     ))}
                   </div>
-                  {/* Default payment terms hint */}
-                  {(() => {
+                  {/* Default payment terms hint — only shown when a preset is active */}
+                  {activePreset !== null && (() => {
                     const def = user?.balanceDueDays;
-                    if (!def) return null;
-                    const label = def === 0 ? 'due immediately' : `${def} days`;
+                    if (def == null || def <= 0) return null;
+                    const label = `${def} day${def !== 1 ? 's' : ''}`;
                     return (
                       <p className="text-xs text-gray-400">
                         Your default: <span className="font-medium text-gray-500">{label}</span>
