@@ -1123,7 +1123,11 @@ export function registerOrderCommsRoutes(app: Express): void {
 
       let fallbackText: string | null = null;
       if (!message && order.stripePaymentLinkUrl) {
-        const shortFallbackUrl = await createShortPaymentLink(order.stripePaymentLinkUrl, wholesalerId, 24);
+        const wholesaler = await storage.getUser(wholesalerId);
+        const freshPaymentUrl = wholesaler
+          ? (await refreshStripePaymentLinkIfExpired(order, wholesaler)) ?? order.stripePaymentLinkUrl
+          : order.stripePaymentLinkUrl;
+        const shortFallbackUrl = await createShortPaymentLink(freshPaymentUrl, wholesalerId, 24);
         fallbackText = `Hi! You have a payment link for order ${order.orderNumber}: ${shortFallbackUrl}`;
       }
       const textToSend = message || fallbackText;
