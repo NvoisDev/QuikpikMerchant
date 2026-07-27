@@ -1244,6 +1244,14 @@ export function registerQuoteRoutes(app: Express): void {
         ? Boolean(req.body.chaserPaused)
         : undefined;
 
+      const VALID_DEPOSIT_PERCENTAGES = [0, 25, 50, 75, 100];
+      const newDepositPercentage: number | undefined = req.body.depositPercentage !== undefined
+        ? parseInt(String(req.body.depositPercentage), 10)
+        : undefined;
+      if (newDepositPercentage !== undefined && !VALID_DEPOSIT_PERCENTAGES.includes(newDepositPercentage)) {
+        return res.status(400).json({ error: 'depositPercentage must be one of 0, 25, 50, 75, 100', errorType: 'VALIDATION_ERROR' });
+      }
+
       // Server-side input validation for each item
       for (const item of items) {
         if (!Number.isInteger(item.quantity) || item.quantity <= 0) {
@@ -1304,7 +1312,8 @@ export function registerQuoteRoutes(app: Express): void {
       // Use the incoming payment method (if changed) to determine offline status — not the old one
       const effectivePaymentMethod = newPaymentMethod ?? existingOrder.paymentMethod;
       const isOfflinePayment = effectivePaymentMethod ? OFFLINE_METHODS.includes(effectivePaymentMethod) : false;
-      const depositPercentage = existingOrder.depositPercentage || 100;
+      // Use the incoming deposit percentage if the wholesaler changed it; fall back to existing order value.
+      const depositPercentage = newDepositPercentage !== undefined ? newDepositPercentage : (existingOrder.depositPercentage ?? 100);
       const isPayLaterEdit = depositPercentage === 0;
       const isOfflineEdit = isPayLaterEdit || isOfflinePayment;
       const feeConfigEdit = await getFeeConfigForWholesaler(wholesalerId);
@@ -1806,6 +1815,7 @@ export function registerQuoteRoutes(app: Express): void {
           ...(newPaymentMethod !== undefined ? { paymentMethod: newPaymentMethod } : {}),
           ...(newBalanceDueDays !== undefined ? { balanceDueDays: newBalanceDueDays } : {}),
           ...(newChaserPaused !== undefined ? { chaserPaused: newChaserPaused } : {}),
+          ...(newDepositPercentage !== undefined ? { depositPercentage: newDepositPercentage } : {}),
         }).where(eq(orders.id, quoteId));
       });
 

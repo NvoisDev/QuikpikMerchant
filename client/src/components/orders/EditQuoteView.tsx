@@ -47,6 +47,7 @@ interface OrderForEdit {
   balanceDueDays?: number;
   createdAt?: string | Date;
   chaserPaused?: boolean;
+  depositPercentage?: number;
 }
 
 interface EditQuoteViewProps {
@@ -90,6 +91,11 @@ export function EditQuoteView({
   );
   const [editBalanceDueDays, setEditBalanceDueDays] = useState(order.balanceDueDays ?? 0);
   const [editChaserPaused, setEditChaserPaused] = useState(order.chaserPaused ?? false);
+  const [editDepositPercentage, setEditDepositPercentage] = useState<0 | 25 | 50 | 75 | 100>(
+    ([0, 25, 50, 75, 100].includes(order.depositPercentage ?? 100)
+      ? (order.depositPercentage ?? 100)
+      : 100) as 0 | 25 | 50 | 75 | 100
+  );
 
   const [applyPriceListId, setApplyPriceListId] = useState('');
   const [isApplyingPriceList, setIsApplyingPriceList] = useState(false);
@@ -289,6 +295,7 @@ export function EditQuoteView({
           deliveryCost: deliveryCostVal,
           balanceDueDays: editBalanceDueDays,
           chaserPaused: editChaserPaused,
+          depositPercentage: editDepositPercentage,
         }),
       });
       const data = await response.json();
@@ -632,6 +639,31 @@ export function EditQuoteView({
           </div>
 
           <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Payment Type</label>
+            <div className="grid grid-cols-5 gap-1.5">
+              {([0, 25, 50, 75, 100] as const).map((pct) => (
+                <button
+                  key={pct}
+                  type="button"
+                  onClick={() => setEditDepositPercentage(pct)}
+                  className={`py-1.5 text-xs font-medium rounded-md border transition-colors whitespace-nowrap ${
+                    editDepositPercentage === pct
+                      ? 'bg-green-600 border-green-600 text-white'
+                      : 'bg-white border-gray-300 text-gray-600 hover:border-green-500 hover:text-green-700'
+                  }`}
+                >
+                  {pct === 100 ? 'Full' : pct === 0 ? 'Later' : `${pct}%`}
+                </button>
+              ))}
+            </div>
+            {editDepositPercentage === 0 && (
+              <p className="text-xs text-blue-700 bg-blue-50 border border-blue-200 rounded-md px-3 py-2 mt-2">
+                Pay Later — no payment required now. No payment link will be generated.
+              </p>
+            )}
+          </div>
+
+          {editDepositPercentage > 0 && <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Method of Payment</label>
             <select
               value={editPaymentMethod}
@@ -646,9 +678,9 @@ export function EditQuoteView({
               <option value="pay_later">Pay Later</option>
               <option value="other">Other</option>
             </select>
-          </div>
+          </div>}
 
-          <div>
+          {editDepositPercentage > 0 && <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Balance Due Date</label>
             {(() => {
               // Normalise createdAt to a UTC-midnight timestamp so all day-diff
@@ -728,7 +760,7 @@ export function EditQuoteView({
               ? <p className="text-xs text-gray-400 mt-1">No due date — payment expected immediately</p>
               : <p className="text-xs text-gray-400 mt-1">{editBalanceDueDays} day{editBalanceDueDays !== 1 ? 's' : ''} from order date</p>
             }
-          </div>
+          </div>}
 
           <div className="flex items-center justify-between rounded-lg border border-gray-200 p-3">
             <div>
