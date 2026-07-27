@@ -15,6 +15,112 @@ import { isConnectAccountReady } from "../utils/stripe-connect-ready";
 import { resolveInvoiceWholesaler } from "./orders-read";
 import { createShortPaymentLink } from "../shortPaymentLink";
 
+/**
+ * Ensures the Stripe checkout session stored on an order is still live.
+ * If `quoteExpiresAt` is in the past (or not set), creates a fresh 24-hour
+ * session, persists it to the DB, and returns the new URL.
+ * Returns the existing URL when the session is still valid, or null when the
+ * order has no Stripe payment link at all.
+ */
+async function refreshStripePaymentLinkIfExpired(
+  order: any,
+  wholesaler: any,
+): Promise<string | null> {
+  if (!order.stripePaymentLinkUrl) return null;
+
+  // Still valid if quoteExpiresAt is more than 5 minutes away
+  const bufferMs = 5 * 60 * 1000;
+  if (order.quoteExpiresAt && new Date(order.quoteExpiresAt).getTime() > Date.now() + bufferMs) {
+    return order.stripePaymentLinkUrl;
+  }
+
+  const amountOutstanding = parseFloat(order.amountOutstanding || '0');
+  if (amountOutstanding <= 0) return order.stripePaymentLinkUrl;
+
+  const stripe = getStripeClient(Boolean(wholesaler.isTestAccount));
+  const orderTotal = parseFloat(order.total || '0');
+  const depositPercentage = order.depositPercentage || 100;
+
+  let paymentAmount: number;
+  let paymentLabel: string;
+  let paymentDescription: string;
+
+  if (order.paymentStatus === 'unpaid' && depositPercentage < 100) {
+    paymentAmount = orderTotal * (depositPercentage / 100);
+    paymentLabel = `Deposit (${depositPercentage}%) - Order ${order.orderNumber}`;
+    paymentDescription = `Deposit payment of ${depositPercentage}%. Order total: £${orderTotal.toFixed(2)}`;
+  } else {
+    paymentAmount = amountOutstanding;
+    paymentLabel = `Remaining Balance - Order ${order.orderNumber}`;
+    paymentDescription = `Payment for remaining balance. Original order total: £${orderTotal.toFixed(2)}`;
+  }
+
+  // Validate wholesaler's Connect account for automatic fund routing
+  let useConnect = false;
+  if (wholesaler?.stripeAccountId) {
+    try {
+      const connectAccount = await stripe.accounts.retrieve(wholesaler.stripeAccountId);
+      if (connectAccount.charges_enabled && connectAccount.details_submitted) useConnect = true;
+    } catch (err: any) {
+      console.error(`❌ refreshStripePaymentLink: Connect validation failed: ${err.message}`);
+    }
+  }
+
+  const wholesalerNet = parseFloat(order.subtotal || '0') - parseFloat(order.platformFee || '0');
+  const transferAmount = orderTotal > 0
+    ? Math.round(paymentAmount * (wholesalerNet / orderTotal) * 100)
+    : 0;
+
+  const appUrl = process.env.APP_URL
+    || (process.env.REPLIT_DOMAINS?.split(',')[0] ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}` : 'https://quikpik.app');
+
+  const customer = order.retailerId ? await storage.getUser(order.retailerId) : null;
+
+  const session = await stripe.checkout.sessions.create({
+    payment_method_types: ['card'],
+    line_items: [{
+      price_data: {
+        currency: 'gbp',
+        product_data: { name: paymentLabel, description: paymentDescription },
+        unit_amount: Math.round(paymentAmount * 100),
+      },
+      quantity: 1,
+    }],
+    mode: 'payment',
+    success_url: `${appUrl}/customer/payment-success?order=${order.orderNumber}&wholesaler=${wholesaler.id}&returning=true&session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${appUrl}/store/${wholesaler.id}`,
+    metadata: {
+      orderId: order.id.toString(),
+      orderNumber: order.orderNumber || '',
+      wholesalerId: wholesaler.id,
+      customerId: order.retailerId,
+      isQuote: 'true',
+      isBalancePayment: order.paymentStatus === 'part_paid' ? 'true' : 'false',
+      depositPercentage: depositPercentage.toString(),
+      depositAmount: paymentAmount.toFixed(2),
+      totalAmount: orderTotal.toFixed(2),
+    },
+    customer_email: customer?.email || undefined,
+    expires_at: Math.floor(Date.now() / 1000) + (24 * 60 * 60),
+    ...(useConnect && transferAmount > 0 ? {
+      payment_intent_data: {
+        transfer_data: { destination: wholesaler.stripeAccountId, amount: transferAmount },
+      },
+    } : {}),
+  });
+
+  await db.update(orders)
+    .set({
+      stripePaymentLinkId: session.id,
+      stripePaymentLinkUrl: session.url || '',
+      quoteExpiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+    })
+    .where(eq(orders.id, order.id));
+
+  console.log(`🔄 Refreshed Stripe payment link for order ${order.orderNumber} (previous session expired)`);
+  return session.url || '';
+}
+
 export function registerOrderCommsRoutes(app: Express): void {
 
   // POST /api/shorten — generate a short quikpik.app/pay/... link for a given Stripe URL
@@ -501,10 +607,22 @@ export function registerOrderCommsRoutes(app: Express): void {
       let paymentSection = '';
       if (amountOutstanding > 0.009) {
         const connectReady = await isConnectAccountReady(wholesaler.stripeAccountId, Boolean(wholesaler.isTestAccount));
+        // Refresh the Stripe checkout session if it has expired (sessions last 24 h).
+        // Best-effort: on any Stripe/network error fall back to the stored URL so the
+        // email is still delivered (customer sees the old link rather than no email at all).
+        let paymentUrl: string | null = order.stripePaymentLinkUrl || null;
         if (connectReady && order.stripePaymentLinkUrl) {
+          try {
+            paymentUrl = await refreshStripePaymentLinkIfExpired(order, wholesaler) ?? order.stripePaymentLinkUrl;
+          } catch (refreshErr: any) {
+            console.error(`⚠️ share-invoice: Stripe session refresh failed for order ${order.id}, using stored URL: ${refreshErr.message}`);
+            // paymentUrl already set to stored URL above — email will still send
+          }
+        }
+        if (connectReady && paymentUrl) {
           paymentSection =
             `<p style="margin:16px 0 8px;color:#374151;font-size:15px">💳 <strong>Amount due: ${sym}${amountOutstanding.toFixed(2)}</strong></p>` +
-            emailButton('Pay Now', order.stripePaymentLinkUrl);
+            emailButton('Pay Now', paymentUrl);
         } else {
           paymentSection =
             `<p style="margin:16px 0 0;color:#374151;font-size:14px">💳 <strong>Amount due: ${sym}${amountOutstanding.toFixed(2)}</strong> — Please contact us to arrange payment.</p>`;
