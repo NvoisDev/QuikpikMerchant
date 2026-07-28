@@ -498,7 +498,7 @@ function MarginOverview() {
                                       </div>
                                     </div>
                                     <button
-                                      onClick={(e) => { e.stopPropagation(); setSelectedMarginProduct(p); setExpandedProductId(null); }}
+                                      onClick={(e) => { e.stopPropagation(); setSelectedMarginProduct(p); }}
                                       className="mt-2 text-xs font-medium text-blue-600 hover:text-blue-800 flex items-center gap-1"
                                     >
                                       View invoice breakdown <ChevronDown className="w-3 h-3 rotate-[-90deg]" />
