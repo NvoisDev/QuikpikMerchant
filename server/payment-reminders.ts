@@ -1,6 +1,7 @@
 import { db } from './db';
 import { orders, users, orderItems, products, businessProfiles } from '@shared/schema';
-import { and, gt, isNotNull, sql, eq, ne, isNull, or } from 'drizzle-orm';
+import { and, gt, isNotNull, sql, eq, ne, isNull, or, lt, inArray } from 'drizzle-orm';
+import { storage } from './storage';
 import { sendPaymentReminderEmail, sendChaserEmail } from './sendgrid-service';
 import { getCurrencySymbol } from '../shared/utils/currency';
 import { sendWhatsAppMessage } from './services/whatsappService';
@@ -463,6 +464,74 @@ export async function sendPaymentChasers(): Promise<number> {
     return totalSent;
   } catch (error) {
     console.error('❌ Error in sendPaymentChasers:', error);
+    return 0;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Auto-fulfil job
+// Marks paid/processing orders as fulfilled then immediately archives them
+// for wholesalers who have opted in and configured a day threshold.
+// ---------------------------------------------------------------------------
+export async function runAutoFulfilJob(): Promise<number> {
+  try {
+    // 1. Find wholesalers with autoFulfilEnabled = true
+    const wholesalers = await db
+      .select({ id: users.id, notificationPreferences: users.notificationPreferences })
+      .from(users)
+      .where(sql`${users.notificationPreferences}->>'autoFulfilEnabled' = 'true'`);
+
+    if (wholesalers.length === 0) return 0;
+
+    let totalFulfilled = 0;
+
+    for (const wholesaler of wholesalers) {
+      const prefs = (wholesaler.notificationPreferences as Record<string, unknown>) || {};
+      const thresholdDays: number = typeof prefs.autoFulfilDays === 'number' ? prefs.autoFulfilDays : 30;
+
+      const cutoff = new Date();
+      cutoff.setDate(cutoff.getDate() - thresholdDays);
+
+      // 2. Find qualifying orders for this wholesaler
+      const qualifying = await db
+        .select({ id: orders.id, orderNumber: orders.orderNumber })
+        .from(orders)
+        .where(
+          and(
+            eq(orders.wholesalerId, wholesaler.id),
+            inArray(orders.status, ['paid', 'processing']),
+            lt(orders.createdAt, cutoff),
+          )
+        );
+
+      for (const order of qualifying) {
+        try {
+          // 3. Set fulfilled then immediately archive (bypass the 24 h setTimeout used in the route)
+          await storage.updateOrderStatus(order.id, 'fulfilled');
+          await storage.updateOrderStatus(order.id, 'archived');
+
+          // 4. Log the action
+          await logQuoteActivity({
+            quoteId: order.id,
+            actionType: 'auto_fulfilled',
+            entityType: 'order',
+            entityId: String(order.id),
+            description: `Order automatically fulfilled and archived after ${thresholdDays} days`,
+            newValue: { thresholdDays },
+            performedBy: 'system',
+          });
+
+          totalFulfilled++;
+          console.log(`✅ Auto-fulfilled order ${order.orderNumber || order.id} (wholesaler ${wholesaler.id})`);
+        } catch (err) {
+          console.error(`❌ Auto-fulfil failed for order ${order.id}:`, err);
+        }
+      }
+    }
+
+    return totalFulfilled;
+  } catch (error) {
+    console.error('❌ Error in runAutoFulfilJob:', error);
     return 0;
   }
 }

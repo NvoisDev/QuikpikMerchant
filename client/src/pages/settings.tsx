@@ -1290,6 +1290,8 @@ export default function Settings() {
     chaserIntervalDays: 7,
     chaserChannel: 'email',
     chaserMaxDays: null as number | null,
+    autoFulfilEnabled: false,
+    autoFulfilDays: 30,
   });
 
   // Only initialise from server data once — on first load. Background refetches
@@ -1315,6 +1317,8 @@ export default function Settings() {
         chaserIntervalDays: (notifPrefs as any).chaserIntervalDays ?? 7,
         chaserChannel: (notifPrefs as any).chaserChannel || 'email',
         chaserMaxDays: (notifPrefs as any).chaserMaxDays ?? null,
+        autoFulfilEnabled: (notifPrefs as any).autoFulfilEnabled === true,
+        autoFulfilDays: (notifPrefs as any).autoFulfilDays ?? 30,
       });
     }
   }, [notifPrefs]);
@@ -1345,6 +1349,8 @@ export default function Settings() {
           chaserIntervalDays: p.chaserIntervalDays ?? f.chaserIntervalDays,
           chaserChannel: p.chaserChannel || f.chaserChannel,
           chaserMaxDays: p.chaserMaxDays ?? null,
+          autoFulfilEnabled: p.autoFulfilEnabled === true,
+          autoFulfilDays: p.autoFulfilDays ?? f.autoFulfilDays,
         }));
       }
       queryClient.invalidateQueries({ queryKey: ["/api/settings/notification-preferences"] });
@@ -3306,6 +3312,43 @@ export default function Settings() {
                               <strong>Tone:</strong> Days 1–7 friendly · 8–21 firm · 22+ urgent. Bank details are always included. You can pause chasers per-invoice from the invoice editor.
                             </div>
                             <ChaserTestEmailButton />
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Auto-fulfil */}
+                      <div className="space-y-2 pt-2 border-t border-gray-100">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="text-sm font-medium text-gray-800">Auto-fulfil old orders</p>
+                            <p className="text-xs text-gray-500 mt-0.5">Automatically fulfil and archive paid or processing orders once they reach a certain age.</p>
+                          </div>
+                          <Switch
+                            checked={notifForm.autoFulfilEnabled}
+                            onCheckedChange={(v) => setNotifForm(f => ({ ...f, autoFulfilEnabled: v }))}
+                            disabled={notifPrefsLoading}
+                          />
+                        </div>
+                        {notifForm.autoFulfilEnabled && (
+                          <div className="space-y-3 pt-1">
+                            <div>
+                              <p className="text-xs font-medium text-gray-700 mb-1">Fulfil orders older than</p>
+                              <div className="flex items-center gap-2">
+                                <Input
+                                  type="number"
+                                  min="1"
+                                  max="365"
+                                  value={notifForm.autoFulfilDays}
+                                  onChange={(e) => setNotifForm(f => ({ ...f, autoFulfilDays: Math.max(1, parseInt(e.target.value) || 30) }))}
+                                  className="w-20"
+                                  disabled={notifPrefsLoading}
+                                />
+                                <span className="text-sm text-gray-500">days</span>
+                              </div>
+                            </div>
+                            <div className="bg-blue-50 border border-blue-100 rounded-md p-3 text-xs text-blue-700">
+                              Orders in <strong>paid</strong> or <strong>processing</strong> status that are older than the set number of days will be automatically fulfilled and archived each night.
+                            </div>
                           </div>
                         )}
                       </div>

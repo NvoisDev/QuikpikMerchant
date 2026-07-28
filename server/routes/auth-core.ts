@@ -614,6 +614,8 @@ export function registerAuthCoreRoutes(app: Express): void {
         chaserIntervalDays: typeof prefs.chaserIntervalDays === 'number' ? prefs.chaserIntervalDays : 7,
         chaserChannel: prefs.chaserChannel ?? 'email',
         chaserMaxDays: typeof prefs.chaserMaxDays === 'number' ? prefs.chaserMaxDays : null,
+        autoFulfilEnabled: prefs.autoFulfilEnabled === true,
+        autoFulfilDays: typeof prefs.autoFulfilDays === 'number' ? prefs.autoFulfilDays : 30,
       });
     } catch (error) {
       console.error('Error fetching notification preferences:', error);
@@ -627,7 +629,7 @@ export function registerAuthCoreRoutes(app: Express): void {
       const user = await storage.getUser(req.user.id);
       if (!user) return res.status(404).json({ message: 'User not found' });
 
-      const { stockAlertFrequency, stockAlertChannel, stockAlertDay, paymentReminderEnabled, paymentReminderChannel, promotionReminderEnabled, promotionReminderChannel, weeklyOrderDigestEnabled, weeklyOrderDigestDay, chaserEnabled, chaserIntervalDays, chaserChannel, chaserMaxDays } = req.body;
+      const { stockAlertFrequency, stockAlertChannel, stockAlertDay, paymentReminderEnabled, paymentReminderChannel, promotionReminderEnabled, promotionReminderChannel, weeklyOrderDigestEnabled, weeklyOrderDigestDay, chaserEnabled, chaserIntervalDays, chaserChannel, chaserMaxDays, autoFulfilEnabled, autoFulfilDays } = req.body;
 
       const validFrequencies = ['daily', 'weekly', 'critical_only'];
       const validChannels = ['email', 'sms', 'both', 'off'];
@@ -659,6 +661,9 @@ export function registerAuthCoreRoutes(app: Express): void {
       if (chaserMaxDays !== undefined && chaserMaxDays !== null && (typeof chaserMaxDays !== 'number' || !Number.isInteger(chaserMaxDays) || chaserMaxDays < 1)) {
         return res.status(400).json({ message: 'chaserMaxDays must be a positive integer or null' });
       }
+      if (autoFulfilDays !== undefined && (typeof autoFulfilDays !== 'number' || !Number.isInteger(autoFulfilDays) || autoFulfilDays < 1)) {
+        return res.status(400).json({ message: 'autoFulfilDays must be a positive integer' });
+      }
 
       const existing = (user.notificationPreferences as Record<string, unknown>) || {};
       const updated = {
@@ -677,6 +682,8 @@ export function registerAuthCoreRoutes(app: Express): void {
         ...(chaserChannel !== undefined && { chaserChannel }),
         // chaserMaxDays: null means "no limit" — store explicitly so we can distinguish from "never set"
         ...(chaserMaxDays !== undefined && { chaserMaxDays: chaserMaxDays === null ? null : Number(chaserMaxDays) }),
+        ...(autoFulfilEnabled !== undefined && { autoFulfilEnabled: Boolean(autoFulfilEnabled) }),
+        ...(autoFulfilDays !== undefined && { autoFulfilDays: Number(autoFulfilDays) }),
       };
 
       await storage.updateUserSettings(req.user.id, { notificationPreferences: updated });

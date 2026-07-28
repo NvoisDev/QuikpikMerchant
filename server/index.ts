@@ -16,7 +16,7 @@ process.on('unhandledRejection', (reason) => {
 });
 import { validateDatabaseConnection } from "./health";
 import { startDatabaseMaintenance } from "./database-maintenance";
-import { checkAndSendPaymentReminders, sendPaymentChasers } from "./payment-reminders";
+import { checkAndSendPaymentReminders, sendPaymentChasers, runAutoFulfilJob } from "./payment-reminders";
 import { checkAndSendWeeklyOrderDigests } from "./services/weeklyOrderDigestService";
 import { checkAndSendTrialReminders } from "./services/trialReminderService";
 import { pruneExpiredShortLinks } from "./shortPaymentLink";
@@ -1221,6 +1221,17 @@ httpServer.listen({ port, host: '0.0.0.0', reusePort: true }, () => {
       }
     });
     console.log(`📧 Payment reminder + chaser system enabled (daily at 9 AM)`);
+
+    cron.schedule('0 3 * * *', async () => {
+      console.log('📦 Running auto-fulfil job...');
+      try {
+        const count = await runAutoFulfilJob();
+        if (count > 0) console.log(`📦 Auto-fulfil: ${count} order(s) fulfilled and archived`);
+      } catch (error) {
+        console.error('❌ Auto-fulfil job failed:', error);
+      }
+    });
+    console.log(`📦 Auto-fulfil scheduler enabled (daily at 3 AM)`);
 
     cron.schedule('0 9 * * *', async () => {
       console.log('⏳ Running trial expiry reminder check...');
