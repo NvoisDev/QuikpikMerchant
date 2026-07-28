@@ -1292,8 +1292,13 @@ export default function Settings() {
     chaserMaxDays: null as number | null,
   });
 
+  // Only initialise from server data once — on first load. Background refetches
+  // (e.g. React Query's refetchOnWindowFocus) must NOT overwrite unsaved edits.
+  // After a successful save we update the form explicitly from the response.
+  const notifFormInitialized = useRef(false);
   useEffect(() => {
-    if (notifPrefs) {
+    if (notifPrefs && !notifFormInitialized.current) {
+      notifFormInitialized.current = true;
       setNotifForm({
         stockAlertFrequency: notifPrefs.stockAlertFrequency || 'daily',
         stockAlertChannel: notifPrefs.stockAlertChannel || 'email',
@@ -1320,7 +1325,28 @@ export default function Settings() {
       if (!r.ok) { const e = await r.json(); throw new Error(e.message || "Failed to save"); }
       return r.json();
     },
-    onSuccess: () => {
+    onSuccess: (saved: any) => {
+      // Update the form from the confirmed-saved values so it stays in sync,
+      // then invalidate so the query cache reflects the new state too.
+      if (saved?.preferences) {
+        const p = saved.preferences;
+        setNotifForm(f => ({
+          ...f,
+          stockAlertFrequency: p.stockAlertFrequency || f.stockAlertFrequency,
+          stockAlertChannel: p.stockAlertChannel || f.stockAlertChannel,
+          stockAlertDay: p.stockAlertDay ?? f.stockAlertDay,
+          paymentReminderEnabled: p.paymentReminderEnabled !== false,
+          paymentReminderChannel: p.paymentReminderChannel || f.paymentReminderChannel,
+          promotionReminderEnabled: p.promotionReminderEnabled !== false,
+          promotionReminderChannel: p.promotionReminderChannel || f.promotionReminderChannel,
+          weeklyOrderDigestEnabled: p.weeklyOrderDigestEnabled !== false,
+          weeklyOrderDigestDay: p.weeklyOrderDigestDay ?? f.weeklyOrderDigestDay,
+          chaserEnabled: p.chaserEnabled === true,
+          chaserIntervalDays: p.chaserIntervalDays ?? f.chaserIntervalDays,
+          chaserChannel: p.chaserChannel || f.chaserChannel,
+          chaserMaxDays: p.chaserMaxDays ?? null,
+        }));
+      }
       queryClient.invalidateQueries({ queryKey: ["/api/settings/notification-preferences"] });
       toast({ title: "Notification preferences saved" });
     },
