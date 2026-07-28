@@ -23,3 +23,9 @@ id = "NCh0CbxQSZvQBfSaM8S7V"
 uri = "file://products-upload.csv"
 type = "table"
 title = "Wholesaler Product Upload (48 products)"
+
+[[outputs]]
+id = "39iH21Jt346FpgOsETrmE"
+uri = "file://attached_assets/product_upload.csv"
+type = "table"
+title = "Product Upload Sheet"
