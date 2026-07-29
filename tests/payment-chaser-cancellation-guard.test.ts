@@ -394,6 +394,61 @@ describe('sendPaymentChasers — partial-payment grace-period suppression', () =
 
     expect(sendChaserEmail).toHaveBeenCalledOnce();
   });
+
+  it('suppresses SMS when chaserChannel is "sms" and updatedAt is within the grace window', async () => {
+    // Switch the grace wholesaler to SMS-only channel
+    await db.execute(
+      sql`UPDATE users SET notification_preferences = jsonb_set(
+            notification_preferences,
+            '{chaserChannel}',
+            '"sms"'
+          ) WHERE id = ${GRACE_WHOLESALER_ID}`
+    );
+
+    // Updated 1 day ago — inside the 3-day grace window
+    await makeGraceOrder(1);
+
+    await sendPaymentChasers();
+
+    expect(ReliableSMSService.sendMarketingSMS).not.toHaveBeenCalled();
+
+    // Restore channel to 'email' so later tests are unaffected
+    await db.execute(
+      sql`UPDATE users SET notification_preferences = jsonb_set(
+            notification_preferences,
+            '{chaserChannel}',
+            '"email"'
+          ) WHERE id = ${GRACE_WHOLESALER_ID}`
+    );
+  });
+
+  it('suppresses SMS when chaserChannel is "both" and updatedAt is within the grace window', async () => {
+    // Switch the grace wholesaler to both email+SMS channel
+    await db.execute(
+      sql`UPDATE users SET notification_preferences = jsonb_set(
+            notification_preferences,
+            '{chaserChannel}',
+            '"both"'
+          ) WHERE id = ${GRACE_WHOLESALER_ID}`
+    );
+
+    // Updated 2 days ago — inside the 3-day grace window
+    await makeGraceOrder(2);
+
+    await sendPaymentChasers();
+
+    expect(ReliableSMSService.sendMarketingSMS).not.toHaveBeenCalled();
+    expect(sendChaserEmail).not.toHaveBeenCalled();
+
+    // Restore channel to 'email' so later tests are unaffected
+    await db.execute(
+      sql`UPDATE users SET notification_preferences = jsonb_set(
+            notification_preferences,
+            '{chaserChannel}',
+            '"email"'
+          ) WHERE id = ${GRACE_WHOLESALER_ID}`
+    );
+  });
 });
 
 describe('runAutoFulfilJob — cancellation guards', () => {
