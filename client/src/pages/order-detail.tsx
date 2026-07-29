@@ -18,7 +18,7 @@ import {
 import {
   DollarSign, Clock, CheckCircle, X, Truck, MapPin, Camera, Image as ImageIcon,
   RefreshCw, FileText, Loader2, Share2, Package, ChevronLeft, Home, Building, Warehouse, Building2,
-  Pencil, Plus, Minus, Search, MessageCircle, MoreHorizontal, Copy, Link, ClipboardList, Smartphone, RotateCcw
+  Pencil, Plus, Minus, Search, MessageCircle, MoreHorizontal, Copy, Link, ClipboardList, Smartphone, RotateCcw, Bot
 } from "lucide-react";
 import { useAuth, type AuthUser } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -1549,6 +1549,11 @@ export default function OrderDetail() {
                   {order.fulfillmentType === 'delivery'
                     ? <><Truck className="w-3 h-3 mr-1" />Delivery</>
                     : <><MapPin className="w-3 h-3 mr-1" />Collection</>}
+                </Badge>
+              )}
+              {(order as any).isAutoFulfilled && (
+                <Badge variant="outline" className="text-xs border-purple-300 text-purple-700">
+                  <Bot className="w-3 h-3 mr-1" />Auto-fulfilled
                 </Badge>
               )}
               </div>

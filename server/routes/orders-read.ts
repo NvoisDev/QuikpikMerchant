@@ -295,8 +295,22 @@ export function registerOrderReadRoutes(app: Express): void {
         chaserInfo = { enabled: chaserEnabled, intervalDays, maxDays, nextChaserDate, daysOverdue };
       }
 
+      // Check if this order was auto-fulfilled
+      const [autoFulfilledRow] = await db
+        .select({ quoteId: quoteActivityLogs.quoteId })
+        .from(quoteActivityLogs)
+        .where(
+          and(
+            eq(quoteActivityLogs.quoteId, orderId),
+            eq(quoteActivityLogs.actionType, 'auto_fulfilled')
+          )
+        )
+        .limit(1);
+      const isAutoFulfilled = !!autoFulfilledRow;
+
       res.json({
         ...order,
+        isAutoFulfilled,
         vatEnabled: order.wholesaler?.vatEnabled ?? false,
         vatRate: order.wholesaler?.vatRate ?? '0.2000',
         cancellationRequest: cancellationRequest ? {
