@@ -178,11 +178,29 @@ export default function Customers() {
 
   // Address book state
   const [searchQuery, setSearchQuery] = useState('');
+  const searchQueryRef = useRef('');
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [isEditCustomerDialogOpen, setIsEditCustomerDialogOpen] = useState(false);
   const [isAddToGroupDialogOpen, setIsAddToGroupDialogOpen] = useState(false);
   const [isViewCustomerOrdersDialogOpen, setIsViewCustomerOrdersDialogOpen] = useState(false);
   const [isAddCustomerDialogOpen, setIsAddCustomerDialogOpen] = useState(false);
+
+  // Keep ref in sync so the navigate handler can read the latest value without stale closure
+  useEffect(() => {
+    searchQueryRef.current = searchQuery;
+  }, [searchQuery]);
+
+  // Restore search query when navigating back from a customer detail page
+  useEffect(() => {
+    try {
+      const saved = sessionStorage.getItem('customers_filter_state');
+      if (saved) {
+        const s = JSON.parse(saved);
+        if (s.searchQuery) setSearchQuery(s.searchQuery);
+        sessionStorage.removeItem('customers_filter_state');
+      }
+    } catch { /* sessionStorage unavailable */ }
+  }, []);
 
   // Auto-open Add Customer dialog when navigated from dashboard with ?add=true
   useEffect(() => {
@@ -1008,7 +1026,12 @@ export default function Customers() {
             ) : (
               <div className="divide-y divide-gray-100 border border-gray-100 rounded-lg overflow-hidden bg-white">
                 {sortedCustomers.map((customer) => (
-                  <div key={customer?.id} className="flex items-center gap-3 px-3 py-2 hover:bg-gray-50 transition-colors cursor-pointer min-w-0" onClick={() => navigate(`/customers/${customer?.id}`)}>
+                  <div key={customer?.id} className="flex items-center gap-3 px-3 py-2 hover:bg-gray-50 transition-colors cursor-pointer min-w-0" onClick={() => {
+                      try {
+                        sessionStorage.setItem('customers_filter_state', JSON.stringify({ searchQuery: searchQueryRef.current }));
+                      } catch { /* sessionStorage unavailable */ }
+                      navigate(`/customers/${customer?.id}`);
+                    }}>
                     <Avatar className="h-8 w-8 flex-shrink-0">
                       <AvatarFallback className="bg-blue-100 text-blue-600 text-xs">
                         {getInitials(customer?.firstName || '', customer?.lastName, customer?.businessName, customer?.phoneNumber)}
