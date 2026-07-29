@@ -57,6 +57,52 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 
 // Chart data is now fetched from real backend API instead of fake data generation
 
+// ── Inventory KPI card ───────────────────────────────────────────────────────
+function InventoryKpiCard() {
+  const { formatMoney } = useCurrency();
+  const { data, isLoading } = useQuery<{
+    summary: { productsInStock: number; inventoryCostValue: number };
+  }>({
+    queryKey: ["/api/inventory/summary", "current"],
+    queryFn: async () => {
+      const r = await fetch("/api/inventory/summary", { credentials: "include" });
+      if (!r.ok) throw new Error("failed");
+      return r.json();
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
+  return (
+    <Link href="/inventory">
+      <AnimatedCard
+        className="text-white border-0 shadow-lg cursor-pointer"
+        style={{ background: "linear-gradient(135deg, #0d9488 0%, #0f766e 100%)" }}
+        hoverScale={true}
+        fadeIn={true}
+        delay={150}
+      >
+        <AnimatedCardContent className="p-3 sm:p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-white/80 text-xs sm:text-sm font-medium">Inventory</p>
+              <p className="text-xl sm:text-3xl font-bold">
+                {isLoading ? "…" : formatMoney(data?.summary?.inventoryCostValue ?? 0)}
+              </p>
+              <p className="text-white/80 text-xs mt-1">
+                {isLoading ? "" : `${formatNumber(data?.summary?.productsInStock ?? 0)} products in stock`}
+              </p>
+            </div>
+            <div className="bg-white/20 p-2 sm:p-3 rounded-full">
+              <Package className="h-4 w-4 sm:h-6 sm:w-6" />
+            </div>
+          </div>
+        </AnimatedCardContent>
+      </AnimatedCard>
+    </Link>
+  );
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 interface DashboardStats { totalRevenue?: number; revenueChange?: number; ordersCount?: number; ordersChange?: number; activeProducts?: number; lowStockCount?: number; unpaidAmount?: number; unpaidCount?: number; }
 interface BroadcastStats { recipientsReached?: number; }
 interface TopProduct { id: number; name: string; description?: string; images?: string[]; totalRevenue?: number; unitsOrdered?: number; revenue?: number; totalQuantitySold?: number; orderCount?: number; price?: number; }
@@ -1498,6 +1544,9 @@ export default function WholesalerDashboard() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Inventory */}
+            <InventoryKpiCard />
 
             <Card className="text-white border-0 shadow-lg" style={{ background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)' }}>
               <CardContent className="p-3 sm:p-6">

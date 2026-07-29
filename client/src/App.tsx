@@ -65,6 +65,7 @@ const Blog = lazy(() => import("@/pages/blog"));
 const BlogPost = lazy(() => import("@/pages/blog-post"));
 const PriceListDetail = lazy(() => import("@/pages/price-list-detail"));
 const SavedProducts = lazy(() => import("@/pages/saved-products"));
+const InventorySummary = lazy(() => import("@/pages/inventory-summary"));
 
 import AppLayout from "@/components/layout/app-layout";
 import SubscriptionExpiredWall from "@/components/SubscriptionExpiredWall";
@@ -96,6 +97,9 @@ const CustomersSection = () => (
 );
 const PriceListDetailSection = () => (
   <SectionErrorBoundary sectionName="Price list detail"><PriceListDetail /></SectionErrorBoundary>
+);
+const InventorySummarySection = () => (
+  <SectionErrorBoundary sectionName="Inventory summary"><InventorySummary /></SectionErrorBoundary>
 );
 const CustomerRegistrationRequestsSection = () => (
   <SectionErrorBoundary sectionName="Customer registration requests"><CustomerRegistrationRequests /></SectionErrorBoundary>
@@ -282,6 +286,7 @@ function AuthenticatedRoutes() {
               <Route path="/campaigns" component={CampaignsSection} />
               <Route path="/broadcasts" component={CampaignsSection} />
               <Route path="/message-templates" component={MessageTemplatesSection} />
+              <Route path="/inventory" component={InventorySummarySection} />
               <Route path="/stock-alerts" component={StockAlertsSection} />
               <Route path="/quick-quote" component={QuickQuoteSection} />
               <Route path="/team-management" component={TeamManagementSection} />

@@ -1472,4 +1472,115 @@ Return only the taglines, one per line, without numbers or formatting.`;
     }
   });
 
+  // GET /api/inventory/summary
+  // Returns current or historical inventory snapshot.
+  // Query params:
+  //   asAt=YYYY-MM-DD  — reconstruct stock from movements on/before that date
+  //   (none)           — live stock from products.stock
+  app.get('/api/inventory/summary', requireAuth, async (req: any, res) => {
+    try {
+      const wholesalerId = resolveWholesalerId(req);
+      const { asAt } = req.query as { asAt?: string };
+
+      interface ProductRow {
+        id: number;
+        name: string;
+        stock: number;
+        costPrice: string | null;
+        price: string;
+      }
+
+      let rows: ProductRow[];
+
+      if (asAt) {
+        // Historical: last stock_after per product on/before the given day
+        const asAtTs = new Date(asAt as string);
+        asAtTs.setHours(23, 59, 59, 999);
+
+        const result = await db.execute(sql`
+          WITH last_movements AS (
+            SELECT DISTINCT ON (product_id)
+              product_id,
+              stock_after
+            FROM stock_movements
+            WHERE wholesaler_id = ${wholesalerId}
+              AND created_at <= ${asAtTs}
+            ORDER BY product_id, created_at DESC
+          )
+          SELECT
+            p.id,
+            p.name,
+            lm.stock_after   AS stock,
+            p.cost_price     AS "costPrice",
+            p.price
+          FROM products p
+          JOIN last_movements lm ON p.id = lm.product_id
+          WHERE p.wholesaler_id = ${wholesalerId}
+            AND p.status != 'locked'
+            AND lm.stock_after > 0
+          ORDER BY p.name
+        `);
+        rows = result.rows as ProductRow[];
+      } else {
+        // Current: live stock
+        const result = await db.execute(sql`
+          SELECT
+            id,
+            name,
+            stock,
+            cost_price AS "costPrice",
+            price
+          FROM products
+          WHERE wholesaler_id = ${wholesalerId}
+            AND status != 'locked'
+            AND stock > 0
+          ORDER BY name
+        `);
+        rows = result.rows as ProductRow[];
+      }
+
+      let inventoryCostValue = 0;
+      let potentialSalesValue = 0;
+      let totalUnits = 0;
+
+      const productRows = rows.map((r) => {
+        const stock = Number(r.stock) || 0;
+        const cost = parseFloat(r.costPrice ?? '0') || 0;
+        const price = parseFloat(r.price) || 0;
+        const costVal = stock * cost;
+        const salesVal = stock * price;
+
+        inventoryCostValue += costVal;
+        potentialSalesValue += salesVal;
+        totalUnits += stock;
+
+        return {
+          id: r.id,
+          name: r.name,
+          stock,
+          costPrice: cost,
+          price,
+          inventoryCostValue: costVal,
+          inventorySalesValue: salesVal,
+          grossProfitValue: salesVal - costVal,
+        };
+      });
+
+      res.json({
+        asAt: asAt || null,
+        summary: {
+          productsInStock: productRows.length,
+          totalUnits,
+          inventoryCostValue,
+          potentialSalesValue,
+          potentialGrossProfit: potentialSalesValue - inventoryCostValue,
+        },
+        products: productRows,
+      });
+    } catch (error) {
+      console.error("Error fetching inventory summary:", error);
+      res.status(500).json({ message: "Failed to fetch inventory summary" });
+    }
+  });
+
 }
