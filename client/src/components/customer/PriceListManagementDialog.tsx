@@ -269,9 +269,20 @@ export function PriceListManagementDialog({
   });
 
   const handleNativeShare = async (listId: number, listName: string) => {
-    const storeSlug = (user?.role === 'team_member' ? null : user?.storeSlug) || user?.id;
-    const publicUrl = `${window.location.origin}/w/${storeSlug}`;
-    const shareText = `Your exclusive price list — to enquire or order, visit: ${publicUrl}`;
+    const rawSlug = user?.role === 'team_member' ? null : user?.storeSlug;
+    const publicUrl = rawSlug ? `${window.location.origin}/w/${rawSlug}` : null;
+
+    if (!publicUrl) {
+      toast({
+        title: "Store URL not configured",
+        description: "Set up your store URL in Settings so customers can visit your online store.",
+        variant: "destructive",
+      });
+    }
+
+    const shareText = publicUrl
+      ? `Your exclusive price list — to enquire or order, visit: ${publicUrl}`
+      : "Your exclusive price list — see the attached file for details.";
 
     if (typeof navigator.share !== "function") {
       const a = document.createElement("a");
@@ -296,14 +307,14 @@ export function PriceListManagementDialog({
         await navigator.share({
           title: listName,
           text: shareText,
-          url: publicUrl,
+          ...(publicUrl ? { url: publicUrl } : {}),
           files: [file],
         });
       } else {
         await navigator.share({
           title: listName,
           text: shareText,
-          url: publicUrl,
+          ...(publicUrl ? { url: publicUrl } : {}),
         });
       }
     } catch (err) {
@@ -330,9 +341,20 @@ export function PriceListManagementDialog({
     const url = `/api/products/catalogue-export?format=${format}`;
     const fileName = `Standard Price List.${ext}`;
 
-    const storeSlug = (user?.role === 'team_member' ? null : user?.storeSlug) || user?.id;
-    const publicUrl = `${window.location.origin}/w/${storeSlug}`;
-    const shareText = `Browse our catalogue and place orders at: ${publicUrl}`;
+    const rawSlug = user?.role === 'team_member' ? null : user?.storeSlug;
+    const publicUrl = rawSlug ? `${window.location.origin}/w/${rawSlug}` : null;
+
+    if (!publicUrl) {
+      toast({
+        title: "Store URL not configured",
+        description: "Set up your store URL in Settings so customers can visit your online store.",
+        variant: "destructive",
+      });
+    }
+
+    const shareText = publicUrl
+      ? `Browse our catalogue and place orders at: ${publicUrl}`
+      : "Browse our catalogue — see the attached file for details.";
 
     if (typeof navigator.share !== 'function') {
       const a = document.createElement('a');
@@ -352,9 +374,9 @@ export function PriceListManagementDialog({
       const file = new File([blob], fileName, { type: mimeType });
 
       if (navigator.canShare?.({ files: [file] })) {
-        await navigator.share({ title: 'Standard Price List', text: shareText, url: publicUrl, files: [file] });
+        await navigator.share({ title: 'Standard Price List', text: shareText, ...(publicUrl ? { url: publicUrl } : {}), files: [file] });
       } else {
-        await navigator.share({ title: 'Standard Price List', text: shareText, url: publicUrl });
+        await navigator.share({ title: 'Standard Price List', text: shareText, ...(publicUrl ? { url: publicUrl } : {}) });
       }
     } catch (err) {
       if ((err as { name?: string })?.name === 'AbortError') {
