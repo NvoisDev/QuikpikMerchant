@@ -269,7 +269,9 @@ export function PriceListManagementDialog({
   });
 
   const handleNativeShare = async (listId: number, listName: string) => {
-    const portalUrl = `${window.location.origin}/customer/${user?.id}`;
+    const storeSlug = (user?.role === 'team_member' ? null : user?.storeSlug) || user?.id;
+    const publicUrl = `${window.location.origin}/w/${storeSlug}`;
+    const shareText = `Your exclusive price list — to enquire or order, visit: ${publicUrl}`;
 
     if (typeof navigator.share !== "function") {
       const a = document.createElement("a");
@@ -293,15 +295,15 @@ export function PriceListManagementDialog({
       if (navigator.canShare?.({ files: [file] })) {
         await navigator.share({
           title: listName,
-          text: "Your exclusive price list — shop at the link below.",
-          url: portalUrl,
+          text: shareText,
+          url: publicUrl,
           files: [file],
         });
       } else {
         await navigator.share({
           title: listName,
-          text: "Your exclusive price list — shop at the link below.",
-          url: portalUrl,
+          text: shareText,
+          url: publicUrl,
         });
       }
     } catch (err) {
