@@ -342,6 +342,7 @@ export default function OrdersFresh() {
   const paymentStatusRef = useRef('');
   const statusFilterRef = useRef('');
   const staleFilterRef = useRef(false);
+  const isFilterInitialized = useRef(false);
 
   const handleShareDraft = async (draftId: number) => {
     const pdfUrl = `/api/orders/${draftId}/invoice`;
@@ -475,24 +476,44 @@ export default function OrdersFresh() {
     const searchParam = urlParams.get('search');
     const statusParam = urlParams.get('status');
     const staleParam = urlParams.get('stale');
+    const hasUrlParams = !!(customerIdParam || searchParam || statusParam || staleParam);
 
-    const initialTab = customerIdParam ? 'all' : staleParam ? 'all' : 'active';
-    if (customerIdParam) {
-      setCustomerIdFilter(customerIdParam);
-      customerIdRef.current = customerIdParam;
-      setArchiveTab('all');
-    }
-    if (staleParam) {
-      staleFilterRef.current = true;
-      setStaleFilterActive(true);
-      setArchiveTab('all');
-    }
-    if (searchParam) {
-      setSearchQuery(searchParam);
-    }
-    if (statusParam) {
-      setStatusFilter(statusParam);
-      statusFilterRef.current = statusParam;
+    let effectiveTab: 'active' | 'archived' | 'all' | 'drafts' = 'active';
+    let effectiveSearch = '';
+
+    if (!hasUrlParams) {
+      // Restore saved filter state when returning from an order detail (back-navigation)
+      try {
+        const saved = sessionStorage.getItem('orders_filter_state');
+        if (saved) {
+          const s = JSON.parse(saved);
+          if (s.searchQuery) { setSearchQuery(s.searchQuery); effectiveSearch = s.searchQuery; }
+          if (s.customerIdFilter) { setCustomerIdFilter(s.customerIdFilter); customerIdRef.current = s.customerIdFilter; }
+          if (s.statusFilter) { setStatusFilter(s.statusFilter); statusFilterRef.current = s.statusFilter; }
+          if (s.archiveTab) { setArchiveTab(s.archiveTab); effectiveTab = s.archiveTab; }
+          if (s.paymentStatusFilter) { setPaymentStatusFilter(s.paymentStatusFilter); paymentStatusRef.current = s.paymentStatusFilter; }
+          if (s.deliveryTypeFilter) { setDeliveryTypeFilter(s.deliveryTypeFilter); deliveryTypeRef.current = s.deliveryTypeFilter; }
+          if (s.dateRangeFilter) setDateRangeFilter(s.dateRangeFilter);
+          if (s.pickingStatusFilter) setPickingStatusFilter(s.pickingStatusFilter);
+          if (s.staleFilterActive) { setStaleFilterActive(true); staleFilterRef.current = true; }
+        }
+      } catch { /* sessionStorage unavailable */ }
+    } else {
+      // URL params — existing logic (explicit link / deep link)
+      if (customerIdParam) {
+        setCustomerIdFilter(customerIdParam);
+        customerIdRef.current = customerIdParam;
+        setArchiveTab('all');
+        effectiveTab = 'all';
+      }
+      if (staleParam) {
+        staleFilterRef.current = true;
+        setStaleFilterActive(true);
+        setArchiveTab('all');
+        effectiveTab = 'all';
+      }
+      if (searchParam) { setSearchQuery(searchParam); effectiveSearch = searchParam; }
+      if (statusParam) { setStatusFilter(statusParam); statusFilterRef.current = statusParam; }
     }
 
     const orderId = urlParams.get('id');
@@ -501,10 +522,11 @@ export default function OrdersFresh() {
     }
 
     loadCancellationRequests();
-    if (!customerIdParam) {
-      loadOrderStats(initialTab as 'active' | 'archived' | 'all');
+    if (!customerIdRef.current) {
+      loadOrderStats(effectiveTab as 'active' | 'archived' | 'all');
     }
-    loadOrders(1, searchParam || '', initialTab as 'active' | 'archived' | 'all');
+    loadOrders(1, effectiveSearch, effectiveTab as 'active' | 'archived' | 'all');
+    isFilterInitialized.current = true;
   }, []);
 
   const isInitialMount = useRef(true);
@@ -522,6 +544,18 @@ export default function OrdersFresh() {
       if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
     };
   }, [searchQuery]);
+
+  // Persist filter state to sessionStorage so it survives back-navigation
+  useEffect(() => {
+    if (!isFilterInitialized.current) return;
+    try {
+      sessionStorage.setItem('orders_filter_state', JSON.stringify({
+        searchQuery, customerIdFilter, statusFilter, archiveTab,
+        paymentStatusFilter, deliveryTypeFilter, dateRangeFilter,
+        pickingStatusFilter, staleFilterActive,
+      }));
+    } catch { /* sessionStorage unavailable */ }
+  }, [searchQuery, customerIdFilter, statusFilter, archiveTab, paymentStatusFilter, deliveryTypeFilter, dateRangeFilter, pickingStatusFilter, staleFilterActive]);
 
   // Load cancellation requests
   const loadCancellationRequests = async () => {
@@ -1334,6 +1368,7 @@ export default function OrdersFresh() {
                 setDeliveryTypeFilter('');
                 setDateRangeFilter('');
                 setPickingStatusFilter('');
+                try { sessionStorage.removeItem('orders_filter_state'); } catch {}
                 loadOrders(1, '');
               }}
               className="text-sm whitespace-nowrap"
