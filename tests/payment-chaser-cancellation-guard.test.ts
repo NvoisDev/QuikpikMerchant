@@ -577,4 +577,20 @@ describe('runAutoFulfilJob — cancellation guards', () => {
 
     expect(storage.updateOrderStatus).not.toHaveBeenCalled();
   });
+
+  it('returns { fulfilled: 1, skipped: 1 } when updateOrderStatus throws on one of two qualifying orders', async () => {
+    // Seed two qualifying orders; both should be picked up by the job.
+    await makePaidOldOrder();
+    await makePaidOldOrder();
+
+    // First call throws (first order fails its fulfilled step → skipped++).
+    // All subsequent calls resolve (second order succeeds → fulfilled++).
+    (storage.updateOrderStatus as ReturnType<typeof vi.fn>)
+      .mockRejectedValueOnce(new Error('DB error'))
+      .mockResolvedValue(undefined);
+
+    const result = await runAutoFulfilJob();
+
+    expect(result).toEqual({ fulfilled: 1, skipped: 1 });
+  });
 });
