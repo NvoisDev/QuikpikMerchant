@@ -1298,7 +1298,7 @@ export default function Settings() {
     weeklyOrderDigestDay: 1,
     lastWeeklyOrderDigestSentAt: null as string | null,
     chaserEnabled: false,
-    chaserIntervalDays: 7,
+    chaserIntervalDays: 7 as number | '',
     chaserChannel: 'email',
     chaserMaxDays: null as number | null,
     autoFulfilEnabled: false,
@@ -3317,7 +3317,8 @@ export default function Settings() {
                                     min="1"
                                     max="90"
                                     value={notifForm.chaserIntervalDays}
-                                    onChange={(e) => setNotifForm(f => ({ ...f, chaserIntervalDays: Math.max(1, parseInt(e.target.value) || 7) }))}
+                                    onChange={(e) => setNotifForm(f => ({ ...f, chaserIntervalDays: e.target.value === '' ? '' : Math.max(1, parseInt(e.target.value) || 1) }))}
+                                    onBlur={() => setNotifForm(f => ({ ...f, chaserIntervalDays: f.chaserIntervalDays === '' || !f.chaserIntervalDays ? 7 : f.chaserIntervalDays }))}
                                     className="w-20"
                                     disabled={notifPrefsLoading}
                                   />
@@ -3394,7 +3395,7 @@ export default function Settings() {
                   {!isTeamMember && <div className="flex justify-end pt-1">
                     <Button
                       size="sm"
-                      onClick={() => saveNotifPrefsMutation.mutate(notifForm)}
+                      onClick={() => saveNotifPrefsMutation.mutate({ ...notifForm, chaserIntervalDays: notifForm.chaserIntervalDays || 7 })}
                       disabled={saveNotifPrefsMutation.isPending || notifPrefsLoading}
                       className="flex items-center gap-1.5"
                     >
