@@ -1261,7 +1261,18 @@ export default function Settings() {
   const urlParams = new URLSearchParams(location.split('?')[1] || '');
   const tabFromUrl = urlParams.get('tab');
   const [activeTab, setActiveTab] = useState(tabFromUrl || "account");
+  const pillBarRef = useRef<HTMLDivElement>(null);
   const [thresholdInput, setThresholdInput] = useState("");
+
+  // Scroll the active pill into view whenever the tab changes (handles deep-link navigation)
+  useEffect(() => {
+    if (pillBarRef.current) {
+      const activeBtn = pillBarRef.current.querySelector<HTMLButtonElement>(`[data-tab="${activeTab}"]`);
+      if (activeBtn) {
+        activeBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+      }
+    }
+  }, [activeTab]);
 
   const { data: notifPrefs, isLoading: notifPrefsLoading } = useQuery<{
     stockAlertFrequency: string;
@@ -1818,7 +1829,7 @@ export default function Settings() {
       <div className="space-y-8 p-4 sm:p-6">
 
       {/* Mobile horizontal pill nav — shown below lg, hidden on lg+ */}
-      <div className="flex overflow-x-auto gap-2 pb-1 lg:hidden -mx-1 px-1" style={{ scrollbarWidth: 'none' }}>
+      <div ref={pillBarRef} className="flex overflow-x-auto gap-2 pb-1 lg:hidden -mx-1 px-1" style={{ scrollbarWidth: 'none' }}>
         {[
           { key: 'account', label: 'Account', icon: <User className="h-3.5 w-3.5 mr-1.5" /> },
           { key: 'business', label: 'Business', icon: <Building2 className="h-3.5 w-3.5 mr-1.5" /> },
@@ -1828,6 +1839,7 @@ export default function Settings() {
         ].map(({ key, label, icon }) => (
           <button
             key={key}
+            data-tab={key}
             type="button"
             onClick={() => setActiveTab(key)}
             className={`flex-shrink-0 flex items-center px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
