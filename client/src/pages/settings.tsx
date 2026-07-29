@@ -1212,10 +1212,42 @@ function PublicStoreSettings({ user }: { user: any }) {
   );
 }
 
-function ChaserTestEmailButton() {
+/** Pure helper: given a chase interval, describe which tone applies to each chase. */
+function getChaserTonePreview(intervalDays: number | ''): string {
+  const n = Math.max(1, Number(intervalDays) || 7);
+  type Tone = 'friendly' | 'firm' | 'urgent';
+  const schedule: { chase: number; day: number; tone: Tone }[] = [];
+  for (let i = 0; i < 15; i++) {
+    const day = 1 + i * n;
+    if (day > 90) break;
+    const tone: Tone = day <= 7 ? 'friendly' : day <= 21 ? 'firm' : 'urgent';
+    schedule.push({ chase: i + 1, day, tone });
+  }
+  if (schedule.length === 0) return 'Days 1–7 friendly · 8–21 firm · 22+ urgent';
+
+  // Group consecutive same-tone chases
+  const groups: { tone: Tone; first: number; last: number; firstDay: number; lastDay: number }[] = [];
+  for (const c of schedule) {
+    const prev = groups[groups.length - 1];
+    if (prev && prev.tone === c.tone) { prev.last = c.chase; prev.lastDay = c.day; }
+    else groups.push({ tone: c.tone, first: c.chase, last: c.chase, firstDay: c.day, lastDay: c.day });
+  }
+
+  const LABEL: Record<Tone, string> = { friendly: 'Friendly', firm: 'Firm', urgent: 'Urgent' };
+  return groups.map((g, i) => {
+    const open = i === groups.length - 1; // last group is open-ended
+    const chaseStr = g.first === g.last
+      ? (open ? `chase ${g.first}+` : `chase ${g.first}`)
+      : (open ? `chases ${g.first}–${g.last}+` : `chases ${g.first}–${g.last}`);
+    const dayStr = g.firstDay === g.lastDay ? `day ${g.firstDay}` : `days ${g.firstDay}–${g.lastDay}`;
+    return `${LABEL[g.tone]}: ${chaseStr} (${dayStr})`;
+  }).join(' · ');
+}
+
+function ChaserTestEmailButton({ initialTone = 'friendly' }: { initialTone?: 'friendly' | 'firm' | 'urgent' }) {
   const { toast } = useToast();
   const [sending, setSending] = useState(false);
-  const [tone, setTone] = useState<'friendly' | 'firm' | 'urgent'>('friendly');
+  const [tone, setTone] = useState<'friendly' | 'firm' | 'urgent'>(initialTone);
 
   const handleSend = async () => {
     setSending(true);
@@ -3346,9 +3378,9 @@ export default function Settings() {
                               <p className="text-xs text-gray-400 mt-1">Leave blank to chase indefinitely until paid</p>
                             </div>
                             <div className="bg-amber-50 border border-amber-100 rounded-md p-3 text-xs text-amber-700">
-                              <strong>Tone:</strong> Days 1–7 friendly · 8–21 firm · 22+ urgent. Bank details are always included. You can pause chasers per-invoice from the invoice editor.
+                              <strong>Tone:</strong> {getChaserTonePreview(notifForm.chaserIntervalDays)}. Bank details are always included. You can pause chasers per-invoice from the invoice editor.
                             </div>
-                            <ChaserTestEmailButton />
+                            <ChaserTestEmailButton initialTone="friendly" />
                           </div>
                         )}
                       </div>
