@@ -5,7 +5,7 @@ import {
   orders, orderCancellationRequests, products, productBatches,
   sql, eq, and, desc, inArray, or, count, sum, isNull,
   buildInvoicePdf, getStripeClient, isLiveMode,
-  users, wholesalerCustomerRelationships,
+  users, wholesalerCustomerRelationships, quoteActivityLogs,
 } from "./shared";
 import { businessProfiles } from "@shared/schema";
 import { getOrderStats } from "../services/analyticsService";
@@ -464,6 +464,21 @@ export function registerOrderReadRoutes(app: Express): void {
         pickingRows.forEach(p => { pickingStatusMap[p.orderId] = p.pickingStatus; });
       }
 
+      // Batch-fetch auto-fulfilled flag for this page's orders
+      let autoFulfilledIds = new Set<number>();
+      if (orderIds.length > 0) {
+        const autoFulfilledRows = await db
+          .select({ quoteId: quoteActivityLogs.quoteId })
+          .from(quoteActivityLogs)
+          .where(
+            and(
+              inArray(quoteActivityLogs.quoteId, orderIds),
+              eq(quoteActivityLogs.actionType, 'auto_fulfilled')
+            )
+          );
+        autoFulfilledIds = new Set(autoFulfilledRows.map(r => r.quoteId));
+      }
+
       // Batch-fetch live retailer (customer) records for all orders on this page
       const retailerIds = Array.from(new Set(ordersResult.map(o => o.retailerId).filter(Boolean)));
       let retailerMap: Record<string, { firstName: string | null; lastName: string | null; businessName: string | null; phoneNumber: string | null }> = {};
@@ -498,13 +513,14 @@ export function registerOrderReadRoutes(app: Express): void {
         });
       }
 
-      // Attach cancellation request, business profile name, picking status, and live retailer to each order
+      // Attach cancellation request, business profile name, picking status, live retailer, and auto-fulfilled flag to each order
       const ordersWithRequests = ordersResult.map(order => ({
         ...order,
         cancellationRequest: cancellationRequestsMap[order.id] || null,
         businessProfileName: order.businessProfileId ? (profileNameMap[order.businessProfileId] ?? null) : null,
         pickingStatus: pickingStatusMap[order.id] ?? 'not_started',
         retailer: order.retailerId ? (retailerMap[order.retailerId] ?? null) : null,
+        isAutoFulfilled: autoFulfilledIds.has(order.id),
       }));
       
       res.json({

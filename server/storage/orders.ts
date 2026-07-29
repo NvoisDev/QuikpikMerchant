@@ -26,6 +26,7 @@ import {
   productBatches,
   businessProfiles,
   collectionAddresses,
+  quoteActivityLogs,
   type BusinessProfile,
   type User,
   type UpsertUser,
@@ -261,6 +262,21 @@ export class OrderStorage extends ProductStorage {
       profileMap = profiles.reduce((acc, p) => { acc[p.id] = p.name; return acc; }, {} as Record<number, string>);
     }
 
+    // Batch fetch auto-fulfilled order IDs (orders that have an 'auto_fulfilled' activity log entry)
+    let autoFulfilledIds = new Set<number>();
+    if (orderIds.length > 0) {
+      const autoFulfilledRows = await db
+        .select({ quoteId: quoteActivityLogs.quoteId })
+        .from(quoteActivityLogs)
+        .where(
+          and(
+            sql`${quoteActivityLogs.quoteId} IN (${sql.join(orderIds.map(id => sql`${id}`), sql`, `)})`,
+            eq(quoteActivityLogs.actionType, 'auto_fulfilled')
+          )
+        );
+      autoFulfilledIds = new Set(autoFulfilledRows.map(r => r.quoteId));
+    }
+
     // Transform results using filtered results
     const ordersWithItems = filteredOrderResults.map(order => {
       const retailer = userMap[order.retailerId];
@@ -295,6 +311,7 @@ export class OrderStorage extends ProductStorage {
           preferredCurrency: wholesaler.preferredCurrency,
         } : null,
         businessProfileName: order.businessProfileId ? (profileMap[order.businessProfileId] ?? null) : null,
+        isAutoFulfilled: autoFulfilledIds.has(order.id),
         items: itemsByOrderId[order.id] || []
       };
     });

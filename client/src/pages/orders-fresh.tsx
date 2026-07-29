@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Separator } from "@/components/ui/separator";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Search, Package, DollarSign, Clock, Users, CheckCircle, X, Truck, MapPin, Camera, Image as ImageIcon, RefreshCw, Eye, FileText, UserPen, ShoppingCart, Loader2, MoreVertical, Share2, PackageCheck, RotateCcw } from "lucide-react";
+import { Search, Package, DollarSign, Clock, Users, CheckCircle, X, Truck, MapPin, Camera, Image as ImageIcon, RefreshCw, Eye, FileText, UserPen, ShoppingCart, Loader2, MoreVertical, Share2, PackageCheck, RotateCcw, Bot } from "lucide-react";
 import { PickingStatusBadge } from "@/components/orders/PickingMode";
 import ElephantLoader from "@/components/ui/elephant-loader";
 import PageHeader from "@/components/PageHeader";
@@ -1767,6 +1767,11 @@ export default function OrdersFresh() {
                           ) : (
                             <Badge className="bg-slate-100 text-slate-700 text-xs">Unfulfilled</Badge>
                           )}
+                          {(order as any).isAutoFulfilled && (
+                            <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200" title="Automatically fulfilled and archived by the system">
+                              <Bot className="w-3 h-3 mr-1" />Auto-fulfilled
+                            </Badge>
+                          )}
                           {(order.isQuote || order.orderSource === 'wholesaler') ? (
                             <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200" title="Invoice Order (created by you)">
                               <UserPen className="w-3 h-3" />
@@ -1962,6 +1967,11 @@ export default function OrdersFresh() {
                           <Badge className="bg-slate-100 text-slate-700 text-xs">Confirmed</Badge>
                         ) : (
                           <Badge className="bg-slate-100 text-slate-700 text-xs">Unfulfilled</Badge>
+                        )}
+                        {(order as any).isAutoFulfilled && (
+                          <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200" title="Automatically fulfilled and archived by the system">
+                            <Bot className="w-3 h-3 mr-1" />Auto-fulfilled
+                          </Badge>
                         )}
                         {(order.isQuote || order.orderSource === 'wholesaler') ? (
                           <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200">
