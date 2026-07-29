@@ -91,6 +91,7 @@ function InventoryKpiCard() {
               <p className="text-white/80 text-xs mt-1">
                 {isLoading ? "" : `${formatNumber(data?.summary?.productsInStock ?? 0)} products in stock`}
               </p>
+              <p className="text-white/70 text-xs mt-1 font-medium">View details →</p>
             </div>
             <div className="bg-white/20 p-2 sm:p-3 rounded-full">
               <Package className="h-4 w-4 sm:h-6 sm:w-6" />
