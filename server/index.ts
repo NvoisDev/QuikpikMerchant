@@ -1225,8 +1225,9 @@ httpServer.listen({ port, host: '0.0.0.0', reusePort: true }, () => {
     cron.schedule('0 3 * * *', async () => {
       console.log('📦 Running auto-fulfil job...');
       try {
-        const count = await runAutoFulfilJob();
-        if (count > 0) console.log(`📦 Auto-fulfil: ${count} order(s) fulfilled and archived`);
+        const { fulfilled, skipped } = await runAutoFulfilJob();
+        if (fulfilled > 0) console.log(`📦 Auto-fulfil: ${fulfilled} order(s) fulfilled and archived`);
+        if (skipped > 0) console.warn(`⚠️ Auto-fulfil: ${skipped} order(s) skipped due to errors — check logs above`);
       } catch (error) {
         console.error('❌ Auto-fulfil job failed:', error);
       }

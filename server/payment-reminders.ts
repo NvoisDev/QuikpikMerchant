@@ -486,7 +486,7 @@ export async function sendPaymentChasers(): Promise<number> {
 // Marks paid/processing orders as fulfilled then immediately archives them
 // for wholesalers who have opted in and configured a day threshold.
 // ---------------------------------------------------------------------------
-export async function runAutoFulfilJob(): Promise<number> {
+export async function runAutoFulfilJob(): Promise<{ fulfilled: number; skipped: number }> {
   try {
     // 1. Find wholesalers with autoFulfilEnabled = true
     const wholesalers = await db
@@ -494,9 +494,10 @@ export async function runAutoFulfilJob(): Promise<number> {
       .from(users)
       .where(sql`${users.notificationPreferences}->>'autoFulfilEnabled' = 'true'`);
 
-    if (wholesalers.length === 0) return 0;
+    if (wholesalers.length === 0) return { fulfilled: 0, skipped: 0 };
 
     let totalFulfilled = 0;
+    let totalSkipped = 0;
 
     for (const wholesaler of wholesalers) {
       const prefs = (wholesaler.notificationPreferences as Record<string, unknown>) || {};
@@ -551,14 +552,16 @@ export async function runAutoFulfilJob(): Promise<number> {
           totalFulfilled++;
           console.log(`✅ Auto-fulfilled order ${order.orderNumber || order.id} (wholesaler ${wholesaler.id})`);
         } catch (err) {
-          console.error(`❌ Auto-fulfil failed for order ${order.id}:`, err);
+          totalSkipped++;
+          console.error(`❌ Auto-fulfil failed for order ${order.id} (wholesaler ${wholesaler.id}):`, err);
         }
       }
     }
 
-    return totalFulfilled;
+    console.log(`ℹ️ Auto-fulfil job complete — fulfilled: ${totalFulfilled}, skipped due to errors: ${totalSkipped}`);
+    return { fulfilled: totalFulfilled, skipped: totalSkipped };
   } catch (error) {
     console.error('❌ Error in runAutoFulfilJob:', error);
-    return 0;
+    return { fulfilled: 0, skipped: 0 };
   }
 }
