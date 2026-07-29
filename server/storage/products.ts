@@ -680,7 +680,7 @@ export class ProductStorage extends UserStorageBase {
     // Log a stock movement so the history panel shows the restock event
     if (wholesalerId) {
       const [productAfter] = await db
-        .select({ stock: products.stock })
+        .select({ stock: products.stock, costPrice: products.costPrice })
         .from(products)
         .where(eq(products.id, batch.productId));
       const stockAfter = Number(productAfter?.stock ?? 0);
@@ -699,6 +699,7 @@ export class ProductStorage extends UserStorageBase {
         orderId: opts?.orderId ?? null,
         businessProfileId: opts?.businessProfileId ?? null,
         batchId: newBatch!.id,
+        costPrice: productAfter?.costPrice ?? null,
       });
     }
 
@@ -748,7 +749,7 @@ export class ProductStorage extends UserStorageBase {
         // Read product-level totals before and after sync so movement history
         // shows a coherent running balance across all batches.
         const [prodBefore] = await db
-          .select({ stock: products.stock })
+          .select({ stock: products.stock, costPrice: products.costPrice })
           .from(products)
           .where(eq(products.id, before.productId));
         const productStockBefore = Number(prodBefore?.stock ?? 0);
@@ -772,6 +773,7 @@ export class ProductStorage extends UserStorageBase {
           stockAfter: productStockAfter,
           reason: `Batch quantity updated (batch #${before.batchNumber || batchId})`,
           batchId,
+          costPrice: prodBefore?.costPrice ?? null,
         });
         return updated;
       }
@@ -819,7 +821,7 @@ export class ProductStorage extends UserStorageBase {
       // Use product-level totals (not batch-level) so movement history shows a
       // coherent running balance across all batches.
       const [prodBefore] = await db
-        .select({ stock: products.stock })
+        .select({ stock: products.stock, costPrice: products.costPrice })
         .from(products)
         .where(eq(products.id, batch.productId));
       const productStockBefore = Number(prodBefore?.stock ?? 0);
@@ -845,6 +847,7 @@ export class ProductStorage extends UserStorageBase {
         orderId: orderId ?? null,
         businessProfileId: businessProfileId ?? null,
         batchId,
+        costPrice: prodBefore?.costPrice ?? null,
       });
       return;
     }
@@ -954,7 +957,7 @@ export class ProductStorage extends UserStorageBase {
 
     // Read current stock before update so we can detect a silent change
     const [prod] = await db
-      .select({ stock: products.stock, unitsPerPallet: products.unitsPerPallet, quantityInPack: products.quantityInPack })
+      .select({ stock: products.stock, unitsPerPallet: products.unitsPerPallet, quantityInPack: products.quantityInPack, costPrice: products.costPrice })
       .from(products)
       .where(eq(products.id, productId));
     const currentStock = Number(prod?.stock ?? 0);
@@ -982,6 +985,7 @@ export class ProductStorage extends UserStorageBase {
         stockAfter: newStock,
         reason: ctx.reason ?? 'Stock recalculated from batch quantities',
         batchId: ctx.batchId ?? null,
+        costPrice: prod?.costPrice ?? null,
       });
     }
   }

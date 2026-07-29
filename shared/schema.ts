@@ -686,6 +686,7 @@ export const stockMovements = pgTable("stock_movements", {
   customerName: varchar("customer_name"), // customer name if movement is from purchase
   businessProfileId: integer("business_profile_id").references(() => businessProfiles.id, { onDelete: "set null" }), // business profile if movement is from an order
   batchId: integer("batch_id").references(() => productBatches.id, { onDelete: "set null" }), // batch this movement came from
+  costPrice: decimal("cost_price", { precision: 10, scale: 2 }), // product cost price at time of movement (null for historic rows)
   createdAt: timestamp("created_at").defaultNow(),
 });
 

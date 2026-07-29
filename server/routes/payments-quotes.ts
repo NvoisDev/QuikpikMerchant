@@ -702,9 +702,9 @@ export function registerQuoteRoutes(app: Express): void {
         for (const psum of Array.from(createPurchaseSummary.values())) {
           const { productId: psProductId, qty: psQty, primaryBatchId: psBid } = psum;
           const stockBefore = stockBeforeCreate.get(psProductId)?.units ?? 0;
-          const [productNow] = await trx.select({ stock: products.stock }).from(products).where(eq(products.id, psProductId)).limit(1);
+          const [productNow] = await trx.select({ stock: products.stock, costPrice: products.costPrice }).from(products).where(eq(products.id, psProductId)).limit(1);
           const stockAfter = productNow?.stock ?? 0;
-          await trx.insert(stockMovements).values({ productId: psProductId, wholesalerId, movementType: 'purchase', quantity: -psQty, unitType: 'units', stockBefore, stockAfter, reason: `Invoice order sale — ${psQty} units`, orderId: quoteOrderRow!.id, customerName: quoteOrderRow!.customerName ?? null, businessProfileId: quoteOrderRow!.businessProfileId ?? null, batchId: psBid });
+          await trx.insert(stockMovements).values({ productId: psProductId, wholesalerId, movementType: 'purchase', quantity: -psQty, unitType: 'units', stockBefore, stockAfter, reason: `Invoice order sale — ${psQty} units`, orderId: quoteOrderRow!.id, customerName: quoteOrderRow!.customerName ?? null, businessProfileId: quoteOrderRow!.businessProfileId ?? null, batchId: psBid, costPrice: productNow?.costPrice ?? null });
         }
 
         // Propagate any manually-set line prices to the chosen scope ('customer' →
@@ -1773,13 +1773,13 @@ export function registerQuoteRoutes(app: Express): void {
           const net = newQty - oldQty; // positive = more allocated; negative = units returned
           if (net === 0) continue;
           const stockBefore7a = stockBeforeEdit7a.get(nmPid)?.units ?? 0;
-          const [productNowNet] = await trx.select({ stock: products.stock }).from(products).where(eq(products.id, nmPid)).limit(1);
+          const [productNowNet] = await trx.select({ stock: products.stock, costPrice: products.costPrice }).from(products).where(eq(products.id, nmPid)).limit(1);
           const stockAfterNet = productNowNet?.stock ?? 0;
           if (net > 0) {
-            await trx.insert(stockMovements).values({ productId: nmPid, wholesalerId, movementType: 'purchase', quantity: -net, unitType: 'units', stockBefore: stockBefore7a, stockAfter: stockAfterNet, reason: `Invoice edit — ${net} extra units allocated`, orderId: quoteId, customerName: existingOrder.customerName ?? null, businessProfileId: existingOrder.businessProfileId ?? null, batchId: nmBid });
+            await trx.insert(stockMovements).values({ productId: nmPid, wholesalerId, movementType: 'purchase', quantity: -net, unitType: 'units', stockBefore: stockBefore7a, stockAfter: stockAfterNet, reason: `Invoice edit — ${net} extra units allocated`, orderId: quoteId, customerName: existingOrder.customerName ?? null, businessProfileId: existingOrder.businessProfileId ?? null, batchId: nmBid, costPrice: productNowNet?.costPrice ?? null });
           } else {
             const absNet = Math.abs(net);
-            await trx.insert(stockMovements).values({ productId: nmPid, wholesalerId, movementType: 'return', quantity: absNet, unitType: 'units', stockBefore: stockBefore7a, stockAfter: stockAfterNet, reason: `Invoice edit — ${absNet} units returned`, orderId: quoteId, customerName: existingOrder.customerName ?? null, businessProfileId: existingOrder.businessProfileId ?? null });
+            await trx.insert(stockMovements).values({ productId: nmPid, wholesalerId, movementType: 'return', quantity: absNet, unitType: 'units', stockBefore: stockBefore7a, stockAfter: stockAfterNet, reason: `Invoice edit — ${absNet} units returned`, orderId: quoteId, customerName: existingOrder.customerName ?? null, businessProfileId: existingOrder.businessProfileId ?? null, costPrice: productNowNet?.costPrice ?? null });
           }
         }
 

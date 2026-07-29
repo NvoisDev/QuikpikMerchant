@@ -834,6 +834,8 @@ async function runStartupMigrations() {
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS retailer_economics_visible BOOLEAN NOT NULL DEFAULT FALSE`,
     // Payment chaser opt-out per invoice — wholesaler can pause chasers for individual invoices
     `ALTER TABLE orders ADD COLUMN IF NOT EXISTS chaser_paused BOOLEAN NOT NULL DEFAULT FALSE`,
+    // Record product cost price on each stock movement for accurate historical inventory valuation
+    `ALTER TABLE stock_movements ADD COLUMN IF NOT EXISTS cost_price DECIMAL(10,2)`,
   ];
   let warned = 0;
   for (const stmt of migrations) {

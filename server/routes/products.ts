@@ -392,6 +392,7 @@ export function registerProductRoutes(app: Express): void {
           stockAfter: initialStock,
           reason: 'Initial stock',
           batchId: initialBatchId ?? null,
+          costPrice: newProduct!.costPrice ?? null,
         });
         return newProduct;
       });
@@ -568,6 +569,7 @@ export function registerProductRoutes(app: Express): void {
               stockAfter: newStock,
               reason: `Manual stock edit (+${delta} units)`,
               batchId: adjBatch!.id,
+              costPrice: existingProduct.costPrice ?? null,
             });
           } else if (delta < 0) {
             // Stock decrease: deduct from batches in FEFO order
@@ -629,6 +631,7 @@ export function registerProductRoutes(app: Express): void {
               stockBefore: currentBatchTotal,
               stockAfter: actualStock,
               reason: `Manual stock edit (-${currentBatchTotal - actualStock} units)`,
+              costPrice: existingProduct.costPrice ?? null,
             });
           }
         }
@@ -1501,7 +1504,8 @@ Return only the taglines, one per line, without numbers or formatting.`;
           WITH last_movements AS (
             SELECT DISTINCT ON (product_id)
               product_id,
-              stock_after
+              stock_after,
+              cost_price
             FROM stock_movements
             WHERE wholesaler_id = ${wholesalerId}
               AND created_at <= ${asAtTs}
@@ -1510,8 +1514,8 @@ Return only the taglines, one per line, without numbers or formatting.`;
           SELECT
             p.id,
             p.name,
-            lm.stock_after   AS stock,
-            p.cost_price     AS "costPrice",
+            lm.stock_after                              AS stock,
+            COALESCE(lm.cost_price, p.cost_price)      AS "costPrice",
             p.price
           FROM products p
           JOIN last_movements lm ON p.id = lm.product_id

@@ -236,7 +236,7 @@ export default function InventorySummary() {
         {preset !== "current" && (
           <div className="flex items-start gap-2 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2 text-xs text-blue-700">
             <Info className="h-3.5 w-3.5 mt-0.5 shrink-0" />
-            <span>Stock quantities reflect the position on that date. Cost and selling prices use current values.</span>
+            <span>Stock quantities reflect the position on that date. Cost prices for movements recorded before this feature was enabled fall back to today's cost price.</span>
           </div>
         )}
 
