@@ -584,7 +584,10 @@ export function registerCustomerRoutes(app: Express): void {
       const groupId = parseInt(req.params.groupId, 10);
       if (isNaN(groupId)) return res.status(400).json({ error: 'Invalid group ID' });
       const customerId = req.params.customerId;
-      const { firstName, lastName, phoneNumber, email, businessName } = req.body;
+      const {
+        firstName, lastName, phoneNumber, email, businessName,
+        streetAddress, addressLine2, city, postalCode, country,
+      } = req.body;
 
       if (!phoneNumber) {
         return res.status(400).json({ message: "Phone number is required" });
@@ -619,6 +622,11 @@ export function registerCustomerRoutes(app: Express): void {
       if (businessName !== undefined) sharedUpdates.businessName = businessName || null;
       if (firstName !== undefined) sharedUpdates.firstName = firstName || null;
       if (lastName !== undefined) sharedUpdates.lastName = lastName || null;
+      if (streetAddress !== undefined) sharedUpdates.streetAddress = streetAddress || null;
+      if (addressLine2 !== undefined) sharedUpdates.addressLine2 = addressLine2 || null;
+      if (city !== undefined) sharedUpdates.city = city || null;
+      if (postalCode !== undefined) sharedUpdates.postalCode = postalCode || null;
+      if (country !== undefined) sharedUpdates.country = country || null;
       await db.update(users).set(sharedUpdates).where(eq(users.id, customerId));
       
       res.json({

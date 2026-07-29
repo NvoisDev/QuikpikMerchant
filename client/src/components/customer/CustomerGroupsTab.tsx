@@ -50,6 +50,11 @@ const editMemberFormSchema = z.object({
     .regex(/^\+?[\d\s\-\(\)]+$/, "Please enter a valid phone number"),
   name: z.string().optional().or(z.literal("")),
   email: z.string().email("Please enter a valid email address").optional().or(z.literal("")),
+  streetAddress: z.string().optional().or(z.literal("")),
+  addressLine2: z.string().optional().or(z.literal("")),
+  city: z.string().optional().or(z.literal("")),
+  postalCode: z.string().optional().or(z.literal("")),
+  country: z.string().optional().or(z.literal("")),
 });
 
 const editGroupFormSchema = z.object({
@@ -95,6 +100,11 @@ interface GroupMember {
   phoneNumber?: string;
   phone_number?: string;
   email?: string;
+  streetAddress?: string;
+  addressLine2?: string;
+  city?: string;
+  postalCode?: string;
+  country?: string;
 }
 
 interface DeviceContact {
@@ -195,7 +205,11 @@ export function CustomerGroupsTab({
 
   const editMemberForm = useForm<EditMemberFormData>({
     resolver: zodResolver(editMemberFormSchema),
-    defaultValues: { phoneNumber: "", name: "", email: "" },
+    defaultValues: {
+      phoneNumber: "", name: "", email: "",
+      firstName: "", lastName: "",
+      streetAddress: "", addressLine2: "", city: "", postalCode: "", country: "",
+    },
   });
 
   const editGroupForm = useForm<EditGroupFormData>({
@@ -943,7 +957,15 @@ export function CustomerGroupsTab({
                           const fullName = `${member.firstName || ''} ${member.lastName || ''}`.trim() || member.name || '';
                           editMemberForm.reset({
                             name: fullName,
+                            firstName: member.firstName || '',
+                            lastName: member.lastName || '',
                             phoneNumber: member.phoneNumber || member.phone_number || '',
+                            email: member.email || '',
+                            streetAddress: member.streetAddress || '',
+                            addressLine2: member.addressLine2 || '',
+                            city: member.city || '',
+                            postalCode: member.postalCode || '',
+                            country: member.country || '',
                           });
                           setIsEditMemberDialogOpen(true);
                         }}
@@ -1068,6 +1090,86 @@ export function CustomerGroupsTab({
                     <FormLabel>Phone Number</FormLabel>
                     <FormControl>
                       <Input placeholder="e.g., +447123456789" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={editMemberForm.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email (Optional)</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g., customer@example.com" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={editMemberForm.control}
+                name="streetAddress"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Street Address (Optional)</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g., 12 High Street" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={editMemberForm.control}
+                name="addressLine2"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Address Line 2 (Optional)</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g., Flat 2" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <div className="grid grid-cols-2 gap-3">
+                <FormField
+                  control={editMemberForm.control}
+                  name="city"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>City (Optional)</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g., London" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={editMemberForm.control}
+                  name="postalCode"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Postal Code (Optional)</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g., EC1A 1BB" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <FormField
+                control={editMemberForm.control}
+                name="country"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Country (Optional)</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g., GB" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
