@@ -345,7 +345,20 @@ export async function sendPaymentChasers(): Promise<number> {
             ne(orders.paymentStatus, 'paid'),
             sql`${orders.status} NOT IN ('draft', 'cancelled')`,
             eq(orders.chaserPaused, false),
-            gt(orders.balanceDueDays, 0)
+            gt(orders.balanceDueDays, 0),
+            // Skip orders with a pending cancellation request
+            sql`NOT EXISTS (
+              SELECT 1 FROM ${orderCancellationRequests}
+              WHERE ${orderCancellationRequests.orderId} = ${orders.id}
+              AND ${orderCancellationRequests.status} = 'pending'
+            )`,
+            // Skip orders with a partial refund in progress
+            // (amountRefunded > 0 but not yet fully refunded)
+            or(
+              isNull(orders.amountRefunded),
+              sql`${orders.amountRefunded} <= 0`,
+              eq(orders.paymentStatus, 'refunded'),
+            ),
           )
         );
 
