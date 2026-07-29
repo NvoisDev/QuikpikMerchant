@@ -13,7 +13,7 @@
  */
 
 import { describe, it, expect, vi, beforeAll, afterAll, beforeEach } from 'vitest';
-import { eq, inArray } from 'drizzle-orm';
+import { eq, inArray, sql } from 'drizzle-orm';
 import { db } from '../server/db';
 import { orders, users, orderCancellationRequests } from '@shared/schema';
 
@@ -270,6 +270,129 @@ describe('sendPaymentChasers — cancellation guards', () => {
     await sendPaymentChasers();
 
     expect(ReliableSMSService.sendMarketingSMS).not.toHaveBeenCalled();
+  });
+});
+
+// ── Grace-period suppression tests ────────────────────────────────────────────
+// These use a separate wholesaler with chaserGraceDays = 3 so the grace window
+// is active, unlike the wholesaler above (chaserGraceDays = 0).
+
+const GRACE_WHOLESALER_ID = 'zz_test_chasergrd_grace_ws';
+const GRACE_CUSTOMER_ID = 'zz_test_chasergrd_grace_cust';
+
+const graceOrderIds: number[] = [];
+
+async function seedGraceUsers() {
+  await db
+    .insert(users)
+    .values({
+      id: GRACE_WHOLESALER_ID,
+      role: 'wholesaler',
+      email: 'zz_test_chasergrd_grace_ws@example.com',
+      notificationPreferences: {
+        chaserEnabled: true,
+        chaserIntervalDays: 1,
+        chaserChannel: 'email',
+        chaserMaxDays: null,
+        chaserGraceDays: 3, // 3-day grace window for partial payments
+      },
+    })
+    .onConflictDoNothing();
+
+  await db
+    .insert(users)
+    .values({
+      id: GRACE_CUSTOMER_ID,
+      role: 'customer',
+      email: 'zz_test_chasergrd_grace_cust@example.com',
+    })
+    .onConflictDoNothing();
+}
+
+async function cleanupGraceUsers() {
+  await db.delete(users).where(inArray(users.id, [GRACE_WHOLESALER_ID, GRACE_CUSTOMER_ID]));
+}
+
+/**
+ * Seed a partial-payment overdue order for the grace-period wholesaler.
+ * daysSinceUpdate controls how long ago updatedAt is set relative to now.
+ */
+async function makeGraceOrder(daysSinceUpdate: number): Promise<number> {
+  const tenDaysAgo = new Date(Date.now() - 10 * 24 * 60 * 60 * 1000);
+  const updatedAt = new Date(Date.now() - daysSinceUpdate * 24 * 60 * 60 * 1000);
+
+  const [order] = await db
+    .insert(orders)
+    .values({
+      orderNumber: `ZZGRACE-${Date.now()}-${Math.floor(Math.random() * 100000)}`,
+      wholesalerId: GRACE_WHOLESALER_ID,
+      retailerId: GRACE_CUSTOMER_ID,
+      customerName: 'zz_grace Customer',
+      customerEmail: 'zz_test_chasergrd_grace_cust@example.com',
+      status: 'pending',
+      paymentStatus: 'part_paid',
+      fulfillmentType: 'pickup',
+      subtotal: '100.00',
+      platformFee: '0.00',
+      total: '100.00',
+      deliveryCost: '0.00',
+      amountOutstanding: '50.00',
+      amountPaid: '50.00', // partial payment already made
+      amountRefunded: '0.00',
+      chaserPaused: false,
+      balanceDueDays: 1, // already overdue
+      createdAt: tenDaysAgo,
+    })
+    .returning({ id: orders.id });
+
+  // Override updatedAt to a precise past timestamp — the DB default would be
+  // "now" which would always fall inside any grace window.
+  await db.execute(
+    sql`UPDATE orders SET updated_at = ${updatedAt.toISOString()} WHERE id = ${order.id}`
+  );
+
+  graceOrderIds.push(order.id);
+  return order.id;
+}
+
+async function cleanupGraceOrders() {
+  if (graceOrderIds.length > 0) {
+    await db.delete(orders).where(inArray(orders.id, [...graceOrderIds]));
+    graceOrderIds.length = 0;
+  }
+}
+
+describe('sendPaymentChasers — partial-payment grace-period suppression', () => {
+  beforeAll(async () => {
+    await seedGraceUsers();
+  });
+
+  afterAll(async () => {
+    await cleanupGraceOrders();
+    await cleanupGraceUsers();
+  });
+
+  beforeEach(async () => {
+    await cleanupGraceOrders();
+    vi.clearAllMocks();
+  });
+
+  it('suppresses the chaser when amountPaid > 0 and updatedAt is within the grace window', async () => {
+    // Updated 1 day ago — inside the 3-day grace window
+    await makeGraceOrder(1);
+
+    await sendPaymentChasers();
+
+    expect(sendChaserEmail).not.toHaveBeenCalled();
+  });
+
+  it('sends the chaser when amountPaid > 0 but updatedAt is outside the grace window', async () => {
+    // Updated 5 days ago — outside the 3-day grace window
+    await makeGraceOrder(5);
+
+    await sendPaymentChasers();
+
+    expect(sendChaserEmail).toHaveBeenCalledOnce();
   });
 });
 
