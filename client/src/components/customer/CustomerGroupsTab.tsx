@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,7 @@ import { z } from "zod";
 import { useLocation } from "wouter";
 import { ContextualHelpBubble } from "@/components/ContextualHelpBubble";
 import { helpContent } from "@/data/whatsapp-help-content";
+import { BusinessSearchInput, type BusinessPlaceResult } from "@/components/BusinessSearchInput";
 import {
   Users, Plus, MessageSquare, UserPlus, Edit, Trash2, Search,
   Smartphone, ContactRound, ChevronDown, ChevronRight, Edit3, Check, X,
@@ -27,11 +28,18 @@ const customerGroupFormSchema = z.object({
 });
 
 const addMemberFormSchema = z.object({
+  firstName: z.string().optional().or(z.literal("")),
+  lastName: z.string().optional().or(z.literal("")),
+  businessName: z.string().optional().or(z.literal("")),
+  email: z.string().email("Please enter a valid email address").optional().or(z.literal("")),
   phoneNumber: z.string()
     .min(10, "Valid phone number is required")
     .regex(/^\+?[\d\s\-\(\)]+$/, "Please enter a valid phone number"),
-  name: z.string().optional().or(z.literal("")),
-  email: z.string().email("Please enter a valid email address").optional().or(z.literal("")),
+  streetAddress: z.string().optional().or(z.literal("")),
+  addressLine2: z.string().optional().or(z.literal("")),
+  city: z.string().optional().or(z.literal("")),
+  postalCode: z.string().optional().or(z.literal("")),
+  country: z.string().optional().or(z.literal("")),
 });
 
 const editMemberFormSchema = z.object({
@@ -168,8 +176,20 @@ export function CustomerGroupsTab({
 
   const addMemberForm = useForm<AddMemberFormData>({
     resolver: zodResolver(addMemberFormSchema),
-    defaultValues: { phoneNumber: "", name: "", email: "" },
+    defaultValues: {
+      firstName: "", lastName: "", businessName: "", email: "",
+      phoneNumber: "", streetAddress: "", addressLine2: "", city: "", postalCode: "", country: "",
+    },
   });
+
+  const handleAddMemberBusinessSearch = useCallback((result: BusinessPlaceResult) => {
+    const opts = { shouldValidate: true };
+    if (result.businessName) addMemberForm.setValue('businessName', result.businessName, opts);
+    if (result.streetAddress) addMemberForm.setValue('streetAddress', result.streetAddress, opts);
+    if (result.city) addMemberForm.setValue('city', result.city, opts);
+    if (result.postalCode) addMemberForm.setValue('postalCode', result.postalCode, opts);
+    if (result.country) addMemberForm.setValue('country', result.country, opts);
+  }, [addMemberForm]);
 
   const editMemberForm = useForm<EditMemberFormData>({
     resolver: zodResolver(editMemberFormSchema),
@@ -409,10 +429,13 @@ export function CustomerGroupsTab({
     if (!selectedGroup || selectedContacts.length === 0) return;
     selectedContacts.forEach(contact => {
       if (contact.phoneNumber) {
+        const [importFirst, ...rest] = contact.name.trim().split(' ');
+        const importLast = rest.join(' ');
         addMemberMutation.mutate({
           groupId: selectedGroup.id,
           data: {
-            name: contact.name,
+            firstName: importFirst || contact.name,
+            lastName: importLast,
             phoneNumber: contact.phoneNumber,
             email: ''
           }
@@ -702,8 +725,11 @@ export function CustomerGroupsTab({
       </div>
 
       {/* Add Member Dialog */}
-      <Dialog open={isAddMemberDialogOpen} onOpenChange={setIsAddMemberDialogOpen}>
-        <DialogContent>
+      <Dialog open={isAddMemberDialogOpen} onOpenChange={(open) => {
+        setIsAddMemberDialogOpen(open);
+        if (!open) addMemberForm.reset();
+      }}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Manual Entry - Add Customer to {selectedGroup?.name}</DialogTitle>
             <DialogDescription>
@@ -712,14 +738,24 @@ export function CustomerGroupsTab({
           </DialogHeader>
           <Form {...addMemberForm}>
             <form onSubmit={addMemberForm.handleSubmit(handleAddMember)} className="space-y-4">
+              <div className="pb-1">
+                <label className="text-sm font-medium mb-1.5 block">Search on Google</label>
+                <BusinessSearchInput
+                  placeholder="Type a business name to auto-fill..."
+                  onSelect={handleAddMemberBusinessSearch}
+                />
+              </div>
+              <div className="border-t border-dashed pt-3">
+                <p className="text-xs text-muted-foreground mb-3">Or fill in manually:</p>
+              </div>
               <FormField
                 control={addMemberForm.control}
-                name="name"
+                name="firstName"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Customer Name</FormLabel>
+                    <FormLabel>First Name <span className="text-muted-foreground font-normal">(optional)</span></FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g., John Smith" {...field} />
+                      <Input placeholder="John" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -727,12 +763,25 @@ export function CustomerGroupsTab({
               />
               <FormField
                 control={addMemberForm.control}
-                name="phoneNumber"
+                name="lastName"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Phone Number</FormLabel>
+                    <FormLabel>Last Name <span className="text-muted-foreground font-normal">(optional)</span></FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g., +447123456789" {...field} />
+                      <Input placeholder="Doe" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={addMemberForm.control}
+                name="businessName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Business Name <span className="text-muted-foreground font-normal">(optional)</span></FormLabel>
+                    <FormControl>
+                      <Input placeholder="Acme Ltd" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -743,14 +792,100 @@ export function CustomerGroupsTab({
                 name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Email (Optional)</FormLabel>
+                    <FormLabel>Email <span className="text-muted-foreground font-normal">(optional)</span></FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g., customer@example.com" {...field} />
+                      <Input placeholder="john@example.com" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
+              <FormField
+                control={addMemberForm.control}
+                name="phoneNumber"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Phone Number *</FormLabel>
+                    <FormControl>
+                      <Input placeholder="+447123456789" {...field} />
+                    </FormControl>
+                    <p className="text-xs text-muted-foreground">Required for payment links and customer login</p>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <div className="border-t pt-4">
+                <p className="text-sm font-medium text-muted-foreground mb-3">Address <span className="font-normal">(optional — appears on invoices)</span></p>
+                <div className="space-y-3">
+                  <FormField
+                    control={addMemberForm.control}
+                    name="streetAddress"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Address Line 1</FormLabel>
+                        <FormControl>
+                          <Input placeholder="123 High Street" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={addMemberForm.control}
+                    name="addressLine2"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Address Line 2</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Flat, suite, unit (optional)" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <div className="grid grid-cols-2 gap-3">
+                    <FormField
+                      control={addMemberForm.control}
+                      name="city"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>City</FormLabel>
+                          <FormControl>
+                            <Input placeholder="London" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={addMemberForm.control}
+                      name="postalCode"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Postcode</FormLabel>
+                          <FormControl>
+                            <Input placeholder="SW1A 1AA" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <FormField
+                    control={addMemberForm.control}
+                    name="country"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Country</FormLabel>
+                        <FormControl>
+                          <Input placeholder="United Kingdom" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </div>
               <div className="flex justify-end space-x-2">
                 <Button type="button" variant="outline" onClick={() => setIsAddMemberDialogOpen(false)}>
                   Cancel

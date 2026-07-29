@@ -248,10 +248,28 @@ export function registerCustomerRoutes(app: Express): void {
       
       const groupId = parseInt(req.params.groupId, 10);
       if (isNaN(groupId)) return res.status(400).json({ error: 'Invalid group ID' });
-      const { phoneNumber, name } = req.body;
-      
-      if (!phoneNumber || !name) {
-        return res.status(400).json({ message: "Phone number and name are required" });
+      const {
+        phoneNumber,
+        name,
+        firstName: rawFirstName,
+        lastName: rawLastName,
+        businessName,
+        email,
+        streetAddress,
+        addressLine2,
+        city,
+        postalCode,
+        country,
+      } = req.body;
+
+      // Derive a display name: prefer explicit first/last, then the legacy `name` field, then businessName
+      const effectiveName = name
+        || `${rawFirstName || ''} ${rawLastName || ''}`.trim()
+        || businessName
+        || '';
+
+      if (!phoneNumber) {
+        return res.status(400).json({ message: "Phone number is required" });
       }
 
       // Automatically format phone number to international format
@@ -272,20 +290,31 @@ export function registerCustomerRoutes(app: Express): void {
         return res.status(404).json({ message: "Customer group not found" });
       }
 
+      // Resolve firstName / lastName: explicit fields win, then fall back to parsing `name`
+      const { firstName: parsedFirst, lastName: parsedLast } = parseCustomerName(effectiveName);
+      const resolvedFirstName = rawFirstName || parsedFirst;
+      const resolvedLastName = rawLastName || parsedLast;
+
       // Create or find customer with formatted phone number
       let customer = await storage.getUserByPhone(formattedPhoneNumber);
       let isNewCustomer = false;
-      const { firstName: parsedFirst, lastName: parsedLast } = parseCustomerName(name);
-      const displayNameValue = name.trim() || null;
+      const displayNameValue = `${resolvedFirstName || ''} ${resolvedLastName || ''}`.trim() || businessName || effectiveName || null;
       
       if (!customer) {
         // Create a new customer/retailer account
         customer = await storage.createCustomer({
           phoneNumber: formattedPhoneNumber,
-          firstName: parsedFirst,
-          lastName: parsedLast,
+          firstName: resolvedFirstName,
+          lastName: resolvedLastName,
+          email: email || '',
           role: "retailer",
           wholesalerId: targetUserId, // Link customer to their wholesaler
+          ...(businessName ? { businessName } : {}),
+          ...(streetAddress ? { streetAddress } : {}),
+          ...(addressLine2 ? { addressLine2 } : {}),
+          ...(city ? { city } : {}),
+          ...(postalCode ? { postalCode } : {}),
+          ...(country !== undefined ? { country: country || null } : {}),
         });
         isNewCustomer = true;
         // Create WCR for this wholesaler with the per-wholesaler name
@@ -345,7 +374,7 @@ export function registerCustomerRoutes(app: Express): void {
 
           // 1. Send SMS notification with portal access instructions
           try {
-            const smsMessage = `🎉 Welcome to ${businessName}!\n\nHi ${name}! You've been added to our wholesale customer network.\n\n${accessInstructions}\n\nYou can browse products, place orders, and track deliveries through our customer portal.\n\nQuestions? Contact us anytime!`;
+            const smsMessage = `🎉 Welcome to ${businessName}!\n\nHi ${effectiveName}! You've been added to our wholesale customer network.\n\n${accessInstructions}\n\nYou can browse products, place orders, and track deliveries through our customer portal.\n\nQuestions? Contact us anytime!`;
             
             // Use Twilio directly for welcome message since it's not a verification code
             if (ReliableSMSService.isConfigured()) {
@@ -369,7 +398,7 @@ export function registerCustomerRoutes(app: Express): void {
           if (customer!.email) {
             try {
               const emailSubject = `Welcome to ${businessName} - Your Wholesale Portal Access`;
-              const welcomeBody = `${emailHeading('Welcome!', { size: '22px', color: '#10b981' })}<p style="font-size:16px;margin:0 0 8px">Dear ${escapeHtml(name)},</p><p style="margin:0 0 20px">You've been successfully added to our wholesale customer network. We're delighted to have you on board!</p>${emailCard(`${emailHeading('Your Benefits', { size: '16px' })}<ul style="margin:0;padding-left:20px;color:#374151;font-size:14px"><li style="margin-bottom:6px">Browse our complete product catalog</li><li style="margin-bottom:6px">Access special wholesale pricing</li><li style="margin-bottom:6px">Place orders 24/7 through our customer portal</li><li style="margin-bottom:6px">Track your order status and delivery</li><li>Receive instant stock updates and promotions</li></ul>`, { borderColor: '#a7f3d0', bgColor: '#ecfdf5' })}${emailCard(`${emailHeading('Getting Started', { size: '16px' })}<p style="margin:0;font-size:14px;color:#374151;white-space:pre-line">${escapeHtml(accessInstructions)}</p>`)}${emailCard(`${emailHeading('What You Can Do', { size: '16px' })}<ul style="margin:0;padding-left:20px;color:#374151;font-size:14px"><li style="margin-bottom:6px">View real-time product availability</li><li style="margin-bottom:6px">Compare prices and specifications</li><li style="margin-bottom:6px">Manage your order history</li><li style="margin-bottom:6px">Update your delivery preferences</li><li>Access your account information</li></ul>`)}<p style="margin:20px 0 0">If you have any questions or need assistance, please don't hesitate to contact us. We're here to help you succeed!</p>`;
+              const welcomeBody = `${emailHeading('Welcome!', { size: '22px', color: '#10b981' })}<p style="font-size:16px;margin:0 0 8px">Dear ${escapeHtml(effectiveName)},</p><p style="margin:0 0 20px">You've been successfully added to our wholesale customer network. We're delighted to have you on board!</p>${emailCard(`${emailHeading('Your Benefits', { size: '16px' })}<ul style="margin:0;padding-left:20px;color:#374151;font-size:14px"><li style="margin-bottom:6px">Browse our complete product catalog</li><li style="margin-bottom:6px">Access special wholesale pricing</li><li style="margin-bottom:6px">Place orders 24/7 through our customer portal</li><li style="margin-bottom:6px">Track your order status and delivery</li><li>Receive instant stock updates and promotions</li></ul>`, { borderColor: '#a7f3d0', bgColor: '#ecfdf5' })}${emailCard(`${emailHeading('Getting Started', { size: '16px' })}<p style="margin:0;font-size:14px;color:#374151;white-space:pre-line">${escapeHtml(accessInstructions)}</p>`)}${emailCard(`${emailHeading('What You Can Do', { size: '16px' })}<ul style="margin:0;padding-left:20px;color:#374151;font-size:14px"><li style="margin-bottom:6px">View real-time product availability</li><li style="margin-bottom:6px">Compare prices and specifications</li><li style="margin-bottom:6px">Manage your order history</li><li style="margin-bottom:6px">Update your delivery preferences</li><li>Access your account information</li></ul>`)}<p style="margin:20px 0 0">If you have any questions or need assistance, please don't hesitate to contact us. We're here to help you succeed!</p>`;
 
               const emailSuccess = await sendEmail({
                 to: customer!.email!,
@@ -390,7 +419,7 @@ export function registerCustomerRoutes(app: Express): void {
 
           // 3. Send WhatsApp message if enabled (existing functionality)
           try {
-            const whatsappMessage = `🎉 Welcome to ${businessName}!\n\nHi ${name}! 👋\n\nYou've been added to our customer network and can now:\n\n🛒 Browse our latest products\n📱 Receive instant stock updates\n💬 Place orders directly via WhatsApp\n🚚 Track your deliveries\n💰 Access special wholesale pricing\n\n🌐 **Shop Online**: ${portalUrl}\nVisit our customer portal to browse products, place orders, and track deliveries!\n\n${accessInstructions}\n\nWe'll keep you updated with:\n• New product arrivals\n• Special promotions\n• Stock availability alerts\n\nQuestions? Just reply to this message!\n\n✨ This message was powered by Quikpik Merchant`;
+            const whatsappMessage = `🎉 Welcome to ${businessName}!\n\nHi ${effectiveName}! 👋\n\nYou've been added to our customer network and can now:\n\n🛒 Browse our latest products\n📱 Receive instant stock updates\n💬 Place orders directly via WhatsApp\n🚚 Track your deliveries\n💰 Access special wholesale pricing\n\n🌐 **Shop Online**: ${portalUrl}\nVisit our customer portal to browse products, place orders, and track deliveries!\n\n${accessInstructions}\n\nWe'll keep you updated with:\n• New product arrivals\n• Special promotions\n• Stock availability alerts\n\nQuestions? Just reply to this message!\n\n✨ This message was powered by Quikpik Merchant`;
 
             const user = await storage.getUserById(targetUserId);
             if (user?.whatsappEnabled && wholesaler?.whatsappAccessToken && wholesaler?.whatsappBusinessPhoneId) {
@@ -422,7 +451,7 @@ export function registerCustomerRoutes(app: Express): void {
       
       res.json({
         success: true,
-        message: isNewCustomer ? `${name} added to ${group.name} and welcome message sent!` : `${name} added to ${group.name} successfully`,
+        message: isNewCustomer ? `${effectiveName} added to ${group.name} and welcome message sent!` : `${effectiveName} added to ${group.name} successfully`,
         customer: {
           id: customer!.id,
           name: customer!.firstName,
