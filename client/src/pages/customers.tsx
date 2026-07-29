@@ -80,8 +80,8 @@ const addToGroupFormSchema = z.object({
 
 const addCustomerFormSchema = z.object({
   firstName: z.string().optional().or(z.literal("")),
-  lastName: z.string().optional(),
-  businessName: z.string().optional(),
+  lastName: z.string().optional().or(z.literal("")),
+  businessName: z.string().optional().or(z.literal("")),
   email: z.string().email("Please enter a valid email address").optional().or(z.literal("")),
   phoneNumber: z.string()
     .min(10, "Valid phone number is required")
@@ -92,7 +92,13 @@ const addCustomerFormSchema = z.object({
   city: z.string().optional().or(z.literal("")),
   postalCode: z.string().optional().or(z.literal("")),
   country: z.string().optional().or(z.literal("")),
-});
+}).refine(
+  (data) => !!(data.firstName?.trim() || data.lastName?.trim() || data.businessName?.trim()),
+  {
+    message: "Please enter at least a first name, last name, or business name",
+    path: ["firstName"],
+  }
+);
 
 // Type definitions
 type EditCustomerFormData = z.infer<typeof editCustomerFormSchema>;
