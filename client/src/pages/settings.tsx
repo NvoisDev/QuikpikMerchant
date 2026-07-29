@@ -1484,7 +1484,7 @@ export default function Settings() {
   }, [user?.storeSlug]);
 
   const storeIdentifier = user?.storeSlug || user?.id || '';
-  const storeShareUrl = `https://quikpik.app/customer/${storeIdentifier}`;
+  const storeShareUrl = `https://quikpik.app/w/${storeIdentifier}`;
 
   const checkSlugAvailability = useCallback((value: string) => {
     if (slugCheckTimer.current) clearTimeout(slugCheckTimer.current);
@@ -1506,7 +1506,7 @@ export default function Settings() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
       setSlugStatus('idle');
-      toast({ title: 'Store URL saved', description: `Your store link is now quikpik.app/customer/${slugInput.trim() || user?.id}` });
+      toast({ title: 'Store URL saved', description: `Your store link is now quikpik.app/w/${slugInput.trim() || user?.id}` });
     },
     onError: (err: any) => {
       const msg = err?.message || 'Failed to save store URL.';
@@ -2802,9 +2802,9 @@ export default function Settings() {
                       <Label className="text-xs text-gray-600">Your custom URL slug</Label>
                       <div className="flex items-center gap-2">
                         <div className="relative flex-1">
-                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 pointer-events-none select-none">quikpik.app/customer/</span>
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 pointer-events-none select-none">quikpik.app/w/</span>
                           <Input
-                            className="pl-[172px] pr-8 text-sm font-mono"
+                            className="pl-[120px] pr-8 text-sm font-mono"
                             placeholder="my-store"
                             value={slugInput}
                             onChange={e => {
@@ -2834,7 +2834,7 @@ export default function Settings() {
                       {slugStatus === 'available' && <p className="text-xs text-green-600">Available! Hit Save to use this URL.</p>}
                       {user?.storeSlug && (
                         <p className="text-xs text-gray-400">
-                          Old link still works: quikpik.app/customer/{user?.id}
+                          Old link still works: quikpik.app/customer/{user?.id} (legacy)
                         </p>
                       )}
                     </div>
@@ -2878,7 +2878,7 @@ export default function Settings() {
                         </p>
                       </div>
                       <p className="text-xs text-gray-400 text-center break-all max-w-xs">
-                        quikpik.app/customer/{storeIdentifier}
+                        quikpik.app/w/{storeIdentifier}
                       </p>
                       <div className="flex gap-3">
                         <Button variant="outline" onClick={downloadQR} className="flex items-center gap-2">
