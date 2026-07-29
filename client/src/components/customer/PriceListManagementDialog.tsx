@@ -104,7 +104,7 @@ interface PlanLimits {
 
 interface PriceListManagementDialogProps {
   customers: Customer[];
-  user: { id: string; role?: string } | null;
+  user: { id: string; role?: string; storeSlug?: string | null } | null;
   customerGroups: CustomerGroup[];
   planLimits: PlanLimits | undefined;
   planLimitsLoading: boolean;
@@ -330,6 +330,10 @@ export function PriceListManagementDialog({
     const url = `/api/products/catalogue-export?format=${format}`;
     const fileName = `Standard Price List.${ext}`;
 
+    const storeSlug = (user?.role === 'team_member' ? null : user?.storeSlug) || user?.id;
+    const publicUrl = `${window.location.origin}/w/${storeSlug}`;
+    const shareText = `Browse our catalogue and place orders at: ${publicUrl}`;
+
     if (typeof navigator.share !== 'function') {
       const a = document.createElement('a');
       a.href = url;
@@ -348,9 +352,9 @@ export function PriceListManagementDialog({
       const file = new File([blob], fileName, { type: mimeType });
 
       if (navigator.canShare?.({ files: [file] })) {
-        await navigator.share({ title: 'Standard Price List', files: [file] });
+        await navigator.share({ title: 'Standard Price List', text: shareText, url: publicUrl, files: [file] });
       } else {
-        await navigator.share({ title: 'Standard Price List', url: window.location.origin });
+        await navigator.share({ title: 'Standard Price List', text: shareText, url: publicUrl });
       }
     } catch (err) {
       if ((err as { name?: string })?.name === 'AbortError') {
