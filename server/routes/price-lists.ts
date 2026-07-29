@@ -106,6 +106,7 @@ async function getPriceListRows(wholesalerId: string, listId: number) {
 async function fetchWholesalerBranding(wholesalerId: string) {
   const wholesaler = await storage.getUser(wholesalerId);
   const businessName = wholesaler?.businessName || 'Price List';
+  const storeUrl = `https://quikpik.app/w/${wholesaler?.storeSlug || wholesalerId}`;
   const logoUrl = getEmailLogoUrl(wholesalerId, wholesaler?.logoType, wholesaler?.logoUrl, wholesaler?.updatedAt);
   let logoBuffer: Buffer | undefined;
   let logoExtension: 'png' | 'jpeg' | 'gif' | undefined;
@@ -113,7 +114,7 @@ async function fetchWholesalerBranding(wholesalerId: string) {
     const logoData = await fetchLogoBuffer(logoUrl);
     if (logoData) { logoBuffer = logoData.buffer; logoExtension = logoData.extension; }
   }
-  return { businessName, logoBuffer, logoExtension };
+  return { businessName, storeUrl, logoBuffer, logoExtension };
 }
 
 async function buildPriceListWorkbook(wholesalerId: string, listId: number) {
@@ -127,11 +128,11 @@ async function buildPriceListWorkbook(wholesalerId: string, listId: number) {
 
 async function buildPriceListPdf(wholesalerId: string, listId: number) {
   const { list, rows, showRrp } = await getPriceListRows(wholesalerId, listId);
-  const { businessName, logoBuffer } = await fetchWholesalerBranding(wholesalerId);
+  const { businessName, storeUrl, logoBuffer } = await fetchWholesalerBranding(wholesalerId);
   const safeName = list.name.replace(/[/\\?%*:|"<>]/g, "-");
   const filename = `${safeName} - Price List.pdf`;
   const dateStr = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
-  const pdfBuffer = await buildBrandedPdf({ rows, subtitle: `${list.name} · ${dateStr}`, logoBuffer, businessName, showRrp });
+  const pdfBuffer = await buildBrandedPdf({ rows, subtitle: `${list.name} · ${dateStr}`, logoBuffer, businessName, showRrp, storeUrl });
   return { pdfBuffer, filename };
 }
 

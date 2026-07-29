@@ -234,6 +234,7 @@ export async function buildBrandedPdf({
   showRrp = false,
   showRrpMargin = false,
   showRetailerEconomics = false,
+  storeUrl,
 }: {
   rows: PriceRow[];
   subtitle: string;
@@ -242,6 +243,7 @@ export async function buildBrandedPdf({
   showRrp?: boolean;
   showRrpMargin?: boolean;
   showRetailerEconomics?: boolean;
+  storeUrl?: string;
 }): Promise<Buffer> {
   const PDFDocument = (await import('pdfkit')).default;
 
@@ -401,16 +403,19 @@ export async function buildBrandedPdf({
       y += 18;
     });
 
+    const footerDateLine = `Generated ${new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })} · Prices subject to change`;
     doc
       .fillColor('#9ca3af')
       .font('Helvetica')
       .fontSize(7)
-      .text(
-        `Generated ${new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })} · Prices subject to change`,
-        margin,
-        doc.page.height - 45,
-        { align: 'center', width: pageW },
-      );
+      .text(footerDateLine, margin, doc.page.height - 45, { align: 'center', width: pageW });
+
+    if (storeUrl) {
+      doc
+        .fillColor('#16a34a')
+        .fontSize(7)
+        .text(storeUrl, margin, doc.page.height - 33, { align: 'center', width: pageW, link: storeUrl, underline: true });
+    }
 
     doc.end();
   });

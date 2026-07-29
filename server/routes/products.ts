@@ -195,7 +195,8 @@ export function registerProductRoutes(app: Express): void {
       const safeName = businessName.replace(/[/\\?%*:|"<>]/g, '-');
 
       if (format === 'pdf') {
-        const pdfBuffer = await buildBrandedPdf({ rows, subtitle, logoBuffer, businessName, showRrp, showRrpMargin, showRetailerEconomics });
+        const storeUrl = `https://quikpik.app/w/${wholesaler?.storeSlug || wholesalerId}`;
+        const pdfBuffer = await buildBrandedPdf({ rows, subtitle, logoBuffer, businessName, showRrp, showRrpMargin, showRetailerEconomics, storeUrl });
         res.setHeader('Content-Type', 'application/pdf');
         res.setHeader('Content-Disposition', `attachment; filename="${safeName} - Standard Price List.pdf"`);
         return res.send(pdfBuffer);
