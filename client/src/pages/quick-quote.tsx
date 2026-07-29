@@ -2875,6 +2875,29 @@ export default function QuickQuote() {
                           </Button>
                         ))}
                       </div>
+                      {/* Default payment terms hint — only shown when a preset is active */}
+                      {(() => {
+                        const PRESETS = [7, 14, 30, 60];
+                        const activePreset = PRESETS.includes(balanceDueDays) ? balanceDueDays : null;
+                        if (activePreset === null) return null;
+                        const def = user?.balanceDueDays;
+                        if (def == null || def <= 0) return null;
+                        const label = `${def} day${def !== 1 ? 's' : ''}`;
+                        return (
+                          <p className="text-xs text-gray-400">
+                            Your default: <span className="font-medium text-gray-500">{label}</span>
+                            {activePreset !== def && (
+                              <button
+                                type="button"
+                                onClick={() => setBalanceDueDays(def as 0 | 7 | 14 | 30 | 60)}
+                                className="ml-1.5 text-blue-500 hover:text-blue-700 underline"
+                              >
+                                reset
+                              </button>
+                            )}
+                          </p>
+                        );
+                      })()}
                       {balanceDueDays > 0 && (
                         <p className="text-xs text-gray-500">
                           {depositPercentage === 100
