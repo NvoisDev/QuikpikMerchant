@@ -449,6 +449,35 @@ describe('sendPaymentChasers — partial-payment grace-period suppression', () =
           ) WHERE id = ${GRACE_WHOLESALER_ID}`
     );
   });
+
+  it('grace window wins over chaserMaxDays — suppresses when inside grace even though within maxDays', async () => {
+    // Set chaserMaxDays = 30: the order (10 days overdue) would normally pass the maxDays check.
+    // Grace window (3 days) must still suppress the chaser first.
+    await db.execute(
+      sql`UPDATE users SET notification_preferences = jsonb_set(
+            notification_preferences,
+            '{chaserMaxDays}',
+            '30'
+          ) WHERE id = ${GRACE_WHOLESALER_ID}`
+    );
+
+    // Updated 1 day ago — inside the 3-day grace window but within the 30-day maxDays limit
+    await makeGraceOrder(1);
+
+    await sendPaymentChasers();
+
+    expect(sendChaserEmail).not.toHaveBeenCalled();
+    expect(ReliableSMSService.sendMarketingSMS).not.toHaveBeenCalled();
+
+    // Restore chaserMaxDays to null so later tests are unaffected
+    await db.execute(
+      sql`UPDATE users SET notification_preferences = jsonb_set(
+            notification_preferences,
+            '{chaserMaxDays}',
+            'null'
+          ) WHERE id = ${GRACE_WHOLESALER_ID}`
+    );
+  });
 });
 
 describe('runAutoFulfilJob — cancellation guards', () => {
