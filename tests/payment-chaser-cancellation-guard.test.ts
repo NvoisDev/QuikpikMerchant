@@ -488,6 +488,49 @@ describe('sendPaymentChasers — partial-payment grace-period suppression', () =
     );
   });
 
+  it('chaserMaxDays cutoff fires when order is outside the grace window but beyond maxDays limit', async () => {
+    // Set chaserMaxDays = 5: the order will be 9 days overdue (beyond the limit).
+    // Updated 5 days ago — outside the 3-day grace window, so grace does NOT suppress.
+    // The maxDays cutoff must silence the chaser instead.
+    await db.execute(
+      sql`UPDATE users SET notification_preferences = jsonb_set(
+            notification_preferences,
+            '{chaserMaxDays}',
+            '5'
+          ) WHERE id = ${GRACE_WHOLESALER_ID}`
+    );
+
+    // Switch channel to 'both' so we can assert neither email nor SMS fires
+    await db.execute(
+      sql`UPDATE users SET notification_preferences = jsonb_set(
+            notification_preferences,
+            '{chaserChannel}',
+            '"both"'
+          ) WHERE id = ${GRACE_WHOLESALER_ID}`
+    );
+
+    // Updated 5 days ago — outside the 3-day grace window; order is 9 days overdue (beyond chaserMaxDays = 5)
+    await makeGraceOrder(5);
+
+    await sendPaymentChasers();
+
+    expect(sendChaserEmail).not.toHaveBeenCalled();
+    expect(ReliableSMSService.sendMarketingSMS).not.toHaveBeenCalled();
+
+    // Restore both settings so later tests are unaffected
+    await db.execute(
+      sql`UPDATE users SET notification_preferences = jsonb_set(
+            jsonb_set(
+              notification_preferences,
+              '{chaserMaxDays}',
+              'null'
+            ),
+            '{chaserChannel}',
+            '"email"'
+          ) WHERE id = ${GRACE_WHOLESALER_ID}`
+    );
+  });
+
   it('suppresses SMS when chaserChannel is "sms", wholesaler has no phone number, and updatedAt is within the grace window', async () => {
     // Set channel to 'sms' and clear the phone number so the SMS branch would
     // encounter a missing phone before it gets to try sending.
