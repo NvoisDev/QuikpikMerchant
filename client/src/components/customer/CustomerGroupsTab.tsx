@@ -101,6 +101,8 @@ interface DeviceContact {
   id: string;
   name: string;
   phoneNumber: string;
+  email?: string;
+  businessName?: string;
 }
 
 interface ApiError extends Error {
@@ -437,7 +439,8 @@ export function CustomerGroupsTab({
             firstName: importFirst || contact.name,
             lastName: importLast,
             phoneNumber: contact.phoneNumber,
-            email: ''
+            email: contact.email || '',
+            businessName: contact.businessName || '',
           }
         });
       }
@@ -1110,7 +1113,7 @@ export function CustomerGroupsTab({
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Paste Contact List</label>
                     <Textarea
-                      placeholder="Paste contacts here, one per line:&#10;John Smith, +447123456789&#10;Jane Doe, +447987654321&#10;Bob Wilson, +447555123456"
+                      placeholder="Paste contacts here, one per line:&#10;John Smith, +447123456789&#10;Jane Doe, +447987654321, jane@example.com&#10;Bob Wilson, +447555123456, bob@example.com, Acme Ltd"
                       rows={4}
                       className="text-sm"
                       onChange={(e) => {
@@ -1121,14 +1124,16 @@ export function CustomerGroupsTab({
                           return {
                             id: `paste_${index}`,
                             name: parts[0] || `Contact ${index + 1}`,
-                            phoneNumber: parts[1] || ''
+                            phoneNumber: parts[1] || '',
+                            email: parts[2] || undefined,
+                            businessName: parts[3] || undefined,
                           };
                         }).filter(contact => contact.phoneNumber);
                         setDeviceContacts(contacts);
                       }}
                     />
                     <p className="text-xs text-gray-500">
-                      Format: Name, Phone Number (one per line)
+                      Format: Name, Phone Number, Email (optional), Business Name (optional) — one per line
                     </p>
                   </div>
                 </div>
@@ -1178,8 +1183,8 @@ export function CustomerGroupsTab({
                             {isSelected ? <Check className="h-4 w-4" /> : contact.name[0]?.toUpperCase()}
                           </div>
                           <div>
-                            <p className="font-medium">{contact.name}</p>
-                            <p className="text-sm text-gray-600">{contact.phoneNumber}</p>
+                            <p className="font-medium">{contact.name}{contact.businessName ? ` · ${contact.businessName}` : ''}</p>
+                            <p className="text-sm text-gray-600">{contact.phoneNumber}{contact.email ? ` · ${contact.email}` : ''}</p>
                           </div>
                         </div>
                       </div>
