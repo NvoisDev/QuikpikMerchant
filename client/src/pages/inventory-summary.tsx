@@ -90,7 +90,7 @@ function KpiTile({
         </div>
         <div className="min-w-0">
           <p className="text-xs text-gray-500 font-medium truncate">{label}</p>
-          <p className="text-lg font-bold text-gray-900 truncate">{value}</p>
+          <p className="text-base sm:text-lg font-bold text-gray-900 break-words">{value}</p>
           {sub && <p className="text-xs text-gray-400 truncate">{sub}</p>}
         </div>
       </CardContent>
