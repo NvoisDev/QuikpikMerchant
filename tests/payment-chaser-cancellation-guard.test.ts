@@ -478,6 +478,41 @@ describe('sendPaymentChasers — partial-payment grace-period suppression', () =
           ) WHERE id = ${GRACE_WHOLESALER_ID}`
     );
   });
+
+  it('suppresses SMS when chaserChannel is "sms", wholesaler has no phone number, and updatedAt is within the grace window', async () => {
+    // Set channel to 'sms' and clear the phone number so the SMS branch would
+    // encounter a missing phone before it gets to try sending.
+    await db.execute(
+      sql`UPDATE users
+          SET phone_number = NULL,
+              notification_preferences = jsonb_set(
+                notification_preferences,
+                '{chaserChannel}',
+                '"sms"'
+              )
+          WHERE id = ${GRACE_WHOLESALER_ID}`
+    );
+
+    // Updated 1 day ago — inside the 3-day grace window
+    await makeGraceOrder(1);
+
+    // Must not throw and must not call either send function
+    await expect(sendPaymentChasers()).resolves.not.toThrow();
+
+    expect(ReliableSMSService.sendMarketingSMS).not.toHaveBeenCalled();
+    expect(sendChaserEmail).not.toHaveBeenCalled();
+
+    // Restore channel to 'email' so later tests are unaffected
+    await db.execute(
+      sql`UPDATE users
+          SET notification_preferences = jsonb_set(
+            notification_preferences,
+            '{chaserChannel}',
+            '"email"'
+          )
+          WHERE id = ${GRACE_WHOLESALER_ID}`
+    );
+  });
 });
 
 describe('runAutoFulfilJob — cancellation guards', () => {
