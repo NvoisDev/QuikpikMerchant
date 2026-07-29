@@ -316,10 +316,19 @@ async function cleanupGraceUsers() {
 /**
  * Seed a partial-payment overdue order for the grace-period wholesaler.
  * daysSinceUpdate controls how long ago updatedAt is set relative to now.
+ * Pass customerEmail: null to simulate an order with no customer email address.
  */
-async function makeGraceOrder(daysSinceUpdate: number): Promise<number> {
+async function makeGraceOrder(
+  daysSinceUpdate: number,
+  overrides: { customerEmail?: string | null } = {},
+): Promise<number> {
   const tenDaysAgo = new Date(Date.now() - 10 * 24 * 60 * 60 * 1000);
   const updatedAt = new Date(Date.now() - daysSinceUpdate * 24 * 60 * 60 * 1000);
+
+  const customerEmail =
+    'customerEmail' in overrides
+      ? overrides.customerEmail
+      : 'zz_test_chasergrd_grace_cust@example.com';
 
   const [order] = await db
     .insert(orders)
@@ -328,7 +337,7 @@ async function makeGraceOrder(daysSinceUpdate: number): Promise<number> {
       wholesalerId: GRACE_WHOLESALER_ID,
       retailerId: GRACE_CUSTOMER_ID,
       customerName: 'zz_grace Customer',
-      customerEmail: 'zz_test_chasergrd_grace_cust@example.com',
+      customerEmail: customerEmail ?? null,
       status: 'pending',
       paymentStatus: 'part_paid',
       fulfillmentType: 'pickup',
@@ -512,6 +521,19 @@ describe('sendPaymentChasers — partial-payment grace-period suppression', () =
           )
           WHERE id = ${GRACE_WHOLESALER_ID}`
     );
+  });
+
+  it('suppresses email when chaserChannel is "email", order has no customerEmail, and updatedAt is within the grace window', async () => {
+    // The grace-window continue must fire before the code tries to read customerEmail,
+    // so a NULL address must never cause a throw or an erroneous send.
+
+    // Updated 1 day ago — inside the 3-day grace window; channel is already 'email'
+    await makeGraceOrder(1, { customerEmail: null });
+
+    // Must not throw and must not call sendChaserEmail
+    await expect(sendPaymentChasers()).resolves.not.toThrow();
+
+    expect(sendChaserEmail).not.toHaveBeenCalled();
   });
 });
 
