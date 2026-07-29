@@ -2655,15 +2655,15 @@ export default function Settings() {
                     </div>
 
                     <div className="border border-gray-200 rounded-lg p-4 space-y-4">
-                      <div className="flex items-center justify-between">
-                        <div>
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="min-w-0">
                           <p className="text-sm font-medium text-gray-800">Offer Delivery</p>
                           <p className="text-xs text-gray-500 mt-0.5">When enabled, customers can choose delivery at checkout</p>
                         </div>
                         <button
                           type="button"
                           onClick={() => setDeliveryEnabled(!deliveryEnabled)}
-                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${deliveryEnabled ? 'bg-green-600' : 'bg-gray-300'}`}
+                          className={`relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors ${deliveryEnabled ? 'bg-green-600' : 'bg-gray-300'}`}
                         >
                           <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${deliveryEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
                         </button>
