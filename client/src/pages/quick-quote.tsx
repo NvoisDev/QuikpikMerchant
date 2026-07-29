@@ -2239,6 +2239,11 @@ export default function QuickQuote() {
                                   Per Unit
                                   {unitPriceChanged && <span className="text-[10px] bg-green-100 text-green-700 px-1 rounded">List</span>}
                                 </div>
+                                {(product.packQuantity || product.unitSize) && (
+                                  <div className="text-[10px] text-gray-400 leading-none mt-0.5">
+                                    {product.packQuantity ? `${product.packQuantity}×` : ''}{product.unitSize ? `${formatWeight(parseFloat(product.unitSize))}${product.unitOfMeasure ?? ''}` : ''}
+                                  </div>
+                                )}
                                 <div>
                                   <div className={`font-semibold text-sm ${unitInStock ? 'text-green-600' : 'text-gray-400'}`}>
                                     {promoUnitPrice !== null ? (
@@ -2312,6 +2317,11 @@ export default function QuickQuote() {
                                 onClick={() => palletInStock && addProduct(product, 'pallets')}
                               >
                                 <div className={`text-xs font-medium ${palletInStock ? 'text-blue-600' : 'text-gray-400'}`}>Per Pallet</div>
+                                {(product.packQuantity || product.unitSize) && (
+                                  <div className="text-[10px] text-gray-400 leading-none mt-0.5">
+                                    {product.packQuantity ? `${product.packQuantity}×` : ''}{product.unitSize ? `${formatWeight(parseFloat(product.unitSize))}${product.unitOfMeasure ?? ''}` : ''}
+                                  </div>
+                                )}
                                 <div>
                                   <div className={`font-semibold text-sm ${palletInStock ? 'text-blue-600' : 'text-gray-400'}`}>
                                     {promoPalletPrice !== null ? (
