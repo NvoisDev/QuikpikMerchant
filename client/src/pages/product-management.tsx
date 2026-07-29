@@ -1041,57 +1041,60 @@ export default function ProductManagement() {
     },
   });
 
-  const filteredProducts = (products?.filter((product) =>
-    productMatchesFilters(product, { searchQuery, statusFilter, categoryFilter })
-  ) || []).sort((a, b) => {
-    if (marginSort === "name_asc" || marginSort === "name_desc") {
-      const nameA = (a.name || "").toLowerCase().trim();
-      const nameB = (b.name || "").toLowerCase().trim();
-      if (!nameA && !nameB) return 0;
-      if (!nameA) return 1;
-      if (!nameB) return -1;
-      const cmp = nameA.localeCompare(nameB);
-      return marginSort === "name_asc" ? cmp : -cmp;
-    }
-    if (marginSort === "asc" || marginSort === "desc") {
-      const getMargin = (p: Product): number | null => {
-        const price = parseFloat(String(p.price));
-        const effectiveCost = (p as any).weightedAvgCost ?? p.costPrice ?? null;
-        if (effectiveCost === null || effectiveCost === undefined || effectiveCost === "") return null;
-        const cost = parseFloat(String(effectiveCost));
-        if (!isFinite(price) || !isFinite(cost) || price <= 0) return null;
-        return ((price - cost) / price) * 100;
-      };
-      const ma = getMargin(a);
-      const mb = getMargin(b);
-      if (ma === null && mb === null) return 0;
-      if (ma === null) return 1;
-      if (mb === null) return -1;
-      return marginSort === "asc" ? ma - mb : mb - ma;
-    }
-    if (marginSort === "sold_asc" || marginSort === "sold_desc") {
-      const sa = (a as ProductWithBatches).percentSold ?? null;
-      const sb = (b as ProductWithBatches).percentSold ?? null;
-      if (sa === null && sb === null) return 0;
-      if (sa === null) return 1;
-      if (sb === null) return -1;
-      return marginSort === "sold_asc" ? sa - sb : sb - sa;
-    }
-    if (statusFilter === "expiring") {
-      const getExpiryTime = (p: ProductWithBatches): number => {
-        const fromExpiryDate = p.expiryDate ? new Date(p.expiryDate).getTime() : Infinity;
-        const fromNearestExpiry = p.nearestExpiry ? new Date(p.nearestExpiry).getTime() : Infinity;
-        return Math.min(fromExpiryDate, fromNearestExpiry);
-      };
-      return getExpiryTime(a) - getExpiryTime(b);
-    }
-    return 0;
-  });
+  const filteredProducts = useMemo(() => {
+    const getMargin = (p: Product): number | null => {
+      const price = parseFloat(String(p.price));
+      const effectiveCost = (p as any).weightedAvgCost ?? p.costPrice ?? null;
+      if (effectiveCost === null || effectiveCost === undefined || effectiveCost === "") return null;
+      const cost = parseFloat(String(effectiveCost));
+      if (!isFinite(price) || !isFinite(cost) || price <= 0) return null;
+      return ((price - cost) / price) * 100;
+    };
 
-  const hasCostPrice = filteredProducts.some(
+    return (products?.filter((product) =>
+      productMatchesFilters(product, { searchQuery, statusFilter, categoryFilter })
+    ) || []).sort((a, b) => {
+      if (marginSort === "name_asc" || marginSort === "name_desc") {
+        const nameA = (a.name || "").toLowerCase().trim();
+        const nameB = (b.name || "").toLowerCase().trim();
+        if (!nameA && !nameB) return 0;
+        if (!nameA) return 1;
+        if (!nameB) return -1;
+        const cmp = nameA.localeCompare(nameB);
+        return marginSort === "name_asc" ? cmp : -cmp;
+      }
+      if (marginSort === "asc" || marginSort === "desc") {
+        const ma = getMargin(a);
+        const mb = getMargin(b);
+        if (ma === null && mb === null) return 0;
+        if (ma === null) return 1;
+        if (mb === null) return -1;
+        return marginSort === "asc" ? ma - mb : mb - ma;
+      }
+      if (marginSort === "sold_asc" || marginSort === "sold_desc") {
+        const sa = (a as ProductWithBatches).percentSold ?? null;
+        const sb = (b as ProductWithBatches).percentSold ?? null;
+        if (sa === null && sb === null) return 0;
+        if (sa === null) return 1;
+        if (sb === null) return -1;
+        return marginSort === "sold_asc" ? sa - sb : sb - sa;
+      }
+      if (statusFilter === "expiring") {
+        const getExpiryTime = (p: ProductWithBatches): number => {
+          const fromExpiryDate = p.expiryDate ? new Date(p.expiryDate).getTime() : Infinity;
+          const fromNearestExpiry = p.nearestExpiry ? new Date(p.nearestExpiry).getTime() : Infinity;
+          return Math.min(fromExpiryDate, fromNearestExpiry);
+        };
+        return getExpiryTime(a) - getExpiryTime(b);
+      }
+      return 0;
+    });
+  }, [products, searchQuery, statusFilter, categoryFilter, marginSort]);
+
+  const hasCostPrice = useMemo(() => filteredProducts.some(
     (p) => (p as any).weightedAvgCost != null ||
            (p.costPrice !== null && p.costPrice !== undefined && p.costPrice !== "")
-  );
+  ), [filteredProducts]);
 
   const calcMarginPct = (price: string | number, costPrice: string | number): number | null => {
     const p = parseFloat(String(price));
