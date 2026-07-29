@@ -1,5 +1,5 @@
 import { db } from './db';
-import { orders, users, orderItems, products, businessProfiles } from '@shared/schema';
+import { orders, users, orderItems, products, businessProfiles, orderCancellationRequests } from '@shared/schema';
 import { and, gt, isNotNull, sql, eq, ne, isNull, or, lt, inArray } from 'drizzle-orm';
 import { storage } from './storage';
 import { sendPaymentReminderEmail, sendChaserEmail } from './sendgrid-service';
@@ -493,6 +493,7 @@ export async function runAutoFulfilJob(): Promise<number> {
       cutoff.setDate(cutoff.getDate() - thresholdDays);
 
       // 2. Find qualifying orders for this wholesaler
+      //    Exclude orders with an open cancellation request or a partial refund in progress.
       const qualifying = await db
         .select({ id: orders.id, orderNumber: orders.orderNumber })
         .from(orders)
@@ -501,6 +502,19 @@ export async function runAutoFulfilJob(): Promise<number> {
             eq(orders.wholesalerId, wholesaler.id),
             inArray(orders.status, ['paid', 'processing']),
             lt(orders.createdAt, cutoff),
+            // Skip orders that have a pending cancellation / dispute
+            sql`NOT EXISTS (
+              SELECT 1 FROM ${orderCancellationRequests}
+              WHERE ${orderCancellationRequests.orderId} = ${orders.id}
+              AND ${orderCancellationRequests.status} = 'pending'
+            )`,
+            // Skip orders with a partial refund in progress
+            // (amountRefunded > 0 but not yet fully refunded)
+            or(
+              isNull(orders.amountRefunded),
+              sql`${orders.amountRefunded} <= 0`,
+              eq(orders.paymentStatus, 'refunded'),
+            ),
           )
         );
 
