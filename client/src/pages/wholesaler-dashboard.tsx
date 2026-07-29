@@ -83,9 +83,9 @@ function InventoryKpiCard() {
       >
         <AnimatedCardContent className="p-3 sm:p-6">
           <div className="flex items-center justify-between">
-            <div>
+            <div className="min-w-0">
               <p className="text-white/80 text-xs sm:text-sm font-medium">Inventory</p>
-              <p className="text-xl sm:text-3xl font-bold">
+              <p className="text-xl sm:text-3xl font-bold break-words">
                 {isLoading ? "…" : formatMoney(data?.summary?.inventoryCostValue ?? 0)}
               </p>
               <p className="text-white/80 text-xs mt-1">
@@ -1426,12 +1426,12 @@ export default function WholesalerDashboard() {
               >
                 <AnimatedCardContent className="p-3 sm:p-6">
                   <div className="flex items-center justify-between">
-                    <div>
+                    <div className="min-w-0">
                       <div className="flex items-baseline gap-2">
                         <p className="text-white/80 text-xs sm:text-sm font-medium">Revenue</p>
                         <p className="text-white/50 text-xs">before fees</p>
                       </div>
-                      <p className="text-xl sm:text-3xl font-bold">{statsLoading ? '...' : fmt(stats?.totalRevenue || 0)}</p>
+                      <p className="text-xl sm:text-3xl font-bold break-words">{statsLoading ? '...' : fmt(stats?.totalRevenue || 0)}</p>
                       <p className="text-white/80 text-xs mt-1">
                         {stats?.revenueChange !== undefined 
                           ? `${stats.revenueChange >= 0 ? '+' : ''}${stats.revenueChange.toFixed(1)}% from last month`
@@ -1460,9 +1460,9 @@ export default function WholesalerDashboard() {
               >
                 <AnimatedCardContent className="p-3 sm:p-6">
                   <div className="flex items-center justify-between">
-                    <div>
+                    <div className="min-w-0">
                       <p className="text-white/80 text-xs sm:text-sm font-medium">Amount Owed</p>
-                      <p className="text-xl sm:text-3xl font-bold">{statsLoading ? '...' : fmt(stats?.unpaidAmount || 0)}</p>
+                      <p className="text-xl sm:text-3xl font-bold break-words">{statsLoading ? '...' : fmt(stats?.unpaidAmount || 0)}</p>
                       <p className="text-white/80 text-xs mt-1">
                         {statsLoading ? '' : `${stats?.unpaidCount ?? 0} order${(stats?.unpaidCount ?? 0) !== 1 ? 's' : ''} with balance due`}
                       </p>
@@ -1488,9 +1488,9 @@ export default function WholesalerDashboard() {
               >
                 <AnimatedCardContent className="p-3 sm:p-6">
                   <div className="flex items-center justify-between">
-                    <div>
+                    <div className="min-w-0">
                       <p className="text-white/80 text-xs sm:text-sm font-medium">Total Orders</p>
-                      <p className="text-xl sm:text-3xl font-bold">{statsLoading ? '...' : formatNumber(stats?.ordersCount || 0)}</p>
+                      <p className="text-xl sm:text-3xl font-bold break-words">{statsLoading ? '...' : formatNumber(stats?.ordersCount || 0)}</p>
                       <p className="text-white/80 text-xs mt-1">
                         {stats?.ordersChange !== undefined 
                           ? `${stats.ordersChange >= 0 ? '+' : ''}${stats.ordersChange.toFixed(1)}% from last month`
@@ -1513,9 +1513,9 @@ export default function WholesalerDashboard() {
               <Card className="text-white border-0 shadow-lg bg-gradient-to-br from-purple-500 to-purple-600">
                 <CardContent className="p-3 sm:p-6">
                   <div className="flex items-center justify-between">
-                    <div>
+                    <div className="min-w-0">
                       <p className="text-white/80 text-xs sm:text-sm font-medium">Active Products</p>
-                      <p className="text-xl sm:text-3xl font-bold">{statsLoading ? '...' : formatNumber(stats?.activeProducts || 0)}</p>
+                      <p className="text-xl sm:text-3xl font-bold break-words">{statsLoading ? '...' : formatNumber(stats?.activeProducts || 0)}</p>
                       <p className="text-white/80 text-xs mt-1">
                         {(notifCounts?.stockAlerts ?? 0) > 0 ? `${notifCounts!.stockAlerts} low stock alerts` : 'Stock levels healthy'}
                       </p>
@@ -1532,9 +1532,9 @@ export default function WholesalerDashboard() {
             <Card className="border shadow-sm bg-white">
               <CardContent className="p-3 sm:p-6">
                 <div className="flex items-center justify-between">
-                  <div>
+                  <div className="min-w-0">
                     <p className="text-gray-500 text-xs sm:text-sm font-medium">Low Stock Items</p>
-                    <p className="text-xl sm:text-3xl font-bold text-gray-900">{statsLoading ? '...' : formatNumber(stats?.lowStockCount || 0)}</p>
+                    <p className="text-xl sm:text-3xl font-bold text-gray-900 break-words">{statsLoading ? '...' : formatNumber(stats?.lowStockCount || 0)}</p>
                     <Link href="/products">
                       <span className="text-xs mt-1 font-medium text-primary cursor-pointer hover:underline">View items</span>
                     </Link>
@@ -1552,9 +1552,9 @@ export default function WholesalerDashboard() {
             <Card className="text-white border-0 shadow-lg" style={{ background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)' }}>
               <CardContent className="p-3 sm:p-6">
                 <div className="flex items-center justify-between">
-                  <div>
+                  <div className="min-w-0">
                     <p className="text-white/80 text-xs sm:text-sm font-medium">WhatsApp Reach</p>
-                    <p className="text-xl sm:text-3xl font-bold">{broadcastStatsLoading ? '...' : formatNumber(broadcastStats?.recipientsReached || 0)}</p>
+                    <p className="text-xl sm:text-3xl font-bold break-words">{broadcastStatsLoading ? '...' : formatNumber(broadcastStats?.recipientsReached || 0)}</p>
                     <p className="text-white/80 text-xs mt-1">Customers reached</p>
                   </div>
                   <div className="bg-white/20 p-2 sm:p-3 rounded-full">
