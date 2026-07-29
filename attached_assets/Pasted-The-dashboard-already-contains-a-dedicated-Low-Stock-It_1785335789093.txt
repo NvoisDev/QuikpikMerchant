@@ -1,0 +1,120 @@
+The dashboard already contains a dedicated Low Stock Items KPI card. Do not duplicate low stock information within the new Inventory card.
+
+Instead, introduce a new dashboard KPI called Inventory that provides a high-level snapshot of the wholesaler’s stock holdings.
+
+Dashboard Card
+
+Display only:
+
+* Inventory Value (Cost) — Total value of all stock currently held, calculated using cost price.
+* Products in Stock — Number of active products with stock greater than zero.
+
+Example:
+
+Inventory
+
+* £128,450
+* 487 products
+
+The card should be clean, minimal and clickable.
+
+⸻
+
+Inventory Summary Page
+
+When the Inventory card is clicked, navigate to a dedicated Inventory Summary page.
+
+Summary KPIs
+
+Display:
+
+* Total Products in Stock
+* Total Units in Stock
+* Inventory Cost Value
+* Potential Sales Value
+* Potential Gross Profit
+
+Where:
+
+* Inventory Cost Value = Current Stock × Cost Price
+* Potential Sales Value = Current Stock × Selling Price
+* Potential Gross Profit = Potential Sales Value − Inventory Cost Value
+
+⸻
+
+Date Range & Historical Snapshots
+
+Add a date range selector at the top of the page.
+
+Options should include:
+
+* Today
+* Yesterday
+* Last 7 Days
+* Last 30 Days
+* This Month
+* Last Month
+* Custom Date Range
+* As at Date (historical snapshot)
+
+When a date or range is selected:
+
+* All inventory values must be calculated based on the stock position at that point in time.
+* The system should reconstruct inventory using the stock movement history (stock-ins, invoice allocations, cancellations, returns and manual adjustments).
+* Historical reports must never use the current stock quantity.
+
+For example:
+
+“As at 30 June 2025”
+
+The report should display exactly what inventory existed on that date.
+
+This allows wholesalers to answer questions such as:
+
+* How much stock did I hold at month end?
+* What was my inventory value before year-end?
+* How much capital was tied up in stock on a specific date?
+
+⸻
+
+Product Breakdown
+
+Below the summary, display a searchable and sortable table showing:
+
+* Product Name
+* Current (or historical) Stock
+* Cost per Unit
+* Selling Price
+* Inventory Cost Value
+* Inventory Selling Value
+* Gross Profit Value
+
+Sorting:
+
+* Highest Inventory Value
+* Lowest Inventory Value
+* Highest Quantity
+* Lowest Quantity
+* Product Name
+
+⸻
+
+Important
+
+Do not duplicate existing dashboard metrics such as:
+
+* Low Stock Items
+* Active Products
+* Orders
+* Revenue
+* Amount Owed
+
+Those already exist elsewhere.
+
+This feature should answer one core business question:
+
+“How much inventory do I currently hold (or did I hold on a given date), and what is it worth?”
+
+The implementation must use the existing stock movement ledger as the single source of truth. Historical reports must reconcile exactly with stock movements, invoices, cancellations, returns and manual stock adjustments.
+
+The dashboard should remain lightweight, while the Inventory Summary page provides the detailed analysis wholesalers need for operational management and month-end reporting.
