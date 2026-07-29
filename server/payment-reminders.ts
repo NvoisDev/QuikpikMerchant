@@ -10,10 +10,11 @@ import { getStripeClient } from './stripeConfig';
 import { isConnectAccountReady } from './utils/stripe-connect-ready';
 import { createShortPaymentLink } from './shortPaymentLink';
 import { logQuoteActivity } from './utils/quote-activity';
+import { CHASER_TONE_THRESHOLDS } from '../shared/constants';
 
 function getChaserTone(daysOverdue: number): string {
-  if (daysOverdue <= 7) return 'friendly';
-  if (daysOverdue <= 21) return 'firm';
+  if (daysOverdue <= CHASER_TONE_THRESHOLDS.FRIENDLY_MAX_DAYS) return 'friendly';
+  if (daysOverdue <= CHASER_TONE_THRESHOLDS.FIRM_MAX_DAYS) return 'firm';
   return 'urgent';
 }
 

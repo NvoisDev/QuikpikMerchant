@@ -18,6 +18,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { AddressSearchInput, BusinessSearchInput, type AddressPlaceResult, type BusinessPlaceResult } from "@/components/BusinessSearchInput";
 import { getNextAlertDate, ALERT_DAY_NAMES } from "@/lib/stockAlertSchedule";
+import { CHASER_TONE_THRESHOLDS } from "@shared/constants";
 
 interface BusinessProfile {
   id: number;
@@ -1220,10 +1221,10 @@ function getChaserTonePreview(intervalDays: number | ''): string {
   for (let i = 0; i < 15; i++) {
     const day = 1 + i * n;
     if (day > 90) break;
-    const tone: Tone = day <= 7 ? 'friendly' : day <= 21 ? 'firm' : 'urgent';
+    const tone: Tone = day <= CHASER_TONE_THRESHOLDS.FRIENDLY_MAX_DAYS ? 'friendly' : day <= CHASER_TONE_THRESHOLDS.FIRM_MAX_DAYS ? 'firm' : 'urgent';
     schedule.push({ chase: i + 1, day, tone });
   }
-  if (schedule.length === 0) return 'Days 1–7 friendly · 8–21 firm · 22+ urgent';
+  if (schedule.length === 0) return `Days 1–${CHASER_TONE_THRESHOLDS.FRIENDLY_MAX_DAYS} friendly · ${CHASER_TONE_THRESHOLDS.FRIENDLY_MAX_DAYS + 1}–${CHASER_TONE_THRESHOLDS.FIRM_MAX_DAYS} firm · ${CHASER_TONE_THRESHOLDS.FIRM_MAX_DAYS + 1}+ urgent`;
 
   // Group consecutive same-tone chases
   const groups: { tone: Tone; first: number; last: number; firstDay: number; lastDay: number }[] = [];
