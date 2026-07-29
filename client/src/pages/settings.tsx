@@ -1817,9 +1817,33 @@ export default function Settings() {
       <PageHeader title="Settings" description="Manage your account preferences and business settings" />
       <div className="space-y-8 p-4 sm:p-6">
 
+      {/* Mobile horizontal pill nav — shown below lg, hidden on lg+ */}
+      <div className="flex overflow-x-auto gap-2 pb-1 lg:hidden -mx-1 px-1" style={{ scrollbarWidth: 'none' }}>
+        {[
+          { key: 'account', label: 'Account', icon: <User className="h-3.5 w-3.5 mr-1.5" /> },
+          { key: 'business', label: 'Business', icon: <Building2 className="h-3.5 w-3.5 mr-1.5" /> },
+          ...(user.role !== 'team_member' && user.enableMultiProfile ? [{ key: 'profiles', label: 'Profiles', icon: <Building2 className="h-3.5 w-3.5 mr-1.5" /> }] : []),
+          { key: 'notifications', label: 'Notifications', icon: <Bell className="h-3.5 w-3.5 mr-1.5" /> },
+          { key: 'store', label: 'Store Setup', icon: <Store className="h-3.5 w-3.5 mr-1.5" /> },
+        ].map(({ key, label, icon }) => (
+          <button
+            key={key}
+            type="button"
+            onClick={() => setActiveTab(key)}
+            className={`flex-shrink-0 flex items-center px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+              activeTab === key
+                ? 'bg-green-600 text-white border-green-600'
+                : 'bg-white text-gray-600 border-gray-300 hover:border-green-400'
+            }`}
+          >
+            {icon}{label}
+          </button>
+        ))}
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6">
-        {/* Settings Navigation */}
-        <div className="lg:col-span-1">
+        {/* Settings Navigation — desktop sidebar, hidden on mobile */}
+        <div className="hidden lg:block lg:col-span-1">
           <Card>
             <CardContent className="p-3 sm:p-6">
               <nav className="space-y-2">
