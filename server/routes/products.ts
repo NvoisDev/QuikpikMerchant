@@ -1524,7 +1524,7 @@ Return only the taglines, one per line, without numbers or formatting.`;
             AND lm.stock_after > 0
           ORDER BY p.name
         `);
-        rows = result.rows as ProductRow[];
+        rows = result.rows as unknown as ProductRow[];
       } else {
         // Current: live stock
         const result = await db.execute(sql`
@@ -1540,7 +1540,7 @@ Return only the taglines, one per line, without numbers or formatting.`;
             AND stock > 0
           ORDER BY name
         `);
-        rows = result.rows as ProductRow[];
+        rows = result.rows as unknown as ProductRow[];
       }
 
       let inventoryCostValue = 0;

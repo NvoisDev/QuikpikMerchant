@@ -9,7 +9,7 @@ import { useCurrency } from "@/hooks/useCurrency";
 import { getPackQuantity } from "@shared/utils/product";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { AddressSearchInput } from "@/components/BusinessSearchInput";
+import { BusinessSearchInput, BusinessPlaceResult } from "@/components/BusinessSearchInput";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -1677,6 +1677,23 @@ export default function QuickQuote() {
                       <DialogDescription>Add a customer to create an invoice for them.</DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4 mt-4">
+                      <div className="pb-1">
+                        <label className="text-sm font-medium mb-1.5 block">Search on Google</label>
+                        <BusinessSearchInput
+                          placeholder="Type a business name to auto-fill..."
+                          onSelect={(result: BusinessPlaceResult) => setNewCustomer((c) => ({
+                            ...c,
+                            ...(result.businessName ? { businessName: result.businessName } : {}),
+                            ...(result.streetAddress ? { streetAddress: result.streetAddress } : {}),
+                            ...(result.city ? { city: result.city } : {}),
+                            ...(result.postalCode ? { postalCode: result.postalCode } : {}),
+                            ...(result.country ? { country: result.country } : {}),
+                          }))}
+                        />
+                      </div>
+                      <div className="border-t border-dashed pt-3">
+                        <p className="text-xs text-muted-foreground mb-3">Or fill in manually:</p>
+                      </div>
                       <div className="grid grid-cols-2 gap-3">
                         <div>
                           <Label htmlFor="firstName">First Name <span className="text-muted-foreground font-normal text-xs">(optional)</span></Label>
@@ -1727,17 +1744,6 @@ export default function QuickQuote() {
                       </div>
                       <div className="border-t pt-3">
                         <p className="text-xs font-medium text-muted-foreground mb-2">Address <span className="font-normal">(optional — appears on invoices)</span></p>
-                        <AddressSearchInput
-                          className="mb-2"
-                          placeholder="Search for an address..."
-                          onSelect={(result) => setNewCustomer((c) => ({
-                            ...c,
-                            streetAddress: result.addressLine1,
-                            city: result.city,
-                            postalCode: result.postalCode,
-                            country: result.country,
-                          }))}
-                        />
                         <div className="space-y-2">
                           <Input
                             placeholder="Address line 1"

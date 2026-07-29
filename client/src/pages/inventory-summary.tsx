@@ -118,7 +118,7 @@ export default function InventorySummary() {
   const { formatMoney } = useCurrency();
 
   const [preset, setPreset] = useState<DatePreset>("current");
-  const [customAsAt, setCustomAsAt] = useState<string>(() => toYMD(new Date()));
+  const [customAsAt, setCustomAsAt] = useState<string>(() => toYMD(new Date()) ?? "");
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<SortKey>("costValue_desc");
 
