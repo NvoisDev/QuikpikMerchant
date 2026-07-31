@@ -20,6 +20,11 @@ export function requireBooleanFeature(feature: BooleanFeature) {
         return res.status(401).json({ error: 'Authentication required', code: 'AUTH_REQUIRED' });
       }
 
+      // Admins impersonating a wholesaler bypass all feature gates so they always see real data
+      if ((req as any)._adminEmail) {
+        return next();
+      }
+
       // Team members inherit their wholesaler's subscription plan
       const userId = (req.user.role === 'team_member' && req.user.wholesalerId)
         ? req.user.wholesalerId

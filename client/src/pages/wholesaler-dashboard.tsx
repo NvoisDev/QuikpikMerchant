@@ -1515,9 +1515,11 @@ export default function WholesalerDashboard() {
                   <div className="flex items-center justify-between">
                     <div className="min-w-0">
                       <p className="text-white/80 text-xs sm:text-sm font-medium">Active Products</p>
-                      <p className="text-xl sm:text-3xl font-bold break-words">{statsLoading ? '...' : formatNumber(stats?.activeProducts || 0)}</p>
+                      <p className="text-xl sm:text-3xl font-bold break-words">{statsLoading ? '...' : (statsError ? '—' : formatNumber(stats?.activeProducts || 0))}</p>
                       <p className="text-white/80 text-xs mt-1">
-                        {(notifCounts?.stockAlerts ?? 0) > 0 ? `${notifCounts!.stockAlerts} low stock alerts` : 'Stock levels healthy'}
+                        {statsError
+                          ? 'Upgrade to Starter to view'
+                          : (notifCounts?.stockAlerts ?? 0) > 0 ? `${notifCounts!.stockAlerts} low stock alerts` : 'Stock levels healthy'}
                       </p>
                     </div>
                     <div className="bg-white/20 p-2 sm:p-3 rounded-full">
