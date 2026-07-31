@@ -69,6 +69,12 @@ export function requireFeatureAccess(feature: string, maxValue?: number) {
         });
       }
 
+      // Admins impersonating a wholesaler always bypass feature gates so they
+      // can see accurate data for any account regardless of its plan.
+      if (isImpersonating(req)) {
+        return next();
+      }
+
       // Team members inherit their wholesaler's subscription plan
       const userId = (req.user.role === 'team_member' && req.user.wholesalerId)
         ? req.user.wholesalerId
