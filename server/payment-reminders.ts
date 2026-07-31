@@ -515,7 +515,8 @@ export async function runAutoFulfilJob(): Promise<{ fulfilled: number; skipped: 
         .where(
           and(
             eq(orders.wholesalerId, wholesaler.id),
-            inArray(orders.status, ['paid', 'processing']),
+            inArray(orders.status, ['pending', 'processing']),
+            eq(orders.paymentStatus, 'paid'),
             lt(orders.createdAt, cutoff),
             // Skip orders that have a pending cancellation / dispute
             sql`NOT EXISTS (
