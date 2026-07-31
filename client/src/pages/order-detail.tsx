@@ -2023,7 +2023,7 @@ export default function OrderDetail() {
                         )}
                       </div>
                     )}
-                    {order.paymentStatus === 'paid' && Math.round(amountPaidRaw * 100) < Math.round(parseFloat(order.total || '0') * 100) && (
+                    {order.paymentStatus === 'paid' && Math.round((amountPaidRaw - parseFloat(order.amountRefunded || '0')) * 100) < Math.round(parseFloat(order.total || '0') * 100) && (
                       <div className="bg-amber-50 border border-amber-200 rounded p-2 col-span-2 flex items-start gap-2">
                         <span className="text-amber-500 mt-0.5">⚠️</span>
                         <div>
