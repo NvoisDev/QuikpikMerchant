@@ -2012,7 +2012,7 @@ export default function OrderDetail() {
                       <div className="text-gray-500">Amount Paid</div>
                       <div className="font-semibold text-green-700 text-sm">{formatMoney(wholesalerPaid)}</div>
                     </div>
-                    {wholesalerOutstanding > 0.01 && (
+                    {wholesalerOutstanding > 0.01 && !order.cancelledAt && order.status !== 'cancelled' && (
                       <div className="bg-red-50 rounded p-2 col-span-2">
                         <div className="text-red-500">Outstanding Balance</div>
                         <div className="font-bold text-red-700 text-sm">{formatMoney(wholesalerOutstanding)}</div>
