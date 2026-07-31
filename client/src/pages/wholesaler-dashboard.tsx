@@ -920,6 +920,9 @@ export default function WholesalerDashboard() {
     enabled: !!user,
   });
 
+  // True when the analytics feature is gated for this account (Listing plan)
+  const statsBlocked = (statsError as any)?.status === 403;
+
   const { data: orders, isLoading: ordersLoading, error: ordersError } = useQuery({
     queryKey: ["/api/orders"],
     staleTime: 2 * 60 * 1000, // 2 minutes
@@ -1431,11 +1434,13 @@ export default function WholesalerDashboard() {
                         <p className="text-white/80 text-xs sm:text-sm font-medium">Revenue</p>
                         <p className="text-white/50 text-xs">before fees</p>
                       </div>
-                      <p className="text-xl sm:text-3xl font-bold break-words">{statsLoading ? '...' : fmt(stats?.totalRevenue || 0)}</p>
+                      <p className="text-xl sm:text-3xl font-bold break-words">{statsLoading ? '...' : statsBlocked ? '—' : fmt(stats?.totalRevenue || 0)}</p>
                       <p className="text-white/80 text-xs mt-1">
-                        {stats?.revenueChange !== undefined 
-                          ? `${stats.revenueChange >= 0 ? '+' : ''}${stats.revenueChange.toFixed(1)}% from last month`
-                          : 'No change data'}
+                        {statsBlocked
+                          ? <a href="/subscription/pricing" className="underline underline-offset-2 hover:text-white">Upgrade to see analytics</a>
+                          : stats?.revenueChange !== undefined
+                            ? `${stats.revenueChange >= 0 ? '+' : ''}${stats.revenueChange.toFixed(1)}% from last month`
+                            : 'No change data'}
                       </p>
                     </div>
                     <div className="bg-white/20 p-2 sm:p-3 rounded-full">
@@ -1462,9 +1467,11 @@ export default function WholesalerDashboard() {
                   <div className="flex items-center justify-between">
                     <div className="min-w-0">
                       <p className="text-white/80 text-xs sm:text-sm font-medium">Amount Owed</p>
-                      <p className="text-xl sm:text-3xl font-bold break-words">{statsLoading ? '...' : fmt(stats?.unpaidAmount || 0)}</p>
+                      <p className="text-xl sm:text-3xl font-bold break-words">{statsLoading ? '...' : statsBlocked ? '—' : fmt(stats?.unpaidAmount || 0)}</p>
                       <p className="text-white/80 text-xs mt-1">
-                        {statsLoading ? '' : `${stats?.unpaidCount ?? 0} order${(stats?.unpaidCount ?? 0) !== 1 ? 's' : ''} with balance due`}
+                        {statsBlocked
+                          ? <a href="/subscription/pricing" className="underline underline-offset-2 hover:text-white">Upgrade to see analytics</a>
+                          : statsLoading ? '' : `${stats?.unpaidCount ?? 0} order${(stats?.unpaidCount ?? 0) !== 1 ? 's' : ''} with balance due`}
                       </p>
                     </div>
                     <div className="bg-white/20 p-2 sm:p-3 rounded-full">
@@ -1490,11 +1497,13 @@ export default function WholesalerDashboard() {
                   <div className="flex items-center justify-between">
                     <div className="min-w-0">
                       <p className="text-white/80 text-xs sm:text-sm font-medium">Total Orders</p>
-                      <p className="text-xl sm:text-3xl font-bold break-words">{statsLoading ? '...' : formatNumber(stats?.ordersCount || 0)}</p>
+                      <p className="text-xl sm:text-3xl font-bold break-words">{statsLoading ? '...' : statsBlocked ? '—' : formatNumber(stats?.ordersCount || 0)}</p>
                       <p className="text-white/80 text-xs mt-1">
-                        {stats?.ordersChange !== undefined 
-                          ? `${stats.ordersChange >= 0 ? '+' : ''}${stats.ordersChange.toFixed(1)}% from last month`
-                          : 'No change data'}
+                        {statsBlocked
+                          ? <a href="/subscription/pricing" className="underline underline-offset-2 hover:text-white">Upgrade to see analytics</a>
+                          : stats?.ordersChange !== undefined
+                            ? `${stats.ordersChange >= 0 ? '+' : ''}${stats.ordersChange.toFixed(1)}% from last month`
+                            : 'No change data'}
                       </p>
                     </div>
                     <div className="bg-white/20 p-2 sm:p-3 rounded-full">
@@ -1515,11 +1524,13 @@ export default function WholesalerDashboard() {
                   <div className="flex items-center justify-between">
                     <div className="min-w-0">
                       <p className="text-white/80 text-xs sm:text-sm font-medium">Active Products</p>
-                      <p className="text-xl sm:text-3xl font-bold break-words">{statsLoading ? '...' : (statsError ? '—' : formatNumber(stats?.activeProducts || 0))}</p>
+                      <p className="text-xl sm:text-3xl font-bold break-words">{statsLoading ? '...' : statsBlocked ? '—' : formatNumber(stats?.activeProducts || 0)}</p>
                       <p className="text-white/80 text-xs mt-1">
-                        {statsError
-                          ? 'Upgrade to Starter to view'
-                          : (notifCounts?.stockAlerts ?? 0) > 0 ? `${notifCounts!.stockAlerts} low stock alerts` : 'Stock levels healthy'}
+                        {statsBlocked
+                          ? <a href="/subscription/pricing" className="underline underline-offset-2 hover:text-white">Upgrade to see analytics</a>
+                          : (notifCounts?.stockAlerts ?? 0) > 0
+                            ? `${notifCounts!.stockAlerts} low stock alerts`
+                            : 'Stock levels healthy'}
                       </p>
                     </div>
                     <div className="bg-white/20 p-2 sm:p-3 rounded-full">
@@ -1536,10 +1547,11 @@ export default function WholesalerDashboard() {
                 <div className="flex items-center justify-between">
                   <div className="min-w-0">
                     <p className="text-gray-500 text-xs sm:text-sm font-medium">Low Stock Items</p>
-                    <p className="text-xl sm:text-3xl font-bold text-gray-900 break-words">{statsLoading ? '...' : formatNumber(stats?.lowStockCount || 0)}</p>
-                    <Link href="/products">
-                      <span className="text-xs mt-1 font-medium text-primary cursor-pointer hover:underline">View items</span>
-                    </Link>
+                    <p className="text-xl sm:text-3xl font-bold text-gray-900 break-words">{statsLoading ? '...' : statsBlocked ? '—' : formatNumber(stats?.lowStockCount || 0)}</p>
+                    {statsBlocked
+                      ? <a href="/subscription/pricing" className="text-xs mt-1 font-medium text-primary hover:underline">Upgrade to see analytics</a>
+                      : <Link href="/products"><span className="text-xs mt-1 font-medium text-primary cursor-pointer hover:underline">View items</span></Link>
+                    }
                   </div>
                   <div className="bg-amber-100 p-2 sm:p-3 rounded-full">
                     <AlertTriangle className="h-4 w-4 sm:h-6 sm:w-6 text-amber-500" />

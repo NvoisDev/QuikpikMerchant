@@ -4,6 +4,7 @@ import { db } from '../db';
 import { teamMembers, priceLists } from '@shared/schema';
 import { eq, and, count as drizzleCount } from 'drizzle-orm';
 import { PLAN_LIMITS, PLAN_HIERARCHY, getPlanLimits, hasFeatureFlag, type BooleanFeature } from '../config/plan-limits';
+import { isImpersonating } from '../utils/isImpersonating';
 
 /**
  * Boolean feature gate middleware.
@@ -20,8 +21,9 @@ export function requireBooleanFeature(feature: BooleanFeature) {
         return res.status(401).json({ error: 'Authentication required', code: 'AUTH_REQUIRED' });
       }
 
-      // Admins impersonating a wholesaler bypass all feature gates so they always see real data
-      if ((req as any)._adminEmail) {
+      // Admins impersonating a wholesaler always bypass feature gates so they
+      // can see accurate data for any account regardless of its plan.
+      if (isImpersonating(req)) {
         return next();
       }
 
